@@ -50,8 +50,8 @@ The reasons behind formulating things this way are several:
   to other competent hands without having to ask each and every wizard
   in the game if it's ok with him/her.
 
-- Chalmers Datorforening is a non profit organization, and most members 
-  frown upon use of the equipment for commercial purposes.
+- Genesis Interest Association is a non profit organization, and as such
+  it frowns upon use of the equipment for commercial purposes.
 
 - It could be argued that it is possible to develop code outside
   Genesis and then move it here. However it is not in the interest of
@@ -65,10 +65,11 @@ The reasons behind formulating things this way are several:
 
 COPYRIGHT LICENSE
 
-1.  Genesis is is the name of the LPMud world run at Chalmers Datorforening
-    (Chalmers Computer Society), Goteborg, Sweden. The code making up the
-    world is termed Genesis and the society is termed CD in the following
-    text.
+1.  Genesis is is the name of the LPMud world run by Genesis Interest
+    Association (a non profit organisation, created for the sole
+    purpose of maintaining this game), Goteborg, Sweden. The code
+    making up the world is termed Genesis and the society is termed GIA
+    in the following text.
 
 2.  All code that is produced in Genesis or imported to Genesis is subject 
     to this license. If you have code that you for some reason can't or 
@@ -86,7 +87,7 @@ COPYRIGHT LICENSE
 
 5.  The copyright to all code that is not accompanied by an explicit
     copyright notice with the word Copyright, the year of creation and
-    the name of the author is held by CD.
+    the name of the author is held by GIA.
 
 6.  Swedish law applies to this license. Among other things this means that
     all code is protected, even if it doesn't contain a copyright notice.
@@ -141,16 +142,17 @@ may trigger disciplinary actions.
     will use his/her own judgement to determine if permission is warranted
     or not.
 
-14. Chalmers Computer Society owns the machine that Genesis runs on. The
-    society reserves the right to do anything (that does not violate the
-    the copyright notice) it finds suitable with any information stored
-    in the computer, but will under normal circumstances refrain from 
-    such actions without the consent of the authors.
+14. GIA owns the machine that Genesis runs on. The society reserves
+    the right to do anything (that does not violate the the copyright
+    notice) it finds suitable with any information stored in the
+    computer, but will under normal circumstances refrain from such
+    actions without the consent of the authors.
 
     The society is a democratic organization with bylaws, a board and
-    regular meetings where decisions are made. The Genesis administrators, 
-    the board and the meetings are the only ones who can make decisions
-    affecting Genesis. Individual members do not have the power to do so.
-    Neither do individual members have the right to distribute code without
-    permission from the wizard in question.
+    regular meetings where decisions are made. The Genesis
+    administrators, the board and the meetings are the only ones who
+    can make decisions affecting Genesis. Individual members do not
+    have the power to do so.  Neither do individual members have the
+    right to distribute code without permission from the wizard in
+    question.
 
