@@ -61,7 +61,8 @@ query_guild_not_allow_join_guild(object player, string type,
 {
     if ((player->query_guild_not_allow_join_occ(player, type, style, name)) ||
         (player->query_guild_not_allow_join_lay(player, type, style, name)) ||
-        (player->query_guild_not_allow_join_race(player, type, style, name)))
+        (player->query_guild_not_allow_join_race(player, type, style, name)) ||
+        (player->query_guild_not_allow_join_craft(player, type, style, name)))
     {
         return 1;
     }
@@ -101,7 +102,7 @@ shadow_me(object player, string type, string style, string name,
     }
 
     if (!type ||
-        ((il = member_array(type, ({"occupational", "layman" , "race"}))) < 0))
+        ((il = member_array(type, ({"occupational", "layman" , "race", "craft"}))) < 0))
     {
         notify_fail("Not a valid type of guild.\n");
         return -2;
@@ -129,11 +130,11 @@ shadow_me(object player, string type, string style, string name,
     player->add_autoshadow(MASTER + ":" + init_arg);
 
     call_other(this_object(),
-        "init_" + ({ "occ", "lay", "race" })[il] + "_shadow", init_arg);
+        "init_" + ({ "occ", "lay", "race", "craft" })[il] + "_shadow", init_arg);
 
     player->set_guild_pref( ({ SS_OCCUP, SS_LAYMAN, SS_RACE })[il],
         call_other(this_object(),
-            "query_guild_tax_" + ({ "occ", "lay", "race" })[il])); 
+            "query_guild_tax_" + ({ "occ", "lay", "race", "craft" })[il])); 
     return 1;
 }
 
@@ -153,7 +154,8 @@ query_guild_keep_player(object player)
 /*
  * Function name: query_guild_member
  * Description:   Is the player already member of an occuptional or layman or
- *                race guild? Minor guilds or name of guild also works.
+ *                race or creaft guild? Minor guilds or name of guild also 
+ *		  works.
  * Arguments:     str - the type of guild to search for, or guild name
  * Returns:       1 if the shadowed player was member :)
  */
@@ -176,10 +178,15 @@ query_guild_member(string str)
         i = this_object()->query_guild_member_race();
         break;
 
+    case "craft":
+        i = this_object()->query_guild_member_craft();
+        break;
+
     default:
         if ((str == this_object()->query_guild_name_occ()) ||
             (str == this_object()->query_guild_name_lay()) ||
-            (str == this_object()->query_guild_name_race()))
+            (str == this_object()->query_guild_name_race()) ||
+            (str == this_object()->query_guild_name_craft()))
         {
             i = 1;
         }
@@ -205,7 +212,8 @@ query_guild_style(string str)
 
     if ((str == this_object()->query_guild_style_occ()) ||
         (str == this_object()->query_guild_style_lay()) ||
-        (str == this_object()->query_guild_style_race()))
+        (str == this_object()->query_guild_style_race()) ||
+        (str == this_object()->query_guild_style_craft()))
     {
         i = 1;
     }
@@ -228,7 +236,8 @@ query_guild_leader()
 {
     return (this_object()->query_guild_leader_occ() ||
             this_object()->query_guild_leader_lay() ||
-            this_object()->query_guild_leader_race());
+            this_object()->query_guild_leader_race() ||
+            this_object()->query_guild_leader_craft());
 }
 
 /*
@@ -270,6 +279,16 @@ list_major_guilds()
     else
     {
         str += "No race guild\n";
+    }
+
+    if (this_object()->query_guild_member_craft())
+    {
+        str += sprintf("Craft guild:         %-25s\n",
+            this_object()->query_guild_name_craft());
+    }
+    else
+    {
+        str += "No craft guild\n";
     }
 
     return str;

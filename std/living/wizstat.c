@@ -13,6 +13,17 @@ base_stat(int acc_exp)
     return F_EXP_TO_STAT(acc_exp);
 }
 
+public string
+round_stat(int stat)
+{
+    if (stat > 100000)
+	return sprintf("%2.1fM", itof(stat) / 1000000.0);
+    else if (stat > 1000)
+	return sprintf("%2.1fk", itof(stat) / 1000.0);
+		
+    return sprintf("%d", stat);
+}
+
 /*
  * Function name: stat_living
  * Description  : Give status information on this living.
@@ -24,7 +35,7 @@ stat_living()
     string str, tmp;
     object to;
     int *stats = ({ SS_STR, SS_DEX, SS_CON, SS_INT, SS_WIS, SS_DIS,
-                    SS_RACE, SS_GUILD, SS_OTHER });
+                    SS_RACE, SS_OCCUP, SS_LAYMAN, SS_CRAFT });
 
     to = this_object();
     str = sprintf(
@@ -33,18 +44,18 @@ stat_living()
                   "(%-2d) " +
 #endif
 		  "Race: %-10s Gender: %-10s\n" +
-	          "File: %-31s Uid: %-11s  Euid: %-11s\n"  +
+	          "File: %-35s Uid: %-11s  Euid: %-11s\n"  +
 		  "------------------------------------------------------" +
 		  "--------------------\n" +
 		  "Exp: %-8d  Quest: %-7d  Combat: %-7d General: %-7d " +
 		  "Av.Stat: %d\n" +
 		  "Hp: %4d(%4d) Mana: %4d(%4d)\n" +  
 		  "Fatigue: %5d(%5d)  Weight: %7d(%7d)   Volume: %7d(%7d)\n\n" +
-		  "Stat: %@8s\n"  +
-                  "Value:%@8d\n" +
-                  "Base: %@8d\n" +
-                  "Exp:  %@8d\n" +
-	          "Learn:%@8d\n\n" +
+		  "Stat: %@7s\n"  +
+                  "Value:%@7d\n" +
+                  "Base: %@7d\n" +
+                  "Exp:  %@7s\n" +
+	          "Learn:%@7d\n\n" +
 		  "Intox: %4d  Stuffed: %3d Soaked: %3d  Align : %d\n" +
 		  "Scar : %4d  Ghost  : %3d Invis : %3d  Npc   : %3d  " +
 		  "Whimpy: %3d\n",
@@ -76,7 +87,7 @@ stat_living()
 		  SS_STAT_DESC,
                   map(stats, &to->query_stat()),
                   map(map(stats, &to->query_acc_exp()), base_stat),
-                  map(stats, &to->query_acc_exp()),
+                  map(map(stats, &to->query_acc_exp()), round_stat),
 		  to->query_learn_pref(-1),
 		  to->query_intoxicated(),
 		  to->query_stuffed(),

@@ -382,7 +382,7 @@ init()
     for (i = 0 , s = sizeof(unlock_commands) ; i < s ; i++)
 	add_action(unlock_door, check_call(unlock_commands[i]));
 
-    if (!no_pick && sizeof(unlock_commands))
+    if (sizeof(unlock_commands))
 	add_action(pick_lock, "pick");
 
     for (i = 0 , s = sizeof(knock_commands) ; i < s ; i++)
