@@ -1,6 +1,6 @@
 /*
     
-  Some constants relevant to the login procedure......
+  Some constants relevant to the login procedure.
 
   Just include the proper definitions.
 
