@@ -2,6 +2,8 @@
  * /std/object.c
  *
  * Contains all basic routines for configurable objects.
+ *
+ * $Id:$
  */
 
 #pragma save_binary
@@ -618,7 +620,7 @@ remove_prop(string prop)
         environment()->notify_change_prop(prop, 0, query_prop(prop));
     }
 
-    obj_props = m_delete(obj_props, prop);
+    m_delkey(obj_props, prop);
 }
 
 #define CFUN
