@@ -49,7 +49,7 @@ static  mapping   cont_sublocs,    /* Map of sublocations and the object res-
                                       ponsible for the subloc, in container */
                   cont_subloc_ids; /* Map of sublocation ids to sublocation */
 
-static private int *NotifyProps;   /* Properties to notify about changes of */
+static private string *NotifyProps;   /* Properties to notify about changes of */
 
 /*
  * Prototypes
