@@ -129,7 +129,7 @@ seq_heartbeat(int steps)
         for (il = 0 ; il < sizeof(calls) ; il++)
             if (calls[il][1] == "seq_heartbeat")
                 remove_alarm(calls[il][0]);
-        this_object()->add_notify_meet_interactive(seq_restart);
+        this_object()->add_notify_meet_interactive("seq_restart");
         if (!newstep)
         {
             seq_active = 0;
