@@ -284,6 +284,8 @@
 #define ROOM_M_NO_STEAL         "_room_m_no_steal"
 #define ROOM_I_NO_ATTACK	"_room_m_no_attack"
 #define ROOM_M_NO_ATTACK        "_room_m_no_attack"
+#define ROOM_I_NO_SCRY          "_room_m_no_scry"
+#define ROOM_M_NO_SCRY          "_room_m_no_scry"
 #define ROOM_I_NO_ALLOW_STEED   "_room_i_no_allow_steed"
 #define ROOM_I_ALLOW_STEED      "_room_i_allow_steed"
 
