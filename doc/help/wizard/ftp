@@ -9,36 +9,4 @@ DESCRIPTION
 	mainframes.
 
 USAGE
-	You begin an ftp session by starting your client. The address
-	is the same as the address you use to connect to the mud. Note
-	to use port 1821 for ftp in to Genesis.
-
-		Example: ftp genesis.cs.chalmers.se 1821
-		Example: ftp 129.16.225.60 1821
-
-	When prompted for name you type '<wizname>'.
-
-		Example: commander
-
-	When prompted for password you type your LPMud password.
-
-	You are now logged in and you can access all files in the directory
-	you start in, and all directories below it. If you are a
-	Wizard you start in your home directory. If you are a Lord,
-	an Archwizard or a Keeper you start in the home directory
-	of your domain.
-
-		Example: Lord Styles: /d/Liwitch
-		Example: Wizard Hebol: /d/Liwitch/hebol
-
-	Ftp clients for different machines are not identical, so it's hard 
-	to describe exactly how to transfer files. Some commands that almost 
-	always work are:
-
-	- get: get a file from the remote machine
-	- put: send a filie to the remote machine
-	- ls:  list the directory contents on the remote machine
-	- dir: same as ls
-	- cd:  change directory on the remote machine
-	- bye: end the session
-	- quit: end the session
+	Please see "man ftp" for details.
