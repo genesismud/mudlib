@@ -1881,15 +1881,15 @@ query_move_opposites()
 nomask public int
 query_memory_percentage()
 {
-    int    f;
-    int    cval;
-    string mc;
-    string foobar;
+    string foobar, *data = explode(SECURITY->do_debug("malloc"), "\n");
+    int    f, cval, sz = sizeof(data);
 
-    mc = debug("malloc");
-    sscanf(mc, "%ssbrk requests: %d %d (a) %s", foobar, f, cval, foobar);
-
-    return (cval / (memory_limit / 100));
+    // This code relies heaviily on the ssbrk line being last. Good enough.
+    if (sscanf(data[sz-1], 
+	       "%ssbrk requests: %d %d (a) %s", foobar, f, cval, foobar) == 4)
+	return (cval / (memory_limit / 100));
+    else
+	return 0;
 }
 
 /*
