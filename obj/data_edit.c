@@ -288,9 +288,7 @@ data_add(string str)
 
     /* Update the object if necessary. */
     if (objectp(obj = find_object(path)))
-    {
 	SECURITY->do_debug("destroy", obj);
-    }
 
     if (str = catch(call_other(path, "teleledningsanka")))
     {
@@ -324,9 +322,7 @@ data_add(string str)
 	" of array '" + var + indices + "'.\n");
 
     if (!rm(path))
-    {
 	write("Error removing '" + path + "' after execution.\n");
-    }
 
     return;
 }
@@ -392,25 +388,19 @@ static nomask string
 element_type(mixed element)
 {
     if (intp(element))
-    {
 	return "integer";
-    }
+
     if (stringp(element))
-    {
 	return "string";
-    }
+
     if (floatp(element))
-    {
 	return "float";
-    }
+
     if (pointerp(element))
-    {
 	return sprintf("array   (%2d)", sizeof(element));
-    }
+
     if (mappingp(element))
-    {
 	return sprintf("mapping (%2d)", m_sizeof(element));
-    }
 
     return "unknown";
 }
@@ -455,9 +445,7 @@ data_list(string str)
 
 	index = this_interactive()->query_option(OPT_SCREEN_WIDTH);
 	if (index ==  0)
-	{
 	    index = 80;
-	}
 
 	write("The datafile contains " + size + " variables:\n" +
 	    sprintf("%-*#s\n", (index - 4), implode(data_vars, "\n")));
@@ -466,9 +454,7 @@ data_list(string str)
 
     /* 'list *' lists all variables. */
     if (str == "*")
-    {
 	vars = data_vars;
-    }
     else
     {
 	str = implode(explode(str, ","), " ");
@@ -533,7 +519,7 @@ data_remove(string str)
     /* Only one argument means remove that variable. */
     if (sizeof(words) == 1)
     {
-	data = m_delete(data, var);
+	m_delkey(data, var);
 
 	write("Variable '" + var + "' removed from the datafile.\n");
 	return;
@@ -576,7 +562,7 @@ data_remove(string str)
 	    return;
 	}
 
-	data[var] = m_delete(data[var], element);
+	m_delkey(data[var], element);
 	write("Element '" + element + "' removed from mapping '" + var +
 	    "'.\n");
 	return;
@@ -645,9 +631,7 @@ data_set(string str)
 
     /* If the mapping is not a mapping for some reason, make it one. */
     if (!mappingp(data))
-    {
 	data = ([ ]);
-    }
 
     if (!write_file(path,
 	"#pragma no_clone\n\nvoid\ndata_exec(mapping data)\n{\n    data[\"" +
@@ -658,9 +642,7 @@ data_set(string str)
     }
 
     if (objectp(obj = find_object(path)))
-    {
 	SECURITY->do_debug("destroy", obj);
-    }
 
     if (str = catch(call_other(path, "teleledningsanka")))
     {
@@ -686,9 +668,7 @@ data_set(string str)
     write("Executed: " + var + indices + " = " + expr + ";\n");
 
     if (!rm(path))
-    {
 	write("Error removing: " + path + " after execution.\n");
-    }
 
     return;
 }
@@ -824,8 +804,7 @@ nomask string
 query_auto_load()
 {
     if (environment()->query_wiz_level())
-    {
-         return MASTER;    }
+         return MASTER;
 
     return 0;
 }
