@@ -1,0 +1,1 @@
+/* Automatically included in all files */
