@@ -649,8 +649,7 @@ Dump(string str)
     case "profile_avg":
 	extra = strip(extra);
 	if (!strlen(extra) || 
-	    (member_array(extra, ({ "time", "calls", "average", "function"})) < 0 &&
-	     member_array(extra[0..0], ({ "t", "c", "a", "f" })) < 0))
+	    member_arraay(extra[0..0], ({ "t", "c", "a", "f" })) < 0)
 	    extra = "time";
 
 	funcs = SECURITY->do_debug("getprofile_avg", ob);
@@ -1411,10 +1410,7 @@ Top(string str)
 static int
 profile_sort(string item, mixed a, mixed b)
 {
-    int p;
-
-    if ((p = member_array(item, ({ "time", "calls", "average", "function" }))) < 0)
-	p = member_array(item, ({ "t", "c", "a", "f" }));
+    int p = member_array(item[0..0], ({ "t", "c", "a", "f" }));
 
     if(a[p] < b[p])
 	return -1;
