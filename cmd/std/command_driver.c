@@ -122,13 +122,11 @@ using_soul(object live)
  * Description  : Used to make it impossible to shadow any soul.
  * Returns      : int 1 - always
  */
-/*
 nomask public int
 query_prevent_shadow()
 {
     return 1;
 }
-*/
  
 /*
  * Function name: query_alarms
