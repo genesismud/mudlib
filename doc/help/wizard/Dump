@@ -88,7 +88,8 @@ OPTIONS
                         An optional argument can be given to determine
 	                which column should be used for sorting (in 
                         decending order). The sort options are 'time',
-                        'calls', 'average' and 'function'.
+                        'calls', 'average' and 'function'. The first
+	                letter will suffice as well.
 
 	profile_avg	Prints averages over the last minute of the same
                         data as in profile.

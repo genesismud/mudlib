@@ -13,7 +13,8 @@ DESCRIPTION
 	argument.
 
 ARGUMENTS
-	"average" - show the average over one minute
+	"average" - show the average over one minute. The first letter
+                    will suffice as well.
 	<num>     - the number of entries to show
 
 SEE ALSO
