@@ -1,0 +1,23 @@
+NAME
+	accept - accept an apprentice into the domain
+
+SYNOPSIS
+	accept <name>
+
+DESCRIPTION
+	With this command a Liege can accept anyone into the domain who
+	has made an application. Usually this will be apprentices, but
+	wizards in the independant wizard-domain can also apply to join
+	a normal domain.
+
+	Please note that new wizards are added with all restrict-options
+	preset.
+
+	Remember to assign a suitable mentor to the new wizard.
+
+ARGUMENTS
+	<name>	the name of the player to accept.
+
+SEE ALSO
+	applications, apply, deny, draft, expel, leave, regret, mentor,
+	mentorinfo and restrict

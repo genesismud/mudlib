@@ -1,0 +1,13 @@
+NAME
+	remake - update the inheritance list of an object
+
+SYNOPSIS
+	remake <file>
+
+DESCRIPTION
+	This command updates the objects in the specified object's
+	inheritance list.  Only objects which are newer than the specified
+	object will be updated.
+
+SEE ALSO
+	update

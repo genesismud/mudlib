@@ -1,0 +1,23 @@
+NAME
+        inventory - list your possessions
+        i         - the command 'i' is a global alias for 'inventory'!
+
+SYNOPSIS
+	inventory          or   i
+	inventory <name>   or   i <name>
+
+DESCRIPTION
+        Show a list of everything you are carrying. The contents of
+	containers are not shown. They have to be listed using the
+	'look at' or 'exa[mine]' command.
+
+        On separate lines, the following information is printed: the coins
+        and gems you carry, the items you wield, hold and wear and finally
+        all other items you carry with you.
+
+ARGUMENTS
+	<name> - wizards can view the inventory of other players by
+		 adding the name of that player as argument.
+
+SEE ALSO
+	look

@@ -1,0 +1,12 @@
+NAME
+        remembered - list remembered people
+
+SYNOPSIS
+	remembered
+
+DESCRIPTION
+        Show a list of all the people you remember. These people will be
+	remembered from session to session, until you choose to forget them.
+			
+SEE ALSO
+	remember, forget, introduce, introduced

@@ -1,0 +1,12 @@
+Definition:  FORMAT_NAME(name)
+
+Description: Displays a player name in an 11 space field with justification
+             to the left to make it easier to print in tables.
+
+Arguments  : string name - the name of the player.
+
+Returns    : string - the name of the player with spaces padded.
+
+Example    : FORMAT_NAME("foobar") -> "foobar     "
+
+See also   : CFORMAT_NAME

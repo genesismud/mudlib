@@ -1,0 +1,18 @@
+NAME
+        join - join a team
+
+SYNOPSIS
+	join <person>
+
+DESCRIPTION
+        With this command you join a team you have been invited into.
+	When you enter a team, you will automatically switch to brief mode
+	for as long as you follow your leader. You can still manually set it
+	to verbose mode if you please.
+
+OPTIONS
+        person - a player in your presence
+
+SEE ALSO
+	invite, leave, options, team, teams
+	For general information, see teams

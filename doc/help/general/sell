@@ -1,0 +1,16 @@
+NAME
+	sell - sell an item
+
+SYNOPSIS
+	sell <item>
+
+DESCRIPTION
+	Sell something in a shop, to a travelling salesman, et cetera. Not all
+	shops will accept all items. You may get a better price when your trade
+	skills improve.
+
+ARGUMENTS
+	<item> - the item you want to sell.
+	
+SEE ALSO
+	buy

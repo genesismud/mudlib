@@ -1,0 +1,28 @@
+NAME
+        recover - Recover equipment after logging out
+
+SYNOPSIS
+	This is not a command, but a description
+
+DESCRIPTION
+        Every once in a while Armageddon will come and shut down the
+        game. Often you will want to keep the armours and weaponry you
+        have collected before. To do this, you should go to any startup
+        location - the place where you usually start the game will do
+        fine - and type "save" there. The items that should return will
+        glow briefly.
+
+	Objects that should be able to recover though that are stuck,
+	will fail to glow briefly. To see whether an object is able to
+	recover, you might also appraise it.
+
+        There is one catch: you have to return within two hours, or else
+        the items will be lost anyway.
+
+WARNING
+        Armageddon needs some time to restore all your items when you log
+        in. If you quit before all items are restored, then those items
+        will be lost in the void.
+
+SEE ALSO
+	appraise, armageddon

@@ -1,0 +1,26 @@
+NAME
+        skills - see your skills
+
+SYNOPSIS
+        skills
+	skills <player>
+	skills <group>
+
+DESCRIPTION
+        With this command you can see your educational level in the skills
+	that you have learned. If you are a wizard you can see the skills of
+	other players as well.
+
+	Skills are advanced by training, which you can buy either from
+	the local guilds or from wandering masters in the art.
+
+OPTIONS
+        [none]  - see your own skills
+
+        player  - see the skills of an active player (Only for wizards)
+
+ 	group   - will show only the 'fighting', 'magic', 'thief' or 'general'
+		  group skills. 'all' produces the same result as 'skills'.
+
+SEE ALSO
+        stats, vitals, skillist, skillevels, improve, learn

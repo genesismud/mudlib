@@ -1,0 +1,15 @@
+NAME
+	wizopt - set wizard options
+
+ACCESS LEVEL
+	apprentice or higher
+
+DESCRIPTION
+	Front-end to the "options" command. See options.
+
+ARGUMENTS
+	autopwd <on/off>     - Automatic display of the current working 
+                               directory when you change it.
+
+SEE ALSO
+	cd, options

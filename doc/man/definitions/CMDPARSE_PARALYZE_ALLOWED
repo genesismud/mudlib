@@ -1,0 +1,9 @@
+Definition : CMDPARSE_PARALYZE_ALLOWED
+
+Defined in : #include <cmdparse.h>
+
+Description: This definition returns a list of all commands that should always
+             be available, even when a person is paralyzed by doing something
+             else.
+
+Returns    : array of string

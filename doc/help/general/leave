@@ -1,0 +1,26 @@
+NAME
+        leave - leave a team
+
+SYNOPSIS
+	leave
+        leave team
+	leave <person>
+
+
+DESCRIPTION
+        This command is used when you want to leave a team, or if you
+	want to exclude a member in the team that you lead.
+	Leaving a team will automatically put you into verbose mode again
+	if entering the team made you switch to brief mode.
+
+OPTIONS
+        [none] - leave the team you are a member of
+
+	person - a member of the team you lead
+
+	'team' - Leave the team you are a member of.  If you are the
+	         team's leader, the team is completely disbanded.
+
+SEE ALSO
+	invite, join, options, team, teams
+	For general information, see teams

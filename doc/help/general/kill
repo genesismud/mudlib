@@ -1,0 +1,19 @@
+NAME
+        kill - do your best to eliminate someone
+
+SYNOPSIS
+	kill <something>
+
+DESCRIPTION
+        Start hacking away with your weapons, or with feet and fists
+	if you don't have a weapon.
+
+	If you try to kill someone you know, i.e., have been introduced
+	to and/or remember you will have to confirm your kill command
+	by typing it twice unless you use the persons name.
+
+OPTIONS
+        something  - a living being, or in some cases, a dead object
+
+SEE ALSO
+	stop, assist

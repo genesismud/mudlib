@@ -1,0 +1,33 @@
+NAME
+        who - list people
+
+SYNOPSIS
+	who [fimwq]
+
+DESCRIPTION
+        Get a listing of the people logged on. Mortal players see all
+        people they know. Wizards see all players. By default you will get
+        a sorted list of the names of the players you know. An asterisk (*)
+        is added to the names of those players that are not interactive.
+        A name in brackets means the person is currently invisible, though
+        you have powers to see the player anyway.
+
+OPTIONS
+        f - show the names and full titles of the people you know.
+ 
+        i - do not show players that are not interactive (i.e. linkdead)
+ 
+        m - show only the mortal players logged in.
+ 
+        w - show only the wizards logged in.
+	
+	q - show all players in the queue. People whose name you do not
+	    remember are shown as <unknown>. When used, it supercedes all
+	    other options. For wizards, this option is void. (use finger)
+
+NOTE
+        The options 'w' and 'm' are obviously mutually exclusive. If you
+        give them both, you will only get one (I think 'w').
+
+SEE ALSO
+        mwho

@@ -1,0 +1,19 @@
+#include <cmdparse.h>
+
+/*
+ * PARSE_THIS(s, p)
+ *
+ * This define gives access to the function parse_this in the basic soul
+ * COMMAND_DRIVER so that you do not have to copy it everywhere.
+ *
+ * s - the string to parse
+ * p - the pattern to parse with
+ *
+ * For more information see "sman parse_this" for the description of
+ * the function itself.
+ *
+ * An alternative would be to include <files.h> and then do:
+ *
+ *     oblist = (object *)COMMAND_DRIVER->parse_this(args);
+ */
+

@@ -1,0 +1,22 @@
+NAME
+	assist
+
+SYNOPSYS
+	assist
+	assist <name>
+
+DESCRIPTION
+	When a friend of yours is in combat and you want to help him you
+	can try to figure out the exact description of the living your
+	friend is fighting. Since this may not always be easy, you can
+	easily join combat with the third party by using the assist
+	command, therewith assiting your friend in combat.
+
+OPTIONS
+	[none]	If you are in a team, assist a member of the team.
+	<name>	The name or description of the living you want to assist
+		in combat. Note that you will help <name> and attack the
+		enemy of <name>.
+
+SEE ALSO
+	kill

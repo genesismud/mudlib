@@ -1,0 +1,2 @@
+LIVE_I_QUICKNESS	Determines the delay between combat rounds.  Positive
+			values reduce the delay; negative values increase it.

@@ -1,0 +1,17 @@
+NAME
+        help - get help on a specific topic
+
+SYNOPSIS
+	help topics
+	help [g] <topic>
+
+DESCRIPTION
+	This command prints a help page on a specific topic.
+
+OPTIONS
+	topics  - print the list of topics.
+        <topic> - the topic to read the help page on.
+        g       - wizards can use this optional argument to indicate
+        	  that they want to read the mortal (general) help page
+        	  if there is a wizard command with the same name, for
+        	  instance with 'finger' or 'leave'.

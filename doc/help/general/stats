@@ -1,0 +1,20 @@
+NAME
+        stats - see vital statistics
+
+SYNOPSIS
+        stats
+	stats <player>
+ 
+DESCRIPTION
+        With this command you can see your vital statistics. If you are a
+	wizard you can see the stats of other players as well.
+ 
+	For a summary of the possible descriptions, use the "levels" command.
+
+OPTIONS
+        [none]  - see your own stats
+
+        player  - see the stats of an active player [Only for wizards]
+
+SEE ALSO
+	compare, levels, meditate, vitals

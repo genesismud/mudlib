@@ -1,0 +1,26 @@
+NAME
+        improve - improve your skills
+
+SYNOPSIS
+        improve
+	improve <num>
+	improve <name>
+	improve <name> <num>
+
+DESCRIPTION
+	With this command you can improve your skills at different guilds
+	around the world. At some places you might need to study too. 
+
+OPTIONS
+	without argument list what skills can be improved and the cost to
+	raise them one step.
+
+	<num> - List the skills you can improve <num> steps and the cost
+		to do so.
+
+	<name> - Improve that skill one step
+
+	<name> <num> - Improve skill named <name>, <num> steps.
+
+SEE ALSO
+        stats, vitals, skillist, skillevels, learn

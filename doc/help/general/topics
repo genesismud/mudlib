@@ -1,0 +1,26 @@
+You can request help on the following topics with the "help" command.
+/-----------------------------------------------------------------------------\
+|Seeing            | look, examine, search, show                              |
+|Inventories       | inventory, get, drop, put, give, count, appraise         |
+|Doors, Locks, Lids| open, close, lock, unlock, pick, knock, pound            |
+|Communication     | say, shout, whisper, rsay, reply, ask, commune,          |
+|                  | converse, emotions, adverbs, mail, editor                |
+|Introductions     | introduce, remember, forget, remembered, introduced      |
+|Items             | wear, remove, wield, unwield, hold, release, light,      |
+|                  | extinguish, read, drink, eat, buy, sell                  |
+|Combat            | kill, assist, stop                                       |
+|Status            | vitals, stats, skills, compare, health                   |
+|Teams             | invite, join, leave, team                                |
+|Game              | who, help, date, save, quit, escape, password, email     |
+|                  | options, last, restrict                                  |
+|Magic             | spells, cast, abort                                      |
+|Information       | levels, skillevels, skillist, help                       |
+|Bug reports       | (sys)praise, (sys)idea, (sys)typo, (sys)bug              |
+|Thief skills      | backstab, hide, peek, sneak, steal, track                |
+|Burning           | light, extinguish                                        |
+|Guilds            | improve, learn, meditate				      |
+\-----------------------------------------------------------------------------/
+Additionally, some information is available on the following topics:
+
+adverbs, armageddon, emotions, events, experience, general, history, idle,
+races, recover, rules, quicktyper, target, teams, wizapp, wizards, wizhood.

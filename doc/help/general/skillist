@@ -1,0 +1,78 @@
+NAME
+        skillist
+
+SYNOPSIS
+        This is not a command, simply information.
+	
+
+DESCRIPTION
+	There are a number of different skills that you can learn at different
+	places in the game. Below are the 'normal' skills. These are available
+	to most players and can usually be trained to a certain level in not
+	hard to find places. Some are, as you can see, reserved for specific
+	occuptational guilds, though.
+
+	Weapon skills
+		Sword fighting skill
+		Polearms
+	 	Axes
+		Knives
+		Clubs; any blunt weapons really
+		Missiles; rocks, arrows...
+		Javelins, thrown spears...         
+
+	Specialized fighting skills
+		Two handed combat
+			This increases your capability to be effective with
+			multiple weapons.
+		Unarmed combat
+			This lets you use your strength and dexterity in
+			combat. 
+		Fighting while blinded
+			This increases your capability to hit and dodge while
+			fighting in the dark.
+		Parrying with weapons
+			This increases your capability to dodge blows in
+			in combat, IF you wield a weapon.
+		General defensive skill
+			This generally increases your skill at dodging
+			blows from any enemy.
+
+	Magic skills
+		General spellcasting ability.
+		Attack spells.
+		Defensive spells.
+		Healing spells.
+		Illusions.
+		Any other specific spells.
+		Know herbs & plants from spellcasting value.
+		Mix stuff together. Potions and stuff.
+
+	Thief skills
+		Pick locks.
+		Pick pockets.
+		Doing strange stuff in high places.
+		Find/Remove traps without coming to harm.
+		Sneak into rooms.
+		Hide in rooms.
+		Do something bad to someone's back.
+
+	General skills 
+		Appraise an opponent.
+		Find out properties of objects.
+		Value an object.
+		Swim.
+		Climb.
+		Handle animals.
+		Know where you are.
+		Track something in the wild.
+		Hunt for your living.
+		Speak other languages.
+		Be wary of sneak/hide/backstab.
+		Trade with profit.
+
+OPTIONS
+        none
+
+SEE ALSO
+        skills, skillevels, improve, learn

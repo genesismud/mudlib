@@ -1,0 +1,23 @@
+NAME
+	update - remove an object from gamedriver memory
+
+SYNOPSIS
+	update
+        update <file>
+        update -d <files>
+
+DESCRIPTION
+	With this command you remove an object from the gamedriver memory.
+	In case of a clone or load command, the object will be reread from
+	the disk.
+
+OPTIONS
+	<none>	- update the room you are in. After reloading it, all
+		  interactive players are moved back into the room. You
+		  cannot update the starting location of someone if that
+		  person is in the room.
+	<file>	- the path to the file to update.
+	<files>	- the files to the updated. This may contain wildcards.
+
+SEE ALSO
+	clone, destruct, load, remake

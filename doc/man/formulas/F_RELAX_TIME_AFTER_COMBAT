@@ -1,0 +1,10 @@
+Definition : F_RELAX_TIME_AFTER_COMBAT(tme)
+
+Defined in : #include <formulas.h>
+
+Description: After combat ended, the player needs to wait for a certain time
+             before he can quit or linkdie.
+
+Arguments  : int tme - the time() value when the last hit was made.
+
+Returns    : int - the time() value when the player is allowed to quit.

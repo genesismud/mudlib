@@ -1,0 +1,17 @@
+NAME
+        quit - save your character and leave the game
+
+SYNOPSIS
+	quit
+
+DESCRIPTION
+        Your character is saved and you are logged out of the game.
+	You lose most of your possessions, but some special items
+	and your money will return when you log in again. The things
+	you can not keep are dropped in the location where you quit.
+
+	Since quit is not considered to be a part of the game itself,
+	you are not allowed to quit while in combat.
+
+SEE ALSO
+	save, recover

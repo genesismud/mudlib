@@ -1,0 +1,1640 @@
+/*
+ * /cmd/live/state.c
+ *
+ * General commands for finding out a livings state.
+ * The following commands are:
+ *
+ * - adverbs
+ * - compare
+ * - email
+ * - h
+ * - health
+ * - levels
+ * - options
+ * - skills
+ * - stats
+ * - v
+ * - vitals
+ */
+
+#pragma no_clone
+#pragma no_inherit
+#pragma save_binary
+#pragma strict_types
+
+inherit "/cmd/std/command_driver";
+
+#include <adverbs.h>
+#include <cmdparse.h>
+#include <composite.h>
+#include <const.h>
+#include <files.h>
+#include <filter_funs.h>
+#include <language.h>
+#include <login.h>
+#include <macros.h>
+#include <options.h>
+#include <ss_types.h>
+#include <state_desc.h>
+#include <std.h>
+#include <stdproperties.h>
+#include <time.h>
+
+#define SUBLOC_MISCEXTRADESC "_subloc_misc_extra"
+
+/*
+ * Global constants
+ */
+private mixed
+        stat_strings, beauty_strings, 
+        denom_strings, brute_fact, panic_state, fatigue_state,
+        intox_state, head_state, stuff_state, soak_state,
+        improve_fact, skillmap, compare_strings;
+
+private string *stat_names, *health_state, *mana_state, *enc_weight;
+
+private mapping lev_map;
+
+/*
+ * Prototypes
+ */
+public string beauty_text(int num, int sex);
+public varargs string get_proc_text(int num, mixed maindesc,
+                                    int turnpoint, mixed subdesc);
+
+void
+create()
+{
+    seteuid(getuid(this_object())); 
+    
+    /* These global arrays are created once for all since they are used
+       quite often. They should be considered constant, so do not mess
+       with them
+    */
+
+    skillmap =        SS_SKILL_DESC;
+    denom_strings =   SD_STAT_DENOM;
+
+    stat_names =      SD_STAT_NAMES;
+
+    stat_strings =    ({ SD_STATLEV_STR, SD_STATLEV_DEX, SD_STATLEV_CON,
+                         SD_STATLEV_INT, SD_STATLEV_WIS, SD_STATLEV_DIS, });
+
+    compare_strings = ({ SD_COMPARE_STR, SD_COMPARE_DEX, SD_COMPARE_CON,
+                         SD_COMPARE_INT, SD_COMPARE_WIS, SD_COMPARE_DIS,
+                         SD_COMPARE_HIT, SD_COMPARE_PEN, SD_COMPARE_AC });
+
+    beauty_strings =  ({ SD_BEAUTY_FEMALE, SD_BEAUTY_MALE });
+
+    brute_fact =      SD_BRUTE_FACT;
+    health_state =    SD_HEALTH;
+    mana_state =      SD_MANA;
+    panic_state =     SD_PANIC;
+    fatigue_state =   SD_FATIGUE;
+    soak_state =      SD_SOAK;
+    stuff_state =     SD_STUFF;
+    intox_state =     SD_INTOX;
+    improve_fact =    SD_IMPROVE;
+    enc_weight =      SD_ENC_WEIGHT;
+}
+
+/* **************************************************************************
+ * Return a proper name of the soul in order to get a nice printout.
+ */
+string
+get_soul_id()
+{
+    return "state";
+}
+
+/* **************************************************************************
+ * This is a command soul.
+ */
+int
+query_cmd_soul()
+{
+    return 1;
+}
+
+/* **************************************************************************
+ * The list of verbs and functions. Please add new in alfabetical order.
+ */
+mapping
+query_cmdlist()
+{
+    return ([
+              "adverbs":"adverbs",
+
+              "compare":"compare",
+
+              "email":"email",
+
+              "h":"health",
+              "health":"health",
+
+              "levels":"levels",
+
+              "options":"options",
+
+              "skills":"show_skills",
+              "stats":"show_stats",
+
+              "v":"vitals",
+              "vitals":"vitals",
+            ]);
+}
+
+/*
+ * Function name: using_soul
+ * Description:   Called once by the living object using this soul. Adds
+ *                  sublocations responsible for extra descriptions of the
+ *                  living object.
+ */
+public void 
+using_soul(object live)
+{
+    live->add_subloc(SUBLOC_MISCEXTRADESC, file_name(this_object()));
+    live->add_textgiver(file_name(this_object()));
+}
+
+public string
+show_subloc_size(object on, object for_obj)
+{
+    string race, res;
+    int val, rval, *proc;
+
+    race = on->query_race();
+
+    if (member_array(race, RACES) >= 0)
+    {
+        val = on->query_prop(CONT_I_HEIGHT);
+        rval = RACEATTR[race][0];
+        val = 100 * val / (rval ? rval : val);
+        proc = SPREAD_PROC;
+
+        for (rval = 0; rval < sizeof(proc); rval++)
+            if (val <= proc[rval])
+                break;
+        rval = (rval < sizeof(proc) ? rval : sizeof(proc) -1 );
+
+        res = " " + HEIGHTDESC[rval] + " and ";
+
+        val = on->query_prop(CONT_I_WEIGHT) / on->query_prop(CONT_I_HEIGHT);
+        rval = RACEATTR[race][5];
+        val = 100 * val / (rval ? rval : val);
+        proc = SPREAD_PROC;
+
+        for (rval = 0; rval < sizeof(proc); rval++)
+            if (val <= proc[rval])
+                break;
+        rval = (rval < sizeof(proc) ? rval : sizeof(proc) -1 );
+
+        res += WIDTHDESC[rval] + " for " + LANG_ADDART(on->query_race_name()) +
+            ".\n";
+    }
+    else
+        res = "";
+
+    return res;
+}
+
+public string
+show_subloc_looks(object on, object for_obj)
+{
+    if (on->query_prop(NPC_I_NO_LOOKS))
+        return "";
+
+    return (for_obj == on ?
+                "You look " : capitalize(on->query_pronoun()) + " looks ") +
+                beauty_text(for_obj->my_opinion(on),
+                            (on->query_gender() == G_FEMALE ? 0 : 1)) + ".\n";
+}
+
+public string
+show_subloc_fights(object on, object for_obj)
+{
+    object eob;
+
+    eob = (object)on->query_attack();
+    
+    return " fighting " + (eob == for_obj ? "you" : 
+                           (string)eob->query_the_name(for_obj)) + ".\n";
+}
+
+public string
+show_subloc_health(object on, object for_obj)
+{
+    int hp, mhp;
+
+    hp = on->query_hp();
+    mhp = on->query_max_hp();
+    if (mhp == 0)
+        mhp = 1;
+
+    return get_proc_text((hp * 100) / mhp, health_state, 0, ({}) );
+}
+
+/*
+ * Function name: show_subloc
+ * Description:   Shows the specific sublocation description for a living
+ */
+public string 
+show_subloc(string subloc, object on, object for_obj)
+{
+    string res, cap_pronoun, cap_pronoun_verb, tmp;
+
+    if (on->query_prop(TEMP_SUBLOC_SHOW_ONLY_THINGS))
+        return "";
+
+    if (for_obj == on)
+    {
+        res = "You are";
+        cap_pronoun_verb = res;
+        cap_pronoun = "You are ";
+    }
+    else
+    {
+        res = capitalize(on->query_pronoun()) + " is";
+        cap_pronoun_verb = res;
+        cap_pronoun = capitalize(on->query_pronoun()) + " seems to be ";
+    }
+    
+    if (strlen(tmp = show_subloc_size(on, for_obj)))
+        res += tmp;
+    else
+        res = "";
+
+    res += show_subloc_looks(on, for_obj);
+    
+    if (on->query_attack())
+        res += cap_pronoun_verb + show_subloc_fights(on, for_obj);
+
+    res += cap_pronoun + show_subloc_health(on, for_obj) + ".\n";
+
+    return res;
+}
+
+/****************************************************************
+ *
+ * A textgiver must supply these functions
+ */
+
+/*
+ * Returns true if this textgiver describes the given stat
+ */
+public int 
+desc_stat(int stat)
+{
+    return (stat >= 0 && stat <= SS_NO_EXP_STATS);
+}
+
+/*
+ * Returns true if this textgiver describes the given skill
+ */
+public int 
+desc_skill(int skill)
+{
+    if (sizeof(skillmap[skill]))
+        return 1;
+    else
+        return 0;
+}
+
+/*
+ * Function name: query_stat_string
+ * Description:   Gives text information corresponding to a stat
+ * Parameters:    stat: index in stat array
+ *                value: stat value
+ *                negative value gives the statstring with index corresponding
+ *                to -value
+ * Returns:       string corresponding to stat/value
+ */
+public string
+query_stat_string(int stat, int value)
+{
+    int level;
+
+    if (stat < 0 || stat >= SS_NO_EXP_STATS)
+    {
+        return "";
+    }
+    if (value <= 0)
+    {
+        if (value < -sizeof(stat_strings[stat]))
+        {
+            value = 1-sizeof(stat_strings[stat]);
+        }
+        return stat_strings[stat][-value];
+    }
+    level = SD_NUM_STATLEVS;
+    while(--level >= 0)
+    {
+        if (value >= SD_STATLEVELS[level])
+        {
+            return stat_strings[stat][level];
+        }
+    }
+    /* Should never happen. */
+    return stat_strings[stat][0];
+}
+
+public varargs string
+get_proc_text(int num, mixed maindesc, int turnpoint, mixed subdesc)
+{
+    int a, b, c, d,j;
+    mixed subs;
+
+    if (!sizeof(maindesc))
+        return ">normal<";
+
+    if (num < 0)
+        num = 0;
+    if (num > 99)
+        num = 99;
+
+    j = sizeof(maindesc) * num / 100;    
+    
+    if (!pointerp(subdesc))
+        subs = denom_strings;
+    else if (sizeof(subdesc))
+        subs = subdesc;
+    else
+        return maindesc[j];
+
+    a = num - (j * 100 / sizeof(maindesc));
+
+    b = (sizeof(subs) * a * sizeof(maindesc)) / 100;
+
+    if (j < turnpoint)
+        b = (sizeof(subs) - 1) - b;
+
+    return subs[b] + maindesc[j];
+}
+
+/* **************************************************************************
+ * Here follows some support functions. 
+ * **************************************************************************/
+
+/*
+ * Function name: beauty_text
+ * Description:   Return corresponding text to a certain combination of
+ *                appearance and opinion
+ */
+public string
+beauty_text(int  num, int sex)
+{
+    if (sex != 1)
+        sex = 0;
+    if (num >= 100)
+        num = 99;
+    if (num < 0)
+        num = 0;
+    if (!pointerp(beauty_strings) ||
+        !pointerp(beauty_strings[sex]))
+    {
+        log_file("SKUMBUG", ctime(time()) + " " +
+                 file_name(this_object()) + "\n");
+        create();
+        return beauty_text(num, sex);
+    }
+    return beauty_strings[sex][sizeof(beauty_strings[sex]) * num / 100];
+}
+
+/* **************************************************************************
+ * Here follows the actual functions. Please add new functions in the 
+ * same order as in the function name list.
+ * **************************************************************************/
+
+/*
+ * Adverbs - list the adverbs available to the game.
+ */
+
+/*
+ * Function name: write_adverbs
+ * Description  : Print the list of found adverbs to the screen of the player
+ *                in a nice and tabulated way. It also prints the adverb
+ *                replacements suitable for this list.
+ * Arguments    : string *adverb_list - the list of adverbs to print.
+ *                int total - the total number of adverbs.
+ */
+void
+write_adverbs(string *adverb_list, int total)
+{
+    string  text;
+    string *words;
+    mapping replacements;
+    int     index;
+    int     size;
+
+    size = sizeof(adverb_list);
+    write("From the total of " + total + " adverbs, " + size +
+        (size == 1 ? " matches" : " match") + " your inquiry.\n\n");
+
+    index = -1;
+    size = strlen(ALPHABET);
+    while(++index < size)
+    {
+	words = filter(adverb_list,
+            &wildmatch((ALPHABET[index..index] + "*"), ));
+
+	if (!sizeof(words))
+	{
+	    continue;
+	}
+
+	if (strlen(words[0]) < 16)
+	{
+	    words[0] = (words[0] + "                ")[..15];
+	}
+	write(sprintf("%-76#s\n\n", implode(words, "\n")));
+    }
+
+    text = "";
+    index = -1;
+    size = sizeof(adverb_list);
+    replacements = (mapping)ADVERBS_FILE->query_all_adverb_replacements();
+    while(++index < size)
+    {
+        if (strlen(replacements[adverb_list[index]]))
+        {
+            text += sprintf("%-16s: %s\n", adverb_list[index],
+                replacements[adverb_list[index]]);
+        }
+    }
+    if (strlen(text))
+    {
+        write("Of these, the following adverbs are replaced with a more " +
+            "suitable phrase:\n\n" + text);
+    }
+}
+
+int
+adverbs(string str)
+{
+    string *adverb_list;
+    string *words;
+    string *parts;
+    mapping replacements;
+    int     index;
+    int     size;
+
+    if (!strlen(str))
+    {
+        notify_fail("Syntax: adverbs all  or  list  or  *\n" +
+            "        adverbs <letter>\n" +
+            "        adverbs <wildcards>\n" +
+            "        adverbs replace[ments]\n" +
+            "Commas may be used to specify multiple letters or wildcards.\n");
+        return 0;
+    }
+
+    /* Player wants to see the replacements only. */
+    if (wildmatch("replace*", str))
+    {
+        write("\nThe following adverbs are replaced with a more suitable " +
+            "phrase:\n\n");
+        replacements = ADVERBS_FILE->query_all_adverb_replacements();
+        adverb_list = sort_array(m_indices(replacements));
+        index = -1;
+        size = sizeof(adverb_list);
+        while(++index < size)
+        {
+            write(sprintf("%-16s: %s\n", adverb_list[index],
+                replacements[adverb_list[index]]));
+        }
+        return 1;
+    }
+
+    adverb_list = (string *)ADVERBS_FILE->query_all_adverbs();
+    /* Player wants to see all adverbs. */
+    if ((str == "list") ||
+        (str == "all") ||
+        (str == "*"))
+    {
+        write(".   Use the period to not use any adverb at all, not even " +
+            "the default.\n\n");
+        write_adverbs(adverb_list, sizeof(adverb_list));
+        return 1;
+    }
+
+    /* Make lower case, remove spaces and split on commas. */
+    parts = explode(implode(explode(lower_case(str), " "), ""), ",");
+    index = -1;
+    size = sizeof(parts);
+    words = ({ });
+    while(++index < size)
+    {
+        if (parts[index] == ".")
+        {
+            write(".   Use the period to not use any adverb at all, not " +
+                "even the default.\n\n");
+            continue;
+        }
+        if (strlen(parts[index]) == 1)
+        {
+            parts[index] += "*";
+        }
+        words |= filter(adverb_list, &wildmatch(parts[index], ));
+    }
+
+    if (!sizeof(words))
+    {
+        write("No adverbs found with those specifications.\n");
+        return 1;
+    }
+
+    write_adverbs(sort_array(words), sizeof(adverb_list));
+    return 1;
+}
+
+/*
+ * Compare - compare the stats of two livings, or compare two items.
+ */
+
+/*
+ * Function name: compare_living
+ * Description  : Compares the stats of two livings. The left hand side can
+ *                be this_player().
+ * Arguments    : object living1 - the left hand side to compare.
+ *                object living2 - the right hand side to compare.
+ */
+void
+compare_living(object living1, object living2)
+{
+    int skill = (1000 / (1 + this_player()->query_skill(SS_APPR_MON)));
+    int seed  = atoi(OB_NUM(living1)) + atoi(OB_NUM(living2));
+    int index = -1;
+    int stat1;
+    int stat2;
+    int swap;
+    string str1 = ((this_player() == living1) ? "you" :
+                  living1->query_the_name(this_player()));
+    string str2 = living2->query_the_name(this_player());
+
+    /* Someone might actually want to compare two livings with the same
+     * description.
+     */
+    if (str1 == str2)
+    {
+        str1 = "the first " + living1->query_nonmet_name();
+        str2 = "the second " + living2->query_nonmet_name();
+    }
+
+    /* Loop over all known stats. */
+    while(++index < SS_NO_EXP_STATS)
+    {
+        stat1 = living1->query_stat(index) + random(skill, seed + index);
+        stat2 = living2->query_stat(index) + random(skill, seed + index + 27);
+
+        if (stat1 > stat2)
+        {
+            stat1 = (100 - ((80 * stat2) / stat1));
+            swap = 0;
+        }
+        else
+        {
+            stat1 = (100 - ((80 * stat1) / stat2));
+            swap = 1;
+        }
+        stat1 = ((stat1 * sizeof(compare_strings[index])) / 100);
+        stat1 = ((stat1 > 3) ? 3 : stat1);
+
+        /* Print the message. */
+        if (swap)
+        {
+            write(capitalize(str2) + " is " +
+                compare_strings[index][stat1] + " " + str1 + ".\n");
+        }
+        else
+        {
+            write(((str1 == "you") ? "You are " :
+                (capitalize(str1) + " is ")) +
+                compare_strings[index][stat1] + " " + str2 + ".\n");
+        }
+    }
+}
+
+/*
+ * Function name: compare_weapon
+ * Description  : Compares the stats of two weapons.
+ * Arguments    : object weapon1 - the left hand side to compare.
+ *                object weapon2 - the right hand side to compare.
+ */
+void
+compare_weapon(object weapon1, object weapon2)
+{
+    int skill = (2000 / (1 + this_player()->query_skill(SS_APPR_OBJ) +
+        this_player()->query_skill(SS_WEP_FIRST + weapon1->query_wt())));
+    int seed = atoi(OB_NUM(weapon1)) + atoi(OB_NUM(weapon2));
+    int swap;
+    int stat1;
+    int stat2;
+    string str1;
+    string str2;
+    string print1;
+    string print2;
+    object tmp;
+
+    /* Always use the same order. After all, we don't want "compare X with Y"
+     * to differ from "compare Y with X".
+     */
+    if (OB_NUM(weapon1) > OB_NUM(weapon2))
+    {
+        tmp = weapon1;
+        weapon1 = weapon2;
+        weapon2 = tmp;
+        swap = 1;
+    }
+
+    str1 = weapon1->short(this_player());
+    str2 = weapon2->short(this_player());
+
+    /* Some people will want to compare items with the same description. */
+    if (str1 == str2)
+    {
+        if (swap)
+        {
+            str1 = "first " + str1;
+            str2 = "second " + str2;
+        }
+        else
+        {
+            str2 = "first " + str2;
+            str1 = "second " + str1;
+        }
+    }
+
+    /* Gather the to-hit values. */
+    stat1 = weapon1->query_hit() + random(skill, seed);
+    stat2 = weapon2->query_hit() + random(skill, seed + 27);
+
+    if (stat1 > stat2)
+    {
+        stat1 = (100 - ((80 * stat2) / stat1));
+        print1 = str1;
+        print2 = str2;
+    }
+    else
+    {
+        stat1 = (100 - ((80 * stat1) / stat2));
+        print1 = str2;
+        print2 = str1;
+    }
+
+    stat1 = ((stat1 * sizeof(compare_strings[6])) / 100);
+    write("Hitting someone with the " + print1 + " is " +
+        compare_strings[6][((stat1 > 3) ? 3 : stat1)] + " the " +
+        print2 + " and ");
+
+    /* Compare the penetration values. */
+    stat1 = weapon1->query_pen() + random(skill, seed);
+    stat2 = weapon2->query_pen() + random(skill, seed + 27);
+
+    if (stat1 > stat2)
+    {
+        stat1 = (100 - ((80 * stat2) / stat1));
+        print1 = str1;
+        print2 = str2;
+    }
+    else
+    {
+        stat1 = (100 - ((80 * stat1) / stat2));
+        print1 = str2;
+        print2 = str1;
+    }
+
+    stat1 = ((stat1 * sizeof(compare_strings[7])) / 100);
+    write("damage inflicted by the " + print1 + " is " +
+        compare_strings[7][((stat1 > 3) ? 3 : stat1)] + " the " +
+        print2 + ".\n");
+}
+
+/*
+ * Function name: compare_armour
+ * Description  : Compares the stats of two armour.
+ * Arguments    : object armour1 - the left hand side to compare.
+ *                object armour2 - the right hand side to compare.
+ */
+void
+compare_armour(object armour1, object armour2)
+{
+    int skill = (1000 / (1 + this_player()->query_skill(SS_APPR_OBJ)));
+    int seed  = atoi(OB_NUM(armour1)) + atoi(OB_NUM(armour2));
+    int swap;
+    int stat1;
+    int stat2;
+    string str1;
+    string str2;
+    string print1;
+    string print2;
+    object tmp;
+
+    /* Always use the same order. After all, we don't want "compare X with Y"
+     * to differ from "compare Y with X".
+     */
+    if (OB_NUM(armour1) > OB_NUM(armour2))
+    {
+        tmp = armour1;
+        armour1 = armour2;
+        armour2 = tmp;
+	swap = 1;
+    }
+
+    str1 = armour1->short(this_player());
+    str2 = armour2->short(this_player());
+
+    /* Some people will want to compare items with the same description. */
+    if (str1 == str2)
+    {
+        if (swap)
+        {
+            str1 = "first " + str1;
+            str2 = "second " + str2;
+        }
+        else
+        {
+            str2 = "first " + str2;
+            str1 = "second " + str1;
+        }
+    }
+
+    /* Gather the armour class. */
+    stat1 = armour1->query_ac() + random(skill, seed);
+    stat2 = armour2->query_ac() + random(skill, seed + 27);
+
+    if (stat1 > stat2)
+    {
+        stat1 = (100 - ((80 * stat2) / stat1));
+        print1 = str1;
+        print2 = str2;
+    }
+    else
+    {
+        stat1 = (100 - ((80 * stat1) / stat2));
+        print1 = str2;
+        print2 = str1;
+    }
+
+    stat1 = ((stat1 * sizeof(compare_strings[8])) / 100);
+    write("The " + print1 + " gives " +
+        compare_strings[8][((stat1 > 3) ? 3 : stat1)] + " the " +
+        print2 + ".\n");
+}
+
+int
+compare(string str)
+{
+    string str1;
+    string str2;
+    object *oblist;
+    object obj1;
+    object obj2;
+
+    if (!strlen(str) ||
+        sscanf(str, "%s with %s", str1, str2) != 2)
+    {
+        notify_fail("Compare <whom/what> with <whom/what>?\n");
+        return 0;
+    }
+
+    /* If we compare 'stats', then we are the left party. */
+    if (str1 == "stats")
+    {
+        obj1 = this_player();
+    }
+    else
+    /* Else, see the left hand side of whom/what we want to compare. */
+    {
+        oblist = parse_this(str1, "[the] %i");
+        if (sizeof(oblist) != 1)
+        {
+            notify_fail("Compare <whom/what> with <whom/what>?\n");
+            return 0;
+        }
+        obj1 = oblist[0];
+    }
+
+    if (str2 == "enemy")
+    {
+        if (!objectp(obj1->query_attack()))
+        {
+            notify_fail(((obj1 == this_player()) ? "You are" :
+                (obj1->query_The_name(this_player()) + " is")) +
+                " not fighting anyone.\n");
+            return 0;
+        }
+
+        if (!CAN_SEE_IN_ROOM(this_player()) ||
+            !CAN_SEE(this_player(), obj1->query_attack()))
+        {
+            notify_fail("You cannot see " + ((obj1 == this_player()) ? "your" :
+                (obj1->query_the_name(this_player()) + "'s")) + " enemy.\n");
+            return 0;
+        }
+
+        oblist = ({ obj1->query_attack() });
+    }
+    else
+    /* Get the right hand side of what we want to compare. */
+    {
+        oblist = parse_this(str2, "[the] %i");
+        if (sizeof(oblist) != 1)
+        {
+            notify_fail("Compare <whom/what> with <whom/what>?\n");
+            return 0;
+        }
+    }
+    obj2 = oblist[0];
+
+    /* Yes, people will want to do the obvious. */
+    if (obj1 == obj2)
+    {
+        notify_fail("It is pointless to compare something to itself.\n");
+        return 0;
+    }
+
+    /* Compare the stats of two livings. */
+    if (living(obj1))
+    {
+        if (!living(obj2))
+        {
+            if (obj1 == this_player())
+            {
+                notify_fail("You can only compare your stats to those of " +
+                    "another living.\n");
+                return 0;
+            }
+            notify_fail("The stats of " +
+                obj1->query_the_name(this_player()) +
+                " can only be compared to those of another living.\n" );
+            return 0;
+        }
+
+        compare_living(obj1, obj2);
+        return 1;
+    }
+
+    str1 = function_exists("create_object", obj1);
+    str2 = function_exists("create_object", obj2);
+
+    /* Compare two weapons. */
+    if (str1 == WEAPON_OBJECT)
+    {
+        if (str2 != WEAPON_OBJECT)
+        {
+            notify_fail("The " + obj1->short(this_player()) +
+                " can only be compared to another weapon.\n");
+            return 0;
+        }
+
+        if (obj1->query_wt() != obj2->query_wt())
+        {
+            notify_fail("The " + obj1->short(this_player()) +
+                " can only be compared to another weapon of the same " +
+                "type.\n");
+            return 0;
+        }
+
+        compare_weapon(obj1, obj2);
+        return 1;
+    }
+
+    /* Compare two armours. */
+    if (str1 == ARMOUR_OBJECT)
+    {
+        if (str2 != ARMOUR_OBJECT)
+        {
+            notify_fail("The " + obj1->short(this_player()) +
+                " can only be compared to another armour.\n");
+            return 0;
+        }
+
+        if (obj1->query_at() != obj2->query_at())
+        {
+            notify_fail("The " + obj1->short(this_player()) +
+                " can only be compared to another armour of the same " +
+                "type.\n");
+            return 0;
+        }
+
+        compare_armour(obj1, obj2);
+        return 1;
+    }
+
+    notify_fail("It does not seem possible to compare " +
+        LANG_THESHORT(obj1) + " with " + LANG_THESHORT(obj2) + ".\n");
+    return 0;
+}
+
+/*
+ * email - Display/change your email address.
+ */
+int
+email(string str)
+{
+    if (!stringp(str))
+    {
+        write("Your current email address is: " +
+            this_player()->query_mailaddr() + "\n");
+        return 1;
+    }
+
+    this_player()->set_mailaddr(str);
+    write("Changed your email address.\n");
+    return 1;
+}
+
+/*
+ * health - Display your health or that of someone else.
+ */
+int
+health(string str)
+{
+    object *oblist = ({ });
+    int index;
+    int size;
+    int display_self;
+
+    str = (stringp(str) ? str : "");
+
+    switch(str)
+    {
+    case "":
+        display_self = 1;
+        break;
+
+    case "enemy":
+        if (!objectp(this_player()->query_attack()))
+        {
+            notify_fail("You are not fighting anyone.\n");
+            return 0;
+        }
+
+        if (!CAN_SEE_IN_ROOM(this_player()) ||
+            !CAN_SEE(this_player(), this_player()->query_attack()))
+        {
+            notify_fail("You cannot see your enemy.\n");
+            return 0;
+        }
+
+        oblist = ({ this_player()->query_attack() });
+        break;
+
+    case "team":
+        oblist = this_player()->query_team_others();
+        if (!sizeof(oblist))
+        {
+            str = "noteam";
+            write("You are not in a team with anyone.\n");
+        }
+
+        if (!CAN_SEE_IN_ROOM(this_player()))
+        {
+            notify_fail("It is too dark to see.\n");
+            return 0;
+        }
+
+        /* Only the team members in the environment of the player. */
+        oblist &= all_inventory(environment(this_player()));
+
+        oblist = FILTER_CAN_SEE(oblist, this_player());
+        if (!sizeof(oblist) &&
+            (str != "noteam"))
+        {
+            write("You cannot determine the health of any team member.\n");
+        }
+
+        display_self = 1;
+        break;
+
+    case "all":
+        display_self = 1;
+        /* Intentionally no "break". We need to catch "default" too. */
+
+    default:
+        oblist = parse_this(str, "[the] %l") - all_inventory(this_player());
+        if (!display_self &&
+            !sizeof(oblist))
+        {
+            notify_fail("Determine whose health?\n");
+            return 0;
+        }
+    }
+
+    if (display_self)
+    {
+        size = ((this_player()->query_hp() * 100) /
+            this_player()->query_max_hp());
+        write("You are physically " +
+            get_proc_text(size, health_state, 0, ({ })));
+        size = ((this_player()->query_mana() * 100) /
+            this_player()->query_max_mana());
+        write(" and mentally " + get_proc_text(size, mana_state, 0, ({ })) +
+            ".\n");
+    }
+    else if (!sizeof(oblist))
+    {
+        write("You can only determine the health of those you can see.\n");
+        return 1;
+    }
+
+    index = -1;
+    size = sizeof(oblist);
+    while(++index < size)
+    {
+        write(oblist[index]->query_The_name(this_player()) + " is " +
+            show_subloc_health(oblist[index], this_player()) + ".\n");
+    }
+    return 1;
+}
+
+/*
+ * levels - Print a summary of different levels of different things
+ */
+public int
+levels(string str)
+{
+    string *ix, *levs;
+
+    if (!mappingp(lev_map))
+        lev_map = SD_LEVEL_MAP;
+
+    ix = sort_array(m_indices(lev_map));
+
+    if (!str)
+    {
+        notify_fail("Available level descriptions:\n" + 
+                    break_string(COMPOSITE_WORDS(ix) + ".", 70, 3) + "\n");
+        return 0;
+    }
+    levs = lev_map[str];
+    if (!sizeof(levs))
+    {
+        notify_fail("No such level descriptions. Available:\n" + 
+                    break_string(COMPOSITE_WORDS(ix) + ".", 70, 3) + "\n");
+        return 0;
+    }        
+    write("Level descriptions for: " + capitalize(str) + "\n" +
+          break_string(COMPOSITE_WORDS(levs) + ".", 70, 3) + "\n");
+    return 1;
+}
+
+/* **************************************************************************
+ * options - Change/view the options
+ */
+nomask int
+options(string arg)
+{
+    string        *args, rest;
+    int                wi;
+
+    if (!stringp(arg))
+    {
+        options("morelen");
+        options("screenwidth");
+        options("brief");
+        options("echo");
+        options("wimpy");
+        options("see");
+        options("unarmed");
+        options("gagmisses");
+//        options("merciful");
+        options("autowrap");
+	if (this_player()->query_wiz_level())
+	{
+	    options("autopwd");
+	}
+        return 1;
+    }
+    
+    args = explode(arg, " ");
+    if (sizeof(args) == 1)
+    {
+        switch(arg)
+        {
+        case "morelen":
+        case "more":
+            write("More length:     " +
+                this_player()->query_option(OPT_MORE_LEN) + "\n");
+            break;
+
+        case "screenwidth":
+        case "sw":
+            wi = this_player()->query_option(OPT_SCREEN_WIDTH);
+            write("Screen width:    " + ((wi > -1) ? ("" + wi) : "Off") + "\n");
+            break;
+
+        case "brief":
+            write("Brief display:   " +
+                (this_player()->query_option(OPT_BRIEF) ? "On" : "Off") + "\n");
+            break;
+
+        case "echo":
+            write("Echo commands:   " +
+                (this_player()->query_option(OPT_ECHO) ? "On" : "Off") + "\n");
+            break;
+
+        case "wimpy":
+            wi = this_player()->query_whimpy();
+            write("Wimpy at:       '");
+            if (wi)
+            {
+                wi = wi * sizeof(health_state) / 100;
+                write(capitalize(health_state[wi]) + "'\n");
+            }
+            else
+                write("Brave'\n");
+            break;
+            
+        case "see":
+            write("See fights:      " +
+                (this_player()->query_option(OPT_NO_FIGHTS) ?
+		"Off" : "On") + "\n");
+            break;
+
+        case "unarmed":
+            write("Unarmed combat:  " + 
+                (this_player()->query_option(OPT_UNARMED_OFF) ? 
+                "Off" : "On") + "\n");
+            break;
+
+        case "gagmisses":
+            write("Gag misses:      " + 
+                (this_player()->query_option(OPT_GAG_MISSES) ?
+                "On" : "Off") + "\n");
+            break;
+
+        case "merciful":
+            write("Merciful combat: " + 
+                (this_player()->query_option(OPT_MERCIFUL_COMBAT) ?
+                "On" : "Off") + "\n");
+            break;
+
+        case "autowrap":
+            write("Auto-wrapping:   " + 
+                (this_player()->query_option(OPT_AUTOWRAP) ?
+                "On" : "Off") + "\n");
+            break;
+
+        case "autopwd":
+	case "pwd":
+	    if (this_player()->query_wiz_level())
+	    {
+	        write("Auto pwd on cd:  " +
+		    (this_player()->query_option(OPT_AUTO_PWD) ?
+		    "On" : "Off") + "\n");
+		break;
+	    }
+	    /* Intentional fallthrough to default if not a wizard. */
+
+	default:
+            return notify_fail("Syntax error: No such option.\n");
+            break;
+        }
+        return 1;
+    }
+
+    rest = implode(args[1..], " ");
+    
+    switch(args[0])
+    {
+    case "morelen":
+    case "more":
+        if (!this_player()->set_option(OPT_MORE_LEN, atoi(args[1])))
+        {
+            notify_fail("Syntax error: More length must be in the range of " +
+                "1 - 100.\n");
+            return 0;
+        }
+        options("morelen");
+        break;
+
+    case "screenwidth":
+    case "sw":
+        if (args[1] == "off")
+        {
+            if (!this_player()->set_option(OPT_SCREEN_WIDTH, -1))
+            {
+                notify_fail("Failed to reset screen width setting. Please " +
+                    "make a sysbug report.\n");
+                return 0;
+            }
+        }
+        else if (!this_player()->set_option(OPT_SCREEN_WIDTH, atoi(args[1])))
+        {
+            notify_fail("Syntax error: Screen width must be in the range " +
+                "40 - 200 or 'off' to disable wrapping by the game.\n");
+            return 0;
+        }
+        options("screenwidth");
+        break;
+        
+    case "brief":
+        this_player()->set_option(OPT_BRIEF, (args[1] == "on"));
+        options("brief");
+        break;
+
+    case "echo":
+        this_player()->set_option(OPT_ECHO, (args[1] == "on"));
+        options("echo");
+        break;
+
+    case "wimpy":
+        if (args[1] == "brave")
+        {
+            this_player()->set_whimpy(0);
+        }            
+        else if (args[1] == "?")
+            write("brave, " + implode(health_state, ", ") + "\n");
+        else
+        {
+            wi = member_array(rest, health_state);
+        
+            if (wi < 0)
+            {
+                notify_fail("No such health descriptions (" + rest +
+                    ") Available:\n" +
+                    break_string(COMPOSITE_WORDS(health_state) + ".", 70, 3) +
+                    "\n");
+                return 0;
+            }
+
+            wi = (100 * (wi + 1)) / sizeof(health_state);
+            if (wi > 99)
+                wi = 99;
+
+            this_player()->set_whimpy(wi);
+        }
+        options("wimpy");
+        break;
+
+    case "see":
+        this_player()->set_option(OPT_NO_FIGHTS, (args[1] != "fights"));
+        options("see");
+        break;
+
+    case "unarmed":
+        /* This to accomodate people typing "options unarmed combat" */
+        args -= ({ "combat" });
+        if (sizeof(args) == 2)
+        {
+            this_player()->set_option(OPT_UNARMED_OFF, (args[1] != "on"));
+            this_player()->update_procuse();
+        }
+        options("unarmed");
+        break;
+
+    case "gagmisses":
+        this_player()->set_option(OPT_GAG_MISSES, (args[1] == "on"));
+        options("gagmisses");
+        break;
+
+    case "merciful":
+        this_player()->set_option(OPT_MERCIFUL_COMBAT, (args[1] == "on"));
+        options("merciful");
+        break;
+
+    case "autowrap":
+        this_player()->set_option(OPT_AUTOWRAP, (args[1] == "on"));
+        options("autowrap");
+        break;
+
+    case "autopwd":
+    case "pwd":
+        if (this_player()->query_wiz_level())
+	{
+	    if (args[1] == "on")
+                this_player()->set_option(OPT_AUTO_PWD, 1);
+            else
+	        this_player()->set_option(OPT_AUTO_PWD, 0);
+            options("autopwd");
+	    break;
+	}
+        /* Intentional fallthrough to default if not a wizard. */
+
+    default:
+        return notify_fail("Syntax error: No such option.\n");
+        break;
+    }
+    return 1;
+}
+
+/*
+ * vitals - Give vital state information about the living.
+ */
+varargs int
+vitals(string str, object target = this_player())
+{
+    string name;
+    int self;
+    int value1;
+    int value2;
+
+    if (!strlen(str))
+    {
+        str = "all";
+    }
+
+    self = (target == this_player());
+    name = capitalize(target->query_real_name());
+    switch(str)
+    {
+    case "age":
+        write((self ? "You are" : (name + " is")) + " " +
+            CONVTIME(target->query_age() * 2) + " of age.\n");
+        return 1;
+
+    case "align":
+    case "alignment":
+        write((self ? "You are" : (name + " is")) + " " +
+            target->query_align_text() + ".\n");
+        return 1;
+
+    case "all":
+        vitals("health", this_player());
+        vitals("panic", this_player());
+        vitals("stuffed", this_player());
+        vitals("intox", this_player());
+        vitals("alignment", this_player());
+        vitals("encumbrance", this_player());
+        vitals("age", this_player());
+        return 1;
+
+    case "encumbrance":
+        value1 = target->query_encumberance_weight();
+        write((self ? "You are" : (name + " is")) + " " +
+            get_proc_text(value1, enc_weight, 0, ({ })) + ".\n");
+        return 1;
+
+    case "health":
+    case "mana":
+        value1 = ((target->query_hp() * 100) / target->query_max_hp());
+        write((self ? "You are" : (name + " is")) + " physically " + 
+            get_proc_text(value1, health_state, 0, ({ })));
+        value1 = ((target->query_mana() * 100) / target->query_max_mana());
+        write(" and mentally " + get_proc_text(value1, mana_state, 0, ({ })) +
+            ".\n");
+        return 1;
+
+    case "intox":
+    case "intoxication":
+        value1 = target->query_prop(LIVE_I_MAX_INTOX);
+        value2 = target->query_intoxicated();
+        value1 = (100 * value2 / ((value1 != 0) ? value1 : value2));
+        write((self ? "You are" : (name + " is")) + " " +
+            (value2 ? get_proc_text(value1, intox_state, 0) : "sober") +
+            ".\n");
+        return 1;
+
+    case "panic":
+    case "fatigue":
+        value1 = (10 + (target->query_stat(SS_DIS) * 3));
+        value2 = target->query_panic();
+        value1 = (100 * value2 / ((value1 != 0) ? value1 : value2));
+        write((self ? "You feel" : (name + " feels")) + " " +
+            get_proc_text(value1, panic_state, 2) + " and ");
+
+        value1 = target->query_max_fatigue();
+        value2 = value1 - target->query_fatigue();
+        value1 = (100 * value2 / ((value1 != 0) ? value1 : value2));
+        write(get_proc_text(value1, fatigue_state, 1) + ".\n");
+        return 1;
+
+    case "stuffed":
+    case "soaked":
+        value1 = target->query_prop(LIVE_I_MAX_EAT);
+        value2 = target->query_stuffed();
+        value1 = (100 * value2 / ((value1 != 0) ? value1 : value2));
+        write((self ? "You can" : (name + " can")) + " " +
+            get_proc_text(value1, stuff_state, 0, ({ })) + " and ");
+
+        value1 = target->query_prop(LIVE_I_MAX_DRINK);
+        value2 = target->query_soaked();
+        value1 = (100 * value2 / ((value1 != 0) ? value1 : value2));
+        write(get_proc_text(value1, soak_state, 0, ({ })) + ".\n");
+        return 1;
+
+    default:
+        if (!this_player()->query_wiz_level())
+        {
+            notify_fail("The argument " + str + " is not valid for vitals.\n");
+            return 0;
+        }
+        if (!objectp(target = find_player(lower_case(str))))
+        {
+            notify_fail("There is no player " + capitalize(str) +
+                " in the realms at present.\n");
+            return 0;
+        }
+        vitals("health", target);
+        vitals("panic", target);
+        vitals("stuffed", target);
+        vitals("intox", target);
+        vitals("alignment", target);
+        vitals("encumbrance", target);
+        vitals("age", target);
+        return 1;
+    }
+
+    write("Impossible end of vitals. Please make a sysbug report of this.\n");
+    return 1;
+}
+
+/*
+ * Function name: show_stats
+ * Description:   Gives information on the stats
+ */
+varargs int
+show_stats(string str)
+{
+    int a, i, j;
+    float c, d;
+    object ob;
+    string s, s2, t;
+    int *learn;
+
+    if (!str)
+    {
+        ob = this_player();
+        s = "You are ";
+        s2 = "You have ";
+    }
+    else
+    {
+        if(!((ob = find_player(str)) && this_player()->query_wiz_level()))
+        {
+            notify_fail("Curious aren't we?\n");
+            return 0;
+        }
+        s = capitalize(str) + " is ";
+        s2 = capitalize(str) + " has ";
+    }
+
+    a = ob->query_prop(PLAYER_I_LASTXP);
+    j = ob->query_exp() - a;
+    if (a <= 0)
+    {
+        write("Your progress indicator was not working properly " +
+            "and is now reset.\n");
+        ob->add_prop(PLAYER_I_LASTXP, ob->query_exp());
+    }
+    else if (j > 0)
+    {
+        /* The progress is measured relatively to your current exp. If
+         * you gained more than 6.6% of the exp you had when you logged
+         * in, you get the maximum progress measure. There are a minimum
+         * and a maximum, though.
+         */
+        a /= 15;
+        if (a > SD_IMPROVE_MAX)
+            a = SD_IMPROVE_MAX;
+        else if (a < SD_IMPROVE_MIN)
+            a = SD_IMPROVE_MIN;
+        
+        j /= (a / 100);
+        write(s2 + "made " +
+            get_proc_text(j, improve_fact, 0, ({ }) ) +
+            " progress since you last logged in.\n");
+    }
+    else
+    {
+        write(s2 + "made no measurable progress since you logged " +
+            "in today.\n");
+    }
+    
+    for (t = s, i = 0; i < SS_NO_EXP_STATS; i++)
+    {
+        s2 = query_stat_string(i, ob->query_stat(i));
+
+        if (!i)
+            s2 = LANG_ADDART(s2);
+        if (i < SS_NO_EXP_STATS - 2) 
+            s2 += ", ";
+        else if (i < SS_NO_EXP_STATS - 1)
+            s2 += " and ";
+        else
+            s2 += " " + ob->query_nonmet_name() + ".";
+        t += s2;
+    }
+    write(t + "\n");
+
+    /* brutalfactor  
+     */
+    c = itof(ob->query_exp());
+    d = itof(ob->query_exp_combat() + ob->query_exp_general());
+    j = ftoi(((100.0 * d) / ( c != 0 ? c : d)));
+    write(s + get_proc_text(j, brute_fact, 2) + ".\n");
+
+    return 1;
+}
+
+/*
+ * skills - Give information on a livings skills
+ */
+/*
+ * Function name: show_skills
+ * Description:   Gives information on the stats
+ */
+varargs int
+show_skills(string str)
+{
+    int il, wr, i1, i2, num;
+    object ob;
+    int *sk, ski;
+    mapping skdesc;
+    string s, s1, s2;
+
+    wr = 1;
+    skdesc = SS_SKILL_DESC;
+
+    if (!stringp(str))
+    {
+        ob = this_player();
+        s = "You have ";
+        s2 = "";
+    }
+    else
+    {
+        if (sscanf(str, "%s %s", s1, s2) != 2)
+        {
+            if (find_player(str))
+            {
+                s1 = str;
+                s2 = "";
+            } else {
+                s1 = this_player()->query_real_name();
+                s2 = str;
+            }
+        }
+
+        if (!(ob = find_player(s1)))
+        {
+            notify_fail("No such player.\n");
+            return 0;
+        }
+
+        if (!this_player()->query_wiz_level() && ob != this_player())
+        {
+            notify_fail("Curious aren't we?\n");
+            return 0;
+        }
+        s = capitalize(str) + " has ";
+    }
+    sk = ob->query_all_skill_types();
+
+    SKILL_LIBRARY->sk_init();
+
+    i1 = 0;
+    i2 = 9999999;
+    switch (s2)
+    {
+            case "general": i1 = 100; i2 = 200; break;
+            case "fighting": i1 = 0; i2 = 29; break;
+            case "magic": i1 = 30; i2 = 49; break;
+            case "thief": i1 = 50; i2 = 69; break;
+        case "all":
+        case "": i1 = 0; i2 = 9999999; break;
+            default:
+            notify_fail("Unknown group '" + s2 + "'. Try 'general', " +
+                "'fighting', 'magic', 'thief' or 'all'.\n");
+            return 0;
+    }
+
+    for (il = 0; il < sizeof(sk); il++)
+    {
+        ski = sk[il];
+        if (ski < i1 || ski > i2)
+            continue;
+
+        if (!(num = ob->query_skill(sk[il])))
+        {
+           ob->remove_skill(sk[il]);
+            continue;
+        }
+        if (pointerp(skdesc[sk[il]]))
+            str = skdesc[sk[il]][0];
+        else {
+            str = ob->query_skill_name(sk[il]);
+            if (!strlen(str))
+                continue;
+        }
+        if (++wr % 2)
+          {
+            write(sprintf("%-18s %s", str + ":",
+                SKILL_LIBRARY->sk_rank(num)));
+            write("\n");
+          }
+        else
+          {
+            s1 = sprintf("%-18s %s ", str + ":",
+                SKILL_LIBRARY->sk_rank(num));
+            write(sprintf("%-40s ", s1));
+          }
+    }
+    if (wr)
+        write("\n");
+    else
+        write(s + "no skills.\n");
+
+    return 1;
+}

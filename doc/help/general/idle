@@ -1,0 +1,18 @@
+NAME
+ 	idle
+
+SYNOPSIS
+        This is not a command, simply information.
+	
+DESCRIPTION
+	If you stay idle (inactive) too long you will be logged out
+	automatically as someone else tries to log in. The time you
+	can be idle without being logged out is typically around 30
+	minutes.
+
+WARNING
+        This 30 minute limit exists for a reason. We want to give other
+        people a chance to play this fine game, too. Using a client to
+        circumvent the limit is considered abuse of the resources of
+        the game.
+ 

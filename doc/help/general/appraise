@@ -1,0 +1,22 @@
+NAME
+        appraise - estimate properties
+
+SYNOPSIS
+	appraise <object>
+	appraise <money>
+	appraise <living>
+        appraise light
+
+DESCRIPTION
+        The appraise command allows you to quickly estimate the
+	general properties of an object. Appraising money gives
+	you an estimate of how much money there is in a pile.
+
+OPTIONS
+        <money>  - one of the standard money types
+	<living> - a person or monster
+	<object> - an object in your presence
+        light    - judge the light in your surroundings.
+
+        If an object will survive a reboot, you will get a message like:
+        "This object seems to be able to last a while."

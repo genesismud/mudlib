@@ -1,0 +1,19 @@
+NAME
+        backstab - backstab a living creature
+
+SYNOPSIS
+	backstab <target> with <weapon>
+
+DESCRIPTION
+        You can sneak at a target to backstab it. This skill requires 
+        a knife or a dagger. The success is determined with your sneak
+        skill compared with the target's awareness. Then backstab is
+        checked and the damage depends on your skill with the weapon.
+
+        If you try to kill someone you know, i.e., have been introduced
+        to and/or remember you will have to confirm your kill command
+        by typing it twice unless you use the persons name.
+
+SEE ALSO
+        sneak, hide, kill
+

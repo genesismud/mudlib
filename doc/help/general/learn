@@ -1,0 +1,26 @@
+NAME
+        learn - learn your skills
+
+SYNOPSIS
+        learn
+	learn <num>
+	learn <name>
+	learn <name> <num>
+
+DESCRIPTION
+	With this command you can learn new skills at different guilds
+	around the world. At some places you might need to study too. 
+
+OPTIONS
+	without argument list what skills can be learned and the cost to
+	raise them one step.
+
+	<num> - List the skills you can learn <num> steps and the cost
+		to do so.
+
+	<name> - Learn that skill one step
+
+	<name> <num> - Learn skill named <name>, <num> steps.
+
+SEE ALSO
+        stats, vitals, skillist, skillevels, improve

@@ -1,0 +1,16 @@
+NAME
+        team - check for current team members
+
+SYNOPSIS
+	team [-l]
+
+DESCRIPTION
+        See the names of all members of the team you currently are
+	a member or leader of.
+
+ARGUMENTS
+	-l	List all teams in the realms. (Domain wizards only)
+
+SEE ALSO
+	teams, invite, join, leave
+	For general information, see teams

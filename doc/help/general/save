@@ -1,0 +1,15 @@
+NAME
+        save - save your character
+
+SYNOPSIS
+	save
+
+DESCRIPTION
+        Your character is saved to disk. You should do this after doing
+	complex or important things. If the game crashes you will only lose
+        the parts you did after your last save. For your convenience, the
+        game will automatically save your character every five minutes if
+        you are a mortal player. [Wizards do not autosave].
+
+SEE ALSO
+	quit

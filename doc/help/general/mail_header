@@ -1,0 +1,16 @@
+  The mail reader help on understanding the mail header.
+
+  The command 'from' will list the headers of the messages in your mailbox.
+  The following example will explain what all columns mean. Use 'from new'
+  to list only those messages you have not read before.
+
+   7: Mercade    Subj: New mail system                 *R* 27 Sep 30
+
+  Number  : 7            (You are requested to remove/archive mail regularly!)
+  Author  : Mercade
+  Reply   : "Subj:" original mail    "Re:" reply to a mail
+  Subject : New mail system
+  Status  : *R* message is read      *D* message is marked for deletion
+  Length  : 27 lines     (So you can choose to use more if you need to)
+  Arrival : Sep 30
+
