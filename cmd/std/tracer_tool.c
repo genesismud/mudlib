@@ -1348,17 +1348,13 @@ Tail(string str)
 static int
 profile_sort(string item, mixed a, mixed b)
 {
-    int reverse = 0, 
-	p = member_array(item, ({ "time", "calls", "average", "function" }));
-
-    if (p < 3)
-	reverse = 1;
+    int p = member_array(item, ({ "time", "calls", "average", "function" }));
 
     if(a[p] < b[p])
-	return reverse ? 1 : -1;
+	return -1;
     
     if (a[p] > b[p])
-	return reverse ? -1 : 1;
+	return 1;
 
     return 0;
 }
