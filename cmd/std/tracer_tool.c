@@ -20,6 +20,7 @@
  * - Reload
  * - Set
  * - Tail
+ * - Top
  */
 
 #pragma no_clone
@@ -110,7 +111,8 @@ query_cmdlist()
              
              "Set"      : "Set",
 
-	     "Tail"	: "Tail"
+	     "Tail"	: "Tail",
+	     "Top"	: "Top"
              ]);
 }
 
@@ -1340,6 +1342,65 @@ Tail(string str)
     {
         notify_fail("No read access to: " + str + "\n");
         return 0;
+    }
+
+    return 1;
+}
+
+/*
+ * Top - show top ten cpu
+ *
+ * Syntax: Top <average> <opt num>
+ */
+int
+Top(string str)
+{
+    int i, av = 0, num = 10, val;
+    float time;
+    string *s, obj, spam, *args = ({});
+    mixed *avg;
+
+    if (stringp(str))
+	args = explode(str, " ");
+    
+    foreach (string arg: args)
+    {
+	if (lower_case(arg[0..0]) == "a")
+	    av = 1;
+	else
+	    sscanf(arg, "%d", num);
+    }
+
+    if (av)
+    {
+	avg = SECURITY->do_debug("top_ten_cpu_avg");
+	write(sprintf("    %12s %s\n", "us/s", "Program"));
+    }
+    else
+    {
+	avg = SECURITY->do_debug("top_ten_cpu");
+	write(sprintf("    %12s %s\n", "us", "Program"));
+    }
+
+    if (!pointerp(avg))
+        return 0;
+
+    i = 1;
+    foreach (string a : avg[..num - 1]) 
+    {
+        s = explode(a, ":");
+        obj = implode(s[1..], ":");
+	if (av)
+	{
+	    sscanf(s[0], "%f", time);
+	    write(sprintf("%3d %12.4f /%s\n", i, time, obj));
+	}
+	else
+	{
+	    sscanf(s[0], "%d", val);
+	    write(sprintf("%3d %12d /%s\n", i, val, obj));
+	}
+        i++;
     }
 
     return 1;

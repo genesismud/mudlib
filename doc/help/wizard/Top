@@ -1,0 +1,20 @@
+NAME
+	Top - Show top cpu statistics
+
+SYNOPSIS
+	Top
+	Top <"average"> <num entries>
+
+DESCRIPTION
+	This command show the most cpu consuming objects in the game.
+	With an optional argument "average" it shows you the average
+	over one minute. The defaul shows 10 entries, but you may
+	specify as many or few as you like as an optional extra
+	argument.
+
+ARGUMENTS
+	"average" - show the average over one minute
+	<num>     - the number of entries to show
+
+SEE ALSO
+	tracer

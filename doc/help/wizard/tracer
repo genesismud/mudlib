@@ -16,6 +16,7 @@ SYNOPSIS
 	Reload		Update, load, clone and replace an object
 	Set		Set a tracer variable
 	Tail		Tail the file linked to an object
+	Top		Show top cpu statistics
 
 DESCRIPTION
 
@@ -91,4 +92,4 @@ DESCRIPTION
 
 SEE ALSO
 	At, Call, Cat, Clean, Destruct, Dump, Ed, Goto, In, More, Move,
-	Reload, Set, Tail
+	Reload, Set, Tail, Top
