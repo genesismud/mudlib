@@ -87,7 +87,7 @@ load_player(string pl_name)
 
     /* Protect against too short arrays. */
     acc_exp = acc_exp + allocate(SS_NO_STATS - sizeof(acc_exp));
-    learn_prefs = learn_prefs + allocate(SS_NO_STATS - sizeof(learn_prefs));
+    learn_pref = learn_pref + allocate(SS_NO_STATS - sizeof(learn_pref));
 
     return ret;
 }
