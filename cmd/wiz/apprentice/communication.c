@@ -985,16 +985,16 @@ line(string str, int emotion = 0, int busy_level = 0)
     {
         rank = 1;
         line = capitalize(line);
-        if (!SECURITY->query_team_member(name, line))
+        /* Three letter AoX teams capitalized with X. */
+        if ((strlen(line) == 3) && (line[..1] == "Ao"))
+        {
+            line = line[..1] + capitalize(line[2..]);
+        }
+        if (!SECURITY->query_team_member(line, name))
         {
             write("You are not a member of the " + line + " team.\n");
             return 1;
         }        
-        /* Three letter AoX teams capitalized with X. */
-        if (strlen(line) == 3)
-        {
-            line = line[..1] + capitalize(line[2..]);
-        }
         members = SECURITY->query_team_list(line);
         members &= map(users() - ({ this_player() }), geteuid);
     }
