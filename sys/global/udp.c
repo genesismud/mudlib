@@ -97,8 +97,8 @@ reset()
 
 	p[UDP_NO_CONTACT] = p[UDP_NO_CONTACT] + 1;
 	if (p[UDP_NO_CONTACT] > UDP_NUM_NO_CONTACT) {
-	    reverse = m_delete(reverse, p["HOSTADDRESS"] + ":" + p["PORTUDP"]);
-	    known_muds = m_delete(known_muds, ix[il]);
+	    m_delkey(reverse, p["HOSTADDRESS"] + ":" + p["PORTUDP"]);
+	    m_delkey(known_muds, ix[il]);
 	}
 	else
 	    known_muds[ix[il]] = p;
@@ -189,7 +189,7 @@ set_mud_info(string name, mapping p)
 	    p["VERSION"] = q["VERSION"];
 	if (islowercase(name) && name != q["NAME"])
 	{
-	    known_muds = m_delete(known_muds, name);
+	    m_delkey(known_muds, name);
 	    name = q["NAME"];
 	    p["NAME"] = name;
 	}
@@ -211,7 +211,7 @@ add_list(mapping l)
 	p = l[ix[il]];
 	if (p["NAME"] == lower_case(my_name))
 	{
-	    l = m_delete(l, p["NAME"]);
+	    m_delkey(l, p["NAME"]);
 	    continue;
 	}
 	reverse[p["HOSTADDRESS"] + ":" + p["PORTUDP"]] = p;
@@ -314,9 +314,8 @@ shutdown(mapping p)
     if (stringp(p["NAME"]))
     {
 	if (mappingp(known_muds) && mappingp(known_muds[p["NAME"]]))
-	{
-	    known_muds = m_delete(known_muds, p["NAME"]);
-	}
+	    m_delkey(known_muds, p["NAME"]);
+
 	return 1;
     }
     return 0;

@@ -26,6 +26,7 @@
 
 #define WIZ_CMD_MORTAL     ("/cmd/wiz/mortal")
 #define WIZ_CMD_APPRENTICE ("/cmd/wiz/apprentice")
+#define WIZ_CMD_LINE	   ("/cmd/wiz/line")
 #define WIZ_CMD_PILGRIM    ("/cmd/wiz/pilgrim")
 #define WIZ_CMD_RETIRED    ("/cmd/wiz/retired")
 #define WIZ_CMD_NORMAL     ("/cmd/wiz/normal")

@@ -90,7 +90,7 @@ _stop_listen(string channel, object ob)
 	return;
     
     if(channels[channel])
-	channels[channel] = m_delete(channels[channel], ob);
+	m_delkey(channels[channel], ob);
     if (listeners[ob])
 	listeners[ob] -= ({channel});
 }
@@ -118,7 +118,7 @@ start_listen(string channel, string func)
 
     if (secured[channel])
 	if (!secured[channel][0])
-	    secured = m_delete(secured,channel);
+	    m_delkey(secured, channel);
 	else if (!call_other(secured[channel][0], secured[channel][1],
 			     ob, channel))
       return 0;
@@ -143,13 +143,13 @@ _stop_listen_all(object ob)
 	n = sizeof(listeners[ob]);
 	for(i = 0; i < n; ++i)
 	    if(channels[listeners[ob][i]])
-		channels[listeners[ob][i]] = m_delete(channels[listeners[ob][i]],ob);
-	listeners = m_delete(listeners, ob);
+		m_delkey(channels[listeners[ob][i]], ob);
+	m_delkey(listeners, ob);
     }
     n = sizeof(chans = m_indexes(secured));
     for (i = 0; i < n; ++i)
 	if (secured[chans[i]][0] == ob)
-	    secured = m_delete(secured, chans[i]);
+	    m_delkey(secured, chans[i]);
 }
 
 void
@@ -175,7 +175,7 @@ send_signal(string channel, mixed message)
 
     if (secured[channel])
 	if (!secured[channel][0])
-	    secured = m_delete(secured, channel);
+	    m_delkey(secured, channel);
 	else if (secured[channel][1] &&
 		 !call_other(secured[channel][0], secured[channel][1],
 			     previous_object(), channel, 1))
@@ -211,7 +211,7 @@ query_listeners(string channel)
 
     if (secured[channel])
 	if (!secured[channel][0])
-	    secured = m_delete(secured,channel);
+	    m_delkey(secured,channel);
 	else if (!call_other(secured[channel][0], secured[channel][1],
 			     previous_object(), channel, 1))
 	    return 0;
@@ -245,7 +245,7 @@ secure_channel(string channel, object ob, string func)
 	if (!secured[channel][0] ||
 	    call_other(secured[channel][0], secured[channel][1],
 		       previous_object(), channel, 1))
-	    secured = m_delete(secured,channel);
+	    m_delkey(secured, channel);
 	else
 	    return 0;
     secured += ([channel:({ob, func})]);
