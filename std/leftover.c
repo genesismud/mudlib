@@ -75,8 +75,8 @@ config_split(int new_num, object orig)
 {
     ::config_split(new_num, orig);
 
-    l_race = orig->query_race();
-    l_organ = orig->query_organ();
+    /* Copy the race and organ variables, and initialise the leftover. */
+    leftover_init(orig->query_organ(), orig->query_race());
 }
 
 /*
