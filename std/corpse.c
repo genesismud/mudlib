@@ -161,6 +161,52 @@ query_nonmet_name()
 }
 
 /*
+ * Function name: set_state_desc
+ * Description  : Change the state description of the corpse. Normally this
+ *                is "corpse of " or "heap with decayed remains of ".
+ * Arguments    : string desc - the new state description.
+ */
+void
+set_state_desc(string desc)
+{
+    state_desc = desc;
+}
+
+/*
+ * Function name: query_state_desc
+ * Descritpion  : Returns the present state description.
+ * Returns      : string - the state description.
+ */
+string
+query_state_desc()
+{
+    return state_desc;
+}
+
+/*
+ * Function name: set_pstate_desc
+ * Description  : Change the plural state description of the corpse. Normally
+ *                this is "corpses of " or "heaps with decayed remains of ".
+ * Arguments    : string pdesc - the new plural state description.
+ */
+void
+set_pstate_desc(string pdesc)
+{
+    pstate_desc = pdesc;
+}
+
+/*
+ * Function name: query_pstate_desc
+ * Descritpion  : Returns the present plural state description.
+ * Returns      : string - the plural state description.
+ */
+string
+query_pstate_desc()
+{
+    return pstate_desc;
+}
+
+/*
  * Function name: short_func
  * Description  : Returns the short description of this object, based on
  *                recognition of the corpse.
