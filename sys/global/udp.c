@@ -31,10 +31,6 @@ inherit "/lib/udp/gwiz";		/* intermud wizline */
 
 #define TO this_object()
 
-void reset();
-void add_list(mapping l);
-int islowercase(string s);
-
 mapping	known_muds;		/* The currently known muds */
 mapping reverse;		/* Reverse mapping of known muds */
 static string my_name;
