@@ -103,9 +103,7 @@ query_guild_long_name(string short_name)
     short_name = lower_case(short_name);
 
     if (pointerp(guilds[short_name]))
-    {
 	return guilds[short_name][GUILD_LONG_NAME];
-    }
 
     return 0;
 }
@@ -137,9 +135,7 @@ query_guild_style(string short_name)
     short_name = lower_case(short_name);
 
     if (pointerp(guilds[short_name]))
-    {
 	return guilds[short_name][GUILD_STYLE];
-    }
 
     return 0;
 }
@@ -159,9 +155,7 @@ set_guild_phase(string short_name, string phase)
     int position;
 
     if ((position = member_array(phase, GUILD_PHASES)) != -1)
-    {
 	guilds[short_name][GUILD_PHASE] = position;
-    }
 }
 
 /*
@@ -176,9 +170,7 @@ query_guild_phase(string short_name)
     short_name = lower_case(short_name);
 
     if (pointerp(guilds[short_name]))
-    {
 	return GUILD_PHASES[guilds[short_name][GUILD_PHASE]];
-    }
 
     return 0;
 }
@@ -212,9 +204,7 @@ query_guild_type(string short_name)
     short_name = lower_case(short_name);
 
     if (pointerp(guilds[short_name]))
-    {
 	return guilds[short_name][GUILD_TYPE];
-    }
 
     return 0;
 }
@@ -234,9 +224,7 @@ query_guild_type_int(string type)
     int    result = 0;
 
     if (!strlen(type))
-    {
 	return 0;
-    }
 
     parts = explode(lower_case(type), "");
     size = sizeof(parts);
@@ -274,17 +262,13 @@ query_guild_type_string(int type)
     string result = "";
 
     if (type & G_RACE)
-    {
 	result += "R";
-    }
+
     if (type & G_LAYMAN)
-    {
 	result += "L";
-    }
+
     if (type & G_OCCUPATIONAL)
-    {
 	result += "O";
-    }
 
     return result;
 }
@@ -303,17 +287,13 @@ query_guild_type_long_string(int type)
     string *result = ({ });
 
     if (type & G_RACE)
-    {
 	result += ({ "Race" });
-    }
+
     if (type & G_LAYMAN)
-    {
 	result += ({ "Layman" });
-    }
+
     if (type & G_OCCUPATIONAL)
-    {
 	result += ({ "Occupational" });
-    }
 
     return implode(result, ", ");
 }
@@ -345,9 +325,7 @@ query_guild_domain(string short_name)
     short_name = lower_case(short_name);
 
     if (pointerp(guilds[short_name]))
-    {
 	return guilds[short_name][GUILD_DOMAIN];
-    }
 
     return 0;
 }
@@ -365,9 +343,7 @@ static void
 add_guild_master(string short_name, string master)
 {
     if (member_array(master, guilds[short_name][GUILD_MASTERS]) == -1)
-    {
 	guilds[short_name][GUILD_MASTERS] += ({ master });
-    }
 }
 
 /*
@@ -398,9 +374,7 @@ query_guild_masters(string short_name)
     short_name = lower_case(short_name);
 
     if (pointerp(guilds[short_name]))
-    {
 	return secure_var(sort_array(guilds[short_name][GUILD_MASTERS]));
-    }
 
     return ({ });
 }
@@ -419,10 +393,8 @@ query_guild_is_master(string short_name, string name)
     short_name = lower_case(short_name);
 
     if (pointerp(guilds[short_name]))
-    {
         return (member_array(lower_case(name),
-            guilds[short_name][GUILD_MASTERS]) > -1);
-    }
+			     guilds[short_name][GUILD_MASTERS]) > -1);
 
     return 0;
 }
@@ -454,13 +426,10 @@ guild_sort_styles(string guild1, string guild2)
     string style2 = query_guild_style(guild2);
 
     if (style1 == style2)
-    {
 	return 0;
-    }
+
     if (style1 < style2)
-    {
 	return -1;
-    }
 
     return 1;
 }
@@ -476,7 +445,7 @@ public int
 guild_filter_type(string short_name, int type)
 {
     return (pointerp(guilds[short_name]) &&
-	(guilds[short_name][GUILD_TYPE] & type));
+	    (guilds[short_name][GUILD_TYPE] & type));
 }
 
 /*
@@ -509,9 +478,7 @@ guild_command(string str)
 
     /* Default to "guild list short" if there is no argument. */
     if (!strlen(str))
-    {
 	str = "list short";
-    }
 
     args = explode(str, " ");
     num_args = sizeof(args);
@@ -855,9 +822,7 @@ guild_command(string str)
 
 	    args[2] = lower_case(args[2]);
 	    if (member_array(args[2], GUILD_PHASES) == -1)
-	    {
 		notify_fail("The phase \"" + args[2] + "\" is not valid.\n");
-	    }
 
 	    switch(rank)
 	    {
@@ -868,9 +833,7 @@ guild_command(string str)
 	    case WIZ_STEWARD:
 	    case WIZ_LORD:
 		if (query_guild_domain(guild) == query_wiz_dom(name))
-		{
 		    break;
-		}
 
 		/* Intentionally fall through to default case. */
 
@@ -964,7 +927,7 @@ guild_command(string str)
 	    case WIZ_ARCH:
 	    case WIZ_KEEPER:
 		/* Remove the entry, save the master and give feedback. */
-		guilds = m_delete(guilds, guild);
+		m_delkey(guilds, guild);
 		save_master();
 
 #ifdef GUILD_CMD_LOG

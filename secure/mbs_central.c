@@ -419,7 +419,7 @@ remove_board(string board, string cath, int all)
 
     if (all)
     {
-	BbpMap = m_delete(BbpMap, bdata[BBP_SPATH]);
+	m_delkey(BbpMap, bdata[BBP_SPATH]);
 	write("Removed the central entry '" + bdata[BBP_SPATH] + "'.\n");
     }
     else
@@ -434,9 +434,9 @@ remove_board(string board, string cath, int all)
      * registered boards.
      */
     if (BrokenMap[bdata[BBP_SPATH]])
-	BrokenMap = m_delete(BrokenMap, bdata[BBP_SPATH]);
+	m_delkey(BrokenMap, bdata[BBP_SPATH]);
     if (UnusedMap[bdata[BBP_SPATH]])
-	UnusedMap = m_delete(UnusedMap, bdata[BBP_SPATH]);
+	m_delkey(UnusedMap, bdata[BBP_SPATH]);
 
     write("Removed the board '" + board + "' in the category '" + cath + "'.\n"); 
     logit("Board delete [" + UC(TI->query_real_name()) + "] " + board + ":" + cath);
@@ -484,11 +484,11 @@ remove_central_entry(string entry)
     }
 
     /* All is ok, remove it */
-    BbpMap = m_delete(BbpMap, entry);
+    m_delkey(BbpMap, entry);
     if (BrokenMap[entry])
-	BrokenMap = m_delete(BrokenMap, entry);
+	m_delkey(BrokenMap, entry);
     if (UnusedMap[entry])
-	UnusedMap = m_delete(UnusedMap, entry);
+	m_delkey(UnusedMap, entry);
     dosave();
     write("Removed the central entry '" + entry + "'.\n");
     logit("Central entry delete [" +
@@ -846,7 +846,7 @@ delete_category(string cath)
 	return MBM_CAT_IN_USE;
     }
 
-    CategoryMap = m_delete(CategoryMap, cath);
+    m_delkey(CategoryMap, cath);
     write("Removed category '" + cath + "'.\n");
     logit("Category delete [" + UC(TI->query_real_name()) + "] " + cath);
 
@@ -893,7 +893,7 @@ rename_category(string old, string new, string ndesc)
     CategoryMap[new] = strlen(ndesc) ? ndesc : desc;
     if (old != new)
     {
-	CategoryMap = m_delete(CategoryMap, old);
+	m_delkey(CategoryMap, old);
 
 	bds = BbcMap[old];
 	for (i = 0, sz = sizeof(bds) ; i < sz ; i++)
@@ -1555,13 +1555,10 @@ do_help(string cmd)
     
     	default:
 	    if (!(line = HelpMap[cmd]))
-	    {
 		write("That command does not exist in the mbs helpfile.\n");
-	    }
 	    else
-	    {
                 TI->more(read_file(HELP_FILE, line, HelpMap[cmd + "_len"]));
-	    }
+
 	    break;
     }
 
@@ -2156,10 +2153,10 @@ load_all_boards(string *list)
 					      BbpMap[list[0]][BBP_BOARD],
 					      BbpMap[list[0]][BBP_CAT] })
 				   }));
-	    BrokenMap = m_delete(BrokenMap, list[0]);
+	    m_delkey(BrokenMap, list[0]);
 	    GcTime = time();
 	    logit("Board delete broken [Auto] " + BbpMap[list[0]][BBP_BOARD] + ":" + BbpMap[list[0]][BBP_CAT]);
-	    BbpMap = m_delete(BbpMap, list[0]);
+	    m_delkey(BbpMap, list[0]);
 	    dosave();
 	}
     }
@@ -2167,7 +2164,7 @@ load_all_boards(string *list)
     {
 	/* Make sure it's not on the broken list */
 	if (BrokenMap[list[0]])
-	    BrokenMap = m_delete(BrokenMap, list[0]);
+	    m_delkey(BrokenMap, list[0]);
 	
 	/* Check if the board is badly used */
 	if (tmfunc(BbpMap[list[0]][BBP_LNOTE]) > DTS(WARN_DELAY) &&
@@ -2188,10 +2185,10 @@ load_all_boards(string *list)
 					          BbpMap[list[0]][BBP_BOARD],
 					          BbpMap[list[0]][BBP_CAT] })
 				       }));
-		UnusedMap = m_delete(UnusedMap, list[0]);
+		m_delkey(UnusedMap, list[0]);
 		GcTime = time();
 		logit("Board delete idle [Auto] " + BbpMap[list[0]][BBP_BOARD] + ":" + BbpMap[list[0]][BBP_CAT]);
-		BbpMap = m_delete(BbpMap, list[0]);
+		m_delkey(BbpMap, list[0]);
 		dosave();
 	    }
 	}
@@ -2199,7 +2196,7 @@ load_all_boards(string *list)
 	{
 	    /* Make sure it's not on the unused list */
 	    if (UnusedMap[list[0]])
-		UnusedMap = m_delete(UnusedMap, list[0]);
+		m_delkey(UnusedMap, list[0]);
 	}
     }
     

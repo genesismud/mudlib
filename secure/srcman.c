@@ -205,14 +205,11 @@ get_keywords(string mdir, string sdir, string keyword)
 	return this_object()->get_index(mdir, sdir);
 
     if (stringp(sdir) && member_array(sdir, sdlist) >= 0)
-    {
 	return ({ sdir, fix_subjlist(explode(docdirs[mdir][1][sdir], keyword),
-			   keyword, okbef, okaft) });
-    }
+				     keyword, okbef, okaft) });
+
     else if (stringp(sdir)) /* No such subdir */
-    {
 	return ({});
-    }
 
     found_arr = ({});
     for (i = 0; i < sizeof(sdlist); i++)
@@ -220,9 +217,7 @@ get_keywords(string mdir, string sdir, string keyword)
 	tmp = fix_subjlist(explode(docdirs[mdir][1][sdlist[i]], keyword),
 			   keyword, okbef, okaft);
 	if (sizeof(tmp))
-	{
 	    found_arr += ({ ({ sdlist[i], tmp }) });
-	}
     }
     
     return found_arr;
@@ -249,13 +244,10 @@ get_index(string mdir, string sdir)
 	return ({ });
 
     if (stringp(sdir) && member_array(sdir, sdlist) >= 0)
-    {
 	return ({ sdir, explode(docdirs[mdir][1][sdir], "%%") });
-    }
+
     else if (stringp(sdir)) /* No such subdir */
-    {
 	return ({});
-    }
     
     found_arr = ({});
     for (i = 0; i < sizeof(sdlist); i++)
@@ -263,9 +255,7 @@ get_index(string mdir, string sdir)
 	tmp = explode(docdirs[mdir][1][sdlist[i]], "%%");
 
 	if (sizeof(tmp))
-	{
 	    found_arr += ({ ({ sdlist[i], tmp }) });
-	}
     }
     
     return found_arr;

@@ -77,19 +77,13 @@ public int
 check_newplayer(string ipnumber)
 {
     if (!strlen(ipnumber))
-    {
         return 0;
-    }
 
     if (sizeof(filter(sitebans_nologin, &wildmatch(, ipnumber))))
-    {
         return SITEBAN_NOLOGIN;
-    }
 
     if (sizeof(filter(sitebans_nonew, &wildmatch(, ipnumber))))
-    {
         return SITEBAN_NONEW;
-    }
 
     return 0;
 }
@@ -216,7 +210,7 @@ remove_siteban(string ipmask)
     write("Reason: " + sitebans[ipmask][SITEBAN_COMMENT] + "\n");
 
     name = getwho();
-    sitebans = m_delete(sitebans, ipmask);
+    m_delkey(sitebans, ipmask);
     this_object()->log_syslog(SITEBAN_LOG, sprintf("%s %-7s %-15s %-11s\n",
         ctime(time()), "removed", ipmask, capitalize(name)));
     save_master();
@@ -237,33 +231,25 @@ siteban(string str)
     string *words;
 
     if (!CALL_BY(WIZ_CMD_ARCH))
-    {
 	return 0;
-    }
 
     if (!stringp(str))
-    {
         str = "list all";
-    }
 
     if (!mappingp(sitebans))
-    {
         sitebans = ([ ]);
-    }
 
     words = explode(str, " ");
     switch(words[0])
     {
     case "list":
         if (sizeof(words) == 1)
-        {
             words += ({ "all" });
-        }
+
         if (sizeof(words) != 2)
-        {
             notify_fail("Syntax: list nologin / nonew / <wildcards>\n");
             return 0;
-        }
+
         return list_siteban(words[1]);
 
     case "add":

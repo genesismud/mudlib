@@ -166,9 +166,7 @@ query_domain_name(int number)
     while(--index >= 0)
     {
         if (m_domains[domains[index]][FOB_DOM_NUM] == number)
-        {
             return domains[index];
-        }
     }
 
     return 0;
@@ -186,9 +184,7 @@ query_domain_number(string dname)
     dname = capitalize(dname);
 
     if (!sizeof(m_domains[dname]))
-    {
         return -1;
-    }
 
     return m_domains[dname][FOB_DOM_NUM];
 }
@@ -205,9 +201,7 @@ query_domain_short(string dname)
     dname = capitalize(dname);
 
     if (!sizeof(m_domains[dname]))
-    {
         return "";
-    }
 
     return m_domains[dname][FOB_DOM_SHORT];
 }
@@ -228,9 +222,7 @@ set_domain_short(string dname, string sname)
 {
     /* This function may only be called from the Lord soul. */
     if (!CALL_BY(WIZ_CMD_LORD))
-    {
         return 0;
-    }
 
     m_domains[dname][FOB_DOM_SHORT] = sname;
     save_master();
@@ -249,9 +241,7 @@ query_domain_lord(string dname)
     dname = capitalize(dname);
 
     if (!sizeof(m_domains[dname]))
-    {
         return "";
-    }
 
     return m_domains[dname][FOB_DOM_LORD];
 }
@@ -268,9 +258,7 @@ query_domain_steward(string dname)
     dname = capitalize(dname);
 
     if (!sizeof(m_domains[dname]))
-    {
         return "";
-    }
 
     return m_domains[dname][FOB_DOM_STEWARD];
 }
@@ -287,9 +275,7 @@ query_domain_members(string dname)
     dname = capitalize(dname);
 
     if (!sizeof(m_domains[dname]))
-    {
         return ({ });
-    }
 
     return secure_var(m_domains[dname][FOB_DOM_MEMBERS]);
 }
@@ -319,9 +305,7 @@ set_domain_max(string dname, int max)
 {
     /* May only be called from the Lord soul. */
     if (!CALL_BY(WIZ_CMD_LORD))
-    {
         return 0;
-    }
 
     m_domains[dname][FOB_DOM_MAXSIZE] = max;
     save_master();
@@ -340,9 +324,7 @@ query_domain_max(string dname)
     dname = capitalize(dname);
 
     if (!sizeof(m_domains[dname]))
-    {
         return -1;
-    }
 
     return m_domains[dname][FOB_DOM_MAXSIZE];
 }
@@ -373,9 +355,7 @@ make_domain(string dname, string sname, string wname)
 
     /* Only accept calls from the arch command soul. */
     if (!CALL_BY(WIZ_CMD_ARCH))
-    {
         return 0;
-    }
 
     cmder = getwho();
     if (sizeof(m_domains[dname]))
@@ -394,10 +374,8 @@ make_domain(string dname, string sname, string wname)
 
     if (sizeof(filter(m_indices(m_domains),
             &operator(==)(sname) @ query_domain_short)))
-    {
         notify_fail("The short domain name " + sname +
-            " is already in use.\n");
-    }
+		    " is already in use.\n");
 
     if ((!pointerp(m_wizards[wname])) ||
         (m_wizards[wname][FOB_WIZ_RANK] != WIZ_APPRENTICE))
@@ -419,9 +397,7 @@ make_domain(string dname, string sname, string wname)
         if (file_size(DISCARD_DOMAIN_DIR + "/" + dname) == -2)
         {
             if (rename((DISCARD_DOMAIN_DIR + "/" + dname), ("/d/" + dname)))
-            {
                 write("Revived the old discarded " + dname + ".\n");
-            }
             else
             {
                 write("Failed to discard old instance of " + dname +
@@ -479,9 +455,7 @@ remove_domain(string dname)
 
     /* May only be called from the arch soul. */
     if (!CALL_BY(WIZ_CMD_ARCH))
-    {
         return 0;
-    }
 
     cmder = getwho();
     dname = capitalize(dname);
@@ -541,7 +515,7 @@ remove_domain(string dname)
     }
 
     /* Delete the domain from the domain mapping. */
-    m_domains = m_delete(m_domains, dname);
+    m_delkey(m_domains, dname);
     save_master();
 
     write("You have just obliterated " + dname + ".\n");
@@ -565,19 +539,13 @@ tell_domain(string dname, string wname, string wmess, string dmess)
     int    size;
 
     if (objectp(wiz = find_player(wname)))
-    {
         tell_object(wiz, wmess);
-    }
 
     wlist = (string *)m_domains[dname][FOB_DOM_MEMBERS] - ({ wname });
     size = sizeof(wlist);
     while(--size >= 0)
-    {
         if (objectp(wiz = find_player(wlist[size])))
-        {
             tell_object(wiz, dmess);
-        }
-    }
 }
 
 /*
@@ -627,9 +595,7 @@ transform_mortal_into_wizard(string wname, string cmder)
         playerfile = restore_map(PLAYER_FILE(wname));
 
         if (!pointerp(playerfile["auto_load"]))
-        {
             playerfile["auto_load"] = ({ });
-        }
 
         playerfile["auto_load"] += ({ APPRENTICE_SCROLL_FILE });
         playerfile["default_start_location"] = WIZ_ROOM;
@@ -654,9 +620,7 @@ transform_mortal_into_wizard(string wname, string cmder)
 
     /* Clean up after ourselves. */
     if (fingered)
-    {
         do_debug("destroy", wizard);
-    }
 }
 
 /************************************************************************
@@ -696,9 +660,7 @@ add_wizard_to_domain(string dname, string wname, string cmder)
     if ((!strlen(dname)) &&
         ((m_wizards[wname][FOB_WIZ_RANK] == WIZ_MAGE) ||
          (m_wizards[wname][FOB_WIZ_RANK] >= WIZ_ARCH)))
-    {
         dname = WIZARD_DOMAIN;
-    }
 
     m_wizards[wname][FOB_WIZ_DOM] = dname;
     m_wizards[wname][FOB_WIZ_CHDOM] = cmder;
@@ -716,9 +678,7 @@ add_wizard_to_domain(string dname, string wname, string cmder)
             " is no longer a member of " + old_domain + ".\n"));
     }
     else
-    {
         old_domain = WIZARD_DOMAIN;
-    }
 
     /* Leaving the domain and not joining another domain. */
     if (!strlen(dname))
@@ -775,9 +735,7 @@ draft_wizard_to_domain(string dname, string wname)
 
     /* May only be called from the arch soul. */
     if (!CALL_BY(WIZ_CMD_ARCH))
-    {
         return 0;
-    }
 
     cmder = getwho();
     dname = capitalize(dname);
@@ -824,9 +782,7 @@ draft_wizard_to_domain(string dname, string wname)
 
     /* Apprentices should be made full wizard. */
     if (m_wizards[wname][FOB_WIZ_RANK] == WIZ_APPRENTICE)
-    {
         do_change_rank(wname, WIZ_NORMAL, cmder);
-    }
 
     write("Drafting " + capitalize(wname) + " to " + dname + ".\n");
     return add_wizard_to_domain(dname, wname, cmder);
@@ -845,9 +801,7 @@ expel_wizard_from_domain(string wname)
 
     /* May only be called from the Lord soul. */
     if (!CALL_BY(WIZ_CMD_LORD))
-    {
         return 0;
-    }
 
     wname = lower_case(wname);
     if (!strlen(wname))
@@ -911,9 +865,7 @@ leave_domain()
 
     /* May only be called from the normal wizards soul. */
     if (!CALL_BY(WIZ_CMD_NORMAL))
-    {
         return 0;
-    }
 
     /* Mages, arches and keepers cannot leave WIZARD_DOMAIN. */
     cmder = getwho();
@@ -935,9 +887,7 @@ leave_domain()
     /* Demote the wizard if he isn't a mage, arch or keeper. */
     if ((m_wizards[cmder][FOB_WIZ_RANK] != WIZ_MAGE) &&
         (m_wizards[cmder][FOB_WIZ_RANK] < WIZ_ARCH))
-    {
         do_change_rank(cmder, WIZ_APPRENTICE, cmder);
-    }
 
     /* Add the wizard to the empty domain, i.e leave the domain. */
     return add_wizard_to_domain("", cmder, cmder);
@@ -959,14 +909,14 @@ rename_wizard(string oldname, string newname)
     /* Rename the wizard in the wizard mapping. */
     write("Wizard status copied to " + capitalize(newname) + ".\n");
     m_wizards[newname] = secure_var(m_wizards[oldname]);
-    m_wizards = m_delete(m_wizards, oldname);
+    m_delkey(m_wizards, oldname);
 
     /* Update global read. */
     if (m_global_read[oldname])
     {
         write("Global read copied to " + capitalize(newname) + ".\n");
         m_global_read[newname] = secure_var(m_global_read[oldname]);
-        m_global_read = m_delete(m_global_read, oldname);
+        m_delkey(m_global_read, oldname);
     }
 
     /* Update domain information. */
@@ -988,13 +938,9 @@ rename_wizard(string oldname, string newname)
         }
 
         if (rename(("/w/" + oldname), ("/w/" + newname)))
-        {
             write("Home directory successfully renamed.\n");
-        }
         else
-        {
             write("Failed to rename home directory.\n");
-        }
     }
 
     save_master();
@@ -1027,9 +973,7 @@ apply_to_domain(string dname)
 
     /* May only be called from the apprentice soul. */
     if (!CALL_BY(WIZ_CMD_APPRENTICE))
-    {
         return 0;
-    }
 
     if (!strlen(dname))
     {
@@ -1077,9 +1021,8 @@ apply_to_domain(string dname)
 
     /* See if there is an array of people for that domain already. */
     if (!pointerp(m_applications[dname]))
-    {
         m_applications[dname] = ({ });
-    }
+
     /* else see if the player already applied. */
     else if (member_array(wname, m_applications[dname]) != -1)
     {
@@ -1123,9 +1066,7 @@ accept_application(string wname)
 
     /* May only be called from the Lord soul. */
     if (!CALL_BY(WIZ_CMD_LORD))
-    {
         return 0;
-    }
 
     if (!strlen(wname))
     {
@@ -1175,9 +1116,7 @@ accept_application(string wname)
 
     /* People who aren't a wizard already should become full wizard. */
     if (m_wizards[wname][FOB_WIZ_RANK] == WIZ_APPRENTICE)
-    {
         do_change_rank(wname, WIZ_NORMAL, cmder);
-    }
 
     return add_wizard_to_domain(dname, wname, cmder);
 }
@@ -1197,9 +1136,7 @@ deny_application(string wname)
 
     /* May only be called from the Lord soul. */
     if (!CALL_BY(WIZ_CMD_LORD))
-    {
         return 0;
-    }
     
     cmder = getwho();
     if (m_wizards[cmder][FOB_WIZ_RANK] > WIZ_LORD)
@@ -1227,15 +1164,11 @@ deny_application(string wname)
 
     /* Remove the domain-entry if this was the last application. */
     if (!sizeof(m_applications[dname]))
-    {
-        m_applications = m_delete(m_applications, dname);
-    }
+        m_delkey(m_applications, dname);
 
     if (objectp(wiz = find_player(wname)))
-    {
         tell_object(wiz, "Your application to the domain '" + dname +
-            "' was denied.\n");
-    }
+		    "' was denied.\n");
 
     write("You denied the application to " + dname + " by " +
           capitalize(wname) + ".\n");
@@ -1255,9 +1188,7 @@ regret_application(string dname)
 
     /* May only be called from the apprentice soul. */
     if (!CALL_BY(WIZ_CMD_APPRENTICE))
-    {
         return 0;
-    }
 
     if (!strlen(dname))
     {
@@ -1281,9 +1212,7 @@ regret_application(string dname)
 
     /* If there are no other applications, remove the empty array. */
     if (!sizeof(m_applications[dname]))
-    {
-        m_applications = m_delete(m_applications, dname);
-    }
+        m_delkey(m_applications, dname);
 
     save_master();
 
@@ -1320,9 +1249,7 @@ remove_all_applications(string wname)
 
             /* If this was the last wizard, remove the domain from the list. */
             if (!sizeof(m_applications[domains[index]]))
-            {
-                m_applications = m_delete(m_applications, domains[index]);
-            }
+                m_delkey(m_applications, domains[index]);
         }
     }
 
@@ -1444,7 +1371,7 @@ list_applications(string str)
                 return 1;
             }
 
-            m_applications = m_delete(m_applications, dname);
+            m_delkey(m_applications, dname);
             save_master();
             write("Removed all applications to " + dname + ".\n");
             return 1;
@@ -1462,9 +1389,7 @@ list_applications(string str)
     {
         if (strlen(str) &&
             (rank == WIZ_LORD))
-        {
             return list_applications_by_wizard(str, 0);
-        }
 
         if (!sizeof(m_applications[m_wizards[cmder][FOB_WIZ_DOM]]))
         {
@@ -1511,9 +1436,7 @@ bookkeep_exp(string type, int exp)
      * exists. This is because there is an extra call_other in it.
      */
     if (pobj == giver)
-    {
         giver = previous_object(-2);
-    }
 
     /* It should be a mortal player, not an NPC and it should not be fixup
      * of accumulated stats, not should it be a 'jr' wizhelper character.
@@ -1523,9 +1446,7 @@ bookkeep_exp(string type, int exp)
         ((pobj == giver) &&
          (ABS(exp) < 2)) ||
         wildmatch("*jr", pobj->query_real_name()))
-    {
         return;
-    }
 
 #ifdef EXP_FROM_COMBAT_OBJECT
     /* If it is combat XP, we want to get the living, not the combat
@@ -1573,9 +1494,7 @@ bookkeep_exp(string type, int exp)
     /* Get the euid of the experience giving object. */
     dname = geteuid(giver);
     if (sizeof(m_wizards[dname]))
-    {
         dname = m_wizards[dname][FOB_WIZ_DOM];
-    }
 
     /* Experience can only be given by a domain. This object had a bad
      * euid. Nonexistant or apprentice.
@@ -1608,9 +1527,7 @@ bookkeep_exp(string type, int exp)
         m_domains[dname][FOB_DOM_QXP] += exp;
 #ifdef LOG_BOOKKEEP
         if (ABS(exp) > LOG_BOOKKEEP_LIMIT_Q)
-        {
             should_log = 1;
-        }
 #endif LOG_BOOKKEEP
         break;
 
@@ -1618,9 +1535,7 @@ bookkeep_exp(string type, int exp)
         m_domains[dname][FOB_DOM_CXP] += exp;
 #ifdef LOG_BOOKKEEP
         if (ABS(exp) > LOG_BOOKKEEP_LIMIT_C)
-        {
             should_log = 1;
-        }
 #endif LOG_BOOKKEEP
         break;
     }
@@ -1656,9 +1571,7 @@ do_decay(mixed *darr)
     decay = 100;
 #endif
     if (!decay)
-    {
         return darr;
-    }
 
     if (darr[FOB_DOM_QXP] >= decay || (-darr[FOB_DOM_QXP]) >= decay)
         darr[FOB_DOM_QXP] -= darr[FOB_DOM_QXP] / decay;
@@ -1716,9 +1629,7 @@ query_domain_commands(string dname)
     dname = capitalize(dname);
 
     if (!sizeof(m_domains[dname]))
-    {
         return 0;
-    }
 
     return m_domains[dname][FOB_DOM_CMNDS];
 }
@@ -1735,9 +1646,7 @@ query_domain_qexp(string dname)
     dname = capitalize(dname);
 
     if (!sizeof(m_domains[dname]))
-    {
         return 0;
-    }
 
     return m_domains[dname][FOB_DOM_QXP];
 }
@@ -1754,9 +1663,7 @@ query_domain_cexp(string dname)
     dname = capitalize(dname);
 
     if (!sizeof(m_domains[dname]))
-    {
         return 0;
-    }
 
     return m_domains[dname][FOB_DOM_CXP];
 }
@@ -1777,9 +1684,7 @@ domain_clear_xp(string dname)
 
     /* May only be called from the arch soul. */
     if (!CALL_BY(WIZ_CMD_ARCH))
-    {
         return 0;
-    }
 
     /* Check whether such a domain indeed exists. */
     dname = capitalize(dname);
@@ -1825,9 +1730,7 @@ query_wiz_rank(string wname)
     wname = lower_case(wname);
 
     if (!sizeof(m_wizards[wname]))
-    {
         return WIZ_MORTAL;
-    }
 
     return m_wizards[wname][FOB_WIZ_RANK];
 }
@@ -1846,9 +1749,7 @@ query_wiz_level(string wname)
     wname = lower_case(wname);
 
     if (!sizeof(m_wizards[wname]))
-    {
         return 0;
-    }
 
     return m_wizards[wname][FOB_WIZ_LEVEL];
 #else
@@ -1868,9 +1769,7 @@ query_wiz_chl(string wname)
     wname = lower_case(wname);
 
     if (!sizeof(m_wizards[wname]))
-    {
         return "";
-    }
 
     return m_wizards[wname][FOB_WIZ_CHLEVEL];
 }
@@ -1887,9 +1786,7 @@ query_wiz_dom(string wname)
     wname = lower_case(wname);
 
     if (!sizeof(m_wizards[wname]))
-    {
         return "";
-    }
 
     return m_wizards[wname][FOB_WIZ_DOM];
 }
@@ -1906,9 +1803,7 @@ query_wiz_chd(string wname)
     wname = lower_case(wname);
 
     if (!sizeof(m_wizards[wname]))
-    {
         return "";
-    }
 
     return m_wizards[wname][FOB_WIZ_CHDOM];
 }
@@ -1923,9 +1818,7 @@ string *
 query_wiz_list(int rank)
 {
     if (rank == -1)
-    {
         return m_indices(m_wizards);
-    }
 
     return filter(m_indices(m_wizards), &operator(==)(rank) @ query_wiz_rank);
 }
@@ -1940,13 +1833,10 @@ reset_wiz_uid(object wiz)
 {
     /* Access failure. This is only acceptable for a player object. */
     if (!IS_PLAYER_OBJECT(wiz))
-    {
         return;
-    }
+
     if (!query_wiz_level(wiz->query_real_name()))
-    {
         return;
-    }
 
     set_auth(wiz, wiz->query_real_name() + ":#");
 }
@@ -2023,9 +1913,7 @@ do_change_rank(string wname, int rank, string cmder)
          */
         dname = m_wizards[wname][FOB_WIZ_DOM];
         if (strlen(m_domains[dname][FOB_DOM_LORD]))
-        {
             do_change_rank(m_domains[dname][FOB_DOM_LORD], WIZ_NORMAL, cmder);
-        }
 
         m_domains[dname][FOB_DOM_LORD] = wname;
 
@@ -2038,10 +1926,8 @@ do_change_rank(string wname, int rank, string cmder)
     {
         dname = m_wizards[wname][FOB_WIZ_DOM];
         if (strlen(m_domains[dname][FOB_DOM_STEWARD]))
-        {
             do_change_rank(m_domains[dname][FOB_DOM_STEWARD], WIZ_NORMAL,
-                cmder);
-        }
+			   cmder);
 
         m_domains[dname][FOB_DOM_STEWARD] = wname;
 
@@ -2095,9 +1981,7 @@ wizard_change_rank(string wname, int rank)
 
     /* May only be called from the Lord soul. */
     if (!CALL_BY(WIZ_CMD_LORD))
-    {
         return 0;
-    }
 
     cmder = getwho();
     wname = lower_case(wname);
@@ -2187,12 +2071,10 @@ wizard_change_rank(string wname, int rank)
     case WIZ_MORTAL:
         /* If the wizard is in a domain, kick him out. */
         if (strlen(dname))
-        {
             add_wizard_to_domain("", wname, cmder);
-        }
 
         /* Burry all evidence of his/her existing. */
-        m_wizards = m_delete(m_wizards, wname);
+        m_delkey(m_wizards, wname);
         remove_all_sanctions(wname);
 
         /* Tell him/her the bad news and boot him. */
@@ -2205,9 +2087,7 @@ wizard_change_rank(string wname, int rank)
             /* ... and ... POOF! ;-) */
             wizard->quit();
             if (objectp(wizard))
-            {
                 do_debug("destroy", wizard);
-            }
         }
 
         /* Rename the file after the booting. We might change our mind ;-) */
@@ -2218,9 +2098,8 @@ wizard_change_rank(string wname, int rank)
     case WIZ_PILGRIM:
     case WIZ_RETIRED:
         if (strlen(dname))
-        {
             add_wizard_to_domain("", wname, cmder);
-        }
+
         break;
     }
 
@@ -2250,9 +2129,7 @@ wizard_change_level(string wname, int level)
 
     /* May only be called from the Lord soul. */
     if (!CALL_BY(WIZ_CMD_LORD))
-    {
         return 0;
-    }
 
     cmder = getwho();
     wname = lower_case(wname);
@@ -2341,9 +2218,7 @@ set_keeper(string wname, int promote)
 {
     /* May only be called from the keeper soul. */
     if (!CALL_BY(WIZ_CMD_KEEPER))
-    {
         return 0;
-    }
 
     do_change_rank(wname, (promote ? WIZ_KEEPER : WIZ_ARCH), getwho());
     return 1;
@@ -2361,9 +2236,7 @@ create_wizard(string name)
 {
     if (member_array(function_exists("make_wiz", previous_object()),
         WIZ_MAKER) == -1)
-    {
         return;
-    }
 
     transform_mortal_into_wizard(name, ROOT_UID);
     do_change_rank(name, WIZ_APPRENTICE, ROOT_UID);
@@ -2397,9 +2270,7 @@ query_wiz_pretitle(mixed wiz)
         wiz = finger_player(name);
 
         if (!objectp(wiz))
-        {
             return "";
-        }
 
         gender = wiz->query_gender();
         wiz->remove_object();
@@ -2461,28 +2332,20 @@ query_wiz_path(string wname)
     /* A domains path. */
     dname = capitalize(wname);
     if (sizeof(m_domains[dname]))
-    {
         return "/d/" + dname;
-    }
 
     /* Root. */
     wname = lower_case(wname);
     if (wname == ROOT_UID)
-    {
         return "/syslog";
-    }
 
     /* Not a wizard, ie no path. */
     if (!sizeof(m_wizards[wname]))
-    {
         return "";
-    }
 
     /* A wizard who is a domain member. */
     if (strlen(m_wizards[wname][FOB_WIZ_DOM]))
-    {
         return "/w/" + wname;
-    }
 
     /* Non-domain members, ie apprentices, pilgrims and retired people. */
     return "/doc";
@@ -2504,9 +2367,7 @@ query_mage_links()
     links = sort_array( ({ }) + m_domains[WIZARD_DOMAIN][FOB_DOM_MEMBERS]);
     size  = sizeof(links);
     while(++index < size)
-    {
         links[index] = "/w/" + links[index] + "/" + WIZARD_LINK;
-    }
 
     return links;
 }
@@ -2527,9 +2388,7 @@ query_domain_links()
     links = sort_array(m_indices(m_domains));
     size = sizeof(links);
     while(++index < size)
-    {
         links[index] = "/d/" + links[index] + "/" + DOMAIN_LINK;
-    }
 
     return links;
 }
@@ -2549,9 +2408,7 @@ retire_wizard()
 
     /* May only be called from the 'normal' wizard soul. */
     if (!CALL_BY(WIZ_CMD_NORMAL))
-    {
         return 0;
-    }
 
     cmder = getwho();
     rank  = m_wizards[cmder][FOB_WIZ_RANK];
@@ -2600,9 +2457,7 @@ add_global_read(string wname, string comment)
 
     /* May only be called from the arch soul. */
     if (!CALL_BY(WIZ_CMD_ARCH))
-    {
         return 0;
-    }
 
     cmder = getwho();
 
@@ -2633,10 +2488,8 @@ add_global_read(string wname, string comment)
     save_master();
 
     if (objectp(wiz = find_player(wname)))
-    {
         tell_object(wiz, "Global read access has been granted to you by " +
-            capitalize(cmder) + ".\n");
-    }
+		    capitalize(cmder) + ".\n");
 
     write("Added " + capitalize(wname) + " to have global read access.\n");
     return 1;
@@ -2656,9 +2509,7 @@ remove_global_read(string wname)
 
     /* May only be called from the arch soul. */
     if (!CALL_BY(WIZ_CMD_ARCH))
-    {
         return 0;
-    }
 
     cmder = getwho();
 
@@ -2671,7 +2522,7 @@ remove_global_read(string wname)
     }
 
     /* Remove the entry, save the master and notify the caller. */
-    m_global_read = m_delete(m_global_read, wname);
+    m_delkey(m_global_read, wname);
     save_master();
 
     if (objectp(wiz = find_player(wname)))
@@ -2717,17 +2568,13 @@ set_mentor(string mentor, string student)
 
     /* Only stewards++ can do this */
     if (!CALL_BY(WIZ_CMD_LORD))
-    {
         return 0;
-    }
 
     /* The student has to be at least a normal wiz. */
     if (mentor != "none" && 
 	mentor != "" &&
 	query_wiz_rank(student) < WIZ_NORMAL)
-    {
         return 0;
-    }
 
     /* Erase the previous record */
     if (mentor == "none" || mentor == "")
@@ -2742,34 +2589,24 @@ set_mentor(string mentor, string student)
 
     /* The mentor has to be at least a normal wiz. */
     if (query_wiz_rank(mentor) < WIZ_NORMAL)
-    {
         return 0;
-    }
 
     /* It's impossible to overwrite a mentor record. */
     if (strlen(m_wizards[student][FOB_WIZ_MENTOR]) > 0)
-    {
         return 0;
-    }
 
     /* It's impossible to be a mentor and student at the same time. */
     if (strlen(m_wizards[mentor][FOB_WIZ_MENTOR]) > 0 ||
         sizeof(m_wizards[student][FOB_WIZ_STUDENTS]) > 0)
-    {
         return 0;
-    }
 
     /* The student and mentor should belong to the same domain, except
      * for archwizards of course.
      */
     if (m_wizards[cmder][FOB_WIZ_RANK] < WIZ_ARCH &&
 	m_wizards[mentor][FOB_WIZ_RANK] < WIZ_ARCH)
-    {
         if (m_wizards[student][FOB_WIZ_DOM] != m_wizards[mentor][FOB_WIZ_DOM])
-        {
             return 0;
-        }
-    }
 
     m_wizards[student][FOB_WIZ_MENTOR] = mentor;
     save_master();
@@ -2786,9 +2623,7 @@ string
 query_mentor(string student)
 {
     if (!sizeof(m_wizards[student]))
-    {
         return "";
-    }
 
     return m_wizards[student][FOB_WIZ_MENTOR];
 }
@@ -2807,46 +2642,32 @@ add_student(string mentor, string student)
 
     /* Only stewards++ can do this. */
     if (!CALL_BY(WIZ_CMD_LORD))
-    {
         return 0;
-    }
 
     /* The mentor has to be at least a normal wiz. */
     if (query_wiz_rank(mentor) < WIZ_NORMAL)
-    {
         return 0;
-    }
 
     /* The student has to be at least a normal wiz. */
     if (query_wiz_rank(student) < WIZ_NORMAL)
-    {
         return 0;
-    }
 
     /* It's impossible to be a mentor and student at the same time. */
     if (strlen(m_wizards[mentor][FOB_WIZ_MENTOR]) > 0 ||
         sizeof(m_wizards[student][FOB_WIZ_STUDENTS]) > 0)
-    {
         return 0;
-    }
 
     /* The student and mentor should belong to the same domain, except
      * for archwizards of course.
      */
     if (m_wizards[cmder][FOB_WIZ_RANK] < WIZ_ARCH &&
 	m_wizards[mentor][FOB_WIZ_RANK] < WIZ_ARCH)
-    {
         if (m_wizards[mentor][FOB_WIZ_DOM] != m_wizards[student][FOB_WIZ_DOM])
-        {
             return 0;
-        }
-    }
 
     /* The student must be new. */
     if (member_array(student, m_wizards[mentor][FOB_WIZ_STUDENTS]) >= 0)
-    {
         return 0;
-    }
 
     m_wizards[mentor][FOB_WIZ_STUDENTS] += ({ student });
     save_master();
@@ -2865,15 +2686,11 @@ remove_student(string mentor, string student)
 {
     /* Only stewards++ can do this. */
     if (!CALL_BY(WIZ_CMD_LORD))
-    {
         return 0;
-    }
 
     /* He isn't a wizard. */
     if (!sizeof(m_wizards[mentor]))
-    {
         return 0;
-    }
 
     /* It doesn't matter if he's in the list or not. */
     m_wizards[mentor][FOB_WIZ_STUDENTS] -= ({ student });
@@ -2891,9 +2708,7 @@ string *
 query_students(string mentor)
 {
     if (!sizeof(m_wizards[mentor]))
-    {
         return ({});
-    }
 
     return secure_var(m_wizards[mentor][FOB_WIZ_STUDENTS]);
 }
@@ -2916,23 +2731,17 @@ set_restrict(string wiz, int res)
 {
     /* Only mentors and steward++ can do this. */
     if (!CALL_BY(WIZ_CMD_NORMAL))
-    {
         return 0;
-    }
 
     if (sizeof(m_wizards[wiz]) == 0)
-    {
         return 0;
-    }
 
     /* Impose a restriction, just be certain even though
      * only the wiz soul can call.
      */
     if ((m_wizards[wiz][FOB_WIZ_RANK] < WIZ_NORMAL) ||
         (m_wizards[wiz][FOB_WIZ_RANK] > WIZ_MAGE))
-    {
         return 0;
-    }
     
     m_wizards[wiz][FOB_WIZ_RESTRICT] |= res;
     save_master();
@@ -2951,14 +2760,10 @@ int
 remove_restrict(string wiz, int res)
 {
     if (!CALL_BY(WIZ_CMD_NORMAL))
-    {
         return 0;
-    }
 
     if (sizeof(m_wizards[wiz]) == 0)
-    {
         return 0;
-    }
     
     m_wizards[wiz][FOB_WIZ_RESTRICT] ^= res;
     save_master();
@@ -2975,9 +2780,7 @@ int
 query_restrict(string wiz)
 {
     if (sizeof(m_wizards[wiz]) == 0)
-    {
         return 0;
-    }
     
     return m_wizards[wiz][FOB_WIZ_RESTRICT];
 }
@@ -3005,23 +2808,15 @@ update_teams(void)
     {
         rlist = ({}) + m_teams[tms[i]];
         for (j = 0, sz2 = sizeof(rlist) ; j < sz2 ; j++)
-        {
             if (m_wizards[rlist[j]][FOB_WIZ_RANK] < WIZ_NORMAL)
-            {
                 m_teams[tms[i]] -= ({ rlist[j] });
-            }
-        }
     }
 
     /* Remove empty teams. */
     for (i = 0, sz1 = sizeof(tms) ; i < sz1 ; i++)
-    {
         if (sizeof(m_teams[tms[i]]) == 0)
-        {
-            m_teams = m_delete(m_teams, tms[i]);
-        }
-    }
-    
+            m_delkey(m_teams, tms[i]);
+
     save_master();
 }
 
@@ -3037,24 +2832,18 @@ add_team_member(string team, string member)
 {
     /* Only arches can do this. */
     if (!CALL_BY(WIZ_CMD_ARCH))
-    {
         return 0;
-    }
 
     team = lower_case(team);
     member = lower_case(member);
 
     /* The member must be a full wiz. */
     if (m_wizards[member][FOB_WIZ_RANK] < WIZ_NORMAL)
-    {
         return 0;
-    }
 
     /* Make sure he only ends up there once. */
     if (!pointerp(m_teams[team]))
-    {
         m_teams[team] = ({ member });
-    }
     else
     {
         m_teams[team] -= ({ member });
@@ -3078,9 +2867,7 @@ remove_team_member(string team, string member)
 {
     /* Only arches can do this. */
     if (!CALL_BY(WIZ_CMD_ARCH))
-    {
         return 0;
-    }
 
     team = lower_case(team);
     if (pointerp(m_teams[team]))
@@ -3104,9 +2891,7 @@ query_team_list(string team)
 {
     team = lower_case(team);
     if (!pointerp(m_teams[team]))
-    {
        return ({ });
-    }
 
     return secure_var(m_teams[team]);
 }
@@ -3123,9 +2908,7 @@ query_team_member(string team, string member)
 {
     team = lower_case(team);
     if (!pointerp(m_teams[team]))
-    {
         return 0;
-    }
 
     member = lower_case(member);
     return (member_array(member, m_teams[team]) >= 0);
@@ -3157,10 +2940,8 @@ query_team_membership(string member)
     member = lower_case(member);
     teams = m_indices(m_teams);
     for (i = 0, sz = sizeof(teams) ; i < sz ; i++)
-    {
 	if (member_array(member, m_teams[teams[i]]) >= 0)
 	    rlist += ({ teams[i] });
-    }
 
     return rlist;
 }
@@ -3183,9 +2964,7 @@ set_channels(mapping channels)
 {
     /* May only be called from the apprentice soul. */
     if (!CALL_BY(WIZ_CMD_APPRENTICE))
-    {
         return 0;
-    }
 
     set_auth(this_object(), "root:root");
     save_map(channels, CHANNELS_SAVE);
@@ -3203,9 +2982,7 @@ mapping
 query_channels()
 {
     if (!CALL_BY(WIZ_CMD_APPRENTICE))
-    {
         return 0;
-    }
 
     set_auth(this_object(), "root:root");
     return restore_map(CHANNELS_SAVE);

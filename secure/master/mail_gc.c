@@ -534,7 +534,7 @@ step5(mapping msg_map)
      * Remove the message directory from the message map.
      */
 
-    msg_map = m_delete(msg_map, msg_dir);
+    m_delkey(msg_map, msg_dir);
 
     /*
      * Remove the messages.

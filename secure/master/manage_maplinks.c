@@ -79,7 +79,7 @@ setup_maplinks()
     {
 	if (stringp(catch(call_other(managers[il], "teleledningsanka"))))
 	{
-	    map_managers = m_delete(map_managers, dix[il]);
+	    m_delkey(map_managers, dix[il]);
 	    sflag = 1;
 	    continue;
 	}
@@ -138,7 +138,7 @@ add_maplink(string file, string box, string *singles)
     {
 	if (pointerp(old[2]))
 	    for (il = 0; il < sizeof(old[2]); il++)
-		single_locs = m_delete(single_locs, old[2][il]);
+		m_delkey(single_locs, old[2][il]);
 	
 	if (pointerp(boxes))
 	    for (il = 0; il < sizeof(boxes); il++)
