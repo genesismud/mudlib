@@ -2221,37 +2221,39 @@ whereis(string str)
  *                string type - the type of soul.
  * Returns      : int - number of times the command was found.
  */
-static nomask int
+static nomask string
 print_whichsoul(string *soul_list, string cmd, string type)
 {
-    int    index = -1;
-    int    size = sizeof(soul_list);
-    string soul_id;
-    string *cmds;
-    int    found = 0;
+    int     index = -1;
+    int     size = sizeof(soul_list);
+    string  soul_id;
+    mapping cmd_list;
+    string  text = "";
 
     while(++index < size)
     {
-        cmds = m_indices(soul_list[index]->query_cmdlist());
-        if (member_array(cmd, cmds) > -1)
+        cmd_list = soul_list[index]->query_cmdlist();
+        if (cmd_list[cmd])
         {
             soul_id = soul_list[index]->get_soul_id();
             soul_id = (strlen(soul_id) ? soul_id : "noname");
-            write(sprintf("%-7s  %-15s  %-s\n", type, soul_id,
-                soul_list[index]));
-            found++;
+            text += sprintf("%-7s  %-15s  %-15s  %-s\n", type, soul_id,
+                cmd_list[cmd] + "()", soul_list[index] + ".c");
         }
     }
 
-    return found;
+    return text;
 }
 
 int
 whichsoul(string str)
 {
     object target;
-    string *cmds;
-    int    found = 0;
+    mixed *cmds;
+    string text = "";
+    int    index = -1;
+    int    size;
+    string extra;
 
     if (!stringp(str))
     {
@@ -2283,21 +2285,40 @@ whichsoul(string str)
         return 0;
     }
 
-    write("Scanning for " + str + " on " + target->query_name() + ".\n");
-
-    cmds = target->local_cmd();
-    if (member_array(str, cmds) > -1)
+    cmds = commands(target);
+    size = sizeof(cmds);
+    while (++index < size)
     {
-        write("Found at least once in local commands. (add_action's)\n");
+        if (str == cmds[index][0])
+        {
+            extra = (cmds[index][1] ? ("(part = " + cmds[index][1] + ")") : "");
+            text += sprintf("%-15s  %-s\n",
+                cmds[index][3] + "()", file_name(cmds[index][2]) + extra);
+        }
     }
 
-    write("Type     Soulname         Filename\n");
+    if (strlen(text))
+    {
+        write("Function         Filename\n");
+        write("--------         --------\n");
+        write(text + "\n");
+    }
+    else
+    {
+        write("Command " + str + " not found among local commands. (add_action's)\n\n");
+    }
 
-    found += print_whichsoul(target->query_wizsoul_list(), str, "wizard");
-    found += print_whichsoul(target->query_tool_list(),    str, "tool");
-    found += print_whichsoul(target->query_cmdsoul_list(), str, "command");
+    text = print_whichsoul(target->query_wizsoul_list(), str, "wizard");
+    text += print_whichsoul(target->query_tool_list(),    str, "tool");
+    text += print_whichsoul(target->query_cmdsoul_list(), str, "command");
 
-    if (!found)
+    if (strlen(text))
+    {
+        write("Type     Soulname         Function         Filename\n");
+        write("----     --------         --------         --------\n");
+        write(text);
+    }
+    else
     {
         write("Command " + str + " not found in any souls.\n");
     }
