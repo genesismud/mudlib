@@ -224,19 +224,20 @@ assist(string str)
         return 1;
     }
 
-    if (member_array(friend, this_player()->query_enemy(-1)) != -1)
-    {
-        write(break_string("Help " + friend->query_the_name(this_player()) +
-            " to kill you? There are easier ways to commit seppuku!", 76) +
-            "\n");
-        return 1;
-    }
-
     victim = friend->query_attack();
     if (!objectp(victim))
     {
         write(friend->query_The_name(this_player()) +
             " is not fighting anyone.\n");
+        return 1;
+    }
+
+    if ((member_array(friend, this_player()->query_enemy(-1)) != -1) ||
+        (victim == this_player())
+    {
+        write(break_string("Help " + friend->query_the_name(this_player()) +
+            " to kill you? There are easier ways to commit seppuku!", 76) +
+            "\n");
         return 1;
     }
 
