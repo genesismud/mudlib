@@ -49,6 +49,8 @@ static  mapping   cont_sublocs,    /* Map of sublocations and the object res-
                                       ponsible for the subloc, in container */
                   cont_subloc_ids; /* Map of sublocation ids to sublocation */
 
+static private int *NotifyProps;   /* Properties to notify about changes of */
+
 /*
  * Prototypes
  */
@@ -82,6 +84,10 @@ create_object()
     cont_sublocs = ([]);
     cont_subloc_ids = ([]);
     create_container();
+
+    NotifyProps = ({ CONT_I_ATTACH, CONT_I_TRANSP, CONT_I_CLOSED,
+			 CONT_I_LIGHT, OBJ_I_LIGHT, CONT_I_WEIGHT,
+			 OBJ_I_WEIGHT, CONT_I_VOLUME, OBJ_I_VOLUME });
 }
 
 /*
@@ -451,10 +457,7 @@ notify_change_prop(string prop, mixed val, mixed old)
 
     if (old == val)
         return;
-    if (member_array(prop, ({ CONT_I_ATTACH, CONT_I_TRANSP, CONT_I_CLOSED,
-                              CONT_I_LIGHT, OBJ_I_LIGHT, CONT_I_WEIGHT,
-                              OBJ_I_WEIGHT, CONT_I_VOLUME, OBJ_I_VOLUME }))
-        < 0)
+    if (member_array(prop, NotifyProps) < 0)
         return;
     pobj = previous_object();
 
