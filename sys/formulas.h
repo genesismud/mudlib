@@ -222,9 +222,9 @@
 
 /*
  * Recovery limit. How long can you keep your items if you have been away
- * from the realms.
+ * from the realms. 1209600 = 2 weeks.
  */
-#define F_RECOVERY_LIMIT	(604800)
+#define F_RECOVERY_LIMIT	(1209600)
 
 /* 
  * Death
