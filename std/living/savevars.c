@@ -392,6 +392,9 @@ query_title()
     if (strlen(name = this_object()->query_guild_title_lay()))
         titles += ({ name });
 
+    if (strlen(name = this_object()->query_guild_title_craft()))
+        titles += ({ name });
+
     /* An NPC may have guild-titles and set titles.
      */
     if (query_npc())
@@ -406,8 +409,7 @@ query_title()
             titles += ({ title });
     }
 
-    /* A mortal player cannot have a title set by a wizard!
-     */
+    /* A mortal player cannot have a title set by a wizard! */
     if (!sizeof(titles))
         return "";
 
