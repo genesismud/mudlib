@@ -382,6 +382,12 @@ check_acc_exp()
     int index = -1;
     int sum = query_exp();
 
+    /* Make sure the array of of experience has the right size. */
+    if (sizeof(acc_exp) < SS_NO_STATS)
+    {
+        acc_exp += allocate(SS_NO_STATS - sizeof(acc_exp));
+    }
+
     while(++index < SS_NO_EXP_STATS)
     {
         sum -= query_acc_exp(index);
