@@ -145,10 +145,8 @@ read_cache(string filename)
 	 * put it on top.
 	 */
 	if (pos > 0)
-	{
 	    cache_order = ({ filename }) + cache_order[..(pos - 1)] +
 		cache_order[(pos + 1)..];
-	}
 
 	/* Return the cached information, that is... a copy of it. */
 	return secure_var(cache_map[filename]);
@@ -161,14 +159,12 @@ read_cache(string filename)
      */
     if (catch(data = restore_map(filename)) ||
 	!mappingp(data))
-    {
 	data = ([ ]);
-    }
 
     /* If the cache is too large, reduce its size. */
     while((pos = sizeof(cache_order)) >= cache_size)
     {
-	cache_map = m_delete(cache_map, cache_order[pos - 1]);
+	m_delkey(cache_map, cache_order[pos - 1]);
 	cache_order = cache_order[..(pos - 2)];
     }
 
@@ -202,9 +198,7 @@ save_cache(mapping data, string filename)
 
     /* If the entry is in the cache, update it. */
     if (in_cache(filename))
-    {
     	cache_map[filename] = secure_var(data);
-    }
 
     /* Save the information as usual. */
     save_map(data, filename);
@@ -232,7 +226,7 @@ rm_cache(string filename)
     if (member_array(filename, cache_order) > -1)
     {
     	cache_order -= ({ filename });
-    	cache_map = m_delete(cache_map, filename);
+    	m_delkey(cache_map, filename);
     }
 
     /* Remove the file as usual. */
