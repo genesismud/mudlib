@@ -71,7 +71,6 @@ query_line_cmdlist()
     {
         lines += m_indices(channels);
     }
-    lines += (string *)SECURITY->query_domain_list();
     lines += (string *)SECURITY->query_teams();
     lines = map(lines, lower_case) - ({ "wiz" }) - WIZ_N;
     size = sizeof(lines);
@@ -537,6 +536,7 @@ nomask varargs int
 line(string str, int emotion = 0, int busy_level = 0)
 {
     string *members, *receivers;
+    string name = this_player()->query_real_name();
     string line;
     int    size;
     int    rank;
@@ -560,16 +560,26 @@ line(string str, int emotion = 0, int busy_level = 0)
     if ((rank = member_array(line, CHANNEL_WIZRANK)) >= 0)
     {
         rank = WIZ_R[member_array(line, WIZ_N)];
+        line = ((line == WIZNAME_APPRENTICE) ? "Wizline" : capitalize(line));
+        if (SECURITY->query_wiz_rank(name) < rank)
+        {
+            write("You do not hold the rank to speak on the " + line + " line.\n");
+            return 1;
+        }        
         members = map(users() - ({ this_player() }), geteuid);
         members = filter(members, &operator( >= )(, rank) @
             SECURITY->query_wiz_rank);
-        line = ((line == WIZNAME_APPRENTICE) ? "Wizline" : capitalize(line));
     }
     /* Channel is domain-channel. */
     else if (SECURITY->query_domain_number(line) > -1)
     {
         rank = 1;
         line = capitalize(line);
+        if (SECURITY->query_wiz_dom(name) != line)
+        {
+            write("You are not a member of the domain " + line + ".\n");
+            return 1;
+        }        
         members = SECURITY->query_domain_members(line);
         members &= map(users() - ({ this_player() }), geteuid);
     }
@@ -578,6 +588,11 @@ line(string str, int emotion = 0, int busy_level = 0)
     {
         rank = 1;
         line = capitalize(line);
+        if (!SECURITY->query_team_member(name, line))
+        {
+            write("You are not a member of the " + line + " team.\n");
+            return 1;
+        }        
         /* Three letter AoX teams capitalized with X. */
         if (strlen(line) == 3)
         {
@@ -592,8 +607,13 @@ line(string str, int emotion = 0, int busy_level = 0)
         line = lower_case(line);
         members = channels[line][CHANNEL_USERS] +
             channels[line][CHANNEL_HIDDEN];
-        members &= map(users() - ({ this_player() }), geteuid);
         line = channels[line][CHANNEL_NAME];
+        if (member_array(name, members) == -1)
+        {
+            write("You are not a subscriber to the " + line + " line.\n");
+            return 1;
+        }        
+        members &= map(users() - ({ this_player() }), geteuid);
     }
     else
     {
