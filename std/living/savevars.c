@@ -1545,6 +1545,13 @@ set_learn_pref(int *pref_arr)
 
     mval = 100;
 
+    /* Make sure there's a proper value variable to use. */
+    if (!pointerp(pref_arr))
+	pref_arr = ({});
+
+    if (!pointerp(learn_pref))
+	learn_pref = ({});
+
     /* Make sure the arrays are large enough. */
     if (sizeof(pref_arr) < SS_NO_STATS)
         pref_arr += allocate(SS_NO_STATS - sizeof(pref_arr));
