@@ -485,10 +485,10 @@ Destruct(string str)
 int
 Dump(string str)
 {
-    int     i, j, sz, query_list, ret;
+    int     i, j, sz, query_list, ret, calls, etime;
     object  ob, *ob_list;
     string  flag, *props, path, tmp;
-    mixed   *data, *vars;
+    mixed   *data, *vars, *func, *funcs;
 
     CHECK_SO_WIZ;
 
@@ -598,8 +598,45 @@ Dump(string str)
 	break;
 
     case "profile":
-        write(SECURITY->do_debug("getprofile", ob));
-        write("\n");
+        funcs = SECURITY->do_debug("getprofile", ob);
+	if(stringp(funcs)) { write(funcs+"\n"); break; }
+	for (j = sizeof(funcs); i < j; i++) {
+	    sscanf(funcs[i], "%d:%d: %s", calls, etime, func);
+	    funcs[i] = allocate(4);
+	    funcs[i][0] = etime;
+	    funcs[i][1] = calls;
+	    funcs[i][2] = calls ? itof(etime) / itof(calls) : -1.0;
+	    funcs[i][3] = func;
+	}
+
+	//funcs = sort_array(funcs, "mpg_sort", find_tool(wiz));
+
+	write("     Time       Calls        Average   Function\n");
+	for (i = 0; i < sizeof(funcs); i++) {
+	    write(sprintf("%9d / %9d = %12s : %s\n", funcs[i][0], funcs[i][1],
+		       ""+(funcs[i][2] > 0.0 ? ftoa(funcs[i][2]) : "-"), funcs[i][3]));
+	}
+	break;
+
+    case "profile_avg":
+	funcs = SECURITY->do_debug("getprofile_avg", ob);
+	if(stringp(funcs)) { write(funcs+"\n"); break; }
+	for (j = sizeof(funcs); i < j; i++) {
+	    mixed *func = funcs[i];
+	    funcs[i] = allocate(4);
+	    funcs[i][0] = func[1];
+	    funcs[i][1] = func[2];
+	    funcs[i][2] = func[2] > 0.0? func[1] / func[2] : -1.0;
+	    funcs[i][3] = func[0];
+	}
+
+	//funcs = sort_array(funcs, "mpg_sort", find_tool(wiz));
+
+	write("     Time       Calls        Average   Function\n");
+	for (i = 0; i < sizeof(funcs); i++) {
+	    write(sprintf("%12.4f / %12.4f = %12s : %s\n", funcs[i][0], funcs[i][1],
+			  ""+(funcs[i][2] > 0.0 ? ftoa(funcs[i][2]) : "-"), funcs[i][3]));
+	}
 	break;
 
     case "props":
