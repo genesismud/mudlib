@@ -1235,6 +1235,13 @@ set_option(int opt, int val)
             options = efun::clear_bit(options, OPT_BASE + 19);
         break;
 
+    case OPT_AUTOLINECMD:
+        if (val)
+            options = efun::set_bit(options, OPT_BASE + 20);
+        else
+            options = efun::clear_bit(options, OPT_BASE + 20);
+        break;
+
     default:
         return 0;
         break;
@@ -1303,6 +1310,11 @@ query_option(int opt)
 
     case OPT_AUTOWRAP:
         return efun::test_bit(options, OPT_BASE + 19);
+        break;
+
+    case OPT_AUTOLINECMD:
+	// NB! This option is inversed to look on when it's off... duh.. well.
+        return !(efun::test_bit(options, OPT_BASE + 20));
         break;
 
     default:

@@ -1103,6 +1103,7 @@ options(string arg)
 	if (this_player()->query_wiz_level())
 	{
 	    options("autopwd");
+	    options("autolinecmd");
 	}
         return 1;
     }
@@ -1187,6 +1188,17 @@ options(string arg)
 	    }
 	    /* Intentional fallthrough to default if not a wizard. */
 
+	case "autolinecmd":
+	case "cmd":
+	    if (this_player()->query_wiz_level())
+	    {
+		write("Automatic line command aliasing: " +
+		      (this_player()->query_option(OPT_AUTOLINECMD) ?
+		       "On" : "Off") + "\n");
+		break;
+	    }
+	    /* Intentional fallthrough to default if not a wizard. */
+	    
 	default:
             return notify_fail("Syntax error: No such option.\n");
             break;
@@ -1308,6 +1320,23 @@ options(string arg)
             else
 	        this_player()->set_option(OPT_AUTO_PWD, 0);
             options("autopwd");
+	    break;
+	}
+        /* Intentional fallthrough to default if not a wizard. */
+
+    case "autolinecmd":
+    case "cmd":
+        if (this_player()->query_wiz_level())
+	{
+	    // NB! Inverse states on this option!
+	    if (args[1] == "off")
+                this_player()->set_option(OPT_AUTOLINECMD, 1);
+            else
+	        this_player()->set_option(OPT_AUTOLINECMD, 0);
+
+	    // Make sure the line command set gets updated.
+	    "/cmd/wiz/apprentice"->update_commands();
+            options("autolinecmd");
 	    break;
 	}
         /* Intentional fallthrough to default if not a wizard. */

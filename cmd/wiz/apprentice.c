@@ -93,8 +93,7 @@ create()
     restore_object(WIZ_CMD_APPRENTICE);
 
     create_lines();
-
-    cmdlist = query_cmdlist();
+    update_commands();
 }
 
 /* **************************************************************************
@@ -123,7 +122,7 @@ get_soul_id()
 nomask mapping
 query_cmdlist()
 {
-    return ([
+    mapping cmd = ([
         "adjdesc":"adjdesc",
         "allcmd":"allcmd",
 #ifndef NO_ALIGN_TITLE
@@ -218,8 +217,12 @@ query_cmdlist()
         "wiz":"wiz",
         "wize":"wiz",
         "wsay":"wsay",
-        ]) +
-    query_line_cmdlist();
+        ]);
+
+    if (!this_interactive()->query_option(OPT_AUTOLINECMD))
+	return cmd;
+    else
+	return cmd + query_line_cmdlist();
 }
 
 /* **************************************************************************
@@ -296,11 +299,11 @@ print_soul_list(string *soul_list, string soul)
         write("----- " + capitalize(soul_id) + ":\n");
         list = m_indices(soul_list[index]->query_cmdlist());
 
-        /* To print the list of this soul, don't list the lines. */
+        /* To print the list of this soul, don't list the lines. 
         if (soul == get_soul_id())
         {
             list -= m_indices(query_line_cmdlist());
-        }
+	    } */
 
         if (sizeof(list))
         {
@@ -2142,7 +2145,8 @@ wizopt(string arg)
 {
     if (!stringp(arg))
     {
-        return CMD_LIVE_STATE->options("autopwd");
+        return CMD_LIVE_STATE->options(OPT_AUTO_PWD);
+        return CMD_LIVE_STATE->options(OPT_AUTOLINECMD);
     }
     return CMD_LIVE_STATE->options(arg);
 }

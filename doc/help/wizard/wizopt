@@ -9,7 +9,11 @@ DESCRIPTION
 
 ARGUMENTS
 	autopwd <on/off>     - Automatic display of the current working 
-                               directory when you change it.
+        [pwd on/off]           directory when you change it.
+
+	autolinecmd <on/off> - Automatically insert line commands into
+        [cmd on/off]	       the apprentice soul command space.
+			       This option is default on.
 
 SEE ALSO
 	cd, options

@@ -42,11 +42,13 @@
 // Be merciful in combat
 #define OPT_MERCIFUL_COMBAT     9
 // Auto-wrap long notes
-#define OPT_AUTOWRAP	       10
+#define OPT_AUTOWRAP		10
 
 // Wizard options
 
 // Automatic display of current directory on cwd changes
 #define OPT_AUTO_PWD		6
+// Automatically alias line commands
+#define OPT_AUTOLINECMD		11
 
 #endif /* _options_h */
