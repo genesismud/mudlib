@@ -1223,6 +1223,7 @@ restrict(string str)
 
         case "w":
             setres = RESTRICT_NO_W_DOMAIN;
+            break;
 
         case "log":
             setres = RESTRICT_LOG_COMMANDS;
