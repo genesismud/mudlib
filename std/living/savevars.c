@@ -1590,12 +1590,17 @@ set_learn_pref(int *pref_arr)
     int tmp;
 
     mval = 100;
-    
-    if (sizeof(pref_arr) < SS_NO_EXP_STATS)
+
+    /* Make sure the arrays are large enough. */
+    if (sizeof(pref_arr) < SS_NO_STATS)
     {
-        pref_arr = allocate(SS_NO_STATS);
+        pref_arr += allocate(SS_NO_STATS - sizeof(pref_arr));
     }
-    
+    if (sizeof(learn_pref) < SS_NO_STATS)
+    {
+        learn_pref += allocate(SS_NO_STATS - sizeof(learn_pref));
+    }
+
     /* Take away the tax */
     for(i = SS_NO_EXP_STATS; i < SS_NO_STATS; i++)
     {
