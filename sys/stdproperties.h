@@ -129,8 +129,10 @@
 #define LIVE_I_LAST_STEAL       "_live_i_last_steal"
 #define LIVE_I_BACKSTABBING     "_live_i_backstabbing"
 #define LIVE_I_GOT_BACKSTABBED  "_live_i_got_backstabbed"
-#define LIVE_I_ATTACK_THIEF     "_live_i_attack_thief"
+#define LIVE_I_ATTACK_THIEF     "_live_m_attack_thief"
 #define LIVE_M_ATTACK_THIEF     "_live_m_attack_thief"
+#define LIVE_I_NO_SCRY          "_live_m_no_scry"
+#define LIVE_M_NO_SCRY          "_live_m_no_scry"
 #define LIVE_AO_SPARRING        "_live_ao_sparring"
 
 /* *********************************************************
