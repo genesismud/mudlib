@@ -704,6 +704,12 @@ do_pick_lock(int skill, int pick)
 {
     if (skill > pick)
     {
+	if (no_pick)
+	{
+	    write("You failed to pick the lock. It seems unpickable to you.\n");
+	    return;
+	}
+
 	write("You get very satisfied when you hear a soft 'klick' from " +
 	    "the lock.\n");
 	say("You hear a soft 'klick' from the lock.\n");
@@ -759,12 +765,6 @@ pick_lock(string str)
 
     if (!other_door)
 	load_other_door();
-
-    if (no_pick)
-    {
-	write("You failed to pick the lock. It seems unpickable to you.\n");
-	return 1;
-    }
 
     do_pick_lock(skill, pick);
 
