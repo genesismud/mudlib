@@ -760,6 +760,12 @@ pick_lock(string str)
     if (!other_door)
 	load_other_door();
 
+    if (no_pick)
+    {
+	write("You failed to pick the lock. It seems unpickable to you.\n");
+	return 1;
+    }
+
     do_pick_lock(skill, pick);
 
     return 1;      
