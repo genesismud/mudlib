@@ -85,6 +85,14 @@ OPTIONS
 	profile		Will print the objects profile statistics if the
 			appropriate options are set in the driver.
 
+                        An optional argument can be given to determine
+	                which column should be used for sorting (in 
+                        decending order). The sort options are 'time',
+                        'calls', 'average' and 'function'.
+
+	profile_avg	Prints averages over the last minute of the same
+                        data as in profile.
+
 	props,		Will list all properties set in <object>
 	properties
 

@@ -39,6 +39,7 @@ inherit "/cmd/std/tracer_tool_base";
 int In(string str);
 static nomask void object_items(object target);
 static nomask void light_status(object target, int level);
+static int profile_sort(string item, mixed a, mixed b);
 
 #define CHECK_SO_WIZ    if (WIZ_CHECK < WIZ_NORMAL) return 0; \
                         if (this_interactive() != this_player()) return 0
@@ -487,16 +488,28 @@ Dump(string str)
 {
     int     i, j, sz, query_list, ret, calls, etime;
     object  ob, *ob_list;
-    string  flag, *props, path, tmp;
-    mixed   *data, *vars, *func, *funcs;
+    string  *args, flag, extra, *props, path, tmp;
+    mixed   *data, *vars, *funcs, *item;
 
     CHECK_SO_WIZ;
 
-    if (sscanf(str, "%s %s", path, flag) != 2)
-        path = str;
+    flag = extra = "";
+    if (stringp(str))
+    {
+	args = explode(str, " ");
+	path = args[0];
+	if (sizeof(args) >= 2)
+	{
+	    flag = args[1];
+	    if (sizeof(args) >= 2)
+		extra = implode(args[2..], " ");
 
-    if (!objectp(ob = get_assign(path)))
-	ob = parse_list(path);
+	    if (!objectp(ob = get_assign(path)))
+		ob = parse_list(path);
+	}
+    }
+    else
+	path = str;
 
     if (!objectp(ob))
     {
@@ -549,7 +562,6 @@ Dump(string str)
         }
 	break;
 
-
     case "cpu":
         write("Object CPU usage: " + SECURITY->do_debug("object_cpu", ob));
         write("\n");
@@ -598,45 +610,69 @@ Dump(string str)
 	break;
 
     case "profile":
+	extra = strip(extra);
+	if (!strlen(extra) || 
+	    member_array(extra, ({ "time", "calls", "average", "function"})) < 0)
+	    extra = "time";
+
         funcs = SECURITY->do_debug("getprofile", ob);
-	if(stringp(funcs)) { write(funcs+"\n"); break; }
-	for (j = sizeof(funcs); i < j; i++) {
-	    sscanf(funcs[i], "%d:%d: %s", calls, etime, func);
-	    funcs[i] = allocate(4);
-	    funcs[i][0] = etime;
-	    funcs[i][1] = calls;
-	    funcs[i][2] = calls ? itof(etime) / itof(calls) : -1.0;
-	    funcs[i][3] = func;
+	if (stringp(funcs)) 
+	{ 
+	    write(funcs + "\n"); 
+	    break; 
 	}
 
-	//funcs = sort_array(funcs, "mpg_sort", find_tool(wiz));
-
-	write("     Time       Calls        Average   Function\n");
-	for (i = 0; i < sizeof(funcs); i++) {
-	    write(sprintf("%9d / %9d = %12s : %s\n", funcs[i][0], funcs[i][1],
-		       ""+(funcs[i][2] > 0.0 ? ftoa(funcs[i][2]) : "-"), funcs[i][3]));
+	data = ({});
+	foreach (string func: funcs)
+	{
+	    sscanf(func, "%d:%d: %s", calls, etime, func);
+	    item = allocate(4);
+	    item[0] = etime;
+	    item[1] = calls;
+	    item[2] = calls ? itof(etime) / itof(calls) : -1.0;
+	    item[3] = func;
+	    data += ({ item });
 	}
+
+	funcs = sort_array(data, &profile_sort(extra,));
+
+	write(sprintf("%12s %12s %12s   %s\n\n", "Time", "Calls", "Average", "Function"));
+	foreach (mixed func: funcs)
+	    write(sprintf("%12d %12d %12s : %s\n", func[0], func[1],
+		       (func[2] > 0.0 ? sprintf("%10.2f", func[2]) : "-"), func[3]));
+
 	break;
 
     case "profile_avg":
+	extra = strip(extra);
+	if (!strlen(extra) || 
+	    member_array(extra, ({ "time", "calls", "average", "function"})) < 0)
+	    extra = "time";
+
 	funcs = SECURITY->do_debug("getprofile_avg", ob);
-	if(stringp(funcs)) { write(funcs+"\n"); break; }
-	for (j = sizeof(funcs); i < j; i++) {
-	    mixed *func = funcs[i];
-	    funcs[i] = allocate(4);
-	    funcs[i][0] = func[1];
-	    funcs[i][1] = func[2];
-	    funcs[i][2] = func[2] > 0.0? func[1] / func[2] : -1.0;
-	    funcs[i][3] = func[0];
+	if (stringp(funcs)) 
+	{ 
+	    write(funcs + "\n"); 
+	    break; 
 	}
 
-	//funcs = sort_array(funcs, "mpg_sort", find_tool(wiz));
-
-	write("     Time       Calls        Average   Function\n");
-	for (i = 0; i < sizeof(funcs); i++) {
-	    write(sprintf("%12.4f / %12.4f = %12s : %s\n", funcs[i][0], funcs[i][1],
-			  ""+(funcs[i][2] > 0.0 ? ftoa(funcs[i][2]) : "-"), funcs[i][3]));
+	data = ({});
+	foreach (mixed func: funcs)
+	{
+	    item = allocate(4);
+	    item[0] = func[1];
+	    item[1] = func[2];
+	    item[2] = func[2] > 0.0 ? func[1] / func[2] : -1.0;
+	    item[3] = func[0];
+	    data += ({ item });
 	}
+
+	funcs = sort_array(data, &profile_sort(extra,));
+
+	write(sprintf("%12s %12s %12s   %s\n\n", "Time", "Calls", "Average", "Function"));
+	foreach (mixed func: funcs)
+	    write(sprintf("%12.2f %12.2f %12s : %s\n", func[0], func[1],
+		       (func[2] > 0.0 ? sprintf("%10.2f", func[2]) : "-"), func[3]));
 	break;
 
     case "props":
@@ -1309,3 +1345,20 @@ Tail(string str)
     return 1;
 }
 
+static int
+profile_sort(string item, mixed a, mixed b)
+{
+    int reverse = 0, 
+	p = member_array(item, ({ "time", "calls", "average", "function" }));
+
+    if (p < 3)
+	reverse = 1;
+
+    if(a[p] < b[p])
+	return reverse ? 1 : -1;
+    
+    if (a[p] > b[p])
+	return reverse ? -1 : 1;
+
+    return 0;
+}

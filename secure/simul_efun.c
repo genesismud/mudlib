@@ -1328,3 +1328,28 @@ mkcompare(function f, function compare_fun = &operator(<)())
 }
 
 #endif _FUNCTION
+
+/*
+ * Strip spaces and newlines from both ends of a string.
+ *
+ * NB! Obvious candidate for driver efun implementation later.
+ *
+ * Arguments: str - the string to strip
+ * Returns:   The stripped string.
+ */
+nomask string
+strip(string str)
+{
+    int start, end;
+
+    start = 0;
+    end = strlen(str);
+    while (start < end && (str[start] == ' ' || str[start] == '\n'))
+	start++;
+    
+    end--; // Point _inside_ the string
+    while (end > start && (str[end] == ' ' || str[end] == '\n'))
+	end--;
+
+    return str[start..end];
+}
