@@ -1,25 +1,25 @@
 NAME
-	lineconfig - manage the channels.
+	line config - manage the channels.
 
 SYNOPSIS
-	lineconfig add <name> to <channel>
-	lineconfig create <status> <channel>
-	lineconfig expel <name> from <channel>
-	lineconfig join <channel>
-	lineconfig leave <channel>
-	lineconfig list [<channel>]
-	lineconfig owner <name> of <channel>
-	lineconfig remove <channel>
+	line config add <name> to <channel>
+	line config create <status> <channel>
+	line config expel <name> from <channel>
+	line config join <channel>
+	line config leave <channel>
+	line config list [<channel>]
+	line config owner <name> of <channel>
+	line config remove <channel>
 
 DESCRIPTION
-      -	lineconfig list <channel>
-	lineconfig list
+      -	line config list <channel>
+	line config list
 
 	This gives you a list of all the channels you can join and all
 	the listed members to those channels. If you add the name of a
 	channel you will get the information only for that channel.
 
-      -	lineconfig create <status> <channel>
+      -	line config create <status> <channel>
 
 	Create the channel named <channel> and become its owner. If you
 	make the channel 'open' this means everyone may join it. Else, if
@@ -29,12 +29,12 @@ DESCRIPTION
 	channel entirely. The channel-name may have a maximum length of
 	eight characters, preferably only letters.
 
-      -	lineconfig remove <channel>
+      -	line config remove <channel>
 
 	Remove the channel entirely. This is only possible if you are the
 	owner of the channel (or an arch++). Domain lines cannot be removed.
 
-      -	lineconfig join <channel>
+      -	line config join <channel>
 
 	Join the channel <channel>. This is only possible for open channels.
 	If you want to join a closed channel, the owner must add you. It is
@@ -42,24 +42,24 @@ DESCRIPTION
 	domain you are automatically a member and others must stay clear
 	from the line.
 
-      -	lineconfig leave <channel>
+      -	line config leave <channel>
 
 	Leave the channel <channel>. You cannot leave a domain-line.
 	Membership of the domain line comes with membership of the domain.
 
-      -	lineconfig add <name> to <channel>
+      -	line config add <name> to <channel>
 
 	If you are the owner of the channel (or an arch++) you may add a
 	wizard to the channel. For closed channels, it is imparative that
 	you personally add all members since they cannot join the channel
 	themselves.
 
-      -	lineconfig expel <name> from <channel>
+      -	line config expel <name> from <channel>
 
 	If you are the owner of a channel (or an arch++) you may expel a
 	wizard from the channel.
 
-      - lineconfig owner <name> of <channel>
+      - line config owner <name> of <channel>
 
 	If you are the owner of a channel (or an arch++) you can assign a new
 	owner to the channel.

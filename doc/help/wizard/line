@@ -4,6 +4,8 @@ NAME
 SYNOPSIS
 	line <channel> <message>
 	line <channel>
+        line config <command> <arguments>
+        line list <channel>
 
 DESCRIPTION
 	With this command you can say something to all wizards listening to
@@ -16,12 +18,15 @@ DESCRIPTION
 	one else can become a member of a domain line.
 	
 	If you do not add a message, you will list all members of that
-	particular line, exactly like 'lineconfig list <channel>'. The
+	particular line, exactly like 'line list <channel>'. The
 	command dtell is an alias to 'line <your domain>'.
 
 ARGUMENTS
 	<channel> - the name of a channel or domain.
 	<message> - whatever you want to say on the channel.
+
+        config    - see 'help lineconfig' for details on configuration.
+        list      - list the members of the channel.
 
 SEE ALSO
 	arch, busy, dtell, liege, lineconfig, linee, wiz

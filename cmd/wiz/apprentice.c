@@ -167,7 +167,6 @@ query_cmdlist()
         "last":"last",
         "line":"line",
         "linee":"line",
-        "lineconfig":"lineconfig",
         "lman":"lman",
         "localcmd":"localcmd",
         "ls":"list_files",

@@ -13,7 +13,6 @@
  * - linee
  * - <line> - speech on all lines defined.
  * - <line>e - emote on all lines defined.
- * - lineconfig
  * - next
  * - tell
  * - wiz
@@ -51,6 +50,8 @@ static private mapping channels;
 #define CHANNEL_OWNER   (4) /* the owner of the channel.                  */
 
 #define CHANNEL_WIZRANK ({ WIZNAME_APPRENTICE, WIZNAME_LORD, WIZNAME_ARCH })
+#define CHANNEL_RESERVED ({ "add", "hadd", "config", "create", "expel", \
+            "join", "hjoin", "leave", "list", "owner", "remove" })
 
 /*
  * Function name: query_line_cmdlist
@@ -532,177 +533,13 @@ line_list(string line)
     return 1;
 }
 
-nomask varargs int
-line(string str, int emotion = 0, int busy_level = 0)
-{
-    string *members, *receivers;
-    string name = this_player()->query_real_name();
-    string line;
-    int    size;
-    int    rank;
-    object wizard;
-
-    CHECK_SO_WIZ;
-
-    if (!stringp(str))
-    {
-        notify_fail(capitalize(query_verb()) + " what?\n");
-        return 0;
-    }
-
-    if (sscanf(str, "%s %s", line, str) != 2)
-    {
-        line = str;
-        str = "";
-    }
-
-    /* Channel is a wizline-channel. */
-    if ((rank = member_array(line, CHANNEL_WIZRANK)) >= 0)
-    {
-        rank = WIZ_R[member_array(line, WIZ_N)];
-        line = ((line == WIZNAME_APPRENTICE) ? "Wizline" : capitalize(line));
-        if (SECURITY->query_wiz_rank(name) < rank)
-        {
-            write("You do not hold the rank to speak on the " + line + " line.\n");
-            return 1;
-        }        
-        members = map(users() - ({ this_player() }), geteuid);
-        members = filter(members, &operator( >= )(, rank) @
-            SECURITY->query_wiz_rank);
-    }
-    /* Channel is domain-channel. */
-    else if (SECURITY->query_domain_number(line) > -1)
-    {
-        rank = 1;
-        line = capitalize(line);
-        if (SECURITY->query_wiz_dom(name) != line)
-        {
-            write("You are not a member of the domain " + line + ".\n");
-            return 1;
-        }        
-        members = SECURITY->query_domain_members(line);
-        members &= map(users() - ({ this_player() }), geteuid);
-    }
-    /* Channel is an arch team channel. */
-    else if (sizeof(SECURITY->query_team_list(line)))
-    {
-        rank = 1;
-        line = capitalize(line);
-        if (!SECURITY->query_team_member(name, line))
-        {
-            write("You are not a member of the " + line + " team.\n");
-            return 1;
-        }        
-        /* Three letter AoX teams capitalized with X. */
-        if (strlen(line) == 3)
-        {
-            line = line[..1] + capitalize(line[2..]);
-        }
-        members = SECURITY->query_team_list(line);
-        members &= map(users() - ({ this_player() }), geteuid);
-    }
-    /* Channel is normal type of channel, well, you know what I mean. */
-    else if (pointerp(channels[lower_case(line)]))
-    {
-        line = lower_case(line);
-        members = channels[line][CHANNEL_USERS] +
-            channels[line][CHANNEL_HIDDEN];
-        line = channels[line][CHANNEL_NAME];
-        if (member_array(name, members) == -1)
-        {
-            write("You are not a subscriber to the " + line + " line.\n");
-            return 1;
-        }        
-        members &= map(users() - ({ this_player() }), geteuid);
-    }
-    else
-    {
-        notify_fail("There is no channel called '" + line + "'.\n");
-        return 0;
-    }
-
-    /* No message means list the particular line. */
-    if (!strlen(str))
-    {
-        /* Listing a domain or team line line by fingering them. */
-        if (rank != -1)
-        {
-            return finger("-l " + line);
-        }
-    
-        if (line_list(lower_case(line)))
-        {
-            return 1;
-        }
-
-        notify_fail("There is no channel named '" + line + "' for you.\n");
-        return 0;
-    }
-
-    receivers = filter(members, not @ &operator(&)(busy_level | BUSY_F) @
-                       &->query_prop(WIZARD_I_BUSY_LEVEL) @ find_player);
-    receivers = filter(receivers, &interactive() @ find_player);
-    
-    if (!(size = sizeof(receivers)))
-    {
-        notify_fail("There is no one listening to the channel '" + line +
-            "' at this moment, so your message is not heard.\n");
-        return 0;
-    }
-
-    str = (line == "Wizline" ? "@ " : "<" + line + "> ") +
-           capitalize(this_player()->query_real_name() +
-           ((emotion ? emotion : (query_verb() == "linee")) ? " " : ": ") +
-           str + "\n");
-
-    while(size--)
-    {
-        tell_object(find_player(receivers[size]), str);
-    }
-
-    if (this_player()->query_option(OPT_ECHO))
-    {
-        write(str);
-    }
-    else
-    {
-        write("Ok.\n");
-    }
-
-    return 1;
-}
-
 /*
- * Function name: line_shortcut
- * Descripton   : Provide access to the line functionality by the name of the
- *                line itself to say something.
- * Arguments    : string str - the message to say on the line.
- * Returns      : int 1/0 - as line().
+ * Function name: lineconfig
+ * Description  : Implementation of the command "line config ..."
+ * Arguments    : string str - the arguments to "line config"
+ * Rerturns     : int 1/0 - success/failure.
  */
-int
-line_shortcut(string str)
-{
-    return line(query_verb() + (strlen(str) ? (" " + str) : ""), 0);
-}
-
-/*
- * Function name: linee_shortcut
- * Descripton   : Provide access to the line functionality by the name of the
- *                line itself to emote something.
- * Arguments    : string str - the message to emote on the line.
- * Returns      : int 1/0 - as line().
- */
-int
-linee_shortcut(string str)
-{
-    return line(extract(query_verb(), 0, -2) +
-        (strlen(str) ? (" " + str) : ""), 1);
-}
-
-/* **************************************************************************
- * lineconfig - configurate any of the lines.
- */
-nomask int
+nomask static int
 lineconfig(string str)
 {
     string cmd;
@@ -716,9 +553,9 @@ lineconfig(string str)
     int    index;
     int    size;
 
-    if (!stringp(str))
+    if (!strlen(str))
     {
-        notify_fail("Which subcommand for lineconfig do you wish to use?\n");
+        notify_fail("Which subcommand for line config do you wish to use?\n");
         return 0;
     }
 
@@ -744,7 +581,7 @@ lineconfig(string str)
         if (!strlen(str) ||
             (sscanf(str, "%s to %s", target, line) != 2))
         {
-            notify_fail("Syntax: lineconfig add <name> to <channel>\n");
+            notify_fail("Syntax: line config add <name> to <channel>\n");
             return 0;
         }
         if (!pointerp(channels[line = lower_case(line)]))
@@ -787,7 +624,7 @@ lineconfig(string str)
         if (!strlen(str) ||
             (sscanf(str, "%s %s", target, str) != 2))
         {
-            notify_fail("Syntax: lineconfig create open/closed <channel>\n");
+            notify_fail("Syntax: line config create open/closed <channel>\n");
             return 0;
         }
         if ((strlen(str) < 2) ||
@@ -800,6 +637,11 @@ lineconfig(string str)
         if (pointerp(channels[line = lower_case(str)]))
         {
             notify_fail("The channel '" + line + "' already exists.\n");
+            return 0;
+        }
+        if (member_array(line, CHANNEL_RESERVED) != -1)
+        {
+            notify_fail("The channel '" + line + "' is a reserved name.\n");
             return 0;
         }
         if (SECURITY->query_domain_number(line) > -1)
@@ -827,7 +669,7 @@ lineconfig(string str)
         if (!strlen(str) ||
             (sscanf(str, "%s from %s", target, line) != 2))
         {
-            notify_fail("Syntax: lineconfig expel <name> from <channel>\n");
+            notify_fail("Syntax: line config expel <name> from <channel>\n");
             return 0;
         }
         if (!pointerp(channels[line = lower_case(line)]))
@@ -1005,7 +847,7 @@ lineconfig(string str)
         if (!strlen(str) ||
             (sscanf(str, "%s of %s", target, line) != 2))
         {
-            notify_fail("Syntax: lineconfig owner <name> of <channel>\n");
+            notify_fail("Syntax: line config owner <name> of <channel>\n");
             return 0;
         }
         if (!pointerp(channels[line = lower_case(line)]))
@@ -1067,12 +909,191 @@ lineconfig(string str)
         return 1;
 
     default:
-        notify_fail("No lineconfig subcommand '" + cmd + "'.\n");
+        notify_fail("No line config subcommand '" + cmd + "'.\n");
         return 0;
     }
 
     write("Fatal error in lineconfig(). Please report this.\n");
     return 1;
+}
+
+nomask varargs int
+line(string str, int emotion = 0, int busy_level = 0)
+{
+    string *members, *receivers;
+    string name = this_player()->query_real_name();
+    string line;
+    int    size;
+    int    rank;
+    object wizard;
+
+    CHECK_SO_WIZ;
+
+    if (!stringp(str))
+    {
+        notify_fail(capitalize(query_verb()) + " what?\n");
+        return 0;
+    }
+
+    if (sscanf(str, "%s %s", line, str) != 2)
+    {
+        line = str;
+        str = "";
+    }
+
+    /* Built-in configurator. */
+    switch(line)
+    {
+    case "config":
+        return lineconfig(str);
+        /* Not reached. */
+
+    case "list":
+        return lineconfig("list" + (strlen(str) ? (" " + str) : ""));
+        /* Not reached. */
+    }
+
+    /* Channel is a wizline-channel. */
+    if ((rank = member_array(line, CHANNEL_WIZRANK)) >= 0)
+    {
+        rank = WIZ_R[member_array(line, WIZ_N)];
+        line = ((line == WIZNAME_APPRENTICE) ? "Wizline" : capitalize(line));
+        if (SECURITY->query_wiz_rank(name) < rank)
+        {
+            write("You do not hold the rank to speak on the " + line + " line.\n");
+            return 1;
+        }        
+        members = map(users() - ({ this_player() }), geteuid);
+        members = filter(members, &operator( >= )(, rank) @
+            SECURITY->query_wiz_rank);
+    }
+    /* Channel is domain-channel. */
+    else if (SECURITY->query_domain_number(line) > -1)
+    {
+        rank = 1;
+        line = capitalize(line);
+        if (SECURITY->query_wiz_dom(name) != line)
+        {
+            write("You are not a member of the domain " + line + ".\n");
+            return 1;
+        }        
+        members = SECURITY->query_domain_members(line);
+        members &= map(users() - ({ this_player() }), geteuid);
+    }
+    /* Channel is an arch team channel. */
+    else if (sizeof(SECURITY->query_team_list(line)))
+    {
+        rank = 1;
+        line = capitalize(line);
+        if (!SECURITY->query_team_member(name, line))
+        {
+            write("You are not a member of the " + line + " team.\n");
+            return 1;
+        }        
+        /* Three letter AoX teams capitalized with X. */
+        if (strlen(line) == 3)
+        {
+            line = line[..1] + capitalize(line[2..]);
+        }
+        members = SECURITY->query_team_list(line);
+        members &= map(users() - ({ this_player() }), geteuid);
+    }
+    /* Channel is normal type of channel, well, you know what I mean. */
+    else if (pointerp(channels[lower_case(line)]))
+    {
+        line = lower_case(line);
+        members = channels[line][CHANNEL_USERS] +
+            channels[line][CHANNEL_HIDDEN];
+        line = channels[line][CHANNEL_NAME];
+        if (member_array(name, members) == -1)
+        {
+            write("You are not a subscriber to the " + line + " line.\n");
+            return 1;
+        }        
+        members &= map(users() - ({ this_player() }), geteuid);
+    }
+    else
+    {
+        notify_fail("There is no channel called '" + line + "'.\n");
+        return 0;
+    }
+
+    /* No message means list the particular line. */
+    if (!strlen(str))
+    {
+        /* Listing a domain or team line line by fingering them. */
+        if (rank != -1)
+        {
+            return finger("-l " + line);
+        }
+    
+        if (line_list(lower_case(line)))
+        {
+            return 1;
+        }
+
+        notify_fail("There is no channel named '" + line + "' for you.\n");
+        return 0;
+    }
+
+    receivers = filter(members, not @ &operator(&)(busy_level | BUSY_F) @
+                       &->query_prop(WIZARD_I_BUSY_LEVEL) @ find_player);
+    receivers = filter(receivers, &interactive() @ find_player);
+    
+    if (!(size = sizeof(receivers)))
+    {
+        notify_fail("There is no one listening to the channel '" + line +
+            "' at this moment, so your message is not heard.\n");
+        return 0;
+    }
+
+    str = (line == "Wizline" ? "@ " : "<" + line + "> ") +
+           capitalize(this_player()->query_real_name() +
+           ((emotion ? emotion : (query_verb() == "linee")) ? " " : ": ") +
+           str + "\n");
+
+    while(size--)
+    {
+        tell_object(find_player(receivers[size]), str);
+    }
+
+    if (this_player()->query_option(OPT_ECHO))
+    {
+        write(str);
+    }
+    else
+    {
+        write("Ok.\n");
+    }
+
+    return 1;
+}
+
+/*
+ * Function name: line_shortcut
+ * Descripton   : Provide access to the line functionality by the name of the
+ *                line itself to say something.
+ * Arguments    : string str - the message to say on the line.
+ * Returns      : int 1/0 - as line().
+ */
+int
+line_shortcut(string str)
+{
+    return line(query_verb() + (strlen(str) ? (" " + str) : ""), 0);
+}
+
+/*
+ * Function name: linee_shortcut
+ * Descripton   : Provide access to the line functionality by the name of the
+ *                line itself to emote something.
+ * Arguments    : string str - the message to emote on the line.
+ * Returns      : int 1/0 - as line().
+ */
+int
+linee_shortcut(string str)
+{
+    return line(extract(query_verb(), 0, -2) +
+        (strlen(str) ? (" " + str) : ""), 1);
 }
 
 /* **************************************************************************
