@@ -1375,12 +1375,12 @@ Top(string str)
     if (av)
     {
 	avg = SECURITY->do_debug("top_ten_cpu_avg");
-	write(sprintf("    %12s %s\n", "us/s", "Program"));
+	write(sprintf("    %12s %s\n\n", "us/s", "Program"));
     }
     else
     {
 	avg = SECURITY->do_debug("top_ten_cpu");
-	write(sprintf("    %12s %s\n", "us", "Program"));
+	write(sprintf("    %12s %s\n\n", "us", "Program"));
     }
 
     if (!pointerp(avg))
