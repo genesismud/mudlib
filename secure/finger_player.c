@@ -394,6 +394,17 @@ query_stat(int stat)
     return (tmp > 0 ? tmp : 1);
 }
 
+public string
+round_stat(int stat)
+{
+    if (stat > 100000)
+	return sprintf("%2.1fM", itof(stat) / 1000000.0);
+    else if (stat > 1000)
+	return sprintf("%2.1fk", itof(stat) / 1000.0);
+		
+    return sprintf("%d", stat);
+}
+
 string
 stat_living()
 {
@@ -407,11 +418,11 @@ stat_living()
                   "----------------------\n" +
                   "Exp: %-8d Quest: %-7d Combat: %-7d General: %-7d " +
 		  "Av.Stat: %d\n" +
-                  "Stats:     %@7s\n"  +
-                  "    Val:   %@7d\n" +
-                  "   Base:   %@7d\n" +
-                  "    Acc:   %@7d\n" +
-                  "  Learn:   %@7d\n" 
+                  "Stat: %@7s\n"  +
+                  "Value:%@7d\n" +
+                  "Base: %@7d\n" +
+                  "Exp:  %@7s\n" +
+                  "Learn:%@7d\n" 
                   ,
                   to->query_name(), query_real_name()+")",
                   to->query_race_name(),
@@ -426,8 +437,8 @@ stat_living()
                   ({ query_stat(SS_STR), query_stat(SS_DEX),
                      query_stat(SS_CON), query_stat(SS_INT),
                      query_stat(SS_WIS), query_stat(SS_DIS),
-                     query_stat(SS_RACE), query_stat(SS_GUILD),
-                     query_stat(SS_OTHER) }),
+                     query_stat(SS_RACE), query_stat(SS_OCCUP),
+                     query_stat(SS_LAYMAN), query_stat(SS_CRAFT) }),
 
                   ({ F_EXP_TO_STAT(query_acc_exp(SS_STR)),
                      F_EXP_TO_STAT(query_acc_exp(SS_DEX)),
@@ -436,14 +447,15 @@ stat_living()
                      F_EXP_TO_STAT(query_acc_exp(SS_WIS)),
                      F_EXP_TO_STAT(query_acc_exp(SS_DIS)),
                      F_EXP_TO_STAT(query_acc_exp(SS_RACE)),
-                     F_EXP_TO_STAT(query_acc_exp(SS_GUILD)),
-                     F_EXP_TO_STAT(query_acc_exp(SS_OTHER)) }),
+                     F_EXP_TO_STAT(query_acc_exp(SS_OCCUP)),
+                     F_EXP_TO_STAT(query_acc_exp(SS_LAYMAN)),
+                     F_EXP_TO_STAT(query_acc_exp(SS_CRAFT)) }),
 
-                  ({ query_acc_exp(SS_STR), query_acc_exp(SS_DEX),
-                     query_acc_exp(SS_CON), query_acc_exp(SS_INT),
-                     query_acc_exp(SS_WIS), query_acc_exp(SS_DIS),
-                     query_acc_exp(SS_RACE), query_acc_exp(SS_GUILD),
-                     query_acc_exp(SS_OTHER) }),
+                  map(({ query_acc_exp(SS_STR), query_acc_exp(SS_DEX),
+			     query_acc_exp(SS_CON), query_acc_exp(SS_INT),
+			     query_acc_exp(SS_WIS), query_acc_exp(SS_DIS),
+			     query_acc_exp(SS_RACE), query_acc_exp(SS_OCCUP),
+			     query_acc_exp(SS_LAYMAN), query_acc_exp(SS_CRAFT) }), round_stat),
 
                   to->query_learn_pref(-1)
                   );

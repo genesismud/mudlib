@@ -13,14 +13,14 @@
 
 /* This is obsolete, use SD_STAT_DESC */
 #define SS_STAT_DESC ({ "str", "dex", "con", "int", "wis", "dis", "race", \
-    "occup", "layman" })
+    "occup", "layman", "craft" })
 
 /*
  * There are 2 categories of stats, exp-based-, and guild-stats.
  * Exp based stats have fixed names and are bound to experience points.
  * Guild stats have their names and their values set by the guild.
  */
-#define SS_NO_STATS	 9
+#define SS_NO_STATS	 10
 #define SS_NO_EXP_STATS  6
 
 #define SS_STR	         0
@@ -32,11 +32,7 @@
 #define SS_RACE	         6
 #define SS_OCCUP	 7
 #define SS_LAYMAN	 8
-
-/* Do we need these?
-*/
-#define SS_GUILD	 7
-#define SS_OTHER	 8
+#define SS_CRAFT	 9
 
 /* List of skills as is going to be used */
 
