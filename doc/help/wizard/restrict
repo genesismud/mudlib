@@ -32,20 +32,23 @@ ARGUMENTS
 	   Lists all wizards with restrictions. For Stweards or Lords,
 	   only the restricted wizards in their domain are listed.
 
-	restrict <wizard> snoop/s
+	restrict <wizard> snoop  (short: s)
 	   The wizard is not allowed to snoop anyone. This restriction
 	   excludes the "snoopdom" restriction, if turned on.
 
-	restrict <wizard> snoopdom/sd
+	restrict <wizard> snoopdom (short: sd)
 	   The wizard is not allowed to snoop anyone standing outside
 	   the domain rooms. Naturally, the snoop will not be broken
 	   if the snooped person walks outside the domain again. This
 	   restriction excluded the "snoop" restriction, if turned on.
 
-	restrict <wizard> rw
-	   The wizard will not be able to read, write or ftp files
-	   outside his own directory. Specially sanctioned paths are
-	   still open though.
+	restrict <wizard> rw / w
+           With 'rw' the wizard will not be able to read, write or ftp
+           files outside of his home directory. With 'w' the wizard will
+           not be able to write files outside of his home directory, but
+           he will be able to read files in his domain. To give access,
+           a sanction to a specific directory can be used (but domain
+           sanctions will not work).
 
 	restrict <wizard> log
 	   All wizard commands are logged in a file placed in the

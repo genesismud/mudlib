@@ -1170,6 +1170,8 @@ restrict(string str)
                     write("SD  ");
                 if (res & RESTRICT_RW_HOMEDIR)
                     write("RW  ");
+                if (res & RESTRICT_NO_W_DOMAIN)
+                    write("W   ");
                 if (res & RESTRICT_LOG_COMMANDS)
                     write("LOG ");
                 if (res & RESTRICT_STAT)
@@ -1191,6 +1193,8 @@ restrict(string str)
             write("SD  ");
         if (res & RESTRICT_RW_HOMEDIR)
             write("RW  ");
+        if (res & RESTRICT_NO_W_DOMAIN)
+            write("W   ");
         if (res & RESTRICT_LOG_COMMANDS)
             write("LOG ");
         if (res & RESTRICT_STAT)
@@ -1216,6 +1220,9 @@ restrict(string str)
         case "rw":
             setres = RESTRICT_RW_HOMEDIR;
             break;
+
+        case "w":
+            setres = RESTRICT_NO_W_DOMAIN;
 
         case "log":
             setres = RESTRICT_LOG_COMMANDS;
@@ -1250,6 +1257,12 @@ restrict(string str)
             SECURITY->remove_restrict(args[0], RESTRICT_SNOOP_DOMAIN);
         if (setres == RESTRICT_SNOOP_DOMAIN && (res & RESTRICT_SNOOP) != 0)
             SECURITY->remove_restrict(args[0], RESTRICT_SNOOP);
+
+        // Handle w/rw conflict
+        if (setres == RESTRICT_RW_HOMEDIR && (res & RESTRICT_NO_W_DOMAIN) != 0)
+            SECURITY->remove_restrict(args[0], RESTRICT_NO_W_DOMAIN);
+        if (setres == RESTRICT_NO_W_DOMAIN && (res & RESTRICT_RW_HOMEDIR) != 0)
+            SECURITY->remove_restrict(args[0], RESTRICT_RW_HOMEDIR);
 
         // Actually toggle the restriction bit
         if (res & setres == 0)

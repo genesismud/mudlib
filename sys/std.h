@@ -199,7 +199,8 @@
 #define RESTRICT_RW_HOMEDIR	0x004
 #define RESTRICT_LOG_COMMANDS	0x008
 #define RESTRICT_STAT		0x010
-#define RESTRICT_ALL		(0x020 - 1)
+#define RESTRICT_NO_W_DOMAIN	0x020
+#define RESTRICT_ALL		(0x040 - 1)
 
 /* Siteban flags */
 #define SITEBAN_NOLOGIN 1

@@ -549,7 +549,8 @@ valid_write(string file, mixed writer, string func)
         if (query_wiz_dom(writer) == dname)
         {
             /* The exception being restricted wizards */
-            if (query_restrict(writer) & RESTRICT_RW_HOMEDIR)
+            if (query_restrict(writer) &
+                (RESTRICT_RW_HOMEDIR | RESTRICT_NO_W_DOMAIN))
             {
                 return 0;
             }
