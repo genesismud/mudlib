@@ -639,17 +639,18 @@ Dump(string str)
 
 	funcs = sort_array(data, &profile_sort(extra,));
 
-	write(sprintf("%12s %12s %12s   %s\n\n", "Time", "Calls", "Average", "Function"));
+	write(sprintf("%16s %16s %14s   %s\n\n", "Time", "Calls", "Average", "Function"));
 	foreach (mixed func: funcs)
-	    write(sprintf("%12d %12d %12s : %s\n", func[0], func[1],
-		       (func[2] > 0.0 ? sprintf("%10.2f", func[2]) : "-"), func[3]));
+	    write(sprintf("%16d %16d %14s : %s\n", func[0], func[1],
+		       (func[2] > 0.0 ? sprintf("%10.4f", func[2]) : "-"), func[3]));
 
 	break;
 
     case "profile_avg":
 	extra = strip(extra);
 	if (!strlen(extra) || 
-	    member_array(extra, ({ "time", "calls", "average", "function"})) < 0)
+	    (member_array(extra, ({ "time", "calls", "average", "function"})) < 0 &&
+	     member_array(extra[0..0], ({ "t", "c", "a", "f" })) < 0))
 	    extra = "time";
 
 	funcs = SECURITY->do_debug("getprofile_avg", ob);
@@ -672,10 +673,10 @@ Dump(string str)
 
 	funcs = sort_array(data, &profile_sort(extra,));
 
-	write(sprintf("%12s %12s %12s   %s\n\n", "Time", "Calls", "Average", "Function"));
+	write(sprintf("%16s %16s %14s   %s\n\n", "Time", "Calls", "Average", "Function"));
 	foreach (mixed func: funcs)
-	    write(sprintf("%12.2f %12.2f %12s : %s\n", func[0], func[1],
-		       (func[2] > 0.0 ? sprintf("%10.2f", func[2]) : "-"), func[3]));
+	    write(sprintf("%16.4f %16.4f %14s : %s\n", func[0], func[1],
+		       (func[2] > 0.0 ? sprintf("%10.4f", func[2]) : "-"), func[3]));
 	break;
 
     case "props":
