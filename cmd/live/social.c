@@ -233,7 +233,7 @@ assist(string str)
     }
 
     if ((member_array(friend, this_player()->query_enemy(-1)) != -1) ||
-        (victim == this_player())
+        (victim == this_player()))
     {
         write(break_string("Help " + friend->query_the_name(this_player()) +
             " to kill you? There are easier ways to commit seppuku!", 76) +
