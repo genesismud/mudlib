@@ -85,6 +85,10 @@ load_player(string pl_name)
 
     wiz_level = (SECURITY->query_wiz_rank(pl_name) > WIZ_MORTAL);
 
+    /* Protect against too short arrays. */
+    acc_exp = acc_exp + allocate(SS_NO_STATS - sizeof(acc_exp));
+    learn_prefs = learn_prefs + allocate(SS_NO_STATS - sizeof(learn_prefs));
+
     return ret;
 }
 
