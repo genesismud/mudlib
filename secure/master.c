@@ -3113,7 +3113,7 @@ exist_player(string pl_name)
  *                the players save file.
  * Arguments:     pl_name: Name of player
  *                file: (optional) Name of player_file
- * Returns:       The restored player object or 
+ * Returns:       The restored player object or 0 if it doesn't exist.
  */
 varargs object
 finger_player(string pl_name, string file)
@@ -3122,11 +3122,15 @@ finger_player(string pl_name, string file)
     int ret, lev;
     string f;
 
-    if (strlen(pl_name) == 0)
+    if (!exist_player(pl_name))
+    {
         return 0;
+    }
 
     if (!file)
+    {
         file = FINGER_PLAYER;
+    }
 
     set_auth(this_object(), "#:backbone");
     ob = clone_object(file);
