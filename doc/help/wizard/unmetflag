@@ -1,17 +1,17 @@
 NAME
-	unmetflag - Set your met flag so you are unmet to someone
+	unmetflag - Set the flag so you do not know everyone
 
 SYNOPSIS
-	unmetflag <npc>
+	unmetflag
+	unmetflag npc
 
 DESCRIPTION
-	If you do 'unmetflag' without argument you will get the unmet
-	description of every living being when looking on them. You can
-	do 'unmetflag npc' too. Then you will know all players but get the
-	unmet description of all npc:s you meet. Note, that you will NOT
-	know npc:s that have introduced themselves to you. 
+	Wizards normally know everybody. With this command, you can set not
+	to know everybody, meaning you always get their unmet description.
+	When you do "unmetflag npc" you will know all players, but for NPC's
+	you get their unmet description, even if they introduced themselves.
 
-	LIVE_I_ALWAYS_KNOWN and NEVER_KNOWN always overrules any unmet
-	setting
+	The LIVE_I_ALWAYS_KNOWN property always overrules any unmet setting.
 
-
+SEE ALSO
+	metflag

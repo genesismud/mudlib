@@ -5,5 +5,10 @@ SYNOPSIS
 	metflag
 
 DESCRIPTION
-	With this command you set your metflag so you know everone you meet.
+	Wizards normally know everybody, unless they desire otherwise by using
+	the unmetflag. With this command, you can set to know everybody again.
 
+	The LIVE_I_NEVER_KNOWN property always overrules any met setting.
+
+SEE ALSO
+	unmetflag
