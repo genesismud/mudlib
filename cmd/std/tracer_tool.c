@@ -649,7 +649,7 @@ Dump(string str)
     case "profile_avg":
 	extra = strip(extra);
 	if (!strlen(extra) || 
-	    member_arraay(extra[0..0], ({ "t", "c", "a", "f" })) < 0)
+	    member_array(extra[0..0], ({ "t", "c", "a", "f" })) < 0)
 	    extra = "time";
 
 	funcs = SECURITY->do_debug("getprofile_avg", ob);
