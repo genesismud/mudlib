@@ -175,7 +175,8 @@ random_reset()
 
     if (!reset_interval)
         return 0.0;
- 
+
+    /* Default interval factor 100 leads to 90 minutes. */ 
     mean = 540000.0 / itof(reset_interval);
     reset_time = -log(rnd()) * mean;
     
@@ -249,11 +250,11 @@ disable_reset()
  *                function. By default, the reset time will averagely be
  *                slightly larger than one hour. By using a factor, this period
  *                can be increased or decreased, using the following formula:
- *                    Reset interval = 60 minutes * (100 / factor)
+ *                    Reset interval = 90 minutes * (100 / factor)
  * Arguments    : (optional) int factor - when omitted, the factor will default
- *                to 100 (60 minutes). Use 0 to disable resets in this object.
- *                Valid values for the factor are in the range 10 to 200, which
- *                make for a reset interval of approximately 600 to 30 minutes
+ *                to 100 (90 minutes). Use 0 to disable resets in this object.
+ *                Valid values for the factor are in the range 20 to 200, which
+ *                make for a reset interval of approximately 450 to 45 minutes
  *                on average.
  */
 nomask void
@@ -265,7 +266,7 @@ enable_reset(int factor = 100)
         return;
     }
 
-    if (obj_no_change || factor < 10 || factor > 200)
+    if (obj_no_change || factor < 20 || factor > 200)
     {
         return;
     }
