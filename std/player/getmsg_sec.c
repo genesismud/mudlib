@@ -149,7 +149,7 @@ add_remembered(string str)
     if( m_sizeof(tmp) >= max)
 	return -1;
 
-    introduced_name = m_delete(introduced_name, str);
+    m_delkey(introduced_name, str);
 
     tmp[str] = 1;
 	set_remember_name(tmp);
@@ -185,7 +185,7 @@ remove_remembered(string name)
     if (mappingp(introduced_name))
     {
 	pos = introduced_name[name];
-	introduced_name = m_delete(introduced_name, name);
+	m_delkey(introduced_name, name);
     }
     
     pos2 = query_remember_name()[name];

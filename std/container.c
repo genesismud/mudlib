@@ -547,9 +547,7 @@ visible(object ob)
     object env;
 
     if (!ob)
-    {
         return 0;
-    }
 
     if ((env = (object)this_object()->query_room()) &&
         (this_object()->query_prop(CONT_I_TRANSP) ||
@@ -562,18 +560,14 @@ visible(object ob)
         
     env = environment(ob);
     if (env == this_player() || (env == environment(this_player())))
-    {
         return CAN_SEE(this_player(), ob);
-    }
 
     while (objectp(env) && !living(env) && (env->query_prop(CONT_I_TRANSP) ||
         !env->query_prop(CONT_I_CLOSED)))
     {
         env = environment(env);
         if (env == this_player() || env == environment(this_player()))
-	{
             return CAN_SEE(this_player(), ob);
-	}
     }
 
     return 0;
@@ -593,27 +587,21 @@ describe_contents(object for_obj, object *obarr)
     if (this_object()->query_prop(CONT_I_ATTACH))
     {
         if (sizeof(obarr) > 0)
-	{
             for_obj->catch_tell(capitalize(COMPOSITE_DEAD(obarr)) + 
-                (sizeof(obarr) > 1 ? " are" : " is") + " on the " +
-                this_object()->short() + ".\n");
-        }
+				(sizeof(obarr) > 1 ? " are" : " is") + 
+				" on the " +
+				this_object()->short() + ".\n");
         else
-	{
             for_obj->catch_tell("There is nothing on the " + 
-                this_object()->short() + ".\n");
-        }
+				this_object()->short() + ".\n");
     }
     else if (sizeof(obarr) > 0)
-    {
         for_obj->catch_tell("The " + this_object()->short() + " contains " + 
-            COMPOSITE_DEAD(obarr) + ".\n");
-    }
+			    COMPOSITE_DEAD(obarr) + ".\n");
+
     else
-    {
         for_obj->catch_tell("  " + "The " + this_object()->short() +
             " is empty.\n");
-    }
 }
 
 /*
@@ -710,7 +698,7 @@ query_sublocs() { return m_indexes(cont_sublocs); }
 public void
 remove_subloc(string sloc)
 {
-    cont_sublocs = m_delete(cont_sublocs, sloc);
+    m_delkey(cont_sublocs, sloc);
 
     map(all_inventory(this_object()), &fix_ob_subloc_when_remove(, sloc));
     cont_subloc_ids = map(cont_subloc_ids, &map_subloc_id(, sloc));
@@ -769,13 +757,9 @@ subloc_cont_access(string sloc, string acs, object for_obj)
         for_obj = previous_object();
     
     if (!sloc)
-    {
         slob = this_object();
-    }
     else
-    {
         slob = cont_sublocs[sloc];
-    }
 
     if (!objectp(slob))
         return SUBL_CODE->subloc_access(sloc, this_object(), acs, for_obj);
@@ -830,7 +814,7 @@ show_sublocs(object for_obj, mixed *slocs)
         if (stringp(data))
             str += data;
         else if (data == 0 && slocs[il] != 0)
-            cont_sublocs = m_delete(cont_sublocs, slocs[il]);
+            m_delkey(cont_sublocs, slocs[il]);
     }
 
     return str;

@@ -276,28 +276,20 @@ no_special_fellow()
 
     /* I'm an arch or keeper, so I can do anything. */
     if (SECURITY->query_wiz_rank(name) >= WIZ_ARCH)
-    {
 	return 0;
-    }
 
     /* The board is mine */
     if (name == euid)
-    {
 	return 0;
-    }
 
     /* The board is my domains */
     if (euid == SECURITY->query_wiz_dom(name))
-    {
 	return 0;
-    }
 
     /* I am Lord and the board is of one of my wizards. */
     if ((SECURITY->query_wiz_rank(name) == WIZ_LORD) &&
 	(SECURITY->query_wiz_dom(name) == SECURITY->query_wiz_dom(euid)))
-    {
 	return 0;
-    }
 
     return 1;
 }
@@ -337,20 +329,17 @@ check_reader(int note = 0)
 {
     /* No attempts to block readers. */
     if (!block_reader(note))
-    {
         return 0;
-    }
+
     /* People can always read their own notes. */
     if (note &&
 	(this_player()->query_real_name() == query_author(note)))
-    {
 	return 0;
-    }
+
     /* People with read access to the files can read the board, too. */
     if (SECURITY->valid_read(board_name + "/note", this_player()->query_real_name()))
-    {
         return 0;
-    }
+
     return no_special_fellow();
 }
 
@@ -381,14 +370,12 @@ check_writer()
 {
     /* No attemps to block writers. */
     if (!block_writer())
-    {
         return 0;
-    }
+
     /* People with write access to the files can write notes, too. */
     if (SECURITY->valid_write(board_name + "/note", this_player()->query_real_name()))
-    {
         return 0;
-    }
+
     return no_special_fellow();
 }
 
@@ -423,9 +410,7 @@ check_remove(int note = 0)
 {
     if (note &&
 	(this_player()->query_real_name() == query_author(note)))
-    {
 	return 0;
-    }
 
     return (no_special_fellow() &&
 	    (SECURITY->query_wiz_rank(this_player()->query_real_name()) <
@@ -461,9 +446,7 @@ load_headers()
             map(notes, &atoi() @ &extract(, 1))), extract_headers);
     }
     else
-    {
         headers = ({ });
-    }
 }
 
 /*
@@ -512,11 +495,10 @@ void
 reset_board()
 {
     if (!random(5))
-    {
 	tell_room(environment(),
-	    "A small gnome appears and secures some notes on the " +
-	    short() + " that were loose.\nThe gnome then leaves again.\n");
-    }
+		  "A small gnome appears and secures some notes on the " +
+		  short() + 
+		  " that were loose.\nThe gnome then leaves again.\n");
 }
 
 /*
@@ -553,14 +535,10 @@ long(int start = 1, int end = msg_num)
 	"read/mread previous/current/next [note]\n";
 
     if (this_player()->query_wiz_level())
-    {
 	str += "       store [note] <number> <file name>\n";
-    }
 
     if (!msg_num)
-    {
 	return str + "The " + short() + " is empty.\n";
-    }
 
     str += "The " + short() + " contains " + msg_num +
 	(msg_num == 1 ? " note" : " notes") + " :\n\n";
@@ -568,45 +546,32 @@ long(int start = 1, int end = msg_num)
     if (!silent &&
         present(this_player(), environment()) &&
         !this_player()->query_prop(OBJ_I_INVIS))
-    {
         say(QCTNAME(this_player()) + " studies the " + short() + ".\n");
-    }
 
     /* Check whether the range is valid. */
     if (end > msg_num)
-    {
 	end = msg_num;
-    }
+
     if (start > end)
-    {
 	start = end;
-    }
+
     if (start < 1)
-    {
 	start = 1;
-    }
+
     start -= 2;
 
     /* If the player is not allowed to read the board, only display the
      * notes the player wrote him/herself.
      */
     if (!check_reader())
-    {
 	while (++start < end)
-	{
 	    str += sprintf("%2d: %s\n", (start + 1), headers[start][0]);
-	}
-    }
     else
     {
 	name = this_player()->query_real_name();
 	while (++start < end)
-	{
 	    if (name == query_author(start + 1))
-	    {
 		str += sprintf("%2d: %s\n", (start + 1), headers[start][0]);
-	    }
-	}
     }
 
     return str;
@@ -623,9 +588,7 @@ init()
 
     /* Only interactive players can write notes on boards. */
     if (!query_ip_number(this_player()))
-    {
 	return;
-    }
 
     add_action(list_notes, "list");
     add_action(new_msg,    "note");
@@ -650,18 +613,14 @@ extract_headers(int number)
     string file;
 
     if (!number)
-    {
         return 0;
-    }
 
     seteuid(getuid());
 
     file = "b" + number;
 
     if (!stringp(title = read_file(board_name + "/" + file, 1, 1)))
-    {
         return 0;
-    }
 
     return ({ extract(title, 0, strlen(title) - 2), file });
 }
@@ -717,9 +676,7 @@ list_notes(string str)
     }
 
     if (wildmatch("notes *", str))
-    {
 	str = extract(str, 6);
-    }
 
     if (!wildmatch("*-*", str))
     {
@@ -804,9 +761,7 @@ new_msg(string msg_head)
 
     if (present(this_player(), environment()) &&
         !this_player()->query_prop(OBJ_I_INVIS))
-    {
 	say(QCTNAME(this_player()) + " starts writing a note.\n");
-    }
 
     this_player()->add_prop(LIVE_S_EXTRA_SHORT, " is writing a note");
 
@@ -862,16 +817,12 @@ discard_message(string file)
     if (keep_discarded)
     {
 	if (file_size(board_name + "_old") == -1)
-	{
 	    mkdir(board_name + "_old");
-	}
 
 	rename(board_name + "/" + file, board_name + "_old/" + file);
     }
     else
-    {
 	rm(board_name + "/" + file);
-    }
 }
 
 /*
@@ -883,10 +834,8 @@ public void
 post_note_hook(string head)
 {
     if (present(this_player(), environment()))
-    {
         say(QCTNAME(this_player()) + " has completed a note (#" +
             msg_num + ") :\n" + head + "\n");
-    }
 }
 
 /*
@@ -914,16 +863,12 @@ post_note(string head, string message)
 
     /* If the directory doesn't exist, create it. */
     if (file_size(board_name) == -1)
-    {
 	mkdir(board_name);
-    }
 
     /* Check that the message file isn't used yet. */
     fname = "b" + (t = time());
     while(file_size(board_name + "/" + fname) != -1)
-    {
 	fname = "b" + (++t);
-    }
 
     /* Write the message to disk and update the headers. */
     write_file(board_name + "/" + fname, head + "\n" + message);
@@ -932,9 +877,8 @@ post_note(string head, string message)
 
     /* Update the master board central unless that has been prohibited. */
     if (!no_report)
-    {
 	BOARD_CENTRAL->new_note(board_name, fname, MASTER_OB(environment()));
-    }
+
     stats[WRITE_STAT]++;
 
     post_note_hook(head);
@@ -960,11 +904,9 @@ done_editing(string message)
 	write("No message entered.\n");
 	if (present(this_player(), environment()) &&
           !this_player()->query_prop(OBJ_I_INVIS))
-	{
 	    say(QCTNAME(this_player()) + " quits writing a note.\n");
-	}
 
-	writing = m_delete(writing, this_player());
+	m_delkey(writing, this_player());
 	return 0;
     }
 
@@ -978,7 +920,7 @@ done_editing(string message)
     head = writing[this_player()][..MAX_HEADER_LENGTH] + sprintf("%3d ",
 	sizeof(explode(message, "\n"))) +
 	writing[this_player()][AUTHOR_BEGIN..];
-    writing = m_delete(writing, this_player());
+    m_delkey(writing, this_player());
 
     post_note(head, message);
 
@@ -1013,9 +955,7 @@ create_note(string header, string author, string body)
     int    len;
 
     if (geteuid() != geteuid(previous_object()))
-    {
 	return 0;
-    }
 
     /* The author may not be a real player and the length of the name
      * must be in the valid range.
@@ -1024,9 +964,7 @@ create_note(string header, string author, string body)
     if ((strlen(author) > MAX_NAME_LENGTH) ||
 	(strlen(author) < MIN_NAME_LENGTH) ||
 	(SECURITY->exist_player(author)))
-    {
 	return 0;
-    }
 
     if (!find_player(author) || 
 	find_player(author) != this_interactive())
@@ -1045,19 +983,14 @@ create_note(string header, string author, string body)
 	if ((char < "a") &&
 	    (char > "z") &&
 	    (char != "-"))
-
-	{
 	    return 0;
-	}
     }
 
     /* Header size must be correct and there must be a body too. */
     if ((strlen(header) < MIN_HEADER_LENGTH) ||
 	(strlen(header) > MAX_HEADER_LENGTH) ||
 	(!strlen(body)))
-    {
 	return 0;
-    }
 
     head = sprintf("%-*s %3d %-11s ", MAX_HEADER_LENGTH, header,
 	sizeof(explode(body, "\n")), capitalize(author)) +
@@ -1091,19 +1024,16 @@ read_msg(string what_msg, int mr)
 
     if ((what_msg == "next") ||
 	(what_msg == "next note"))
-    {
 	note = this_player()->query_prop(PLAYER_I_LAST_NOTE) + 1;
-    }
+
     else if ((what_msg == "current") ||
              (what_msg == "current note"))
-    {
         note = this_player()->query_prop(PLAYER_I_LAST_NOTE);
-    }
+
     else if ((what_msg == "previous") ||
              (what_msg == "previous note"))
-    {
         note = this_player()->query_prop(PLAYER_I_LAST_NOTE) - 1;
-    }
+
     else if (!sscanf(what_msg, "note %d", note) &&
 	!sscanf(what_msg, "%d", note))
     {
@@ -1128,25 +1058,19 @@ read_msg(string what_msg, int mr)
 
     this_player()->add_prop(PLAYER_I_LAST_NOTE, note);
     if (present(this_player(), environment()))
-    {
         write("Reading note number " + note + ".\n");
-    }
 
     note--;
     if (!silent &&
         present(this_player(), environment()) &&
         !this_player()->query_prop(OBJ_I_INVIS))
-    {
         say(QCTNAME(this_player()) + " reads a note titled:\n" +
             headers[note][0] + "\n");
-    }
 
     seteuid(getuid());
 
     if (!mr)
-    {
 	mr = (query_verb() == "mread");
-    }
 
     if ((!mr) &&
 	(atoi(headers[note][0][42..44]) > MAX_NO_MREAD))
@@ -1156,10 +1080,8 @@ read_msg(string what_msg, int mr)
     }
 
     if (mr == 1)
-    {
 	this_player()->more(headers[note][0] + "\n\n" +
-	    read_file(board_name + "/" + headers[note][1], 2));
-    }
+			    read_file(board_name + "/" + headers[note][1], 2));
     else
     {
 	write(headers[note][0] + "\n\n");
@@ -1168,9 +1090,8 @@ read_msg(string what_msg, int mr)
 
     /* Update the master board central unless that has been prohibited. */
     if (!no_report)
-    {
 	BOARD_CENTRAL->read_note(board_name);
-    }
+
     stats[READ_STAT]++;
 
     return 1;
@@ -1215,10 +1136,8 @@ remove_msg(string what_msg)
 
     note--;
     if (present(this_player(), environment()))
-    {
         say(QCTNAME(this_player()) + " removes a note:\n" +
             headers[note][0] + "\n");
-    }
 
     discard_message(headers[note][1]);
     headers = exclude_array(headers, note, note);
@@ -1226,9 +1145,8 @@ remove_msg(string what_msg)
 
     if ((note == msg_num) &&
 	(!no_report))
-    {
         BOARD_CENTRAL->remove_note(board_name);
-    }
+
     stats[WRITE_STAT]--;
 
     write("Ok.\n");

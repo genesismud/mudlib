@@ -2,6 +2,9 @@
  * /std/living/wear.c
  *
  * A subpart of /std/living.c containing some wearable related functions.
+ *
+ * $Id:$
+ *
  */
 
 #include <composite.h>
@@ -34,9 +37,7 @@ show_worn(object for_obj)
     string str;
     
     if (!sizeof(worn))
-    {
         return "";
-    }
 
     str = ((for_obj == this_object()) ? "You are" : 
         capitalize(query_pronoun()) + " is") + " wearing " +  
@@ -59,16 +60,10 @@ occupy_clothing_slots(object ob)
     slots = ob->query_slots();
 
     for (i = 0; i < sizeof(slots); i++)
-    {
         if (!pointerp(m_worn[slots[i]]))
-	{
             m_worn[slots[i]] = ({ ob });
-	}
         else
-	{
             m_worn[slots[i]] += ({ ob });
-	}
-    }
 
     return 1;
 }
@@ -85,13 +80,9 @@ clear_clothing_slots(object ob)
 
     slots = m_indices(m_worn);
     for (i = 0; i < sizeof(slots); i++)
-    {
         if (!pointerp(m_worn[slots[i]]) ||
             !sizeof(m_worn[slots[i]] -= ({ ob })))
-	{
-            m_delete(m_worn, slots[i]);
-	}
-    }
+            m_delkey(m_worn, slots[i]);
 }
 
 /*
@@ -106,9 +97,7 @@ remove_clothing(object ob)
 
     /* We do this to remove the item from the worn-subloc. */
     if (environment(ob) == this_object())
-    {
         ob->move(this_object());
-    }
 }
 
 /*
@@ -153,9 +142,7 @@ query_clothing(int slot)
         values = m_values(m_worn);
 
         for (i = 0; i < sizeof(values); i++)
-	{
             all_worn |= values[i];
-	}
 
         return all_worn;
     }
@@ -176,9 +163,7 @@ wear_arm(object arm)
     mixed val;
 
     if (stringp(val = occupy_slot(arm)))
-    {
         return val;
-    }
 
     if (arm->move(this_object(), SUBLOC_WORNA))
     {
@@ -216,9 +201,7 @@ public void
 remove_arm(object arm)
 {
     if (environment(arm) == this_object())
-    {
         arm->move(this_object());
-    }
 
     clear_clothing_slots(arm);
     clear_tool_slots(arm);
@@ -250,14 +233,10 @@ query_armour(int which)
     object arm;
 
     if (which == -1)
-    {
         return filter(query_tool(-1), check_armour_object);
-    }
 
     if ((arm = query_tool(which)) && check_armour_object(arm))
-    {
         return arm;
-    }
 
     return 0;
 }

@@ -385,28 +385,22 @@ query_title()
          */
         family_name = this_object()->query_guild_family_name();
     }
+
     if (strlen(name = this_object()->query_guild_title_occ()))
-    {
         titles += ({ name });
-    }
+
     if (strlen(name = this_object()->query_guild_title_lay()))
-    {
         titles += ({ name });
-    }
 
     /* An NPC may have guild-titles and set titles.
      */
     if (query_npc())
     {
         if (!strlen(title))
-        {
             title = "";
-        }
 
         if (!sizeof(titles))
-        {
             return title;
-        }
 
         if (strlen(title))
             titles += ({ title });
@@ -415,9 +409,7 @@ query_title()
     /* A mortal player cannot have a title set by a wizard!
      */
     if (!sizeof(titles))
-    {
         return "";
-    }
 
     /* If the player has a family name, we add the article after the family
      * name, else we add it before the possible racial title.
@@ -425,19 +417,13 @@ query_title()
     if (family_name)
     {
         if (sizeof(titles) == 1)
-        {
             return titles[0];
-        }
         else
-        {
             return titles[0] + ", " + LD_THE + " "
-              + COMPOSITE_WORDS(titles[1..]);
-        }
+		+ COMPOSITE_WORDS(titles[1..]);
     }
     else
-    {
         return LD_THE + " " + COMPOSITE_WORDS(titles);
-    }
 }
 
 #ifndef NO_ALIGN_TITLE
@@ -597,14 +583,10 @@ heal_hp(int hp)
 
 	/* Don't log CHUMLOCK heal-hp. */
 	if (objectp(o) && (MASTER_OB(o) == CHUMLOCK_OBJECT))
-	{
 	    text = "";
-	}
 
 	if (strlen(text))
-	{
 	    SECURITY->log_syslog(LOG_REDUCE_HP, text);
-	}
     }        
 #endif
 
@@ -800,9 +782,7 @@ static void
 set_acc_exp(int stat, int val)
 {
     if (val < 1)
-    {
         val = 1;
-    }
 
     acc_exp[stat] = val;
 }  
@@ -818,9 +798,7 @@ query_acc_exp(int stat)
 {
     if ((stat < 0) ||
         (stat >= SS_NO_STATS))
-    {
         return -1;
-    }
 
     return acc_exp[stat];
 }
@@ -881,9 +859,7 @@ add_exp_combat(int exp)
 #ifdef MAX_EXP_RED_FRIENDLY
         if ((exp_points < MAX_EXP_RED_FRIENDLY) &&
             (fact > MAX_COMB_EXP_RED))
-        {
             fact = MAX_COMB_EXP_RED;
-        }
 #endif
         
         exp -= ftoi(itof(exp) * fact);
@@ -894,18 +870,14 @@ add_exp_combat(int exp)
         /* Deduct the tax. */
         taxed = query_guild_pref_total();
         if (taxed > 0)
-        {
             exp_combat -= ((exp * taxed) / 100);
-        }
     }
     /* Negative combat experience. */
     else
     {
         /* Don't remove more than the player has. */
         if (exp < -exp_combat)
-        {
             exp = 1 - exp_combat;
-        }
 
         /* Deduct the experience from the total. */
         exp_combat += exp;
@@ -960,9 +932,7 @@ add_exp_general(int exp)
 #ifdef MAX_EXP_RED_FRIENDLY
         if ((exp_general < MAX_EXP_RED_FRIENDLY) &&
             (fact > MAX_COMB_EXP_RED))
-        {
             fact = MAX_COMB_EXP_RED;
-        }
 #endif
         
         exp -= ftoi(itof(exp) * fact);
@@ -973,18 +943,14 @@ add_exp_general(int exp)
         /* Deduct the tax. */
         taxed = query_guild_pref_total();
         if (taxed > 0)
-        {
             exp_general -= ((exp * taxed) / 100);
-        }
     }
     /* Negative general experience. */
     else
     {
         /* Don't remove more than the player has. */
         if (exp < -exp_general)
-        {
             exp = 1 - exp_general;
-        }
 
         /* Deduct the experience from the total. */
         exp_general += exp;
@@ -1028,9 +994,7 @@ add_exp_quest(int exp)
 {
     /* Negative points experience is impossible. */
     if (exp <= 0)
-    {
         return;
-    }
 
     /* Report the experience added before applying the quest-factor. */
     SECURITY->bookkeep_exp("quest", exp);
@@ -1060,13 +1024,9 @@ public void
 add_exp(int exp, int battle)
 {
     if (battle)
-    {
         this_object()->add_exp_combat(exp);
-    }
     else
-    {
         this_object()->add_exp_quest(exp);
-    }
 }
 
 /*
@@ -1317,17 +1277,13 @@ public void
 set_alignment(int a)
 {
     if (ABS(a) > F_MAX_ABS_ALIGNMENT)
-    {
         a = ((a > 0) ? F_MAX_ABS_ALIGNMENT : -F_MAX_ABS_ALIGNMENT);
-    }
 
     alignment = a;
 
 #ifndef NO_ALIGN_TITLE
     if (!query_wiz_level())
-    {
         al_title = query_align_text();
-    }
 #endif NO_ALIGN_TITLE
 }
 
@@ -1362,9 +1318,7 @@ public void
 adjust_alignment(int align)
 {
     if (ABS(align) > F_MAX_ABS_ALIGNMENT)
-    {
         align = ((align > 0) ? F_MAX_ABS_ALIGNMENT : -F_MAX_ABS_ALIGNMENT);
-    }
 
     set_alignment(alignment + F_QUEST_ADJUST_ALIGN(alignment, align));
 }
@@ -1593,56 +1547,42 @@ set_learn_pref(int *pref_arr)
 
     /* Make sure the arrays are large enough. */
     if (sizeof(pref_arr) < SS_NO_STATS)
-    {
         pref_arr += allocate(SS_NO_STATS - sizeof(pref_arr));
-    }
+
     if (sizeof(learn_pref) < SS_NO_STATS)
-    {
         learn_pref += allocate(SS_NO_STATS - sizeof(learn_pref));
-    }
 
     /* Take away the tax */
     for(i = SS_NO_EXP_STATS; i < SS_NO_STATS; i++)
-    {
         mval -= learn_pref[i];
-    }
 
     if (mval < 1)
     {
         for(i = 0; i < SS_NO_EXP_STATS; i++)
-        {
             learn_pref[i] = 0;
-        }
+
         return;
     }
 
     for(i = 0, sum = 0; i < SS_NO_EXP_STATS; i++)
-    {
         sum += pref_arr[i];
-    }
 
     if (sum > 0)
     {
         /* Try to avoid some rounding errors using this tmp */
         tmp = sum / 2;
         for (i = 0; i < SS_NO_EXP_STATS; i++)
-        {
             learn_pref[i] = (mval * pref_arr[i] + tmp) / sum;
-        }
     }
     else
     {
         tmp = mval / SS_NO_EXP_STATS;
         for (i = 0; i < SS_NO_EXP_STATS; i++)
-        {
             learn_pref[i] = tmp;
-        }
     }
         
     for(i = 0, sum = 0; i < SS_NO_EXP_STATS; i++)
-    {
         sum += learn_pref[i];
-    }
     
     sum = mval - sum;
     i = 0;
@@ -1662,6 +1602,7 @@ set_learn_pref(int *pref_arr)
         {
             if (learn_pref[i] > 0)
                 learn_pref[i]--;
+
             if (++i >= SS_NO_EXP_STATS)
                 i = 0;
         }
@@ -1681,15 +1622,11 @@ query_learn_pref(int stat)
 {
     /* Return the learn prefs in a safe array. */
     if (stat < 0)
-    {
         return ({ }) + learn_pref;
-    }
 
     /* No such stats. */
     if (stat >= SS_NO_STATS)
-    {
         return -1;
-    }
 
     return learn_pref[stat];
 }
@@ -1743,9 +1680,7 @@ set_skill(int skill, int val)
 
     /* Mudlib skills must be in the range 0 - 100 */
     if ((skill >= 0) && (skill <= SS_MUDLIB_SKILL_END))
-    {
         val = max(min(100, val), 0);
-    }
 
     skillmap[skill] = val;
     return 1;
@@ -1765,7 +1700,7 @@ set_skill_extra(int skill, int val)
 {
     if (val == 0)
     {
-        skill_extra_map = m_delete(skill_extra_map, skill);
+        m_delkey(skill_extra_map, skill);
         return;
     }
 
@@ -1808,7 +1743,7 @@ remove_skill(int skill)
         }
 #endif LOG_SET_SKILL
 
-        skillmap = m_delete(skillmap, skill);
+        m_delkey(skillmap, skill);
     }
 }
 

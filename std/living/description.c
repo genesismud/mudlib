@@ -10,6 +10,9 @@
  * in a number of places. The reason for this is to allow those
  * functions to be shadowed as internal function calls are not
  * possible to shadow.
+ *
+ * $Id:$
+ *
  */
 
 #include <composite.h>
@@ -38,13 +41,9 @@ public void
 set_linkdead(int i)
 {
     if (i)
-    {
 	is_linkdead = time();
-    }
     else
-    {
 	is_linkdead = 0;
-    }
 }
 
 /*
@@ -100,9 +99,7 @@ notmet_me(object obj)
 {
 #ifdef MET_ACTIVE
     if (obj && query_ip_number(obj))
-    {
 	return !obj->query_met(this_object());
-    }
 #else
     return !this_player()->query_met(this_object());
 #endif MET_ACTIVE
@@ -165,38 +162,26 @@ query_nonmet_name()
 
     /* Espcially true for NPC's. If a short has been set, use it. */
     if (query_short())
-    {
 	return ::short();
-    }
 
     /* Get the gender description only if needed. */
     if (query_humanoid() &&
 	!query_prop(LIVE_I_NO_GENDER_DESC) &&
 	(this_object()->query_gender() != G_NEUTER))
-    {
 	gender = this_object()->query_gender_string() + " ";
-    }
     else
-    {
 	gender = "";
-    }
 
     if (sizeof((adj = this_object()->query_adj(1))) > 0)
-    {
 	str = implode(adj[..1], " ") + " " + gender +
 	    this_object()->query_race_name() +
 	    (query_wiz_level() ? (" " + LD_WIZARD) : "");
-    }
     else
-    {
 	str = gender + this_object()->query_race_name() +
 	    (query_wiz_level() ? (" " + LD_WIZARD) : "");
-    }
 
     if (query_ghost())
-    {
 	str += " " + LD_GHOST;
-    }
 
     return str;
 }
@@ -274,9 +259,7 @@ query_Art_name(object pobj)
 
     /* Capitalize the right character if the description starts with ( or [. */
     if (wildmatch("[\\[(]*", desc))
-    {
         return desc[..0] + capitalize(desc[1..]);
-    }
 
     return capitalize(desc);
 }
@@ -377,9 +360,7 @@ query_The_name(object pobj)
 
     /* Capitalize the right character if the description starts with ( or [. */
     if (wildmatch("[\\[(]*", desc))
-    {
         return desc[..0] + capitalize(desc[1..]);
-    }
 
     return capitalize(desc);
 }
@@ -433,19 +414,13 @@ query_exp_title()
     int average;
 
     if (query_wiz_level())
-    {
 	return LD_WIZARD;
-    }
  
     average = this_object()->query_average_stat();
     index = SD_AV_NUM_TITLES;
     while(--index >= 0)
-    {
         if (average >= SD_AV_LEVELS[index])
-        {
             return SD_AV_TITLES[index];
-        }
-    }
 
     return SD_AV_UTTER_NOVICE;
 }
@@ -501,9 +476,7 @@ short(object for_obj)
 	desc = this_object()->query_nonmet_name();
 #ifdef STATUE_WHEN_LINKDEAD
 	if (is_linkdead)
-	{
 	    desc = STATUE_DESC + " " + LANG_ADDART(desc);
-	}
 #endif STATUE_WHEN_LINKDEAD
     }
     else
@@ -512,16 +485,12 @@ short(object for_obj)
 	desc = this_object()->query_met_name();
 #ifdef STATUE_WHEN_LINKDEAD
 	if (is_linkdead)
-	{
 	    desc = STATUE_DESC + " " + desc;
-	}
 #endif STATUE_WHEN_LINKDEAD
     }
 
     if (strlen(extra = query_prop(LIVE_S_EXTRA_SHORT)))
-    {
 	return (desc + extra);
-    }
 
     return desc;
 }
@@ -609,19 +578,13 @@ show_scar(mixed for_obj)
     num = num_scar();
 
     if (!num)
-    {
 	return "";
-    }
 
     if (!objectp(for_obj))
-    {
 	for_obj = this_player();
-    }
 
     if (for_obj == this_object())
-    {
 	return LD_YOUR_SCARS(num, desc_scar()) + ".\n";
-    }
 
     return capitalize(this_object()->query_pronoun()) + LD_HAS_SCARS(num) +
         " " + this_object()->query_possessive() + " " + desc_scar() + ".\n";
@@ -659,9 +622,7 @@ long(mixed for_obj)
 	{
 	    cap_pronoun = capitalize((string)this_object()->query_pronoun());
 	    if (!notmet_me(for_obj))
-	    {
 		res = LD_PRESENT_TO(this_object());
-	    }
 	    else if (!(this_object()->short(for_obj)))
 		return "";
 	    else
@@ -679,9 +640,7 @@ long(mixed for_obj)
 	    }
 	}
 	else
-	{
 	    res = check_call(res);
-	}
     }
 
     res += this_object()->show_scar(for_obj);
@@ -713,9 +672,7 @@ describe_combat(object *livings)
      * is possible that we fight that living.
      */
     if ((size = sizeof(livings)) < 1)
-    {
 	return;
-    }
 
     /* First compile a mapping of all combats going on in the room.
      * The format is the victim as index and an array of all those
@@ -731,21 +688,15 @@ describe_combat(object *livings)
 	if (objectp(victim = livings[index]->query_attack()))
 	{
 	    if (pointerp(fights[victim]))
-	    {
 		fights[victim] += ({ livings[index] });
-	    }
 	    else
-	    {
 		fights[victim] = ({ livings[index] });
-	    }
 	}
     }
 
     /* No combat going on. */
     if (!m_sizeof(fights))
-    {
 	return;
-    }
 
     /* First we describe the combat of the player him/herself. This will
      * be a nice compound message. Start with 'outgoing' combat.
@@ -763,26 +714,21 @@ describe_combat(object *livings)
 	    subst = " also";
 	}
 	else
-	{
 	    text = "You are fighting " +
 		victim->query_the_name(this_object());
-	}
 
 	/* Other people helping us attacking the same target. */
 	if (sizeof(fights[victim]))
-	{
 	    text += ", assisted by " + FO_COMPOSITE_ALL_LIVE(fights[victim],
-		this_object());
-	}
-	fights = m_delete(fights, victim);
+							     this_object());
+	m_delkey(fights, victim);
 
 	/* Other people hitting on me. */
 	if (index = sizeof(fights[this_object()]))
-	{
 	    text += ", while " + FO_COMPOSITE_ALL_LIVE(fights[this_object()],
-		this_object()) + ((index == 1) ? " is" : " are") +
+						       this_object()) + 
+		((index == 1) ? " is" : " are") +
 		subst + " fighting you";
-	}
 	text += ".\n";
     }
     /* If we aren't fighting, someone or something may be fighting us. */
@@ -798,7 +744,7 @@ describe_combat(object *livings)
      * to circumvent printing two lines of 'a fights b' and 'b fights a'
      * since I think that is a silly way of putting things.
      */
-    fights = m_delete(fights, this_object());
+    m_delkey(fights, this_object());
     livings = m_indices(fights);
     size = sizeof(livings);
     index = -1;
@@ -811,9 +757,7 @@ describe_combat(object *livings)
 	    fights[livings[index]] -= ({ victim });
 
             if (pointerp(fights[victim]))
-            {
                 fights[victim] -= ({ livings[index] });
-            }
 
 	    /* Start with the the name of one of the fighters. */
 	    text += livings[index]->query_The_name(this_object());
@@ -823,7 +767,7 @@ describe_combat(object *livings)
 	    {
 		text += ", with the assistance of " +
 		    FO_COMPOSITE_ALL_LIVE(fights[victim], this_object()) + ",";
-		fights = m_delete(fights, victim);
+		m_delkey(fights, victim);
 	    }
 
 	    /* Then the second living in the fight. */
@@ -831,10 +775,8 @@ describe_combat(object *livings)
 
 	    /* And the helpers on the other side. */
 	    if (sizeof(fights[livings[index]]))
-	    {
 		text += ", aided by " +
 		    FO_COMPOSITE_ALL_LIVE(fights[victim], this_object());
-	    }
 
            text += " are fighting each other.\n";
 	}
@@ -847,7 +789,7 @@ describe_combat(object *livings)
 		livings[index]->query_the_name(this_object()) + ".\n";
 	}
 
-	fights = m_delete(fights, livings[index]);
+	m_delkey(fights, livings[index]);
     }
 
     write(text);
@@ -874,9 +816,7 @@ do_glance(int brief)
 
     /* Don't waste the long description on NPC's. */
     if (!interactive(this_object()))
-    {
 	return 0;
-    }
 
     /* Wizard gets to see the filename of the room we enter and a flag if
      * there is WIZINFO in the room.
@@ -885,9 +825,7 @@ do_glance(int brief)
     if (query_wiz_level())
     {
 	if (stringp(env->query_prop(OBJ_S_WIZINFO)))
-	{
 	    write("Wizinfo ");
-	}
 
 	write(file_name(env) + "\n");
     }
@@ -909,9 +847,7 @@ do_glance(int brief)
 	 (HOUR < 5)) &&
 	((env->query_prop(OBJ_I_LIGHT) +
 	 query_prop(LIVE_I_SEE_DARK)) < 2))
-    {
 	write(LD_IS_NIGHT(env));
-    }
     else
 #endif
     {
@@ -921,9 +857,7 @@ do_glance(int brief)
 	    write(env->exits_description());
 	}
 	else
-	{
 	    write(env->long());
-	}
     }
 
     env->show_visible_contents(this_object());
@@ -987,10 +921,9 @@ my_opinion(object ob)
     if (op_offset)
 	op += op_offset;
     else
-    {
 	if (query_race_name() != ob->query_race_name())
 	    op += 10;
-     }
+
     if (query_race_name() == ob->query_race_name() &&
 	query_gender() != ob->query_gender())
 	op -= 5;

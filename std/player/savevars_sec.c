@@ -265,9 +265,7 @@ nomask public int
 match_password(string p)
 {
     if (!strlen(password))
-    {
         return 1;
-    }
 
     return (password == crypt(p, password));
 }
@@ -303,9 +301,7 @@ set_player_file(string f)
 
     ob = find_object(f);
     if (ob && LOGIN_NEW_PLAYER->legal_player(ob))
-    {
         player_file = f;
-    }
 }
 
 /*
@@ -447,9 +443,7 @@ query_decay_time()
     /* Due to a bug decay_time_acc has become negative in some players.
        This will fix that. */
     if (decay_time_acc < 0)
-    {
         decay_time_acc = 10000;
-    }
     
     /* Only increment if we're actually decaying skills */
     if (!query_skill_decay())
@@ -475,14 +469,10 @@ reset_decay_time()
      * reminder <= the total interval.
      */
     if (decay_time_acc < 0)
-    {
         decay_time_acc = 10000;
-    }
     
     if (decay_time_acc > 432000)
-    {
         decay_time_acc = 432200;
-    }
     
     while (decay_time_acc >= SKILL_DECAY_INTERVAL)
         decay_time_acc -= SKILL_DECAY_INTERVAL;
@@ -907,13 +897,9 @@ pack_bits()
 
     bit_savelist = ({ });
     while(++index < size)
-    {
-            if (bit_bitlist[index])
-            {
-            bit_savelist +=
-                    ({ bit_wizlist[index] | (bit_bitlist[index] << 12) });
-        }
-    }
+	if (bit_bitlist[index])
+	    bit_savelist +=
+		({ bit_wizlist[index] | (bit_bitlist[index] << 12) });
 }
 
 /*
@@ -946,9 +932,8 @@ public void
 set_bit_array(int *arr)
 {
     if (file_name(previous_object()) != LOGIN_NEW_PLAYER)
-    {
         return;
-    }
+
     bit_savelist = arr;
     unpack_bits();
 }
@@ -995,31 +980,21 @@ add_second(string second)
         WIZ_CHECK < WIZ_ARCH &&
         SECURITY->query_team_member("aop", query) == 0 &&
         SECURITY->query_team_member("aod", query) == 0)
-    {
         return 0;
-    }
 
     if (!strlen(second))
-    {
         return 0;
-    }
 
     if (!m_sizeof(m_seconds))
-    {
         m_seconds = ([]);
-    }
 
     second = lower_case(second);
     if (!(SECURITY->exist_player(second)) ||
         SECURITY->query_wiz_rank(second))
-    {
         return 0;
-    }
 
     if (sizeof(m_seconds[second]) == 0)
-    {
         m_seconds[second] = ({ query, time() });
-    }
 
 #ifdef LOG_SECONDS
     if (query == query_real_name())
@@ -1048,27 +1023,20 @@ remove_second(string second)
         WIZ_CHECK < WIZ_ARCH &&
         SECURITY->query_team_member("aop", query) == 0 &&
         SECURITY->query_team_member("aod", query) == 0)
-    {
         return 0;
-    }
 
     if (!strlen(second))
-    {
         return 0;
-    }
 
     if (!m_sizeof(m_seconds))
-    {
         return 1;
-    }
 
     second = lower_case(second);
     if (sizeof(m_seconds[second]) == 0)
-    {
         return 1;
-    }
 
-    m_seconds = m_delete(m_seconds, second);
+    m_delkey(m_seconds, second);
+
 #ifdef LOG_SECONDS
     if (query == query_real_name())
         SECURITY->log_syslog(LOG_SECONDS, (ctime(time()) + " " +
@@ -1097,9 +1065,7 @@ query_seconds()
         (function_exists("create_object", previous_object()) != LOGIN_OBJECT) &&
         SECURITY->query_team_member("aop", query) == 0 &&
         SECURITY->query_team_member("aod", query) == 0)
-    {
         return ({});
-    }
 
     if (!m_sizeof(m_seconds))
         m_seconds = ([]);
@@ -1123,9 +1089,7 @@ query_second_info(string second)
         query != SECURITY->query_domain_lord(SECURITY->query_wiz_dom(name)) &&
         SECURITY->query_team_member("aop", query) == 0 &&
         SECURITY->query_team_member("aod", query) == 0)
-    {
         return ({});
-    }
 
     if (!m_sizeof(m_seconds))
         m_seconds = ([]);
@@ -1144,35 +1108,30 @@ public nomask int
 set_option(int opt, int val)
 {
     if (!stringp(options))
-    {
         options = OPT_DEFAULT_STRING;
-    }
 
     switch (opt)
     {
     case OPT_MORE_LEN:
         if ((val > 100) || (val < 1))
-        {
             return 0;
-        }
+
         options = sprintf("%3d", val) + options[3..];
         break;
 
     case OPT_SCREEN_WIDTH:
         if ((val != -1) &&
             ((val > 200) || (val < 40)))
-        {
             return 0;
-        }
+
         options = options[..2] + sprintf("%3d", val) + options[6..];
         fixup_screen();
         break;
 
     case OPT_WHIMPY:
         if ((val > 99) || (val < 0))
-        {
             return 0;
-        }
+
         options = options[..5] + sprintf("%2d", val) + options[8..];
         /* Update the cache of the whimpy value, too. */
         ::set_whimpy(val);
@@ -1261,9 +1220,7 @@ public nomask int
 query_option(int opt)
 {
     if (!stringp(options))
-    {
         options = OPT_DEFAULT_STRING;
-    }
 
     switch (opt)
     {
@@ -1340,9 +1297,7 @@ set_restricted(int seconds, int self)
     if (self)
     {
         if (this_object() != this_interactive())
-        {
             return;
-        }
 
         restricted = (time() + seconds);
 
@@ -1356,9 +1311,7 @@ set_restricted(int seconds, int self)
     else
     {
         if (file_name(previous_object()) != WIZ_CMD_ARCH)
-        {
             return;
-        }
 
         restricted = -(time() + seconds);
     }
@@ -1377,9 +1330,7 @@ reset_restricted(int self)
     if (self)
     {
         if (this_object() != this_interactive())
-        {
             return;
-        }
 
         restricted = 0;
 #ifdef LOG_RESTRICTED
@@ -1391,9 +1342,7 @@ reset_restricted(int self)
     else
     {
         if (file_name(previous_object()) != WIZ_CMD_ARCH)
-        {
             return;
-        }
 
         restricted = 0;
     }

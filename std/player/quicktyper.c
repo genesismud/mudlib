@@ -55,17 +55,13 @@ modify_command(string str)
     string *subst_words;
 
     if (!strlen(str))
-    {
 	return str;
-    }
 
     /* Player wants to repeat the last command. */
     if (str == "%%")
     {
  	if (this_player()->query_option(OPT_ECHO))
-	{
 	    write("Doing: " + last_command + "\n");
-	}
 
 	return last_command;
     }
@@ -88,9 +84,7 @@ modify_command(string str)
 		implode(subst_words[1..], "");
 	}
 	else
-	{
 	    str = implode(words, " ");
-	}
     }
 
     /* Save the last command given to be retrieved with %%. */
@@ -135,10 +129,9 @@ alias(string str)
  	    "\n\n");
 
 	while(++index < size)
-	{
 	    write(sprintf("%-8s: %s\n", list[index],
 		m_alias_list[list[index]]));
-	}
+
 	return 1;
     }
 
@@ -180,9 +173,7 @@ alias(string str)
 
 	write("The aliases of " + capitalize(cmd) + " are:\n\n");
 	while(++index < size)
-	{
 	    write(sprintf("%-8s: %s\n", list[index], a_list[list[index]]));
-	}
 
 	return 1;
     }
@@ -279,9 +270,7 @@ doit(string str)
 {
     /* Access failure. You cannot be forced to 'do' anything. */
     if (this_interactive() != this_object())
-    {
 	return 0;
-    }
 
     /* No argument. If a 'do' is going on, pause it. */
     if (!strlen(str))
@@ -341,9 +330,7 @@ resume(string str)
 {
     /* Access failure. You cannot be forced to resume. */
     if (this_interactive() != this_object())
-    {
 	return 0;
-    }
 
     /* No argument possible. */
     if (stringp(str))
@@ -397,6 +384,6 @@ unalias(string str)
 
     write("Alias \"" + str + "\" removed. Used to be " + m_alias_list[str] +
 	  ".\n");
-    m_alias_list = m_delete(m_alias_list, str);
+    m_delkey(m_alias_list, str);
     return 1;
 }
