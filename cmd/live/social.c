@@ -833,10 +833,17 @@ kill(string str)
         }
         else
         {
-            write("You feel a divine force protecting this being, your " +
-                "attack fails.\n");
+            write("You feel a divine force protecting " +
+                ob->query_the_name(this_player()) + ", your attack fails.\n");
         }
 
+        return 1;
+    }
+
+    if (member_array(ob, this_player()->query_team_others()) != -1)
+    {
+        write("You cannot attack " + ob->query_the_name(this_player()) +
+            " as " + ob->query_pronoun() + " is in your team.\n");
         return 1;
     }
 
