@@ -5,7 +5,7 @@ SYNOPSIS
 	line <channel> <message>
 	line <channel>
         line config <command> <arguments>
-        line list <channel>
+        line list [<channel>]
 
 DESCRIPTION
 	With this command you can say something to all wizards listening to
@@ -26,7 +26,7 @@ ARGUMENTS
 	<message> - whatever you want to say on the channel.
 
         config    - see 'help lineconfig' for details on configuration.
-        list      - list the members of the channel.
+        list      - list the members of the channel or all channels.
 
 SEE ALSO
 	arch, busy, dtell, liege, lineconfig, linee, wiz
