@@ -1116,7 +1116,7 @@ restrict(string str)
     {
         notify_fail("Syntax: restrict list\n" +
                     "        restrict [wiz] <restriction>\n" +
-                    "        restrictions: snoop/s, snoopdom/sd, rw, log\n");
+                    "        restrictions: snoop/s, snoopdom/sd, rw, w, log\n");
         return 0;
     }
 
