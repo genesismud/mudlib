@@ -67,20 +67,20 @@ public  nomask varargs int check_recoverable(int flag);
 public string *
 parse_command_id_list()         
 { 
-    return (obj_names ? obj_names + ({}) : 0);
+    return obj_names;
 }
 
 /*
- * Description: This function is used buy the efun parse_command()
+ * Description: This function is used by the efun parse_command()
  */
 public string *
 parse_command_plural_id_list() 
 { 
-    return (obj_pnames ? obj_pnames + ({}) : 0);
+    return obj_pnames;
 }
 
 /*
- * Description: This function is used buy the efun parse_command()
+ * Description: This function is used by the efun parse_command()
  */
 public string *
 parse_command_adjectiv_id_list() 
@@ -151,17 +151,6 @@ create()
     add_name(OB_NAME(this_object()), 1);
 }
 
-#if 0
-/*
- * Function name: reset_object
- * Description:   Reset the object (Default for clones)
- */
-public void
-reset_object() 
-{
-}
-#endif
-
 /*
  * Function name: random_reset
  * Description  : This routine is used internally to determine the reset 
@@ -201,22 +190,14 @@ reset()
     int index = sizeof(calls);
 
     while(--index >= 0)
-    {
         if (calls[index][1] == "reset")
-        {
             remove_alarm(calls[index][0]);
-        }
-    }
 
     if (!reset_interval)
-    {
         return;
-    }
 
     if (function_exists("reset_object", this_object()))
-    {
         set_alarm(random_reset(), 0.0, reset);
-    }
 
     this_object()->reset_object();
 }
@@ -233,12 +214,8 @@ disable_reset()
     int index = sizeof(calls);
 
     while(--index >= 0)
-    {
         if (calls[index][1] == "reset")
-        {
             remove_alarm(calls[index][0]);
-        }
-    }
 
     reset_interval = 0;
 }
@@ -267,17 +244,13 @@ enable_reset(int factor = 100)
     }
 
     if (obj_no_change || factor < 20 || factor > 200)
-    {
         return;
-    }
 
     disable_reset();
     reset_interval = factor;
 
     if (function_exists("reset_object", this_object()))
-    {
         set_alarm(random_reset(), 0.0, reset);
-    }
 }
 
 /*
@@ -770,9 +743,8 @@ move(mixed dest, mixed subloc)
         dest = old;
 
     if (subloc == 1)
-    {
         move_object(dest);
-    }
+
     else if (old != dest)
     {
         if (!dest || !dest->query_prop(CONT_I_IN) || dest->query_prop(CONT_M_NO_INS))
@@ -858,8 +830,7 @@ move(mixed dest, mixed subloc)
         move_object(dest);
     }
 
-    if (subloc != 1)
-        obj_subloc = subloc;
+    obj_subloc = subloc != 1 ? subloc : 0;
 
     if (old != dest)
     {
