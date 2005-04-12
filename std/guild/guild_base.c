@@ -132,7 +132,7 @@ shadow_me(object player, string type, string style, string name,
     call_other(this_object(),
         "init_" + ({ "occ", "lay", "race", "craft" })[il] + "_shadow", init_arg);
 
-    player->set_guild_pref( ({ SS_OCCUP, SS_LAYMAN, SS_RACE })[il],
+    player->set_guild_pref( ({ SS_OCCUP, SS_LAYMAN, SS_RACE, SS_CRAFT })[il],
         call_other(this_object(),
             "query_guild_tax_" + ({ "occ", "lay", "race", "craft" })[il])); 
     return 1;
