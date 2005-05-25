@@ -20,8 +20,8 @@ static	int	dont_answer_unseen;	/* Flag if not to answer unseen */
 /*
  * Function name: set_dont_answer_unseen
  * Description:   This mobile will look confused if he can't see who asked
- *		  him and if this flag is set
- * Arguments:     flag - How the flag should be set
+ *		  him and if this flag is set.
+ * Arguments:     int flag - How the flag should be set (1/0)
  */
 public void
 set_dont_answer_unseen(int flag)
@@ -31,8 +31,8 @@ set_dont_answer_unseen(int flag)
 
 /*
  * Function name: query_dont_answer_unseen
- * Description:   Ask about the state of the dont_answer_unseen flag
- * Returns:       The flag
+ * Description:   Ask about the state of the dont_answer_unseen flag.
+ * Returns:       int - the flag
  */
 public int
 query_dont_answer_unseen()
@@ -43,8 +43,8 @@ query_dont_answer_unseen()
 /*
  * Function name: ask_id
  * Description:   Identify questions in the object.
- * Arguments:     str: String to test with.
- * Returns:       True or false.
+ * Arguments:     string str - question to test.
+ * Returns:       int - if true the question exists.
  */
 public int
 ask_id(string str)
@@ -63,15 +63,15 @@ ask_id(string str)
 
 /*
  * Function name: add_ask
- * Description:   Adds an question this mobile can answer. The first
- *                argument is a single string or an array of
- *                strings holding the possible question(s) of the item.
- *                The second argument is the long description of
- *                the answer. add_ask can be repeatedly called with
- *                new questions.
- * Arguments:     questions - Alternate questions for the answer,
- *                answer    - answer of the question
- *		  command   - A flag if this answer is a command
+ * Description:   Adds an question this mobile can answer. The first argument
+ *                is a single string or an array of strings holding the
+ *                the possible question(s) of the item. The second argument is
+ *                the long description of the answer. add_ask can be repeatedly
+ *                called with new questions.
+ * Arguments:     mixed questions - string or array of strings; the question(s)
+ *                                  that lead to this answer.
+ *                mixed answer    - the answer of the question, may be VBFC.
+ *		  int command     - if true this answer is a command
  * Returns:       True or false.
  */
 public varargs int
@@ -124,7 +124,7 @@ remove_asks()
 /*
  * Function name: remove_ask
  * Description:   Removes one additional answer from the additional item list
- * Arguments:     question - question to answer to remove.
+ * Arguments:     string question - question to answer to remove.
  * Returns:       True or false. (True if removed successfully)
  */
 public int
@@ -149,21 +149,22 @@ remove_ask(string question)
 /*
  * Function name: set_default_answer
  * Description:   Set the default answer you want your creature to say if he
- * 		  cannot identify the question.
+ * 		  cannot identify the question. The default answer will be
+ *                echoed to the player, unless the cmd flag is set.
  *                When using VBFC for the default answer, this function should
- *                return the type string. If the NPC performs a command as
+ *                return the type string. If the NPC performed a command as
  *                default answer, the string "" should be returned.
  *		  NOTE that no reaction will come if a player asks a question
  * 		  to this mobile that we have no answer set for if this default
  *		  is not set.
  * Argument:	  mixed answer - The default answer, VBFC is allowed.
- *		  int command  - A flag if this answer is a command.
+ *		  int cmd  - if true, the answer is executed as command.
  */
 public varargs void
-set_default_answer(mixed answer, int command = 0)
+set_default_answer(mixed answer, int cmd = 0)
 {
     default_answer = answer;
-    default_answer_cmd = command;
+    default_answer_cmd = cmd;
 }
 
 /*
