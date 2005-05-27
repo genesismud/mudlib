@@ -2105,9 +2105,9 @@ reveal(string str)
 int
 search(string str)
 {
-    object *ob, obj;
+    object *objs, obj;
     int time;
-    string item, rest;
+    string item;
 
     if (!stringp(str))
         str = "here";
@@ -2124,34 +2124,50 @@ search(string str)
         return 0;
     }
 
-    if (sscanf(str, "%s here", item) == 1)
+    /* Find out where we are searching. */
+    if (sscanf(str, "%s here", str) == 1)
     {
-        str = item;
-        ob = FIND_STR_IN_OBJECT(item, environment(this_player()));
-        if (!sizeof(ob) && environment(this_player())->item_id(item))
-            ob = ({ environment(this_player()) });
+        item = "here";
+    }
+    else if (sscanf(str, "%s for %s", item, str) != 2)
+    {
+        item = str;
+    }
+
+    /* Locate the item. */
+    if (item == "here")
+    {
+        objs = ({ environment(this_player()) });
     }
     else
     {
-        if (sscanf(str, "%s for %s", item, rest) != 2)
-            item = str;
-        if (item == "here")
-            ob = ({ environment(this_player()) });
-        else
-            if (!sizeof(ob = FIND_STR_IN_OBJECT(item, this_player())))
-                if (!sizeof(ob = FIND_STR_IN_OBJECT(item, 
-                     environment(this_player()))))
-                    if (!sizeof(ob) &&
-                        environment(this_player())->item_id(item))
-                        ob = ({ environment(this_player()) });
+        /* Could be an item in his inventory or environment. */
+        objs = FIND_STR_IN_OBJECT(item, this_player());
+        if (!sizeof(objs))
+        {
+            objs = FIND_STR_IN_OBJECT(item, environment(this_player()));
+        }
+        /* Otherwise look for add-items in the environment or inventory. */
+        if (!sizeof(objs))
+        {
+            if (environment(this_player())->item_id(item))
+            {
+                objs = ({ environment(this_player()) });
+            }
+            else
+            {
+                objs = filter(all_inventory(environment(this_player())), &->item_id(item));
+            }
+        }
     }
 
-    notify_fail("You don't find any " + item + " to search.\n");
-    if (!sizeof(ob))
+    if (!sizeof(objs))
+    {
+        notify_fail("You don't find any " + item + " to search.\n");
         return 0;
+    }
 
-    obj = ob[0];
-
+    obj = objs[0];
     if (obj == environment(this_player()))
     {
         write("You start to search" +
@@ -2175,7 +2191,8 @@ search(string str)
             ".\n");
     }
 
-    obj->search_object(str);
+    /* As temporary measure we support "search x for herbs" as argument. */
+    obj->search_object(str == "herbs" ? (item + " for herbs") : str);
     return 1;
 }
 
