@@ -25,6 +25,7 @@
 inherit "/cmd/std/command_driver";
 
 #include <cmdparse.h>
+#include <composite.h>
 #include <language.h>
 #include <log.h>
 #include <macros.h>
@@ -144,44 +145,23 @@ int
 date()
 {
     int runlevel;
-    int delay;
+    int delay, interval;
 
     write("Local time    : " + ctime(time()) + "\n");
     write("Start time    : " + ctime(SECURITY->query_start_time()) + "\n");
     write("Up time       : " + CONVTIME(time() -
 	SECURITY->query_start_time()) + "\n");
-/*
- *  No longer intersting, now is it? //Mrpr
-
     write("Memory usage  : " + SECURITY->query_memory_percentage() + "%\n");
-*/
 #ifdef REGULAR_REBOOT
     write("Regular reboot: " + "Every day after " + REGULAR_REBOOT + ":00\n");
 #endif REGULAR_REBOOT
 
-    /* Tell wizards some system data. */
-    if (this_player()->query_wiz_level())
-    {
 #ifdef REGULAR_UPTIME
-        if (!ARMAGEDDON->shutdown_active())
-        {
-            delay = SECURITY->query_irregular_uptime() +
-                SECURITY->query_start_time() - time();
-            write("Regular reboot: " + ((delay <= 0) ?
-                "Announced within the next 15 minutes.\n" :
-                (CONVTIME(delay) + " to go.\n")));
-        }
+    delay = SECURITY->query_irregular_uptime() +
+        SECURITY->query_start_time() - time();
 #endif REGULAR_UPTIME
 
-	write("System data   : " + SECURITY->do_debug("load_average") + "\n");
-
-        if (runlevel = SECURITY->query_runlevel())
-        {
-            write("Runlevel      : " + WIZ_RANK_NAME(runlevel) +
-                " (and higher).\n");
-        }
-    }
-
+    /* Information about the reboot status. */
     if (ARMAGEDDON->shutdown_active())
     {
 	write("Armageddon    : Shutdown in " +
@@ -189,6 +169,45 @@ date()
 	write("Shutdown by   : " + capitalize(ARMAGEDDON->query_shutter()) +
 	     ".\n");
 	write("Reason        : " + ARMAGEDDON->query_reason() + "\n");
+    }
+#ifdef REGULAR_UPTIME
+    else if (delay <= 0)
+    {
+        write("Regular reboot: Announced within the next 15 minutes.\n");
+    }
+    else if (this_player()->query_wiz_level())
+    {
+        write("Regular reboot: " + CONVTIME(delay) + " to go.\n");
+    }
+    else
+    {
+        /* Round down <= 1h30 -> 0h15, <= 1day -> 1h30,
+                      <= 2day -> 3h00, >= 2day -> 6h00 */
+        if (delay <= 86400)
+        {
+            interval = (delay <= 5400) ? 900 : 5400;
+        }
+        else
+        {
+            interval = (delay <= 129600) ? 10800 : 21600;
+        }
+        delay = ((delay / interval) * interval);
+        write("Regular reboot: between " + CONVTIME(delay) + " and " +
+            CONVTIME(delay + interval) + " to go.\n");
+    }
+#endif REGULAR_UPTIME
+
+    /* Tell wizards some system data. */
+    if (this_player()->query_wiz_level())
+    {
+        if (runlevel = SECURITY->query_runlevel())
+        {
+            write("Runlevel      : " + WIZ_RANK_NAME(runlevel) +
+                " (and higher).\n");
+        }
+
+	write(HANGING_INDENT("System data   : " +
+	    SECURITY->do_debug("load_average"), 16, 0) + "\n");
     }
 
     return 1;

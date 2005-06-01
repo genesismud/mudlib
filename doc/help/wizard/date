@@ -6,4 +6,5 @@ SYNOPSIS
 
 DESCRIPTION
 	Prints the local time and date. Also lists the time when the
-	game was last started as well as uptime.
+	game was last started as well as uptime. If there is a regular
+	reboot time, an indication of the reboot moment is given.
