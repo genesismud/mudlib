@@ -179,6 +179,18 @@ query_default_answer()
     return default_answer;
 }
 
+/* 
+ * Function name: query_default_answer_cmd
+ * Description:   Find out whether the default answer is a command or a text
+ *                to be echoed to the user.
+ * Returns:       int - if true, the default answer is a command.
+ */
+public int
+query_default_answer_cmd()
+{
+    return default_answer_cmd;
+}
+
 /*
  * Function name: set_not_here_func
  * Description:   Set a function to call if the player who posed the question
