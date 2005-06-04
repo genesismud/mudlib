@@ -505,13 +505,13 @@ Dump(string str)
 	    flag = args[1];
 	    if (sizeof(args) >= 2)
 		extra = implode(args[2..], " ");
-
-	    if (!objectp(ob = get_assign(path)))
-		ob = parse_list(path);
 	}
     }
     else
 	path = str;
+
+    if (!objectp(ob = get_assign(path)))
+	ob = parse_list(path);
 
     if (!objectp(ob))
     {
@@ -542,7 +542,7 @@ Dump(string str)
 
     switch (flag)
     {
-    case 0:
+    case "":
 	break;
 
     case "info":
