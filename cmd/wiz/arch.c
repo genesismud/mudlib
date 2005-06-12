@@ -668,6 +668,9 @@ purge(string str)
 {
     CHECK_SO_ARCH;
 
+    notify_fail("Currently not operational.\n");
+    return 0;
+
     if (str == "players")
     {
         if (objectp(PURGE_OBJECT))
