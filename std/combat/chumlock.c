@@ -23,15 +23,23 @@ create_chumanoid()
 }
 
 /*
+ * Function name: cb_add_attack
  * Description:   Add an attack to the attack array.
+ * Arguments:	  
+ *             wchit: Weapon class to hit
+ *             wcpen: Weapon class penetration
+ *	       dt:    Damage type
+ *             %use:  Chance of use each turn
+ *	       id:    Specific id, for humanoids W_NONE, W_RIGHT etc
+ *	       skill: Skill to use
+ *
+ * Returns:       True if added.
  */
 public nomask int
 cb_add_attack(int wchit, mixed wcpen, int damtype, int prcuse,
               int id, int skill)
 {
-    /*
-     * Allow modification only of known attacks
-     */
+    /* Allow modification only of known attacks */
     if (member_array(id, query_attack_id()) >= 0)
 	return ::cb_add_attack(wchit, wcpen, damtype, prcuse, id, skill);
     else
