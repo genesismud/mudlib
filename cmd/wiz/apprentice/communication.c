@@ -1079,6 +1079,9 @@ line(string str, int emotion = 0, int busy_level = 0)
 int
 line_shortcut(string str)
 {
+    if (!this_interactive()->query_option(OPT_AUTOLINECMD))
+        return 0;
+    
     return line(query_verb() + (strlen(str) ? (" " + str) : ""), 0);
 }
 
@@ -1092,6 +1095,9 @@ line_shortcut(string str)
 int
 linee_shortcut(string str)
 {
+    if (!this_interactive()->query_option(OPT_AUTOLINECMD))
+        return 0;
+    
     return line(extract(query_verb(), 0, -2) +
         (strlen(str) ? (" " + str) : ""), 1);
 }

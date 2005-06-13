@@ -41,6 +41,7 @@ inherit "/cmd/std/command_driver";
 #include <formulas.h>
 #include <language.h>
 #include <macros.h>
+#include <money.h>
 #include <ss_types.h>
 #include <std.h>
 #include <stdproperties.h>
@@ -1844,6 +1845,8 @@ peek(string str)
         return 0;
     }
 
+    MONEY_EXPAND(p[0]);
+    
     pp_skill = this_player()->query_skill(SS_PICK_POCKET) / 2;
     if ((pp_skill + random(pp_skill) > p[0]->query_skill(SS_AWARENESS)) &&
         (!p[0]->query_wiz_level()))

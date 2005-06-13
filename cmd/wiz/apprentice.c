@@ -218,11 +218,8 @@ query_cmdlist()
         "wize":"wiz",
         "wsay":"wsay",
         ]);
-
-    if (!this_interactive()->query_option(OPT_AUTOLINECMD))
-	return cmd;
-    else
-	return cmd + query_line_cmdlist();
+    
+    return cmd + query_line_cmdlist();
 }
 
 /* **************************************************************************

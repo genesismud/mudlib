@@ -1665,7 +1665,7 @@ stat(string str)
         // A restricted wizard may not stat other players, only himself.
         if (flags & STAT_PLAYER)
         {
-            if (ob != this_interactive())
+            if (ob != this_interactive() && !wildmatch("*jr", ob->query_real_name()))
             {
                 write("You are currently restricted from using the stat " +
                       "command on other players.\n");
