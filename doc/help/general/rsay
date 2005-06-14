@@ -3,6 +3,7 @@ NAME
 
 SYNOPSIS
 	rsay <string>
+        rsay to <target> <string>
 
 DESCRIPTION
 	This command makes you say something in your racial tongue. People

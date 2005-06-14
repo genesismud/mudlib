@@ -246,6 +246,8 @@ decay_skills()
     obs += pointerp(otmp) ? otmp : ({ otmp });
     otmp = this_object()->query_guild_trainer_lay();
     obs += pointerp(otmp) ? otmp : ({ otmp });
+    otmp = this_object()->query_guild_trainer_craft();
+    obs += pointerp(otmp) ? otmp : ({ otmp });
     obs -= ({ 0 });
 
     /* Filter all relevant skills */
