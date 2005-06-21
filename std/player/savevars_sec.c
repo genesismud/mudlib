@@ -966,6 +966,23 @@ query_aliases()
 }
 
 /*
+ * Function name: add_aliases
+ * Description  : Service function to allow the mudlib to add default aliases.
+ * Arguments    : mapping m - a mapping with the aliases to add.
+ */
+static nomask void
+add_aliases(mapping m)
+{
+    if (!mappingp(m))
+        return;
+
+    if (mappingp(m_alias_list))
+        m_alias_list += m;
+    else    
+        m_alias_list = m;
+}
+
+/*
  * Function name: add_second
  * Description  : Add a second to the player list.
  * Arguments    : string second - the name of the second to add.
