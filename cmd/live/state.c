@@ -1192,7 +1192,7 @@ options(string arg)
 	case "cmd":
 	    if (this_player()->query_wiz_level())
 	    {
-		write("Automatic line command aliasing: " +
+		write("Auto line cmds:  " +
 		      (this_player()->query_option(OPT_AUTOLINECMD) ?
 		       "On" : "Off") + "\n");
 		break;
