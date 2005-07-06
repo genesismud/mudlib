@@ -338,7 +338,8 @@ gs_hook_rise()
 int
 gs_hook_catch_error(string str)
 {
-    write("You cannot do that while meditating.\n");
+    write("You cannot do that while meditating. " +
+        "You may <rise> to end your trance.\n");
     return 1;
 }
 
