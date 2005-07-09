@@ -599,6 +599,22 @@ sk_hook_skillisting()
 }
 
 /*
+ * Function name: sk_hook_also_learn
+ * Description  : This hook is called when there are skills to be learnt when
+ *                the player asks about skills to improve.
+ * Arguments    : int num - the number of skills to be learnt.
+ */
+void
+sk_hook_also_learn(int num)
+{
+    if (num == 1)
+        write("There is one new skill that you can learn here.\n");
+    else
+        write("There are " + LANG_WNUM(num) +
+            " new skills that you can learn here.\n");
+}
+
+/*
  * Function name: sk_hook_no_list_learn
  * Description  : This hook is called when there are no more skills the
  *                player can learn here.
@@ -741,9 +757,9 @@ sk_filter_improve(int sk, int steps)
 int
 sk_list(int steps)
 {
-    int i, *guild_sk, learn;
+    int i, *all_sk, *guild_sk, learn;
 
-    guild_sk = sk_query_train();
+    all_sk = sk_query_train();
     if (!steps)
     {
         steps = 1;
@@ -755,14 +771,14 @@ sk_list(int steps)
     }
     else if (query_verb() == "learn")
     {
-        guild_sk = filter(guild_sk, &sk_filter_learn(, steps));
+        guild_sk = filter(all_sk, &sk_filter_learn(, steps));
         if (!sizeof(guild_sk))
             return sk_hook_no_list_learn();
         sk_hook_write_header(steps);
     }
     else
     {
-        guild_sk = filter(guild_sk, &sk_filter_improve(, steps));
+        guild_sk = filter(all_sk, &sk_filter_improve(, steps));
         if (!sizeof(guild_sk))
             return sk_hook_no_list_improve();
         sk_hook_write_header(steps);
@@ -771,6 +787,14 @@ sk_list(int steps)
     for (i = 0; i < sizeof(guild_sk); i++)
     {
         write(sk_fix_cost(guild_sk[i], steps));
+    }
+
+    /* When trying to improve, see if there are skills to be learnt. */
+    if (query_verb() == "improve")
+    {
+        guild_sk = filter(all_sk, &sk_filter_learn(, 1));
+        if (sizeof(guild_sk))
+            sk_hook_also_learn(sizeof(guild_sk));
     }
 
     return 1;
