@@ -36,7 +36,7 @@ inherit "/std/living";
 
 #define LINKDEATH_TIME    180.0 /* three minutes */
 #define AUTOLOAD_INTERVAL 0.0
-#define RECOVERY_INTERVAL 1.0
+#define RECOVERY_INTERVAL 0.5
 
 /* 
  * List of properties that are to be saved in the player object. This list
