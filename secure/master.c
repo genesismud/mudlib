@@ -1349,6 +1349,8 @@ start_boot(int load_empty)
     {
         temp_locations = ({ });
     }
+    /* Update some internal data. */
+    update_guild_cache();
 
     /* Initialise the siteban structure. */
     init_sitebans();

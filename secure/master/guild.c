@@ -2,8 +2,8 @@
  * /secure/master/guild.c
  *
  * This subpart of SECURITY contains the code related to the administration
- * of guilds for this mud. Having the necessary information in a central place
- * may make it easier to maintain a good overview.
+ * of guilds and clubs for this mud. Having the necessary information in a
+ * central place may make it easier to maintain a good overview.
  */
 
 #include "/sys/const.h"
@@ -24,6 +24,12 @@
  *         ])
  */
 private mapping guilds = ([ ]);
+
+/*
+ * Global variables. These are NOT stores in the KEEPERSAVE.
+ */
+static private string *club_names = ({ });
+static private string *guild_names = ({ });
 
 /*
  * Definitions.
@@ -51,6 +57,31 @@ static void
 load_guild_defaults()
 {
     guilds = ([ ]);
+}
+
+/*
+ * Function name: filter_is_club
+ * Description  : Filter those guilds that are a club (minor guild).
+ * Arguments    : string name - the short name of the club to test.
+ * Returns      : if true, it is a club.
+ */
+public int
+filter_is_club(string name)
+{
+    return !(guilds[name][GUILD_TYPE]);
+}
+
+/*
+ * Function name: update_guild_cache
+ * Description  : Used internally to update the names of the clubs and guilds,
+ *                so we don't have to filter every time.
+ */
+static void
+update_guild_cache()
+{
+    club_names = sort_array(filter(m_indices(guilds), filter_is_club));
+    guild_names = sort_array(m_indices(guilds));
+    guild_names -= club_names;
 }
 
 /*
@@ -236,6 +267,10 @@ query_guild_type_int(string type)
 	    result |= G_RACE;
 	    break;
 
+	case "c":
+	    result |= G_CRAFT;
+	    break;
+
 	case "l":
 	    result |= G_LAYMAN;
 	    break;
@@ -264,6 +299,9 @@ query_guild_type_string(int type)
     if (type & G_RACE)
 	result += "R";
 
+    if (type & G_CRAFT)
+	result += "C";
+
     if (type & G_LAYMAN)
 	result += "L";
 
@@ -286,8 +324,14 @@ query_guild_type_long_string(int type)
 {
     string *result = ({ });
 
+    if (!type)
+        return "Club";
+
     if (type & G_RACE)
 	result += ({ "Race" });
+
+    if (type & G_CRAFT)
+	result += ({ "Craft" });
 
     if (type & G_LAYMAN)
 	result += ({ "Layman" });
@@ -400,6 +444,32 @@ query_guild_is_master(string short_name, string name)
 }
 
 /*
+ * Function name: guild_filter_types
+ * Description  : Filters all guilds of a particular type.
+ * Arguments    : string short_name - the name of the guild to test.
+ *                int type - the bit of the type to check.
+ * Returns      : int 1/0 - passed or failed the filter test.
+ */
+public int
+guild_filter_type(string short_name, int type)
+{
+    return (pointerp(guilds[short_name]) &&
+	    (guilds[short_name][GUILD_TYPE] & type));
+}
+
+/*
+ * Function name: query_clubs
+ * Description  : Returns a list of the short names of all clubs. The answer
+ *                will be sorted.
+ * Returns      : string * - the list of short names.
+ */
+public string *
+query_clubs()
+{
+    return secure_var(club_names);
+}
+
+/*
  * Function name: query_guilds
  * Description  : Returns a list of the short names of all guilds. The answer
  *                will be sorted.
@@ -408,7 +478,7 @@ query_guild_is_master(string short_name, string name)
 public string *
 query_guilds()
 {
-    return sort_array(m_indices(guilds));
+    return secure_var(guild_names);
 }
 
 /*
@@ -435,20 +505,6 @@ guild_sort_styles(string guild1, string guild2)
 }
 
 /*
- * Function name: guild_filter_types
- * Description  : Filters all guilds of a particular type.
- * Arguments    : string short_name - the name of the guild to test.
- *                int type - the bit of the type to check.
- * Returns      : int 1/0 - passed or failed the filter test.
- */
-public int
-guild_filter_type(string short_name, int type)
-{
-    return (pointerp(guilds[short_name]) &&
-	    (guilds[short_name][GUILD_TYPE] & type));
-}
-
-/*
  * Function name: guild_command
  * Description  : This contains the code of the "guild" command for wizards.
  *                It may only be called from the apprentice soul.
@@ -459,15 +515,13 @@ public int
 guild_command(string str)
 {
     string *args;
-    int    num_args;
-    string guild;
     string *names;
-    int    num_guilds;
-    string name;
-    string domain;
-    int    rank;
-    int    index;
-    int    type;
+    string wname, domain, guild;
+    int    num_args, num_guilds;
+    int    rank, index;
+    int    type = 0;
+    string verb = query_verb(); /* Must be "guild" or "club"! */
+    int    club = (verb == "club");
 
     /* Access failure. May only be called from apprentice soul. */
     if (file_name(previous_object()) != WIZ_CMD_APPRENTICE)
@@ -482,17 +536,19 @@ guild_command(string str)
 
     args = explode(str, " ");
     num_args = sizeof(args);
-    name = this_interactive()->query_real_name();
-    rank = query_wiz_rank(name);
+    wname = this_interactive()->query_real_name();
+    rank = query_wiz_rank(wname);
+    names = (club ? query_clubs() : query_guilds());
 
     /* If no guilds are listed, all you can do is add. */
     if ((args[0] != "add") &&
-	!m_sizeof(guilds))
+	!sizeof(names))
     {
-	write("No guilds registered. Add a guild first.\n");
+	write("No " + verb + "s registered. Add a " + verb + " first.\n");
 	return 1;
     }
 
+    /* If the guild name is the argument, display info about it. */
     if (pointerp(guilds[str]))
     {
         args = ({ "info", str });
@@ -508,18 +564,25 @@ guild_command(string str)
     case "add":
 	switch(rank)
 	{
-/*	case WIZ_STEWARD:
+	case WIZ_STEWARD:
 	case WIZ_LORD:
-	    domain = query_wiz_dom(name);
-	    break; */
+	    if (!club)
+	    {
+		notify_fail("Only the administration can approve a guild " +
+		    "and add it to the list. Please submit your proposal " +
+		    "to the AoD for consideration.\n");
+		return 0;
+	    }
+	
+	    domain = query_wiz_dom(wname);
+	    break;
 
 	case WIZ_ARCH:
 	case WIZ_KEEPER:
 	    domain = capitalize(args[1]);
             if (query_domain_number(domain) < 0)
 	    {
-		notify_fail("\"" + domain +
-		    "\" is not a valid domain name.\n");
+		notify_fail("\"" + domain + "\" is not a valid domain name.\n");
 		return 0;
 	    }
 
@@ -528,25 +591,30 @@ guild_command(string str)
 	    break;
 
 	default:
-	    notify_fail("Only the administration can approve a guild " +
-	        "and add it to the list. Please submit your proposal " +
-	        "to the AoD for consideration.\n");
-/*	    notify_fail("Only the Liege or steward of your domain may " +
-		"add a guild to the list. Admins will do, too.\n"); */
+	    notify_fail("Only the Liege or steward of your domain may " +
+		"add a club to the list. Only the administration can " +
+		"approve a guild and add it to the list.\n");
 	    return 0;
+	}
+
+	if (club)
+	{
+	    /* For clubs, add the type (minor guild) and the style (none). */
+	    args = args[..1] + ({ "M", "-" }) + args[2..];
+	    num_args += 2;
 	}
 
 	if (num_args < 6)
 	{
-	    notify_fail("Too few arguments to \"guild add\".\n");
+	    notify_fail("Too few arguments to \"" + verb + " add\".\n");
 	    return 0;
 	}
 
 	guild = lower_case(args[1]);
 	if (pointerp(guilds[guild]))
 	{
-	    notify_fail("A guild by the name of \"" + capitalize(guild) +
-		"\" already exists.\n");
+	    notify_fail("A guild or club by the name of \"" +
+	        capitalize(guild) + "\" already exists.\n");
 	    return 0;
 	}
 	else if (strlen(guild) > 10)
@@ -556,18 +624,18 @@ guild_command(string str)
 	    return 0;
 	}
 
-	if (!(type = query_guild_type_int(args[2])))
+	if (!club && !(type = query_guild_type_int(args[2])))
 	{
 	    notify_fail("Guild type \"" + args[2] + "\" does not contain " +
-		"any of R/L/O.\n");
+		"any of R/C/L/O.\n");
 	    return 0;
 	}
 
 	args[4] = lower_case(args[4]);
 	if (query_wiz_rank(args[4]) < WIZ_NORMAL)
 	{
-	    notify_fail("The intended guildmaster \"" + capitalize(args[4]) +
-		"\" must be a domain wizard.\n");
+	    notify_fail("The intended " + verb + "master \"" +
+	        capitalize(args[4]) + "\" must be a domain wizard.\n");
 	    return 0;
 	}
 
@@ -575,15 +643,16 @@ guild_command(string str)
 	guilds[guild] = ({ implode(args[5..], " "), domain, type,
 	    lower_case(args[3]), ({ args[4] }), GUILD_DEVELOPMENT });
 	save_master();
+	update_guild_cache();
 
 #ifdef GUILD_CMD_LOG
         this_object()->log_syslog(GUILD_CMD_LOG, ctime(time()) +
-	    sprintf(" %-11s adds %s / %s.\n", capitalize(name),
+	    sprintf(" %-11s adds %s / %s.\n", capitalize(wname),
 	    capitalize(guild), query_guild_long_name(guild)));
 #endif GUILD_CMD_LOG
 
 	/* Give verbose feedback about the guild that was added. */
-	write("Added guild with following information:\n");
+	write("Added " + verb + " with following information:\n");
 	return guild_command("info " + guild);
 
     /*
@@ -594,9 +663,9 @@ guild_command(string str)
 	{
 	case 2:
 	    guild = lower_case(args[1]);
-	    if (!pointerp(guilds[guild]))
+	    if ((member_array(guild, names) == -1) || !pointerp(guilds[guild]))
 	    {
-		notify_fail("There is no guild named \"" + capitalize(guild) +
+		notify_fail("There is no " + verb + " named \"" + capitalize(guild) +
 		    "\".\n");
 		return 0;
 	    }
@@ -609,12 +678,13 @@ guild_command(string str)
 	    write("Style & Type: " + capitalize(query_guild_style(guild)) +
 		"; " + query_guild_type_long_string(type) + "\n");
 	    names = map(query_guild_masters(guild), capitalize);
-	    write("Guildmasters: " +
+	    write(capitalize(verb) + "master" +
+	        ((sizeof(names) == 1) ? " " : "s") + (club ? " " : "") + ": " +
 		(sizeof(names) ? COMPOSITE_WORDS(names) : "NONE!") + "\n");
 	    return 1;
 
 	default:
-	    notify_fail("Too many arguments to \"guild info\".\n");
+	    notify_fail("Too many arguments to \"" + verb + " info\".\n");
 	    return 0;
 	}
 
@@ -624,7 +694,7 @@ guild_command(string str)
      * Subcommand: list [all]
      *             list short
      *             list styles
-     *             list R/L/O
+     *             list R/C/L/O
      */
     case "list":
 	switch(num_args)
@@ -636,9 +706,6 @@ guild_command(string str)
 	    /* Intentional fall through to next section. */
 
 	case 2:
-	    names = query_guilds();
-	    num_guilds = sizeof(names);
-
 	    switch(lower_case(args[1]))
 	    {
 	    case "all":
@@ -646,17 +713,17 @@ guild_command(string str)
 		break;
 
 	    case "r":
+	    case "c":
 	    case "l":
 	    case "o":
 		type = query_guild_type_int(args[1]);
 		names = filter(names, &guild_filter_type(, type));
-		num_guilds = sizeof(names);
 		break;
 
 	    case "short":
-		write(sprintf("The following guilds are listed: (Use " +
-                    "\"guild list\" for a detailed list.)\n\n%-80#s\n",
-		    implode(query_guilds(), "\n")));
+		write(sprintf("The following " + verb + "s are listed: (Use " +
+                    "\"" + verb + " list\" for a detailed list.)\n\n%-80#s\n",
+		    implode(names, "\n")));
 		return 1;
 
 	    case "styles":
@@ -665,14 +732,16 @@ guild_command(string str)
 
 	    default:
 		notify_fail("There is no subcommand \"" + args[1] +
-		    "\" for \"guild list\".\n");
+		    "\" for \"" + verb + " list\".\n");
 		return 0;
 	    }
 
 	    index = -1;
+	    num_guilds = sizeof(names);
 
 	    write("Short name P TYP Style   Long " +
-		"name                           Dom Guildmasters\n\n");
+		"name                           Dom " + capitalize(verb) +
+		"master\n\n");
 
 	    while(++index < num_guilds)
 	    {
@@ -691,7 +760,7 @@ guild_command(string str)
 	    return 1;
 
 	default:
-	    notify_fail("Too many arguments to \"guild list\".\n");
+	    notify_fail("Too many arguments to \"" + verb + " list\".\n");
 	    return 0;
 	}
 
@@ -707,17 +776,17 @@ guild_command(string str)
 	    /* If you want to add or remove yourself, the name is appended
 	     * automatically.
 	     */
-	    args += ({ name });
+	    args += ({ wname });
 	    num_args++;
 
 	    /* Intentional fall through to next section. */
 
 	case 4:
 	    guild = lower_case(args[1]);
-	    if (!pointerp(guilds[guild]))
+	    if ((member_array(guild, names) == -1) || !pointerp(guilds[guild]))
 	    {
-		notify_fail("There is no guild named \"" + capitalize(guild) +
-		    "\".\n");
+		notify_fail("There is no " + verb + " named \"" +
+		    capitalize(guild) + "\".\n");
 		return 0;
 	    }
 
@@ -725,10 +794,10 @@ guild_command(string str)
 	    {
 	    case WIZ_NORMAL:
 	    case WIZ_MAGE:
-		if (lower_case(args[3]) != name)
+		if (lower_case(args[3]) != wname)
 		{
 		    notify_fail("You may only add/remove yourself as " +
-			"guildmaster.\n");
+			verb + "master.\n");
 		    return 0;
 		}
 
@@ -736,10 +805,10 @@ guild_command(string str)
 
 	    case WIZ_STEWARD:
 	    case WIZ_LORD:
-		if (query_guild_domain(guild) != query_wiz_dom(name))
+		if (query_guild_domain(guild) != query_wiz_dom(wname))
 		{
 		    notify_fail("Your powers extend to " +
-			query_wiz_dom(name) + " only, while the " +
+			query_wiz_dom(wname) + " only, while the " +
 			capitalize(guild) + " is administered by " +
 			query_guild_domain(guild) + ".\n");
 		    return 0;
@@ -752,10 +821,12 @@ guild_command(string str)
 		break;
 
 	    default:
-		notify_fail("Wizards that are not in any domain cannot " +
-		    "be a guildmaster. If you are still registered, then " +
-		    "ask the Liege of the domain to relieve you.\n");
-		return 0;
+	        if (args[2] != "remove")
+	        {
+		    notify_fail("Wizards who are not in any domain cannot be a " +
+			verb + "master.\n");
+		    return 0;
+		}
 	    }
 
 	    args[3] = lower_case(args[3]);
@@ -771,18 +842,18 @@ guild_command(string str)
 		}
 
 		add_guild_master(guild, args[3]);
-		write("Added " + capitalize(args[3]) + " as guildmaster to " +
-		    capitalize(guild) + ".\n");
+		write("Added " + capitalize(args[3]) + " as " + verb +
+		    "master to " + capitalize(guild) + ".\n");
 		break;
 
 	    case "remove":
 		remove_guild_master(guild, args[3]);
-		write("Removed " + capitalize(args[3]) +
-		    " as guildmaster from " + capitalize(guild) + ".\n");
+		write("Removed " + capitalize(args[3]) + " as " + verb +
+		    "master from " + capitalize(guild) + ".\n");
 		break;
 
 	    default:
-		notify_fail("One can only add or remove a guildmaster.\n");
+		notify_fail("One can only add or remove a " + verb + "master.\n");
 		return 0;
 	    }
 
@@ -791,15 +862,15 @@ guild_command(string str)
 
 #ifdef GUILD_CMD_LOG
            this_object()->log_syslog(GUILD_CMD_LOG, ctime(time()) +
-		sprintf(" %-11s %ss %s to/from %s.\n", capitalize(name),
+		sprintf(" %-11s %ss %s to/from %s.\n", capitalize(wname),
 		args[2], capitalize(args[3]), capitalize(guild)));
 #endif GUILD_CMD_LOG
 
 	    return 1;
 
 	default:
-	    notify_fail("Incorrect number of arguments for " +
-		"\"guild master\".\n");
+	    notify_fail("Incorrect number of arguments for \"" + verb +
+	        " master\".\n");
 	    return 0;
 	}
 
@@ -813,9 +884,9 @@ guild_command(string str)
 	{
 	case 3:
 	    guild = lower_case(args[1]);
-	    if (!pointerp(guilds[guild]))
+	    if ((member_array(guild, names) == -1) || !pointerp(guilds[guild]))
 	    {
-		notify_fail("There is no guild named \"" + capitalize(guild) +
+		notify_fail("There is no " + verb + " named \"" + capitalize(guild) +
 		    "\".\n");
 		return 0;
 	    }
@@ -832,17 +903,18 @@ guild_command(string str)
 
 	    case WIZ_STEWARD:
 	    case WIZ_LORD:
-		if (query_guild_domain(guild) == query_wiz_dom(name))
+		if (query_guild_domain(guild) == query_wiz_dom(wname))
 		    break;
 
 		/* Intentionally fall through to default case. */
 
 	    default:
-		if (member_array(name, guilds[guild][GUILD_MASTERS]) == -1)
+		if (member_array(wname, guilds[guild][GUILD_MASTERS]) == -1)
 		{
-		    notify_fail("The guild \"" + capitalize(guild) +
+		    notify_fail("The " + verb + " \"" + capitalize(guild) +
 			"\" is not in your domain, nor are you a " +
-			"registered guildmaster, Liege or administrator.\n");
+			"registered " + verb +
+			"master, Liege or administrator.\n");
 		    return 0;
 		}
 
@@ -878,7 +950,7 @@ guild_command(string str)
 
 #ifdef GUILD_CMD_LOG
             this_object()->log_syslog(GUILD_CMD_LOG, ctime(time()) +
-		sprintf(" %-11s sets phase %s on %s.\n", capitalize(name),
+		sprintf(" %-11s sets phase %s on %s.\n", capitalize(wname),
 		capitalize(args[2]), capitalize(guild)));
 #endif GUILD_CMD_LOG
 
@@ -887,8 +959,8 @@ guild_command(string str)
 	    return 1;
 
 	default:
-	    notify_fail("Incorrect number of arguments for " +
-		"\"guild phase\".\n");
+	    notify_fail("Incorrect number of arguments for \"" + verb +
+	        " phase\".\n");
 	    return 0;
 	}
 
@@ -904,8 +976,8 @@ guild_command(string str)
 	    guild = lower_case(args[1]);
 	    if (!pointerp(guilds[guild]))
 	    {
-		notify_fail("There is no guild named \"" + capitalize(guild) +
-		    "\".\n");
+		notify_fail("There is no guild or club named \"" +
+		    capitalize(guild) + "\".\n");
 		return 0;
 	    }
 
@@ -913,10 +985,10 @@ guild_command(string str)
 	    {
 	    case WIZ_STEWARD:
 	    case WIZ_LORD:
-		if (query_guild_domain(guild) != query_wiz_dom(name))
+		if (query_guild_domain(guild) != query_wiz_dom(wname))
 		{
 		    notify_fail("Your powers extend to " +
-			query_wiz_dom(name) + " only, while the " +
+			query_wiz_dom(wname) + " only, while the " +
 			capitalize(guild) + " is administered by " +
 			query_guild_domain(guild) + ".\n");
 		    return 0;
@@ -929,33 +1001,33 @@ guild_command(string str)
 		/* Remove the entry, save the master and give feedback. */
 		m_delkey(guilds, guild);
 		save_master();
-
+                update_guild_cache();
+                
 #ifdef GUILD_CMD_LOG
                 this_object()->log_syslog(GUILD_CMD_LOG, ctime(time()) +
-		    sprintf(" %-11s removes %s.\n", capitalize(name),
+		    sprintf(" %-11s removes %s.\n", capitalize(wname),
 		    capitalize(guild)));
 #endif GUILD_CMD_LOG
 
 		write("Removed entry for \"" + capitalize(guild) +
-		    "\" guild.\n");
+		    "\" " + verb + ".\n");
 		return 1;
 
 	    default:
 		notify_fail("Only the Liege or steward of your domain may " +
-		    "remove a guild from the list. Admins will do, too.\n");
+		    "remove a " + verb + " from the list. Admins will do, too.\n");
 		return 0;
 	    }
 
 	default:
-	    notify_fail("Too many arguments to \"guild remove\".\n");
+	    notify_fail("Too many arguments to \"" + verb + " remove\".\n");
 	    return 0;
 	}
 
 	/* Not reached. */
 
     default:
-	notify_fail("There is no subcommand \"" + args[0] +
-	    "\" for \"guild\".\n");
+	notify_fail("There is no command \"" + verb + " " + args[0] + "\".\n");
 	return 0;
     }
 

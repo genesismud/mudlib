@@ -1,5 +1,5 @@
 NAME
-	guild
+	guild - manage the repository of guilds
 
 SYNOPSYS
 	guild add <domain> <guild> <type> <style> <wizard> <long>
@@ -28,7 +28,8 @@ DESCRIPTION
 	naturally the Liege may also be the guildmaster of a particular guild.
 
 	The names of the registered guilds can be used in the commands people
-	and guildtell.
+	and guildtell. There is a similar command managing the repository of
+	clubs.
 
 	The following subcommands exist:
 
@@ -41,7 +42,7 @@ DESCRIPTION
 	         names of the guilds. "styles" will sort the guilds by styles,
 		 "domain" will sort the guilds by domain and "<type>" will list
 		 only the guilds of that particular type. The type must be
-		 abbreviated to one letter R/L/O.
+		 abbreviated to one letter R/C/L/O.
 
 	master - Allows to add or remove someone to/from the list of
 		 guildmasters registered for this guild.
@@ -59,11 +60,12 @@ ARGUMENTS
 
 	<guild>  - The 'short' name of the guild. It must be a single word of
 		   ten characters or less. This name will be printed to mortal
-                   players.
+                   players. No other guild or club may use this name.
 
 	<long>   - The 'long' name of the guild. This must be exactly the same
 		   as what is being returned by the name function in the
-		   shadow. This name will be printed to mortal players.
+		   shadow. This name will be printed to mortal players. No
+		   other guild or club may use this name.
 
 	<phase>  - The phase of development and of a guild. This can be either
 		   'development', 'testing', 'open' or 'closed'.
@@ -72,11 +74,11 @@ ARGUMENTS
 		   in the shadow.
 
 	<type>   - The type of the guild, i.e. the slots the guild takes. All
-		   types must be abbreviated to their first letter, R, L or O
-		   for respectively racial, layman or occupational.
+		   types must be abbreviated to their first letter, R/C/L/O
+		   for respectively racial, craft, layman or occupational.
 
 	<wizard> - Name of the wizard to add or remove as guildmaster. When
 		   the argument is omitted, you will add/remove yourself.
 
 SEE ALSO
-	guildtell, people
+	club, guildtell, people
