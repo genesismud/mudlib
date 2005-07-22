@@ -23,9 +23,9 @@
  * add as binary digits as they can be stacked.
  *
  * G_RACE         - racial guild.
+ * G_CRAFT        - craft guild.
  * G_LAYMAN       - layman guild.
  * G_OCCUPATIONAL - occupational guild.
- * G_CRAFT        - craft guild.
  */
 #define G_RACE         1
 #define G_LAYMAN       2
