@@ -11,6 +11,7 @@
  * - applications
  * - apply
  * - bit
+ * - club
  * - domainsanction (short: dsanction)
  * - finger
  * - gd
@@ -137,6 +138,7 @@ query_cmdlist()
 
         "cat":"cat_file",
         "cd":"cd",
+        "club":"club",
 
         "dirs":"dirs",
         "domainsanction":"domainsanction",
@@ -565,6 +567,17 @@ bit(string args)
 
     notify_fail("Should never happen: switch() error in then end of bit()\n");
     return 0;
+}
+
+/* **************************************************************************
+ * club - manage information about clubs
+ */
+nomask int
+club(string str)
+{
+    CHECK_SO_WIZ;
+
+    return SECURITY->guild_command(str);
 }
 
 /* **************************************************************************

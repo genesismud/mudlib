@@ -25,10 +25,12 @@
  * G_RACE         - racial guild.
  * G_LAYMAN       - layman guild.
  * G_OCCUPATIONAL - occupational guild.
+ * G_CRAFT        - craft guild.
  */
 #define G_RACE         1
 #define G_LAYMAN       2
 #define G_OCCUPATIONAL 4
+#define G_CRAFT        8
 
 /*
  * MAX_ARRAY_SIZE is the maximum size arrays are allowed to have.
