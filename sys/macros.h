@@ -61,6 +61,11 @@
 #define OB_NAME(ob)   ("ob_" + OB_NUM(ob))
 
 /*
+ * IS_MEMBER(item, arr) is true when the item is a member of array.
+ */
+#define IS_MEMBER(item, arr) (member_array((item), (arr)) != -1)
+
+/*
  * LOAD_ERR(file) tries to load the module 'file' and if it fails, returns
  * the error message. If it is succesful, it returns 0.
  */
@@ -119,39 +124,24 @@
 
 #define QSHORT(ob) QMET("vbfc_short", (ob))
 
- /*
-  * QNAME uses 'value by function call'. It returns either the name
-  * of the player or the race preceded by a or an. ob is the object
-  * who we want check if we know.
-  */
-#define QNAME(ob) QMET("query_art_name", (ob))
- /*
-  * QCNAME is the same as QNAME except that it returns a capital A or An
-  */
-#define QCNAME(ob) QMET("query_Art_name", (ob))
 /*
- * QPNAME is the same as QNAME except that it returns the possessive form
+ * QNAME uses VBFC to return either the name of the player or the race
+ *     preceded by a or an. ob is the object who we want check if we know.
+ * QCNAME is the same as QNAME except that it returns a capital A or An.
+ * QPNAME is the same as QNAME except that it returns the possessive form.
+ * QCPNAME is the same as QCNAME except that it returns the possessive form.
+ * QTNAME is the same as QNAME except that it returns 'the'.
+ * QCTNAME is the same as QTNAME except that it returns a capital 'The'.
+ * QTPNAME is the same as QTNAME except that it returns the possessive form.
+ * QCTPNAME is the same as QCTNAME except that it returns the possessive form.
  */
-#define QPNAME(ob) QMET("query_art_possessive_name", (ob))
-/*
- * QCPNAME is the same as QCNAME except that it returns the possessive form
- */
-#define QCPNAME(ob) QMET("query_Art_possessive_name", (ob))
- /*
-  * QTNAME is the same as QNAME except that it returns 'the'
-  */
-#define QTNAME(ob) QMET("query_the_name", (ob))
- /*
-  * QCTNAME is the same as QTNAME except that it returns a capital 'The'
-  */
-#define QCTNAME(ob) QMET("query_The_name", (ob))
- /*
-  * QTPNAME is the same as QTNAME except that it returns the possessive form
-  */
-#define QTPNAME(ob) QMET("query_the_possessive_name", (ob))
- /*
-  * QCTPNAME is the same as QCTNAME except that it returns the possessive form
-  */
+#define QNAME(ob)    QMET("query_art_name", (ob))
+#define QCNAME(ob)   QMET("query_Art_name", (ob))
+#define QPNAME(ob)   QMET("query_art_possessive_name", (ob))
+#define QCPNAME(ob)  QMET("query_Art_possessive_name", (ob))
+#define QTNAME(ob)   QMET("query_the_name", (ob))
+#define QCTNAME(ob)  QMET("query_The_name", (ob))
+#define QTPNAME(ob)  QMET("query_the_possessive_name", (ob))
 #define QCTPNAME(ob) QMET("query_The_possessive_name", (ob))
 
 /*
