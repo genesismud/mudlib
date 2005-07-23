@@ -61,9 +61,9 @@
 #define OB_NAME(ob)   ("ob_" + OB_NUM(ob))
 
 /*
- * IS_MEMBER(item, arr) is true when the item is a member of array.
+ * IN_ARRAY(item, arr) is true when the item is a member of array.
  */
-#define IS_MEMBER(item, arr) (member_array((item), (arr)) != -1)
+#define IN_ARRAY(item, arr) (member_array((item), (arr)) != -1)
 
 /*
  * LOAD_ERR(file) tries to load the module 'file' and if it fails, returns

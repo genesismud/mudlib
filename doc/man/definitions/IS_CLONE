@@ -1,4 +1,4 @@
-*Defined in /sys/mcaros.h
+*Defined in /sys/macros.h
 
 IS_CLONE	True if this_object() is a clone
 
