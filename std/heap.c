@@ -544,6 +544,11 @@ stop(string str)
     if (this_player()->query_wiz_level() ||
     	(member_array(query_verb(), CMDPARSE_PARALYZE_ALLOWED) != -1))
     {
+        /* When quitting, update the actions, so people can drop stuff. */
+        if (query_verb() == "quit")
+        {
+            update_actions();
+        }
         return 0;
     }
     
