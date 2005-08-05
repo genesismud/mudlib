@@ -2864,6 +2864,32 @@ save_player()
     }
 }
 
+/*
+ * Function name: store_predeath
+ * Description  : Just before the death-modifications are made to a player
+ *                file, we secure a copy. Note: this routine moves the
+ *                player file. It relies on a new copy being saved shortly
+ *                after the call to this routine, so we don't have to make
+ *                a costly copy, but can rely on moving it.
+ */
+void
+store_predeath()
+{
+    object pobj;
+    string pfile, prefile;
+
+    pobj = previous_object();
+    if (function_exists("load_player", pobj) != PLAYER_SEC_OBJECT)
+        return;
+
+    pfile = PLAYER_FILE(pobj->query_real_name());
+    prefile = pfile + ".predeath.o";
+    pfile += ".o";
+    /* Rename the present file. A new file will be made shortly. */
+    if (file_time(pfile) > 0)
+        rename(pfile, prefile);
+}
+
 int
 rem_def_start_loc(string str)
 {

@@ -40,6 +40,8 @@ second_life(object killer)
         remove_prop(TEMP_BACKUP_BRIEF_OPTION);
     }
 
+    catch(SECURITY->store_predeath());
+
     make_scar();
     modify_on_death();
 
