@@ -157,8 +157,12 @@ num_heap()
 }
 
 /*
- * Description: Called before a pending move of a part of the heap
- *              The heap size / volume is set to the part to be moved
+ * Function name: split_heap
+ * Description  : Called before a pending move of a part of the heap. This
+ *                reduces the heap to the number of elements that is being
+ *                moved. Afterwards the heap is restored.
+ * Arguments    : int num - the number of items that is being split from the
+ *                    heap in order to be moved.
  */
 public int
 split_heap(int num)
