@@ -192,8 +192,17 @@ date()
             interval = (delay <= 129600) ? 10800 : 21600;
         }
         delay = ((delay / interval) * interval);
-        write("Regular reboot: between " + CONVTIME(delay) + " and " +
-            CONVTIME(delay + interval) + " to go.\n");
+        if (delay > 0)
+        {
+            write("Regular reboot: between " + CONVTIME(delay) + " and " +
+                CONVTIME(delay + interval) + " to go.\n");
+        }
+        else
+        {
+            /* Note: 15 minutes because of being in the last interval and
+             * another 15 minutes because Armageddon needs to wake up. */
+            write("Regular reboot: Announced within the next 30 minutes.\n");
+        }
     }
 #endif REGULAR_UPTIME
 
