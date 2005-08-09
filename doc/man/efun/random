@@ -5,16 +5,20 @@ SYNOPSIS
 	int random(int limit, void|int seed)
 	
 DESCRIPTION
-	Gives a random value between 0 and 'limit - 1'. Note that the 'limit'
-	must be a positive integer.
+	Gives a random value between 0 and 'limit - 1'. This limit must be a
+	positive integer.
 
-	If the optional argument 'seed' is given then a specific random
-	number will be given. random will always return the same value
-	for a given limit and seed.
-
-SEE ALSO
-	rnd
+	If the optional argument 'seed' is given then a specific random number
+	will be given. random will always return the same value for a given
+	limit and seed.
 
 NOTA BENE
-	The last paragraph is badly tested, please report any bugs found
+	The 'seed' syntax is badly tested, please report any bugs found. The
+	value MAY change when the gamedriver is recompiled using a different
+	random generator.
+	The mudlib-only version NAME_TO_RANDOM to transform a player name
+	into a random number with a seed that is guaranteed not to change
+	as it is built into the mudlib. It is sufficiently random, too.
 
+SEE ALSO
+	rnd, NAME_TO_RANDOM
