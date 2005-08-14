@@ -1429,6 +1429,7 @@ bookkeep_exp(string type, int exp)
     int    cobj = 0;
     int    should_log = 0;
     string dname = "";
+    string log;
     object pobj = previous_object();
     object giver = previous_object(-1);
 
@@ -1460,6 +1461,7 @@ bookkeep_exp(string type, int exp)
     }
 #endif EXP_FROM_COMBAT_OBJECT
 
+    set_auth(this_object(), "root:root");
 #ifdef LOG_BOOKKEEP_ERR
     /* BAD wiz! Won't be wiz much longer. */
     if (objectp(this_interactive()))
@@ -1467,7 +1469,6 @@ bookkeep_exp(string type, int exp)
         if (SECURITY->query_wiz_level(dname =
             this_interactive()->query_real_name()))
         {
-            set_auth(this_object(), "root:root");
             log_file(LOG_BOOKKEEP_ERR,
                 sprintf("%s %-12s %-7s(%8d) by %-12s\n", ctime(time()),
                 capitalize(pobj->query_real_name()), type, exp,
@@ -1483,7 +1484,6 @@ bookkeep_exp(string type, int exp)
     else if ((type == "combat") && !living(giver))
 #endif EXP_FROM_COMBAT_OBJECT 
     {
-        set_auth(this_object(), "root:root");
         log_file(LOG_BOOKKEEP_ERR,
             sprintf("%s %-12s combat (%8d) object %s\n", ctime(time()),
             capitalize(pobj->query_real_name()), exp,
@@ -1508,7 +1508,6 @@ bookkeep_exp(string type, int exp)
         if ((dname != BACKBONE_UID) &&
             (file_name(giver) != CMD_LIVE_THIEF))
         {
-            set_auth(this_object(), "root:root");
             log_file(LOG_BOOKKEEP_ERR,
                 sprintf("%s %-12s %-7s(%8d) %-1s\n", ctime(time()),
                 capitalize(pobj->query_real_name()), type, exp,
@@ -1538,6 +1537,14 @@ bookkeep_exp(string type, int exp)
             should_log = 1;
 #endif LOG_BOOKKEEP
         break;
+
+    case "general":
+//      m_domains[dname][FOB_DOM_GXP] += exp;
+#ifdef LOG_BOOKKEEP
+        if (ABS(exp) > LOG_BOOKKEEP_LIMIT_G)
+            should_log = 1;
+#endif LOG_BOOKKEEP
+        break;
     }
 
 #ifdef LOG_BOOKKEEP
@@ -1546,12 +1553,25 @@ bookkeep_exp(string type, int exp)
      */
     if (should_log)
     {
-        set_auth(this_object(), "root:root");
         log_file(LOG_BOOKKEEP, sprintf("%s %-12s %-7s(%8d) %-1s\n",
             ctime(time()), capitalize(pobj->query_real_name()),
             type, exp, file_name(giver)), 1000000);
     }
 #endif LOG_BOOKKEEP
+
+#ifdef LOG_BOOKKEEP_ROTATE
+    /* Cycle the log with the same day number every month. */
+    log = "/syslog/log/" + LOG_BOOKKEEP_ROTATE + "." + TIME2FORMAT(time(), "dd");
+    if ((file_size(log) > 0) &&
+        ((file_time(log) + 86400) < time()))
+    {
+        rm(log);
+    }
+
+    write_file(log, sprintf("%s %-12s %-7s(%8d) %-1s\n",
+            ctime(time()), capitalize(pobj->query_real_name()),
+            type, exp, file_name(giver)));
+#endif LOG_BOOKKEEP_ROTATE
 }
 
 /*

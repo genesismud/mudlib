@@ -142,8 +142,10 @@
  * Used in: /secure/master/fob.c
  */
 #define LOG_BOOKKEEP "DOMAIN_XP"
+#define LOG_BOOKKEEP_LIMIT_Q  1000
+#define LOG_BOOKKEEP_LIMIT_G  2500
 #define LOG_BOOKKEEP_LIMIT_C 10000
-#define LOG_BOOKKEEP_LIMIT_Q 1000
+#define LOG_BOOKKEEP_ROTATE "domain_xp/XP"
 
 /*
  * LOG_BOOKKEEP_ERR
