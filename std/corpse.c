@@ -523,10 +523,10 @@ remove_leftover(string organ)
     {
 	if (leftover_list[i][1] == organ)
 	{
-	    leftover_list = leftover_list[0..(i - 1)] +
-		leftover_list[(i + 1)..(sizeof(leftover_list))];
+	    leftover_list[i] = 0;
 	}
     }
+    leftover_list = filter(leftover_list, pointerp);
 }
 
 /*
