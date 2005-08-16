@@ -1197,6 +1197,13 @@ set_option(int opt, int val)
             options = efun::clear_bit(options, OPT_BASE + 5);
         break;
         
+    case OPT_WEBPERM:
+        if (val)
+            options = efun::set_bit(options, OPT_BASE + 6);
+        else
+            options = efun::clear_bit(options, OPT_BASE + 6);
+        break;
+
     case OPT_AUTO_PWD:
         if (val)
             options = efun::set_bit(options, OPT_BASE + 18);
@@ -1276,6 +1283,10 @@ query_option(int opt)
 
     case OPT_MERCIFUL_COMBAT:
         return efun::test_bit(options, OPT_BASE + 5);
+        break;
+
+    case OPT_WEBPERM:
+        return efun::test_bit(options, OPT_BASE + 6);
         break;
 
     case OPT_AUTO_PWD:

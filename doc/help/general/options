@@ -72,6 +72,10 @@ ARGUMENTS
                                200 columns. The default is 80.
                                Use "off" to disable screen wrapping on the
                                side of the game.
+ 
+        webperm <yes/no>     - Give permission to publish certain information 
+                               linked to your player on the web.
+
 
 SEE ALSO
 	wizopt (wizards only)

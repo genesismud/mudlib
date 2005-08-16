@@ -1098,6 +1098,7 @@ options(string arg)
         options("see");
         options("unarmed");
         options("gagmisses");
+        options("webperm");
 //        options("merciful");
         options("autowrap");
 	if (this_player()->query_wiz_level())
@@ -1175,6 +1176,11 @@ options(string arg)
             write("Auto-wrapping:   " + 
                 (this_player()->query_option(OPT_AUTOWRAP) ?
                 "On" : "Off") + "\n");
+            break;
+
+        case "webperm":
+            write("Web publication: " +
+                (this_player()->query_option(OPT_WEBPERM) ? "No" : "Yes") + "\n");
             break;
 
         case "autopwd":
@@ -1309,6 +1315,11 @@ options(string arg)
     case "autowrap":
         this_player()->set_option(OPT_AUTOWRAP, (args[1] == "on"));
         options("autowrap");
+        break;
+
+    case "webperm":
+        this_player()->set_option(OPT_WEBPERM, (args[1] == "no"));
+        options("webperm");
         break;
 
     case "autopwd":

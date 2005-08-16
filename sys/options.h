@@ -43,6 +43,8 @@
 #define OPT_MERCIFUL_COMBAT     9
 // Auto-wrap long notes
 #define OPT_AUTOWRAP		10
+// Web participation
+#define OPT_WEBPERM		12
 
 // Wizard options
 
