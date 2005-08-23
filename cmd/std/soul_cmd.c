@@ -3895,9 +3895,13 @@ point(string str)
             }
             return 0;
         }
-        write("You point at " + LANG_THESHORT(oblist[0]) + ".\n");
-        allbb(" points at " + LANG_THESHORT(oblist[0]) + ".");
-        return 1;
+
+	if (oblist[0] != this_player())
+	{
+	    write("You point at " + LANG_THESHORT(oblist[0]) + ".\n");
+	    allbb(" points at " + LANG_THESHORT(oblist[0]) + ".");
+	    return 1;
+	}
     }
 
     if (oblist[0] == this_player())
