@@ -1289,7 +1289,7 @@ options(string arg)
 
     case "see":
     case "fights":
-        this_player()->set_option(OPT_NO_FIGHTS, (args[sizeof(args) - 1] == "on"));
+        this_player()->set_option(OPT_NO_FIGHTS, (args[sizeof(args) - 1] != "on"));
         options("see");
         break;
 
