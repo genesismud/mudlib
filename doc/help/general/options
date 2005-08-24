@@ -55,9 +55,8 @@ ARGUMENTS
 			       damage level.
 		    ?        - Give a list of available <damage> strings.
 
-        see <fights/no fights>
-			     - This options controls whether you see ongoing
-			       fights or not. This is particularly useful if
+        see <on/off> or      - This options controls whether you see ongoing
+	fights <on/off>        fights or not. This is particularly useful if
   			       you are running on a slow line and do not want
      			       to wait for all the scrolling of messages.
 
@@ -73,7 +72,7 @@ ARGUMENTS
                                Use "off" to disable screen wrapping on the
                                side of the game.
  
-        webperm <yes/no>     - Give permission to publish certain information 
+        web <yes/no>         - Give permission to publish certain information 
                                linked to your character on the web.
 
 

@@ -1098,7 +1098,7 @@ options(string arg)
         options("see");
         options("unarmed");
         options("gagmisses");
-        options("webperm");
+        options("web");
 //        options("merciful");
         options("autowrap");
 	if (this_player()->query_wiz_level())
@@ -1149,6 +1149,7 @@ options(string arg)
             break;
             
         case "see":
+        case "fights":
             write("See fights:      " +
                 (this_player()->query_option(OPT_NO_FIGHTS) ?
 		"Off" : "On") + "\n");
@@ -1178,7 +1179,7 @@ options(string arg)
                 "On" : "Off") + "\n");
             break;
 
-        case "webperm":
+        case "web":
             write("Web publication: " +
                 (this_player()->query_option(OPT_WEBPERM) ? "No" : "Yes") + "\n");
             break;
@@ -1287,7 +1288,8 @@ options(string arg)
         break;
 
     case "see":
-        this_player()->set_option(OPT_NO_FIGHTS, (args[1] != "fights"));
+    case "fights":
+        this_player()->set_option(OPT_NO_FIGHTS, (args[sizeof(args) - 1] == "on"));
         options("see");
         break;
 
@@ -1317,9 +1319,9 @@ options(string arg)
         options("autowrap");
         break;
 
-    case "webperm":
+    case "web":
         this_player()->set_option(OPT_WEBPERM, (args[1] == "no"));
-        options("webperm");
+        options("web");
         break;
 
     case "autopwd":
