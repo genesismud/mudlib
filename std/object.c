@@ -1757,27 +1757,36 @@ query_item()
 
 /*
  * Function name: remove_item
- * Description:   Removes one additional item from the additional item list
- * Arguments:     name: name of item to remove.
- * Returns:       True or false. (True if removed successfully)
+ * Description  : Removes one item from the list of additional items. All
+ *                instances that include the name are removed. If you have
+ *                added multiple synonyms, it suffices to remove only one
+ *                in order to remove the whole group. For example:
+ *                    add_item( ({ "floor", "ground" }), "It's flat.\n");
+ *                is cancelled out by:
+ *                    remove_item("ground");
+ * Arguments    : string name - the name of item to remove.
+ * Returns      : int 1/0 - if true, it was removed.
  */
 public int
 remove_item(string name)
 {
-    int i;
+    int index, removed = 0;
     
     if (!pointerp(obj_items))
         return 0;
     
     if (query_prop(ROOM_I_NO_EXTRA_ITEM))
         return 0;
-    for (i = 0; i < sizeof(obj_items); i++)
-        if (member_array(name, obj_items[i][0]) >= 0 )
+
+    for (index = 0; index < sizeof(obj_items); index++)
+    {
+        if (IN_ARRAY(name, obj_items[index][0]))
         {
-            obj_items = exclude_array(obj_items, i, i);
-            return 1;
+            obj_items = exclude_array(obj_items, index, index);
+            removed = 1;
         }
-    return 0;
+    }
+    return removed;
 }
 
 static string gExcmd;
