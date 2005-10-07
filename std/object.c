@@ -254,6 +254,18 @@ enable_reset(int factor = 100)
 }
 
 /*
+ * Function Name: query_reset_active
+ * Description  : Used to check if enable_reset has been called
+ *                to start the reset_alarm.
+ * Returns      : Returns the reset factor if reset is active.
+ */
+int
+query_reset_active()
+{
+    return reset_interval;
+}
+
+/*
  * Function name: get_this_object()
  * Description  : Always returns the objectpointer to this object.
  * Returns      : object - this_object()
@@ -923,7 +935,7 @@ leave_env(object old, object dest)
 void
 recursive_rm(object ob)
 {
-    if (query_ip_number(ob))
+    if (query_interactive(ob))
         ob->move(ob->query_default_start_location());
     else
         ob->remove_object();

@@ -103,7 +103,7 @@ gtell(mapping p)
 			   p["WIZTO"] + " was not found.\n");
 	    return 0;
 	}
-	if (!query_ip_number(pl)) {
+	if (!query_interactive(pl)) {
 	    send_gtell(p["NAME"], "UDPmanager", p["WIZFROM"],
 		       p["WIZTO"] + " is link-dead.\n");
 	    return 0;

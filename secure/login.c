@@ -103,7 +103,7 @@ static void get_name(string str);
 static void
 clean_up()
 {
-    if (!query_ip_number(this_object()))
+    if (!query_interactive(this_object()))
     {
         remove_object();
     }
@@ -171,7 +171,7 @@ logon()
 {
     set_screen_width(80);
 
-    if (!query_ip_number(this_object()))
+    if (!query_interactive(this_object()))
     {
         remove_object();
         return 0;
@@ -274,7 +274,7 @@ start_player2(object ob)
      * LOGIN_NEW_PLAYER since that doesn't leave a 'notify' message when
      * destructed.
      */
-    if (query_ip_number(ob))
+    if (query_interactive(ob))
     {
         if (environment(ob))
         {
@@ -466,7 +466,7 @@ start_player()
     }
 
     /* If you already have a link, you are asked to switch terminals */
-    if (query_ip_number(other_copy))
+    if (query_interactive(other_copy))
     {
         write_socket("You are already playing !\n");
         write_socket("Throw the other copy out ? ");

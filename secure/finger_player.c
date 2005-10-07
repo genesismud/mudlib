@@ -123,7 +123,7 @@ query_finger_player()
 public int
 notmet_me(object obj)
 {
-    if (obj && query_ip_number(obj))
+    if (obj && query_interactive(obj))
 	return !obj->query_met(this_object());
     return !this_player()->query_met(this_object());
 }

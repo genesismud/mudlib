@@ -1109,7 +1109,7 @@ tell(string str)
 	return 1;
     }
 
-    if ((who != "armageddon") && (!query_ip_number(ob)))
+    if ((who != "armageddon") && (!query_interactive(ob)))
     {
 	write(capitalize(who) + " is link dead right now.\n");
 	return 1;

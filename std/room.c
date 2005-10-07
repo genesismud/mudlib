@@ -23,6 +23,7 @@ inherit "/std/container";
 #include "/std/room/link.c"
 #include "/std/room/move.c"
 #include "/std/room/terrain.c"
+#include "/std/room/objects.c"
 
 static object   room_link_cont;	/* Linked container */
 static object   *accept_here = ({ }); /* Items created here on roomcreation */
@@ -65,8 +66,10 @@ create_container()
     {
 	enable_reset();
     }
-
+    
     create_room();
+    reset_auto_objects();
+    
     accept_here = all_inventory(this_object());
     if (!sizeof(accept_here))
 	accept_here = ({ });
@@ -122,11 +125,14 @@ reset_container()
     cleanup_loot();
 
     reset_room();
-
+    reset_auto_objects();
+    
     if (!sizeof(accept_here))
 	accept_here = ({ });
     else
 	accept_here = filter(accept_here, objectp);
+
+    
 }
 
 /*
@@ -268,38 +274,6 @@ clean_up()
     }
 
     return 1;
-}
-
-/*
- * Function name: room_add_object
- * Description:   Clone and move an object into the room
- * Arguments:	  file - What file it is we want to clone
- *		  num  - How many clones we want to have, if not set 1 clone
- *		  mess - Message to be written when cloned
- */
-varargs void
-room_add_object(string file, int num, string mess)
-{
-    int i;
-    object ob;
-
-    if (num < 1)
-	num = 1;
-
-    seteuid(getuid());
-    for (i = 0; i < num; i++)
-    {
-	ob = clone_object(file);
-	if (stringp(mess))
-	{
-	    tell_room(this_object(), mess);
-	    ob->move(this_object(), 1);
- 	}
-	else if (living(ob))
-	    ob->move_living("xx", this_object());
-	else
-	    ob->move(this_object(), 1);
-    }
 }
 
 /*

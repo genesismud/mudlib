@@ -178,7 +178,7 @@ finger_player(string player)
 
     if (li) {
 	str += "Currently logged on from: " + ob->query_login_from() + "\n";
-	if (query_ip_number(ob)) {
+	if (query_interactive(ob)) {
 	    if (query_idle(ob) > 0)
 		str += "Idle time: " + CONVTIME(query_idle(ob)) + ".\n";
 	}

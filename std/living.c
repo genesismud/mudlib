@@ -221,8 +221,7 @@ can_see_in_room()
 public void 
 catch_msg(mixed str, object from_player)
 {
-    if (!query_ip_number(this_object()) &&
-	!query_tell_active())
+    if (!query_interactive(this_object()) && !query_tell_active())
     {
 	return;
     }

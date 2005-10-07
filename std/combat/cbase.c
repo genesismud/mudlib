@@ -2061,7 +2061,7 @@ cb_attacked_by(object ob)
 {
     cb_add_enemy(ob);
 
-    if (!attack_ob || (!query_ip_number(attack_ob) && query_ip_number(ob)))
+    if (!attack_ob || (!query_interactive(attack_ob) && query_interactive(ob)))
     {
         attack_ob = ob;
     }

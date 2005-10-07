@@ -89,7 +89,7 @@ catch_tell(string str)
     int il;
     string pattern, func, euid;
 
-    if (query_ip_number(this_object())) // Monster is possessed
+    if (query_interactive(this_object())) // Monster is possessed
     {
 	write_socket(str);
 	return;

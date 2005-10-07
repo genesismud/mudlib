@@ -218,9 +218,9 @@ short_func()
     object pob;
 
     pob = vbfc_caller();
-    if (!pob || !query_ip_number(pob) || pob == this_object())
+    if (!pob || !query_interactive(pob) || pob == this_object())
         pob = previous_object(-1);
-    if (!pob || !query_ip_number(pob))
+    if (!pob || !query_interactive(pob))
 	pob = this_player();
     if (pob && pob->query_real_name() == lower_case(met_name))
 	return state_desc + "yourself";
@@ -242,9 +242,9 @@ pshort_func()
     object pob;
 
     pob = vbfc_caller();
-    if (!pob || !query_ip_number(pob) || pob == this_object())
+    if (!pob || !query_interactive(pob) || pob == this_object())
         pob = previous_object(-1);
-    if (!pob || !query_ip_number(pob))
+    if (!pob || !query_interactive(pob))
 	pob = this_player();
     if (pob && pob->query_real_name() == lower_case(met_name))
 	return pstate_desc + "yourself";
@@ -266,7 +266,7 @@ long_func()
     object pob;
 
     pob = vbfc_caller();
-    if (!pob || !query_ip_number(pob) || pob == this_object())
+    if (!pob || !query_interactive(pob) || pob == this_object())
 	pob = this_player();
     if (pob->query_real_name() == lower_case(met_name))
 	return "This is your own dead body.\n";

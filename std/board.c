@@ -587,7 +587,7 @@ init()
     ::init();
 
     /* Only interactive players can write notes on boards. */
-    if (!query_ip_number(this_player()))
+    if (!query_interactive(this_player()))
 	return;
 
     add_action(list_notes, "list");

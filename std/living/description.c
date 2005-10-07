@@ -98,7 +98,7 @@ public int
 notmet_me(object obj)
 {
 #ifdef MET_ACTIVE
-    if (obj && query_ip_number(obj))
+    if (obj && query_interactive(obj))
 	return !obj->query_met(this_object());
 #else
     return !this_player()->query_met(this_object());
