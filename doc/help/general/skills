@@ -3,8 +3,8 @@ NAME
 
 SYNOPSIS
         skills
-	skills <player>
 	skills <group>
+	skills <player> [<group>]
 
 DESCRIPTION
         With this command you can see your educational level in the skills

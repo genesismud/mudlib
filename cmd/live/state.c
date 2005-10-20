@@ -1580,103 +1580,116 @@ show_stats(string str)
 varargs int
 show_skills(string str)
 {
-    int il, wr, i1, i2, num;
-    object ob;
-    int *sk, ski;
+    int index, skill, wrap, iLow, iHigh, num;
+    object player = this_player();
+    int *skills;
+    string *words;
     mapping skdesc;
-    string s, s1, s2;
+    string group = "";;
 
-    wr = 1;
+    wrap = 1;
     skdesc = SS_SKILL_DESC;
 
-    if (!stringp(str))
+    words = str ? explode(str, " ") : ({ });
+    switch(sizeof(words))
     {
-        ob = this_player();
-        s = "You have ";
-        s2 = "";
+    case 0:
+        /* Default situation. Player wants to see all his stats. */
+        break;
+    case 1:
+        /* Person wants to see a group of himself, or see someone elses stats. */
+        if (!objectp(player = find_player(words[0])))
+        {
+            player = this_player();
+            group = words[0];
+        }
+        break;
+    case 2:
+        /* Player specifies both the person to see and the group to see. */
+        player = find_player(words[0]);
+        group = words[1];
+        break;
+    default:
+        notify_fail("Too many arguments. Syntax: stats [player] [skill group]\n");
+        return 0;
     }
-    else
+    
+    if (!this_player()->query_wiz_level() && (player != this_player()))
     {
-        if (sscanf(str, "%s %s", s1, s2) != 2)
-        {
-            if (find_player(str))
-            {
-                s1 = str;
-                s2 = "";
-            } else {
-                s1 = this_player()->query_real_name();
-                s2 = str;
-            }
-        }
-
-        if (!(ob = find_player(s1)))
-        {
-            notify_fail("No such player.\n");
-            return 0;
-        }
-
-        if (!this_player()->query_wiz_level() && ob != this_player())
-        {
-            notify_fail("Curious aren't we?\n");
-            return 0;
-        }
-        s = capitalize(str) + " has ";
+        write("You can only see your own skills.\n");
+        return 1;
     }
-    sk = ob->query_all_skill_types();
+    if (!objectp(player))
+    {
+        notify_fail("No player " + words[0] + " found.\n");
+        return 0;
+    }
 
+    skills = player->query_all_skill_types();
     SKILL_LIBRARY->sk_init();
 
-    i1 = 0;
-    i2 = 9999999;
-    switch (s2)
+    switch (group)
     {
-            case "general": i1 = 100; i2 = 200; break;
-            case "fighting": i1 = 0; i2 = 29; break;
-            case "magic": i1 = 30; i2 = 49; break;
-            case "thief": i1 = 50; i2 = 69; break;
+        case "general":
+            iLow = 100;
+            iHigh = 200;
+            break;
+        case "fighting":
+            iLow = 0;
+            iHigh = 29;
+            break;
+        case "magic":
+            iLow = 30;
+            iHigh = 49;
+            break;
+        case "thief":
+            iLow = 50;
+            iHigh = 69;
+            break;
         case "all":
-        case "": i1 = 0; i2 = 9999999; break;
-            default:
-            notify_fail("Unknown group '" + s2 + "'. Try 'general', " +
-                "'fighting', 'magic', 'thief' or 'all'.\n");
+        case "":
+            iLow = 0;
+            iHigh = 9999999;
+            break;
+        default:
+            notify_fail("Unknown group '" + group + "'.\n" +
+                "Valid groups are: 'general', 'fighting', 'magic', 'thief' or 'all'.\n");
             return 0;
     }
 
-    for (il = 0; il < sizeof(sk); il++)
+    for (index = 0; index < sizeof(skills); index++)
     {
-        ski = sk[il];
-        if (ski < i1 || ski > i2)
+        skill = skills[index];
+        if (skill < iLow || skill > iHigh)
             continue;
 
-        if (!(num = ob->query_skill(sk[il])))
+        if (!(num = player->query_skill(skills[index])))
         {
-           ob->remove_skill(sk[il]);
+            player->remove_skill(skills[index]);
             continue;
         }
-        if (pointerp(skdesc[sk[il]]))
-            str = skdesc[sk[il]][0];
-        else {
-            str = ob->query_skill_name(sk[il]);
-            if (!strlen(str))
-                continue;
+        if (pointerp(skdesc[skills[index]]))
+            str = skdesc[skills[index]][0];
+        else if (!strlen(str = player->query_skill_name(skills[index])))
+            continue;
+
+        /* Print the text in two columns. */
+        if (++wrap % 2)
+        {
+            write(sprintf("%-18s %s\n", str + ":", SKILL_LIBRARY->sk_rank(num)));
         }
-        if (++wr % 2)
-          {
-            write(sprintf("%-18s %s", str + ":",
-                SKILL_LIBRARY->sk_rank(num)));
-            write("\n");
-          }
         else
-          {
-            s1 = sprintf("%-18s %s ", str + ":",
-                SKILL_LIBRARY->sk_rank(num));
-            write(sprintf("%-40s ", s1));
-          }
+        {
+            write(sprintf("%-18s %-20s ", str + ":", SKILL_LIBRARY->sk_rank(num)));
+        }
     }
-    if (wr)
+    if (wrap)
         write("\n");
     else
-        write(s + "no skills.\n");
+    {
+        str = (player == this_player()) ? "You have " : (player->query_name() + " has ");
+        write(str + "no skills.\n");
+    }
 
     return 1;
 }
