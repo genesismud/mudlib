@@ -373,6 +373,9 @@ query_option(int opt)
     case OPT_NO_FIGHTS:
         return 1;
 
+    case OPT_UNARMED_OFF:
+	return query_prop(NPC_I_NO_UNARMED);
+
     case OPT_WHIMPY:
 	return query_whimpy();
     }

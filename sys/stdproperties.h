@@ -250,6 +250,7 @@
 #define NPC_I_NO_FEAR           "_npc_i_no_fear"
 #define NPC_I_NO_LOOKS		"_npc_i_no_looks"
 #define NPC_I_NO_RUN_AWAY	"_npc_i_no_run_away"
+#define NPC_I_NO_UNARMED        "_npc_i_no_unarmed"
 
 /* *********************************************************
  * Room properties
