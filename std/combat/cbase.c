@@ -78,7 +78,6 @@ static int    *att_id = ({}),    /* Id's for attacks */
               panic,             /* Dont panic... */
               panic_time,        /* Time panic last checked. */
               tohit_val,         /* A precalculated tohit value for someone */
-              hit_heart,         /* Controls the quickness when fighting. */
               i_am_real,         /* True if the living object is interactive */
               alarm_id,          /* The id of the heart_beat alarm */
               combat_time,       /* The last time a hit was made. */
@@ -1600,12 +1599,6 @@ heart_beat()
             me->remove_prop(LIVE_I_ATTACK_DELAY);
     }
 
-#if 0
-    if (((hit_heart * 100) + me->query_prop(LIVE_I_QUICKNESS)) < random(100))
-        return 1; /* Wait one round more then. */
-    hit_heart = -1;
-#endif
-
     if (me->query_prop(LIVE_I_STUNNED))
     {
         return;
@@ -1641,6 +1634,9 @@ heart_beat()
     size = sizeof(attacks);
     while(++il < size)
     {
+        if (!objectp(me))
+            break;
+        
         /*
          * Will we use this attack this round? (random(100) < %use)
          */
@@ -1681,15 +1677,7 @@ heart_beat()
                         pen = pen[0];
 		    }
  
-//                    if (random(10))
-		    {
-                        pen *= 5;
-		    }
-//                    else
-//		    {
-//                        pen *= 10;
-//                        pen += attack_ob->query_max_hp();
-//		    }
+                    pen *= 5;
                 }
                 else
                 {
@@ -1709,12 +1697,12 @@ heart_beat()
                 dbits = ({dt & W_IMPALE, dt & W_SLASH, dt & W_BLUDGEON }) - ({0});
                 dt = sizeof(dbits) ? one_of_list(dbits) : W_NO_DT;
 
-                hitresult = (mixed*)attack_ob->hit_me(pen, dt, me, att_id[il]);
+                hitresult = attack_ob->hit_me(pen, dt, me, att_id[il]);
 
                 if (crit)
 		{
                    log_file("CRITICAL", sprintf("%s: %-11s on %-11s " +
-                       "(dam = %4d(%4d))\n\t%s on %s\n",
+                                "(dam = %4d(%4d))\n\t%s on %s\n",
                        ctime(time()), me->query_real_name(),
                        attack_ob->query_real_name(), hitresult[3], pen,
                        file_name(me), file_name(attack_ob)), -1);
@@ -1722,8 +1710,7 @@ heart_beat()
             }
             else
             {
-                hitresult = 
-                    (mixed*)attack_ob->hit_me(hitsuc, 0, me, att_id[il]);
+                hitresult = attack_ob->hit_me(hitsuc, 0, me, att_id[il]);
             }
 
             /*
@@ -1762,6 +1749,17 @@ heart_beat()
         }
     }
 
+    /*
+     * We might actually turn into a deadform here also,
+     * some armours do damage when they're hit.
+     */
+    if (!objectp(me) || me->query_ghost())
+    {
+        attack_ob = 0;
+        stop_heart();
+        return;
+    }
+    
     /*
      * Fighting is quite tiresome you know
      */
