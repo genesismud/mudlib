@@ -91,7 +91,6 @@ static mixed  *attacks = ({}),   /* Array of each attack */
 
 static object me,                /* The living object concerned */
               *enemies = ({}),   /* Array holding all living I hunt */
-              tohit_ob,          /* Last object we calculated tohit values */
               attack_ob;         /* Object to attack == Current enemy. */
 
 /*
@@ -204,10 +203,9 @@ cb_data()
             ", Euid: " + geteuid(this_object()) + ")\n";
 
     val = 2 * fixnorm(me->query_stat(SS_DEX), 50) -
-        fixnorm(me->query_prop(CONT_I_VOLUME), 60000) -
         fixnorm(me->query_encumberance_weight() +
-                me->query_encumberance_volume(), 60);
-
+            me->query_encumberance_volume(), 60);
+    
     tmp = 0;
     i = -1;
     size = sizeof(att_id);
@@ -240,10 +238,9 @@ cb_data()
     str += sprintf("%-20s %5d\n", "Offensive pen:", val);
 
     val = 2 * fixnorm(50, me->query_stat(SS_DEX)) -
-        fixnorm(60000, me->query_prop(CONT_I_VOLUME)) -
         fixnorm(60, me->query_encumberance_weight() +
-                me->query_encumberance_volume());
-
+            me->query_encumberance_volume());
+    
     if (sizeof((object *)me->query_weapon(-1) - ({ 0 })))
     {
         tmp = me->query_skill(SS_PARRY);
@@ -487,13 +484,11 @@ fixnorm(int offence, int defence)
 varargs void
 cb_update_tohit_val(object ob, int weight)
 {
-    tohit_ob = ob;
     tohit_val = 2 * fixnorm(me->query_stat(SS_DEX), ob->query_stat(SS_DEX)) -
-        fixnorm(me->query_prop(CONT_I_VOLUME), ob->query_prop(CONT_I_VOLUME)) -
         (((me->query_encumberance_weight() +
-           me->query_encumberance_volume()) -
-          (ob->query_encumberance_weight() +
-           ob->query_encumberance_volume())) / 4);
+              me->query_encumberance_volume()) -
+            (ob->query_encumberance_weight() +
+                ob->query_encumberance_volume())) / 4);
     tohit_val += weight + tohit_mod;
 }
 
@@ -580,10 +575,9 @@ cb_tohit(int aid, int wchit, object vic)
 
     whit = 4 * fixnorm(random(wchit) + random(wchit) + 
                        random(wchit) + random(wchit), random(tmp));
-
-    if (vic != tohit_ob)
-        cb_update_tohit_val(vic);
-
+    
+    cb_update_tohit_val(vic);
+    
     whit += tohit_val;
 
     if (whit > 0)
