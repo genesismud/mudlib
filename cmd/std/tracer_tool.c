@@ -1353,57 +1353,164 @@ Tail(string str)
  *
  * Syntax: Top <average> <opt num>
  */
+static string *units = ({ "Y", "Z", "E", "P", "T", "G", "M", "k", "", "m", "u", "n", "p", "f", "a", "z", "y" });
+static float *unit_factor = ({ 1.0e-24, 1.0e-21, 1.0e-18, 1.0e-15, 1.0e-12, 1.0e-9, 1.0e-6, 1.0e-3, 1.0,
+                               1.0e3, 1.0e6, 1.0e9, 1.0e12, 1.0e15, 1.0e18, 1.0e21, 1.0e24 });
+
 int
-Top(string str)
+Top(string arg)
 {
-    int i, av = 0, num = 10, val;
-    float time;
-    string *s, obj, spam, *args = ({});
-    mixed *avg;
+    int show = 10, criteria = -1, c;
+    int total, latest, per_call, calls;
+    if (arg)
+        foreach (string param : explode(arg, " ")) {
+            int paramlen = strlen(param) - 1;
+            if (paramlen < 0)
+                continue;
+            if (param == "cumulative"[..paramlen])
+                total = 1;
+            else if (param == "intrinsic"[..paramlen])
+                total = 0;
+            else if (param == "latest"[..paramlen])
+                latest = 1;
+            else if (param == "absolute"[..paramlen])
+                latest = 0;
+            else if (param == "percall"[..paramlen]) {
+                per_call = 1;
+                calls = 0;
+            } else if (param == "numcalls"[..paramlen]) {
+                calls = 1;
+                per_call = 0;
+            } else if (param == "time"[..paramlen])
+                calls = per_call = 0;
+            else if (sscanf(param, "C%i", c) >= 1 && c >= 0 && c <= 9) {
+                latest = total = per_call = calls = 0;
+                if (c % 2)
+                    latest = 1;
+                c = c / 2;
+                if (c == 2)
+                    calls = 1;
+                 else {
+                     if (c >= 3) {
+                         per_call = 1;
+                         c -= 3;
+                     }
+                     if (c % 2)
+                         total = 1;
+                 }
+            } else if (sscanf(param, "%i", show) < 1) {
+                if (param != "?" && param != "help")
+                    write(sprintf("Unknown parameter %O to top.\n", param));
+                write("Allowed parameters are 'intrinsic', 'cumulative', 'absolute', 'latest', 'time', 'numcalls', 'percall' and <number>.\n");
+                write("What is sorted on is controlled by:\n");
+                write("        time: sorts on time spent in the function.\n");
+                write("    numcalls: sorts on number of calls.\n");
+                write("     percall: sorts on average time spent in function per call.\n");
+                write("What is measured as time spent in the function is controlled by:\n");
+                write("   intrinsic: measure the time spent in the function itself.\n");
+                write("  cumulative: measure the time spent in the function and in functions it calls.\n");
+                write("    absolute: measure the time spent since the object was loaded.\n");
+                write("      latest: measure the time spent using an exponential average.\n");
+                write("How many functions to show is controled by <number>.\n");
+                write("\nThe parameters can be abriviated to one character.\nThe default parameters are 'time instrinsic absolute 10'.\n");
+                return 1;
+            }
+        }
 
-    if (stringp(str))
-	args = explode(str, " ");
-    
-    foreach (string arg: args)
-    {
-	if (lower_case(arg[0..0]) == "a")
-	    av = 1;
-	else
-	    sscanf(arg, "%d", num);
-    }
+    if (calls)
+        criteria = 4 + latest; 
+    else 
+        criteria = 6 * per_call + 2 * total + latest;
 
-    if (av)
-    {
-	avg = SECURITY->do_debug("top_ten_cpu_avg");
-	write(sprintf("    %12s %s\n\n", "us/s", "Program"));
-    }
-    else
-    {
-	avg = SECURITY->do_debug("top_ten_cpu");
-	write(sprintf("    %12s %s\n\n", "us", "Program"));
-    }
-
+    show = min(max(0, show), 1000);
+  
+    if (show) {
+    mixed *avg = SECURITY->do_debug("top_functions", show, criteria);
     if (!pointerp(avg))
         return 0;
+    write("\n");
+    if (latest) {
+        float timebase = SECURITY->do_debug("profile_timebase");
+        if (intp(timebase))
+            timebase = -1.0;
+        write(sprintf("%8.3f seconds average\n", timebase));
+    }
+    int time_offset = 3 + 2 * total + latest;
+    int call_offset = 7 + latest;
+    float max_percall = -1.0;
+    float max_time = -1.0;
+    float max_calls = -1.0;
+    foreach (mixed *func : avg) {
+        float calls = func[call_offset];
+        if (calls > max_calls)
+            max_calls = calls;
+        float time = func[time_offset];
+        if (time > max_time)
+            max_time = time;
+        if (calls > 1.0e-30) {
+            float percall = time / calls;
+            if (percall > max_percall)
+                max_percall = percall;
+        }
+    }
+    string timeunit, callunit, percallunit;
+    float timefactor, callfactor, percallfactor;
 
-    i = 1;
-    foreach (string a : avg[..num - 1]) 
-    {
-        s = explode(a, ":");
-        obj = implode(s[1..], ":");
-	if (av)
-	{
-	    sscanf(s[0], "%f", time);
-	    write(sprintf("%3d %12.4f /%s\n", i, time, obj));
-	}
-	else
-	{
-	    sscanf(s[0], "%d", val);
-	    write(sprintf("%3d %12d /%s\n", i, val, obj));
-	}
+    int factor = 0, maxfactor = sizeof(units) - 1;
+    while (max_time  * unit_factor[factor] < 100.0 && factor < maxfactor)
+        factor++;
+    timefactor = unit_factor[factor];
+    timeunit = sprintf("%ss%s", units[factor], latest ? "/s" : "");
+
+    factor = 0;
+    if (latest)
+        while (max_calls  * unit_factor[factor] < 100.0 && factor < maxfactor)
+            factor++;
+    else
+        while (max_calls  * unit_factor[factor] < 100.0 && unit_factor[factor] < 1.0)
+            factor++;
+    callfactor = unit_factor[factor];
+    callunit = sprintf("%scalls%s", units[factor], latest ? "/s" : "");
+
+    factor = 0;
+    while (max_percall * unit_factor[factor] < 100.0 && factor < maxfactor)
+        factor++;
+    percallfactor = unit_factor[factor];
+    percallunit = sprintf("%ss/call", units[factor]);
+
+    write(sprintf("    %10s   %10s   %10s\n", timeunit, callunit, percallunit));
+    int i = 1;
+    foreach (mixed *func : avg) {
+        float time = func[time_offset];
+        float num_calls = func[call_offset];
+
+        string time_per_call;
+
+        if (num_calls > 1.0e-30)
+            time_per_call =  sprintf("%10.4f", time / num_calls * percallfactor);
+        else
+            time_per_call = "-";
+        if (!latest && callfactor == 1.0)
+            write(sprintf("%3d %10.4f / %10i = %10s : %s() in %s\n", i, time * timefactor,
+                          ftoi(num_calls), time_per_call, func[1], func[0]));
+        else if (!latest && callfactor > 1.0e-4)
+            write(sprintf("%3d %10.4f / %10.3f = %10s : %s() in %s\n", i, time * timefactor,
+                          num_calls * callfactor, time_per_call, func[1], func[0]));
+        else
+            write(sprintf("%3d %10.4f / %10.4f = %10s : %s() in %s\n", i, time * timefactor,
+                          num_calls * callfactor, time_per_call, func[1], func[0]));
         i++;
     }
-
+    }
+    write("\n");
+    foreach (string line : explode(SECURITY->do_debug("load_average"), ", ")) {
+         string *a = explode(line, " ");
+         string one, five, fifteen;
+         string name = implode(a[1..], " ");
+         sscanf(a[0], "%f/%f/%f", one, five, fifteen);
+         write(sprintf("%9.2f %9.2f %9.2f %s\n", 
+               one, five, fifteen, name));
+    }
     return 1;
 }
 
