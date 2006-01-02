@@ -1665,10 +1665,10 @@ stat(string str)
         // A restricted wizard may not stat other players, only himself.
         if (flags & STAT_PLAYER)
         {
-            if (ob != this_interactive() && !wildmatch("*jr", ob->query_real_name()))
+            if (!ob->query_wiz_level() && !wildmatch("*jr", ob->query_real_name()))
             {
                 write("You are currently restricted from using the stat " +
-                      "command on other players.\n");
+                    "command on mortal players (except juniors).\n");
                 return 1;
             }
         }
@@ -1677,8 +1677,8 @@ stat(string str)
         // permission
         if (!SECURITY->valid_read(MASTER_OB(ob), this_interactive(), "stat"))
         {
-            write("You are currently restricted from using the stat command " +
-                  "on that object.\n");
+            write("You may only stat objects for which you can read the " +
+                "source code.\n");
             return 1;
         }
     }
