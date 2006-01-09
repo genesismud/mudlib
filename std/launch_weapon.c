@@ -1369,10 +1369,17 @@ try_load()
  */
 public varargs string
 long(string str, object for_obj)
-{ 
-    return ::::long(str, for_obj) + 
-      (str ? "" : this_object()->load_desc()) + 
-      (str ? "" : wep_condition_desc());
+{
+    if (str)
+    {
+        return ::long(str, for_obj);
+    }
+    if (obj_long)
+    {
+        return check_call(obj_long, for_obj) + 
+            this_object()->load_desc() + wep_condition_desc();
+    }
+    return "You see a non-descript object.\n";
 }
 
 /*
