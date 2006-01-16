@@ -14,6 +14,7 @@
 #include <ss_types.h>
 #include <std.h>
 #include <options.h>
+#include <formulas.h>
 
 /*
  * Non-static global variables. These variables are stored in the players
@@ -46,8 +47,8 @@ private int     *bit_savelist,          /* Saved bits */
                 decay_time_acc,         /* # of seconds since last decay */
 #endif NO_SKILL_DECAY
                 restricted,             /* Restriction on playing */
-                login_time;             /* Last time logging in */
-
+                login_time,             /* Last time logging in */
+                wiz_unmet;              /* If wizards want to be unmet */
 private mapping m_remember_name,        /* Names of players we have met */
                 m_alias_list,           /* Aliases for the quicktyper */
                 m_seconds;              /* Second characters */
@@ -72,6 +73,9 @@ public nomask void fixup_screen();
 #ifndef NO_SKILL_DECAY
 nomask public int query_skill_decay();
 #endif NO_SKILL_DECAY
+
+public varargs mixed query_introduced(mixed name);
+public int remove_introduced(string str);
 
 /*
  * Function name: player_save_vars_reset
@@ -402,20 +406,7 @@ query_temp_start_location()
     return temp_start_location;
 }
 
-/*
- * Function name:   query_remember_name
- * Description:     Gives back a mapping with all names that a player has
- *                  remembered.
- * Returns:         The mapping with all names.
- */
-public nomask mapping
-query_remember_name()
-{
-    if (mappingp(m_remember_name))
-        return ([ ]) + m_remember_name;
-    else
-        return ([ ]);
-}
+
 
 /*
  * Function name:   query_age
@@ -603,17 +594,6 @@ set_temp_start_location(string str)
         return 0;
     temp_start_location = str;
     return 1;
-}
-
-/*
- * Function name:   set_remember_name
- * Description:     Sets the people who are remembered by a player.
- * Arguments:       nlist: A mapping with names of remembered players
- */
-public nomask void
-set_remember_name(mapping nlist)
-{
-    m_remember_name = ([ ]) + nlist;
 }
 
 /*
@@ -1388,6 +1368,123 @@ query_restricted()
     return restricted;
 }
 
+/*************************************************************************
+ * 
+ * Remember handling routines.
+ *
+ */
+
+/*
+ * Function name:   query_remember_name
+ * Description:     Gives back a mapping with all names that a player has
+ *                  remembered.
+ * Returns:         The mapping with all names.
+ */
+public nomask mapping
+query_remember_name()
+{
+    if (mappingp(m_remember_name))
+        return ([ ]) + m_remember_name;
+    else
+        return ([ ]);
+}
+
+
+/*
+ * Function name:   set_remember_name
+ * Description:     Sets the people who are remembered by a player.
+ * Arguments:       nlist: A mapping with names of remembered players
+ */
+public nomask void
+set_remember_name(mapping nlist)
+{
+    m_remember_name = ([ ]) + nlist;
+}
+
+/*
+ * Function name:   query_remembered
+ * Description  :   Returns true if the player has rememberd someone.
+ *                  If no argument is passed the entire remembered mapping is
+ *                  returned.
+ * Arguments    :   The name to check for.
+ * Returns      :   True if name is remembered
+ */
+public varargs mixed
+query_remembered(mixed name)
+{
+    if (!mappingp(m_remember_name))
+        m_remember_name = ([ ]);
+
+    if (name)
+        return m_remember_name[name];
+    return ([ ]) + m_remember_name;
+}
+
+/*
+ * Function name:   add_remembered
+ * Description:     Adds a living to those whom we want to remember.
+ *                  The living must exist in our list of those we have been
+ *                  introduced to.
+ * Arguments:       str: Name of living that we want to remember.
+ * Returns:         -1 if at limit for remember, 0 if not introduced, 
+ *                  1 if remember ok, 2 if already known
+ */
+public int
+add_remembered(string str)
+{
+    int max;    
+    
+    /* Alreayd known? */
+    if (query_remembered(str))
+	return 2;
+
+    /* Not introduced? */
+    if (!query_met(str) && !query_introduced(str))
+	return 0;
+    
+    max = F_MAX_REMEMBERED(query_stat(SS_INT), query_stat(SS_WIS));
+    if (m_sizeof(query_remember_name()) >= max)
+	return -1;
+
+    if (!mappingp(m_remember_name))
+        m_remember_name = ([ ]);
+
+    remove_introduced(str);
+    m_remember_name[str] = 1;
+    
+    return 1; /* Remember ok */
+}
+
+/*
+ * Function name:   remove_remembered
+ * Description:     Removes a remembered or introduced person from our list.
+ * Arguments:       name: Name of living to forget
+ * Returns:         false if the name was not introduced or remembered,
+ *                  true otherwise.
+ */
+public int
+remove_remembered(string name)
+{
+    int result;
+
+    name = lower_case(name);
+    
+    if (query_introduced(name))
+    {
+        result = 1;
+	remove_introduced(name);        
+    }
+
+    if (query_remembered(name))
+    {
+        result = 1;
+        m_delkey(m_remember_name, name);
+    }
+    
+    return result;
+}
+
+
 /*
  * Function name: set_whimpy
  * Description  : When a living gets too hurt, it might try to run from
@@ -1402,4 +1499,28 @@ public void
 set_whimpy(int flag)
 {
     set_option(OPT_WHIMPY, flag);
+}
+
+/*
+ * Function name:   set_wiz_unmet
+ * Description:     Marks if the wizard wants to see all as met or unmet
+ * Arguments:       flag: 1 if see as unmet, 0 if see as met, 2 see npcs as unmet.
+ * Returns:         The new state    
+ */
+public int
+set_wiz_unmet(int flag)
+{
+    wiz_unmet = flag;
+    return wiz_unmet;
+}
+
+/*
+ * Function name:   query_wiz_unmet
+ * Description:     Returns if the wizard wants to see all as met or unmet
+ * Returns:         The current state    
+ */
+public int
+query_wiz_unmet()
+{
+    return wiz_unmet;
 }
