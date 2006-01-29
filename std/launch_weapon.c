@@ -59,109 +59,46 @@ int    Shoot_alarm,         /* Alarm used between aim and fire. */
 // Prototypes
 
 public int shoot(string args);
-
 public int aim(string args);
-
 public int fire(string args);
-
 public int unload(string args);
-
 public int secondary_wep_cmd(string args);
-
 public int extra_sanity_checks(string action, string args);
-
 private void ready_to_fire();
-
 public void do_fire();
-
 public nomask void set_secondary_wep_cmd(string command);
-
 public nomask string query_secondary_wep_cmd();
-
 private nomask void wield_secondary_weapon();
-
 private nomask int setup_sane(string action, string args);
-
 public nomask void find_projectiles();
-
 public nomask void load_projectile();
-
 public nomask void unload_projectile();
-
 public nomask int try_load();
-
 public nomask object find_protecting_armour(object target, int hid);
-
 private nomask void reset_launch_weapon();
-
 private nomask void fatigue_unload();
-
 public void move_projectile_to_env(object location, object projectile);
-
 public void move_projectile_to_target(object target, object projectile);
-
 public void tell_archer_no_missiles();
-
-public void tell_archer_fatigue_unload(object archer, object target,
-				       object projectile);
-
-public void tell_archer_unload(object archer, object target,
-			       object projectile);
-
-public void tell_others_unload(object archer, object target,
-			       object projectile);
-
+public void tell_archer_fatigue_unload(object archer, object target, object projectile);
+public void tell_archer_unload(object archer, object target, object projectile);
+public void tell_others_unload(object archer, object target, object projectile);
 public void tell_all_projectile_break(object projectile, object target);
-
-public void tell_archer_miss(object archer, object target,
-			     object projectile, string adj_room_desc);
-
-public void tell_target_miss(object archer, object target, object projectile,
-			     string adj_room_desc, string org_room_desc);
-
-public void tell_others_miss(object archer, object target, object projectile,
-			     string adj_room_desc, string org_room_desc);
-
-public void tell_archer_bounce_armour(object archer, object target,
-				      object projectile, string adj_room_desc,
-				      object armour);
-
-public void tell_target_bounce_armour(object archer, object target,
-				      object projectile, string adj_room_desc,
-				      string org_room_desc, object armour);
-
-public void tell_others_bounce_armour(object archer, object target,
-				      object projectile, string adj_room_desc,
-				      string org_room_desc, object armour);
-
-public void tell_archer_hit(object archer, object target, object projectile,
-			    string adj_room_desc, string hdesc,
-			    int dt, int phurt, int dam, int hid);
-
-public void tell_target_hit(object archer, object target, object projectile,
-			    string adj_room_desc, string org_room_desc,
-			    string hdesc, int dt, int phurt, int dam, int hid);
-
-public void tell_others_hit(object archer, object target, object projectile,
-			    string adj_room_desc, string org_room_desc,
-			    string hdesc, int dt, int phurt, int dam, int hid);
-
-public void tell_archer_load(object archer, object target, object projectile,
-			     string adj_desc);
-
-public void tell_others_load(object archer, object target, object projectile,
-			     string adj_desc);
-
+public void tell_archer_miss(object archer, object target, object projectile, string adj_room_desc);
+public void tell_target_miss(object archer, object target, object projectile, string adj_room_desc, string org_room_desc);
+public void tell_others_miss(object archer, object target, object projectile, string adj_room_desc, string org_room_desc);
+public void tell_archer_bounce_armour(object archer, object target, object projectile, string adj_room_desc, object armour);
+public void tell_target_bounce_armour(object archer, object target, object projectile, string adj_room_desc, string org_room_desc, object armour);
+public void tell_others_bounce_armour(object archer, object target, object projectile, string adj_room_desc, string org_room_desc, object armour);
+public void tell_archer_hit(object archer, object target, object projectile, string adj_room_desc, string hdesc, int dt, int phurt, int dam, int hid);
+public void tell_target_hit(object archer, object target, object projectile, string adj_room_desc, string org_room_desc, string hdesc, int dt, int phurt, int dam, int hid);
+public void tell_others_hit(object archer, object target, object projectile, string adj_room_desc, string org_room_desc, string hdesc, int dt, int phurt, int dam, int hid);
+public void tell_archer_load(object archer, object target, object projectile, string adj_desc);
+public void tell_others_load(object archer, object target, object projectile, string adj_desc);
 public void tell_target_load(object archer, object target, object projectile);
-
-nomask void tell_bystanders_miss(string see_both, string see_archer,
-				 string see_target, string see_noone,
-				 object archer, object target, object env);
-
+nomask void tell_bystanders_miss(string see_both, string see_archer, string see_target, string see_noone, object archer, object target, object env);
 private int filter_see_blood(object person);
-
 private int filter_gag_misses(object person);
-
 
 /*
  * Function name: create_launch_weapon
@@ -285,7 +222,7 @@ set_unload_command(string command)
 public nomask void
 set_valid_projectile_function(string function_name)
 {
-     Valid_projectile = function_name;
+    Valid_projectile = function_name;
 }
 
 /*
@@ -1719,14 +1656,15 @@ did_hit(int aid, string hdesc, int phurt, object target, int dt,
         move_projectile_to_target(target, Projectile);
     }
 
-    reset_launch_weapon();
-
     if (dam > 0)
     {
         target->heal_hp((F_LAUNCH_W_DAM_FACTOR * -dam) / 100);
 	Projectile->projectile_hit_target(query_wielded(), aid, hdesc, phurt,
 					  target, dt, phit, dam, hid);
     }
+
+    /* Reset launch weapon only after all other processing. */
+    reset_launch_weapon();
 
     return 1;
 }
