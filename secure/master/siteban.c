@@ -247,8 +247,10 @@ siteban(string str)
             words += ({ "all" });
 
         if (sizeof(words) != 2)
+	{
             notify_fail("Syntax: list nologin / nonew / <wildcards>\n");
             return 0;
+	}
 
         return list_siteban(words[1]);
 
