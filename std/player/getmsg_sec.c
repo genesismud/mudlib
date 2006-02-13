@@ -14,7 +14,6 @@
 #include <stdproperties.h>
 
 static mapping introduced_name;   /* People who introduced themselves */
-public int     wiz_unmet;         /* If wizards want to be unmet */
 
 /************************************************************************
  *
