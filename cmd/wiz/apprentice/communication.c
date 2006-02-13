@@ -1158,6 +1158,7 @@ tell(string str)
     string who;
     string *names;
     object *players = ({ });
+    string timestamp = ctime(time())[11..15] + " ";
     object target;
 
     CHECK_SO_WIZ;
@@ -1219,7 +1220,8 @@ tell(string str)
     
         if (target->query_wiz_level())
         {
-            target->catch_tell(capitalize(this_player()->query_real_name()) +
+            target->catch_tell((target->query_option(OPT_TIMESTAMP) ? timestamp : "") + 
+                capitalize(this_player()->query_real_name()) +
                 " tells you: " + msg + "\n");
         }
         else if ((environment(target) != environment(this_player())) ||
