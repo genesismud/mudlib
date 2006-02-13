@@ -1242,64 +1242,51 @@ query_option(int opt)
 
     case OPT_SCREEN_WIDTH:
         return atoi(options[3..5]);
-        break;
 
     case OPT_WHIMPY:
         return atoi(options[6..7]);
-        break;
 
     case OPT_BRIEF:
         return efun::test_bit(options, OPT_BASE + 0);
-        break;
 
     case OPT_ECHO:
         return efun::test_bit(options, OPT_BASE + 1);
-        break;
 
     case OPT_NO_FIGHTS:
     case OPT_BLOOD: /* Backward compatibility. */
         return efun::test_bit(options, OPT_BASE + 2);
-        break;
 
     case OPT_UNARMED_OFF:
         return efun::test_bit(options, OPT_BASE + 3);
-        break;
 
     case OPT_GAG_MISSES:
         return efun::test_bit(options, OPT_BASE + 4);
-        break;
 
     case OPT_MERCIFUL_COMBAT:
         return efun::test_bit(options, OPT_BASE + 5);
-        break;
 
     case OPT_WEBPERM:
         return efun::test_bit(options, OPT_BASE + 6);
-        break;
 
     case OPT_AUTO_PWD:
         return efun::test_bit(options, OPT_BASE + 18);
-        break;
 
     case OPT_AUTOWRAP:
         return efun::test_bit(options, OPT_BASE + 19);
-        break;
 
     case OPT_AUTOLINECMD:
 	// NB! This option is inversed to look on when it's off... duh.. well.
         return !(efun::test_bit(options, OPT_BASE + 20));
-        break;
 
     case OPT_TIMESTAMP:
         return efun::test_bit(options, OPT_BASE + 21);
-        break;
 
     default:
-        return -1;
-        break;
+        return 0;
     }
 
-    return 1;
+    /* Not reached. */
+    return 0;
 }
 
 /*
