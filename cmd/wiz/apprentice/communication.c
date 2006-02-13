@@ -923,6 +923,7 @@ line(string str, int emotion = 0, int busy_level = 0)
     string *members, *receivers;
     string name = this_player()->query_real_name();
     string line;
+    string timestamp = ctime(time())[11..15] + " ";
     int    size;
     int    rank;
     object wizard;
@@ -1047,19 +1048,22 @@ line(string str, int emotion = 0, int busy_level = 0)
         return 0;
     }
 
-    str = (line == "Wizline" ? "@ " : "<" + line + "> ") +
-           capitalize(this_player()->query_real_name() +
+    line = (line == "Wizline" ? "@ " : "<" + line + "> ");
+    str = capitalize(this_player()->query_real_name() +
            ((emotion ? emotion : (query_verb() == "linee")) ? " " : ": ") +
            str + "\n");
 
     while(size--)
     {
-        tell_object(find_player(receivers[size]), str);
+        wizard = find_player(receivers[size]);
+        tell_object(wizard, line +
+            (wizard->query_option(OPT_TIMESTAMP) ? timestamp : "") + str);
     }
 
     if (this_player()->query_option(OPT_ECHO))
     {
-        write(str);
+        write(line +
+            (this_player()->query_option(OPT_TIMESTAMP) ? timestamp : "") + str);
     }
     else
     {
@@ -1293,8 +1297,11 @@ wiz(string str)
     return line((WIZNAME_APPRENTICE + " " + str), (query_verb() == "wize"),
                 BUSY_W);
 }
- 
-int
+
+/* **************************************************************************
+ * wsay - speak in the way of the wizards
+ */
+nomask int
 wsay(string str)
 {
     object *wizards;

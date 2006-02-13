@@ -15,5 +15,8 @@ ARGUMENTS
         [cmd on/off]	       the apprentice soul command space.
 			       This option is default on.
 
+	timestamp <on/off>   - Show the wiz line with a time stamp.
+
+
 SEE ALSO
 	cd, options

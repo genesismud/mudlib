@@ -1105,6 +1105,7 @@ options(string arg)
 	{
 	    options("autopwd");
 	    options("autolinecmd");
+	    options("timestamp");
 	}
         return 1;
     }
@@ -1181,7 +1182,8 @@ options(string arg)
 
         case "web":
             write("Web publication: " +
-                (this_player()->query_option(OPT_WEBPERM) ? "No" : "Yes") + "\n");
+                (this_player()->query_option(OPT_WEBPERM) ?
+                "No" : "Yes") + "\n");
             break;
 
         case "autopwd":
@@ -1201,6 +1203,16 @@ options(string arg)
 	    {
 		write("Auto line cmds:  " +
 		      (this_player()->query_option(OPT_AUTOLINECMD) ?
+		       "On" : "Off") + "\n");
+		break;
+	    }
+	    /* Intentional fallthrough to default if not a wizard. */
+
+	case "timestamp":
+	    if (this_player()->query_wiz_level())
+	    {
+		write("Timestamp lines: " +
+		      (this_player()->query_option(OPT_TIMESTAMP) ?
 		       "On" : "Off") + "\n");
 		break;
 	    }
@@ -1350,6 +1362,18 @@ options(string arg)
 	    // Make sure the line command set gets updated.
 	    "/cmd/wiz/apprentice"->update_commands();
             options("autolinecmd");
+	    break;
+	}
+        /* Intentional fallthrough to default if not a wizard. */
+
+    case "timestamp":
+        if (this_player()->query_wiz_level())
+	{
+	    if (args[1] == "on")
+                this_player()->set_option(OPT_TIMESTAMP, 1);
+            else
+	        this_player()->set_option(OPT_TIMESTAMP, 0);
+            options("timestamp");
 	    break;
 	}
         /* Intentional fallthrough to default if not a wizard. */

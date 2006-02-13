@@ -2157,6 +2157,7 @@ wizopt(string arg)
     {
         return CMD_LIVE_STATE->options(OPT_AUTO_PWD);
         return CMD_LIVE_STATE->options(OPT_AUTOLINECMD);
+        return CMD_LIVE_STATE->options(OPT_TIMESTAMP);
     }
     return CMD_LIVE_STATE->options(arg);
 }

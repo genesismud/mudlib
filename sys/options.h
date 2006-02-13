@@ -52,5 +52,7 @@
 #define OPT_AUTO_PWD		6
 // Automatically alias line commands
 #define OPT_AUTOLINECMD		11
+// Get a time stamp on wiz lines.
+#define OPT_TIMESTAMP		13
 
 #endif /* _options_h */
