@@ -911,7 +911,8 @@ unpack_bits()
 public void
 set_bit_array(int *arr)
 {
-    if (file_name(previous_object()) != LOGIN_NEW_PLAYER)
+    if ((file_name(previous_object()) != LOGIN_NEW_PLAYER) ||
+        (file_name(previous_object()) != LOGIN_TEST_PLAYER))
         return;
 
     bit_savelist = arr;
@@ -1205,6 +1206,13 @@ set_option(int opt, int val)
             options = efun::clear_bit(options, OPT_BASE + 20);
         break;
 
+    case OPT_TIMESTAMP:
+        if (val)
+            options = efun::set_bit(options, OPT_BASE + 21);
+        else
+            options = efun::clear_bit(options, OPT_BASE + 21);
+        break;
+
     default:
         return 0;
         break;
@@ -1280,6 +1288,10 @@ query_option(int opt)
     case OPT_AUTOLINECMD:
 	// NB! This option is inversed to look on when it's off... duh.. well.
         return !(efun::test_bit(options, OPT_BASE + 20));
+        break;
+
+    case OPT_TIMESTAMP:
+        return efun::test_bit(options, OPT_BASE + 21);
         break;
 
     default:
