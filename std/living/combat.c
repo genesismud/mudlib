@@ -13,6 +13,7 @@
 #include <comb_mag.h>
 #include <files.h>
 #include <log.h>
+#include <login.h>
 #include <money.h>
 #include <std.h>
 #include <stdproperties.h>
@@ -374,7 +375,7 @@ do_die(object killer)
         move_all_to(corpse);
     }
     
-    set_ghost(1);
+    set_ghost(GP_DEAD);
 
     if (!this_object()->second_life(killer))
     {
