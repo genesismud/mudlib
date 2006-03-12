@@ -16,8 +16,8 @@ OPTIONS
 		  interactive players are moved back into the room. You
 		  cannot update the starting location of someone if that
 		  person is in the room.
-	<file>	- the path to the file to update.
-	<files>	- the files to the updated. This may contain wildcards.
+	<file>	- the path to the single file to update.
+     -d <files>	- updates multiple files. <files> may contain wildcards.
 
 SEE ALSO
 	clone, destruct, load, remake
