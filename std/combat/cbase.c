@@ -2289,14 +2289,14 @@ query_attack(int id)
 
 /*
  * Function name: add_hitloc
- * Description:   Add a hitlocation to the hitloc array
- * Arguments:
- *            ac:    The ac's for a given hitlocation, can be an int
- *            %hit:  The chance that a hit will hit this location
- *            desc:  String describing this hitlocation, ie "head", "tail"
- *            id:    Specific id, for humanoids A_TORSO, A_HEAD etc
- *
- * Returns:       True if added.
+ * Description  : Add a hitlocation to the hitloc array
+ * Arguments    : mixed ac - The ac's for a given hitlocation, can be an int
+ *                  or int* ({ impale, slash, bludgeon }).
+ *                int %hit - The chance that a hit will hit this location.
+ *                string desc - Describes this hitlocation, ie "head", "tail".
+ *                int id - Specific id, for humanoids A_TORSO, A_HEAD etc.
+ *                object *armours - armours protecting this location, if any.
+ * Returns      : int 1/0 - True if added.
  */
 static varargs int
 add_hitloc(mixed ac, int prchit, string desc, int id, object *armours)
@@ -2366,8 +2366,8 @@ remove_hitloc(int id)
 
 /*
  * Function name: query_hitloc_id
- * Description:   Give all hitloc id's
- * Returns:       Array with elements as described in add_attack
+ * Description  : Give all hitloc id's
+ * Returns      : int * - An array with all hitloc identifiers.
  */
 public int *
 query_hitloc_id() 
@@ -2377,9 +2377,19 @@ query_hitloc_id()
 
 /*
  * Function name: query_hitloc
- * Description:   Give the hitloc for a certain id
- * Arguments:     id: The id to return hitloc array for
- * Returns:       Array with elements as described in add_hitloc
+ * Description  : Give the hitloc for a certain id.
+ * Arguments    : int id - The id to return hitloc array for
+ * Returns      : mixed - an array with several elements about the properties
+ *                  of the hitlocation, as follows:
+ *
+ *            ({  int *ac - The ac's for a given hitlocation,
+ *                  ({ impale, slash, bludgeon }).
+ *                int %hit - The chance that a hit will hit this location.
+ *                string desc - Describes this hitlocation, ie "head", "tail".
+ *                int *ac_mod - Modifiers for the ac's for the hitlocation
+ *                  ({ impale, slash, bludgeon }).
+ *                object *armours - armours protecting this location, if any.
+ *            })
  */
 public nomask mixed *
 query_hitloc(int id) 
