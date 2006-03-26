@@ -6,11 +6,11 @@ SYNOPSIS
 
 DESCRIPTION
 	Gives the current time in number of seconds passed since January 1970,
-	something. 
+	something. Use time() to get the integer value.
 
 SEE ALSO
-	ctime, file_time, object_time
+	ctime, file_time, object_time, time
 
-BUGS
+CAVEAT
 	The actual time is only updated in the gamedriver each heartbeat.
 	This means that time makes 'leaps' every heartbeat.

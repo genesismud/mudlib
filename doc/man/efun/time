@@ -9,9 +9,9 @@ DESCRIPTION
 	something. 
 
 SEE ALSO
-	ctime, file_time, object_time
+	ctime, file_time, gettimeofday, object_time
 
-BUGS
+CAVEAT
 	The actual time is only updated in the gamedriver each heartbeat.
 	This means that time makes 'leaps' every heartbeat.
 
