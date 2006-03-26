@@ -56,9 +56,8 @@ stat_living()
                   "Base: %@7d\n" +
                   "Exp:  %@7s\n" +
 	          "Learn:%@7d\n\n" +
-		  "Intox: %4d  Stuffed: %3d Soaked: %3d  Align : %d\n" +
-		  "Scar : %4d  Ghost  : %3d Invis : %3d  Npc   : %3d  " +
-		  "Whimpy: %3d\n",
+	  "Intox: %4d  Stuffed: %3d Soaked: %3d  Panic : %3d  Align : %d\n" +
+	  "Scar : %4d  Ghost  : %3d Invis : %3d  Npc   : %3d  Whimpy: %3d\n",
 		  capitalize(query_real_name()),
 		  WIZ_RANK_NAME(SECURITY->query_wiz_rank(query_real_name())),
 #ifdef USE_WIZ_LEVELS
@@ -92,6 +91,7 @@ stat_living()
 		  to->query_intoxicated(),
 		  to->query_stuffed(),
 		  to->query_soaked(),
+		  to->query_panic(),
 		  to->query_alignment(),
 		  to->query_scar(),
 		  to->query_ghost(),
