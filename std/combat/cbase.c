@@ -45,6 +45,7 @@ public string cb_hitloc_desc(int hid);
 static void stop_heart();
 public mixed cb_query_weapon(int which);
 public mixed * query_attack(int id);
+public nomask void cb_update_enemies();
 
 
 /*
