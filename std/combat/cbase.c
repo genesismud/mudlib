@@ -105,8 +105,6 @@ cb_status()
     mixed ac;
     object *valid_enemies;
 
-    enemies = filter(enemies, objectp);
-
     str = "Living object: " + file_name(me) + 
         " (Uid: " + getuid(me) + ", Euid: " + geteuid(me) + ")\n";
 
@@ -119,8 +117,9 @@ cb_status()
             " (" + file_name(attack_ob) +")\n";
 
     /* if the enemies have been destroyed then it can cause problems
-     * so remove the non live ones.  Left
+     * so remove the non live ones. Do we need this with cb_update_enemies?
      */
+    cb_update_enemies();
     valid_enemies = FILTER_LIVE(enemies);
 
     if (sizeof(valid_enemies))
@@ -589,8 +588,9 @@ cb_tohit(int aid, int wchit, object vic)
 /*
  * Function name: cb_query_combat_time
  * Description  : Query the time value of the time when a hit was last made,
- *                either by us, or on us.
- * Returns      : int - the time value of the last hit..
+ *                either by us, or on us. This variable keeps its value also
+ *                after combat stops.
+ * Returns      : int - the time value of the last hit.
  */
 public int
 cb_query_combat_time()
@@ -1098,14 +1098,11 @@ cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
 /*
  * Function name: cb_death_occured
  * Description:   Called when 'me' dies
- * Arguments:     killer: The enemy that caused our death.
+ * Arguments:     object killer: The enemy that caused our death.
  */
 public void
 cb_death_occured(object killer)
 {
-    /*
-     * We forget our enemies when we die.
-     */
     stop_heart();
     enemies = ({});
     attack_ob = 0;
@@ -1115,15 +1112,15 @@ cb_death_occured(object killer)
 /*
  * Function name: cb_add_enemy
  * Description:   Used to add enemies to 'me'
- * Arguments:     enemy: The enemy to be
- *                force: If true and enemy array full one other is replaced
+ * Arguments:     object enemy: The enemy to be.
+ *                int force: put the enemy on top of the list.
  */
 public varargs void
 cb_add_enemy(object enemy, int force)
 {
     int pos;
 
-    enemies = filter(enemies, objectp);
+    cb_update_enemies();
 
     /* Make sure panic value is updated before we add enemies */
     cb_query_panic(); 
@@ -1162,80 +1159,80 @@ cb_adjust_combat_on_move(int leave)
 
     if (environment(me))
     {
-        all = all_inventory(environment(me));
-        inv = all & enemies;
-        if (leave)
+        return;
+    }
+
+    all = all_inventory(environment(me));
+    inv = all & enemies;
+    if (leave)
+    {
+        /* If the aggressors are around. */
+        if (sizeof(inv))
         {
-            /*
-             * If the aggressors are around.
-             */
-            if (sizeof(inv))
-            {
-                drag = ({ });
-                rest = ({ });
-                i = -1;
-                size = sizeof(inv);
-                while(++i < size)
-                {
-                    if (inv[i]->query_prop(LIVE_O_ENEMY_CLING) == me)
-                    {
-                        drag += ({ inv[i] });
-                        tell_object(inv[i], "As " +
-                            me->query_the_name(inv[i]) + 
-                            " leaves, you are dragged along.\n");
-                    }
-                    else
-                    {
-                        rest += ({ inv[i] });
-                        tell_object(inv[i], "You are now hunting " +
-                            me->query_the_name(inv[i]) + ".\n");
-                    }
-                }
-
-                if (sizeof(drag))
-                {
-                    if (i_am_real)
-                    {
-                        me->catch_msg(
-                            "As you try to leave, you can not get rid of " +
-                            COMPOSITE_LIVE(drag) + ".\n");
-                    }
-                    me->add_prop(TEMP_DRAGGED_ENEMIES, drag);
-                }
-
-                if (sizeof(rest) && i_am_real)
-                {
-                    me->catch_tell("You are now hunted by " + 
-                        FO_COMPOSITE_ALL_LIVE(rest, me) + ".\n");
-                }
-
-                /* Stop fighting all the enemies that don't follow us.
-                   We must still fight the enemies that do, since otherwise
-                   we can move so quickly that we don't update our enemies
-                   to include them when they attack again, although they
-                   will autofollow and attack again on entry.
-                */
-                this_object()->cb_stop_fight(rest);
-            }
-        } 
-        else 
-        {
+            drag = ({ });
+            rest = ({ });
             i = -1;
             size = sizeof(inv);
             while(++i < size)
             {
-                if (CAN_SEE(me, inv[i]) && CAN_SEE_IN_ROOM(me) &&
-                    !NPATTACK(inv[i]))
+                if (inv[i]->query_prop(LIVE_O_ENEMY_CLING) == me)
                 {
-                    me->attack_object(inv[i]);
-                    cb_update_tohit_val(inv[i], 30); /* Give hunter bonus */
-                    tell_room(environment(me), QCTNAME(me) + " attacks " +
-                        QTNAME(inv[i]) + ".\n", ({ inv[i], me }));
-                    tell_object(inv[i], me->query_The_name(inv[i]) +
-                        " attacks you!\n");
-                    tell_object(me, "You attack " +
-                        inv[i]->query_the_name(me) + ".\n");
+                    drag += ({ inv[i] });
+                    tell_object(inv[i], "As " +
+                        me->query_the_name(inv[i]) + 
+                        " leaves, you are dragged along.\n");
                 }
+                else
+                {
+                    rest += ({ inv[i] });
+                    tell_object(inv[i], "You are now hunting " +
+                        me->query_the_name(inv[i]) + ".\n");
+                }
+            }
+
+            if (sizeof(drag))
+            {
+                if (i_am_real)
+                {
+                    me->catch_msg(
+                        "As you try to leave, you can not get rid of " +
+                        COMPOSITE_LIVE(drag) + ".\n");
+                }
+                me->add_prop(TEMP_DRAGGED_ENEMIES, drag);
+            }
+
+            if (sizeof(rest) && i_am_real)
+            {
+                me->catch_tell("You are now hunted by " + 
+                    FO_COMPOSITE_ALL_LIVE(rest, me) + ".\n");
+            }
+
+            /* Stop fighting all the enemies that don't follow us.
+               We must still fight the enemies that do, since otherwise
+               we can move so quickly that we don't update our enemies
+               to include them when they attack again, although they
+               will autofollow and attack again on entry.
+            */
+            this_object()->cb_stop_fight(rest);
+        }
+    } 
+    else 
+    {
+        i = -1;
+        size = sizeof(inv);
+        while(++i < size)
+        {
+            if (CAN_SEE(me, inv[i]) && CAN_SEE_IN_ROOM(me) &&
+                !NPATTACK(inv[i]))
+            {
+                me->attack_object(inv[i]);
+                cb_update_tohit_val(inv[i], 30); /* Give hunter bonus */
+                tell_room(environment(me), QCTNAME(me) + " attacks " +
+                    QTNAME(inv[i]) + ".\n", ({ inv[i], me }));
+                tell_object(inv[i], me->query_The_name(inv[i]) +
+                    " attacks you!\n");
+                tell_object(me, "You attack " +
+                    inv[i]->query_the_name(me) + ".\n");
             }
         }
     }
@@ -1502,11 +1499,6 @@ stop_heart()
     me->remove_prop(LIVE_I_ATTACK_DELAY);
     remove_alarm(alarm_id);
     alarm_id = 0;
-
-    if (!sizeof(enemies))
-    {
-        combat_time = 0;
-    }
 }
 
 /*
@@ -1533,6 +1525,7 @@ heart_beat()
     /*
      * Do something when the enemy is somehow lost
      */
+    cb_update_enemies();
     if (!attack_ob || attack_ob->query_ghost() ||
         environment(attack_ob) != environment(me))
     {
@@ -1542,7 +1535,6 @@ heart_beat()
         me->remove_prop(LIVE_O_ENEMY_CLING);
 
         /* Switch enemy if we have an alternate. */
-        enemies = filter(enemies, objectp);
         new = (all_inventory(environment(me)) & enemies) - ({ attack_ob });
 
         if (sizeof(new))
@@ -2094,10 +2086,8 @@ cb_stop_fight(mixed elist)
         attack_ob = 0;
     }
 
-    if (pointerp(enemies) && pointerp(elist))
-    {
-        enemies = enemies - (object *)elist;
-    }
+    cb_update_enemies();
+    enemies = enemies - (object *)elist;
 
     if (sizeof(enemies))
     {
@@ -2107,22 +2097,30 @@ cb_stop_fight(mixed elist)
             attack_ob = local[0];
         }
     }
-    else
-    {
-        combat_time = 0;
-    }
+}
+
+/*
+ * Function name: cb_update_enemies
+ * Description  : Makes sure our enemy list is valid.
+ */
+public nomask void
+cb_update_enemies()
+{
+    enemies = filter(enemies, objectp);
 }
 
 /*
  * Function name: cb_query_enemy
- * Description:   Gives our current enemy
- * Arguments:     arg: Enemy number, (-1 == all enemies)
- * Returns:       Object pointer to the enemy
+ * Description  : Find out about recorded enemies. To find out the currently
+ *                fought enemy, use [cb_]query_attack() instead.
+ * Arguments    : int arg - Enemy number in the list (-1 == all enemies)
+ * Returns      : object  - the requested enemy (arg >= 0)
+ *                object* - all our enemies (arg == -1)
  */
 public nomask mixed
 cb_query_enemy(int arg)
 {
-    enemies = filter(enemies, objectp);
+    cb_update_enemies();
 
     if (arg == -1)
     {
@@ -2138,8 +2136,9 @@ cb_query_enemy(int arg)
 
 /*
  * Function name: cb_query_attack
- * Description:   Gives the enemy we are fighting, if we are fighting...
- * Returns:       Object pointer to the enemy
+ * Description  : Gives the object we are currently fightin (if any). This does
+ *                not include hunted enemies. Use cb_query_enemy() for that.
+ * Returns      : object - the currently attacked object.
  */
 public nomask mixed
 cb_query_attack() 

@@ -734,7 +734,7 @@ combat_init()
     if (!CAN_SEE(this_object(), this_player()))
         return;
 
-    if ((member_array(this_player(), this_object()->query_enemy(-1)) >= 0) &&
+    if ((member_array(this_player(), query_enemy(-1)) >= 0) &&
         !NPATTACK(this_player()))
     {
         this_object()->reveal_me(1);
@@ -784,6 +784,19 @@ stop_fight(mixed elist)
     CEX; combat_extern->cb_stop_fight(elist);
 }
 
+/* 
+ * Function name: query_enemy 
+ * Description  : Gives information of recorded enemies. If you want to know
+ *                the currently fought enemy (if any) call query_attack().
+ * Arguments    : See "sman cb_query_enemy"
+ * Returns      : See "sman cb_query_enemy"
+ */
+public mixed
+query_enemy(int arg)
+{
+    CEX; return combat_extern->cb_query_enemy(arg);
+}
+ 
 /*
  * Function name: update_combat_time
  * Description  : Mark that on this moment a hit was made, either by us or on
@@ -818,7 +831,7 @@ query_relaxed_from_combat()
     int tme = query_combat_time();
 
     /* No combat, means relaxed. */
-    if (!tme)
+    if (!tme || !query_enemy(0))
     {
         return 1;
     }
@@ -830,22 +843,10 @@ query_relaxed_from_combat()
 }
 
 /*
- * Function name:   query_enemy
- * Description:     Gives information of recorded enemies. If you want to
- *                  know currently fought enemy (if any) call query_attack()
- * Arguments:       arg: Enemy number (-1 == all enemies)
- * Returns:         Object pointer to the enemy
- */
-public mixed
-query_enemy(int arg) 
-{
-    CEX; return combat_extern->cb_query_enemy(arg); 
-}
-
-/*
- * Function name:   query_attack
- * Description:     Return the attacked object.
- * Returns:         The attacked object.
+ * Function name: query_attack
+ * Description  : Return the object we are currently fighting. This does not
+ *                include hunted enemies. Use query_enemy() for that.
+ * Returns      : object - the currently attacked object.
  */
 public object
 query_attack()
