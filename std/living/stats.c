@@ -192,8 +192,9 @@ add_tmp_stat(int stat, int ds, int dt)
 
 /*
  * Function name: query_stat
- * Description:   Get the compound value of a stat. Never less than 1.
- * Arguments:     stat - Which stat to find.
+ * Description  : Get the compound value of a stat. Never less than 1.
+ * Arguments    : int stat - Which stat to find.
+ * Returns      : int - the stat value.
  */
 public int
 query_stat(int stat)
@@ -211,6 +212,19 @@ query_stat(int stat)
     tmp += stat_extra[stat];
 
     return (tmp > 0 ? tmp : 1);
+}
+
+/*
+ * Function name: query_rel_stat
+ * Description  : Measure a stat versus the average stat as percentage. A stat
+ *                that is on average returns 100%
+ * Arguments    : int stat - the stat to find.
+ * Returns      : int - the percentage
+ */
+public int
+query_rel_stat(int stat)
+{
+    return (100 * query_stat(stat)) / query_average_stat();
 }
 
 /*
