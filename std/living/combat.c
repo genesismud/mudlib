@@ -36,6 +36,7 @@ static mixed    leftover_list;  /* The list of leftovers */
 varargs public mixed query_leftover(string organ);
 public int remove_leftover(string organ);
 public void run_away();
+public mixed query_enemy(int arg);
 
 /*
  * Function name:   query_combat_file
