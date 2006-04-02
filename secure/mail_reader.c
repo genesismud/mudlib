@@ -1679,7 +1679,7 @@ send_mail_safely(string *dest_array, string name)
                     sizeof(player_mail[MAIL_MAIL]) + ") from " + name +
                     ",\nconcerning " +
                     ((gIs_reply & IS_REPLY) ? "Re: " : "Subj: ") +
-                    gSubject + "\n\n");
+                    gSubject + " (" + gTo_send[MAIL_LENGTH] + ")\n\n");
             else
                 tell_object(obj,
                     "\nPostmaster tells you that you have new mail from " +
