@@ -1158,7 +1158,7 @@ cb_adjust_combat_on_move(int leave)
     int i, pos, size;
     object *inv, enemy, *all, *rest, *drag;
 
-    if (environment(me))
+    if (!environment(me))
     {
         return;
     }
