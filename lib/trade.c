@@ -249,6 +249,7 @@ void set_money_accept(int *a) { money_accept = a; }
 /*
  * Function name: set_money_greed_buy
  * Description:   Set the greed when player buys something
+ *                Can't be lower than 90
  * Arguments:     m - The greed in %, VBFC support
  */
 void set_money_greed_buy(mixed m) { money_greed_buy = m; }
@@ -256,6 +257,7 @@ void set_money_greed_buy(mixed m) { money_greed_buy = m; }
 /*
  * Function name: set_money_greed_sell
  * Description:   Set the greed when player sells something to us
+ *                Can't be lower than 90
  * Arguments:     m - The greed in %, VBFC support
  */
 void set_money_greed_sell(mixed m) { money_greed_sell = m; }
@@ -263,6 +265,7 @@ void set_money_greed_sell(mixed m) { money_greed_sell = m; }
 /*
  * Function name: set_money_greed_change
  * Description:   Set the greed when player shuold get change back
+ *                Can't be lower than 90
  * Arguments:     m - The greed in %, VBFC support
  */
 void set_money_greed_change(mixed m) { money_greed_change = m; }
@@ -292,17 +295,26 @@ int query_money_give_max()
 
 int query_money_greed_buy()
 {
-    return this_object()->check_call(money_greed_buy);
+    int val;
+    val = this_object()->check_call(money_greed_buy);
+
+    return (val < 90 ? 90 : val);
 }
 
 int query_money_greed_sell()
 {
-    return this_object()->check_call(money_greed_sell);
+    int val;
+    
+    val = this_object()->check_call(money_greed_sell);
+    return (val < 90 ? 90 : val);
 }
 
 int query_money_greed_change()
 {
-    return this_object()->check_call(money_greed_change);
+    int val;
+    
+    val = this_object()->check_call(money_greed_change);
+    return (val < 90 ? 90 : val);
 }
 
 string *query_money_types() { return money_types; }
@@ -551,7 +563,7 @@ calc_change(int price, int *arr, string str)
 
     if (arr) /* No greed on change if this isnt change */
         new_price = (money_merge(arr) - price) * 100 /
-	    this_object()->check_call(money_greed_change);
+            query_money_greed_change();
     else
 	new_price = price;
 
@@ -864,7 +876,7 @@ pay(int price, object ob, string str, int test, object ob2, string str2,
     }
 
     /* How greedy are we? The original price should be the value of object. */
-    price = price * this_object()->check_call(money_greed_buy) / 100;
+    price = price * query_money_greed_buy() / 100;
     arr = what_coins(ob);
 
     if (str) /* Reduce money array to what we wants to pay with */
@@ -931,7 +943,7 @@ give(int price, object ob, string str, int test, object ob2, int silent)
     }
 
     tmp_arr = allocate(num_of_types);
-    price = price * 100 / this_object()->check_call(money_greed_sell);
+    price = price * 100 / query_money_greed_sell();
     arr = calc_change (price, 0, str);
     arr = tmp_arr + arr;
 
