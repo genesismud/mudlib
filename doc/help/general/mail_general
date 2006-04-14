@@ -1,7 +1,7 @@
   GENESIS MAIL READER    Version 4.0 by Mercade
 
   x or q            Exit from mail reading mode (and delete marked messages).
-  h or H            Print all headers. (H lists only unread headers)
+  h or H [<name>]   Print all headers. (H = unread; <name> filters a sender).
   r [<num>]         Reply to current message or reply to to message <num>.
   R [<num>]         Reply (see r) and include the message you reply to.
   m <name>          Mail a message to <name>.
