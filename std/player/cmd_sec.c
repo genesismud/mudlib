@@ -166,6 +166,10 @@ check_recover_loc()
     if (ARMAGEDDON->shutdown_active())
 	return 1;
 
+    /* Wizards always recover. */
+    if (query_wiz_level())
+        return 1;
+
     /* Check for recoverable surroundings */
     if (objectp(tmp = environment(this_object())))
 	env = file_name(tmp);
