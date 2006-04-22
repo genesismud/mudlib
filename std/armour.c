@@ -597,33 +597,32 @@ check_armour()
 
 /*
  * Function name: set_default_armour
- * Description:
- * Arguments:
- * Returns:
+ * Description  : This routine is a shortcut function for the following:
+ *                  set_ac(ac);
+ *                  set_at(at);
+ *                  set_am(am);
+ *                  set_af(af);
+ * Arguments    : See the referred routines.
  */
 public varargs void
 set_default_armour(int ac, int at, int *am, object af)
 {
-    /* Sets the armour class.
-    */
+    /* Sets the armour class. */
     if (ac) set_ac(ac); 
     else set_ac(1);
 
-    /* Set the armour type.
-    */
+    /* Set the armour type. */
     if (at) set_at(at);
     else set_at(A_BODY);
     
-    /* Set armour modifier vs weapon damage type.
-    */
+    /* Set armour modifier vs weapon damage type. */
     if (am) set_am(am);
     else set_am(A_NAKED_MOD);
 
     
     /* Sets the name of the object that contains the function
        to call for extra defined wear_arm() and remove_arm()
-       functions.
-    */
+       functions. */
     if (af) set_af(af);
 }
     
