@@ -366,14 +366,8 @@ data_done()
 	write("Backup made to " + filename + ".o.old\n");
     }
 
-    /* Try to save the datafile back to disk. */
-    if (!save_map(data, filename))
-    {
-	write("Could not save to " + filename + ".o\n");
-	write("Use q[uit] to quit without saving.\n");
-	return 0;
-    }
-
+    /* Save the datafile back to disk. */
+    save_map(data, filename);
     write("Datafile saved to " + filename + ".o\n");
     return 1;
 }
