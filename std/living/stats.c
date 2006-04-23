@@ -144,7 +144,26 @@ query_average_stat()
     return (query_base_stat(SS_STR) + query_base_stat(SS_DEX) +
 	query_base_stat(SS_CON) + query_base_stat(SS_INT) +
 	query_base_stat(SS_WIS) + query_base_stat(SS_DIS)) / 6;
-}   
+}
+
+/*
+ * Function name: query_relative_stat
+ * Description  : Calculate the relative stat value (percentage) of a stat
+ *                compared to the average stat. Default: 100
+ * Arguments    : int stat - the stat to query.
+ * Returns      : int - the relative stat value as percentage.
+ */
+public int
+query_relative_stat(int stat)
+{
+    if ((stat < 0) ||
+        (stat >= SS_NO_STATS))
+    {
+	return 0;
+    }
+
+    return (100 * query_base_stat(stat)) / query_average_stat();
+}
 
 /*
  * Function name: expire_tmp_stat()
