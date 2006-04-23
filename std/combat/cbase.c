@@ -8,7 +8,7 @@
 
  Ver 2.0 JnA: 911220
 
-   This version uses an attack and defence table. Combat no longer have
+   This version uses an attack and defence table. Combat no longer has
    a concept of weapons and armours. Only attacks and hitlocations.
 
    This file is meant to be inherited by more advanced combat systems.
@@ -384,20 +384,29 @@ cb_add_panic(int dpan)
  */
 public int
 cb_query_panic() 
-{ 
-    int n, chk;
+{
+    int ival, proc;
 
-    if (me->query_enemy(0))
-        panic_time = time(); /* So we don't heal panic while fighting */
-    else 
+    /* No healing while we are in direct combat or access failure. */
+    if (attack_ob || !panic || !panic_time || (panic_time > time()))
     {
-        n = (time() - panic_time) / F_INTERVAL_BETWEEN_PANIC_HEALING;
-        if (n > 0 && (chk = (1 << n)) > 0)
+        panic_time = time();
+    }
+    else
+    {
+        /* Find out the number of intervals we should heal the panic. */
+        ival = (time() - panic_time) / F_INTERVAL_BETWEEN_PANIC_HEALING;
+        panic_time += ival * F_INTERVAL_BETWEEN_PANIC_HEALING;
+
+        /* See "man F_PANIC_DEPR_PROC" for a description of the formula. */
+        proc = F_PANIC_DEPR_PROC * me->query_relative_stat(SS_DIS);
+        /* Apply the formula 'ival' times. */
+        while ((--ival >= 0) && (panic > 0))
         {
-            if (panic > 0)
-                panic = panic / chk;
-            panic_time += n * F_INTERVAL_BETWEEN_PANIC_HEALING;
+            panic = ((panic * (10000 - proc)) / 10000) - F_PANIC_DEPR_CONST;
         }
+        /* Panic may not be negative. */
+        panic = max(panic, 0);
     }
 
     return panic; 
@@ -410,7 +419,7 @@ cb_query_panic()
 public void
 cb_may_panic()
 {
-    int il, size, dis;
+    int     dis;
     object *tm;
 
     /* If you don't run away, then you shouldn't panic either. */
@@ -425,14 +434,13 @@ cb_may_panic()
     {
         tell_object(me,"You panic!\n");
         tell_room(environment(me), QCTNAME(me) + " panics!\n", me);
+
+        /* Add panic to all present team members. */
         tm = (object*)me->query_team_others();
-        size = sizeof(tm);
-        il = -1;
-        while(++il < size)
-        {
-            if (environment(me) == environment(tm[il]))
-                tm[il]->add_panic(25);
-        }
+        tm = filter((tm), &operator(==)(environment(me)) @ environment)
+        tm->add_panic(25);
+
+        /* And run like hell. */
         me->run_away();
     }
 }

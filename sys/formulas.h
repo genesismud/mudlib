@@ -158,14 +158,16 @@
 #define F_QUEST_ADJUST_ALIGN(my_align, quest_align) \
     (F_KILL_ADJUST_ALIGN((my_align), -(quest_align)))
 #define F_PANIC_WIMP_LEVEL(dis)		(10 + 3 * (dis))
+#define F_PANIC_DEPR_PROC		(4)
+#define F_PANIC_DEPR_CONST		(1)
 #define F_DIE_REDUCE_XP(xp) 		((xp) / 5)
+#define F_DIE_START_HP(max_hp) 		((max_hp) / 10)
 
 #define F_EXP_ON_KILL(ka, va) \
     (int)call_other(MATH_FILE, "exp_on_kill", (ka), (va))
 #define F_KILL_GIVE_EXP(av)	        (((av) * (av) * 400) / ((av) + 50))
 #define F_EXP_TEAM_BONUS(size)          (100 + ((size) * 10))
 #define F_RELAX_TIME_AFTER_COMBAT(tme)  ((tme) + 60 + (6 * ((tme) % 10)))
-#define F_DIE_START_HP(max_hp) 		((max_hp) / 10)
 #define F_MAX_SCAR			(10)
 #define F_SCAR_DESCS ({ 					       \
 			  "left leg", "right leg", "nose", "left arm", \
