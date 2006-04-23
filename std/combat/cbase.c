@@ -437,7 +437,7 @@ cb_may_panic()
 
         /* Add panic to all present team members. */
         tm = (object*)me->query_team_others();
-        tm = filter((tm), &operator(==)(environment(me)) @ environment)
+        tm = filter((tm), &operator(==)(environment(me)) @ environment);
         tm->add_panic(25);
 
         /* And run like hell. */
