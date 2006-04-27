@@ -1622,7 +1622,7 @@ show_skills(string str)
         break;
     case 1:
         /* Person wants to see a group of himself, or see someone elses stats. */
-        if (!objectp(player = find_player(words[0])))
+        if (!this_player()->query_wiz_level() || !(player = find_player(words[0])))
         {
             player = this_player();
             group = words[0];
@@ -1630,17 +1630,13 @@ show_skills(string str)
         break;
     case 2:
         /* Player specifies both the person to see and the group to see. */
-        player = find_player(words[0]);
+        if (this_player()->query_wiz_level())
+            player = find_player(words[0]);        
         group = words[1];
         break;
     default:
         notify_fail("Too many arguments. Syntax: stats [player] [skill group]\n");
         return 0;
-    }
-    
-    if (!this_player()->query_wiz_level() && (player != this_player()))
-    {
-        player = this_player();
     }
     
     if (!objectp(player))
