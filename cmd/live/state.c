@@ -1640,9 +1640,9 @@ show_skills(string str)
     
     if (!this_player()->query_wiz_level() && (player != this_player()))
     {
-        write("You can only see your own skills.\n");
-        return 1;
+        player = this_player();
     }
+    
     if (!objectp(player))
     {
         notify_fail("No player " + words[0] + " found.\n");
