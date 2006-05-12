@@ -197,7 +197,7 @@ parse_string(string args)
 
     if (!args || !parse_command(args, ({ this_object() }), " %o ", dummy))
     {
-	notify_fail("String what? The " + short() + "?/n");
+	notify_fail("String what? The " + short() + "?\n");
 	return 0;
     }
 
@@ -258,7 +258,7 @@ parse_unstring(string args)
 
     if (!args || !parse_command(args, ({ this_object() }), " %o ", dummy))
     {
-	notify_fail("Unstring what? The " + short() + "?/n");
+	notify_fail("Unstring what? The " + short() + "?\n");
 	return 0;
     }
 
