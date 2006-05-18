@@ -51,6 +51,7 @@ private int     *bit_savelist,          /* Saved bits */
                 wiz_unmet;              /* If wizards want to be unmet */
 private mapping m_remember_name,        /* Names of players we have met */
                 m_alias_list,           /* Aliases for the quicktyper */
+                m_nick_list,            /* Nick(name)s for the quicktyper */
                 m_seconds;              /* Second characters */
 
 /*
@@ -961,6 +962,21 @@ add_aliases(mapping m)
         m_alias_list += m;
     else    
         m_alias_list = m;
+}
+
+/*
+ * Function name: query_nicks
+ * Description  : This returns the list of nick(name)s of a player.
+ * Arguments    : mapping - the indices are the namenames and the
+ *                          values the replacements.
+ */
+public mapping
+query_nicks()
+{
+    if (mappingp(m_nick_list))
+        return ([ ]) + m_nick_list;
+    else
+        return ([ ]);
 }
 
 /*

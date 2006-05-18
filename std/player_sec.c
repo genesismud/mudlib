@@ -683,6 +683,10 @@ setup_player(string pl_name)
     {
         m_alias_list = ([ ]);
     }
+    if (!m_nick_list)               
+    { 
+        m_nick_list = ([ ]);   
+    } 
 
     /* Get the autoloading shadows and the autoloading objects. Start the
      * recovery with a little alarm to make it safe. */

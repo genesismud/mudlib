@@ -10,6 +10,7 @@
 #include <options.h>
 
 #define ALIAS_LENGTH (query_wiz_level() ? 45 : 30)
+#define NICK_LENGTH  (query_wiz_level() ? 20 : 10)
 
 /*
  * Global variables, all static, i.e. non-savable.
@@ -23,9 +24,11 @@ static private int    do_alarm     = 0;
  * Prototypes.
  */
 static nomask int alias(string str);
+static nomask int nick(string str);
 static nomask int doit(string str);
 static nomask int resume(string str);
 static nomask int unalias(string str);
+static nomask int unnick(string str);
 
 /*
  * Function name: init_cmdmodify
@@ -35,9 +38,11 @@ static nomask void
 init_cmdmodify()
 {
     add_action(alias,   "alias");
+    add_action(nick,    "nick");
     add_action(doit,    "do");
     add_action(resume,  "resume");
     add_action(unalias, "unalias");
+    add_action(unnick,  "unnick");
 }
 
 /*
@@ -78,13 +83,30 @@ modify_command(string str)
 	 * replace that '%%' with the remaining words of the command line.
 	 */
 	if (wildmatch("*%%?*", words[0]))
-	{
 	    subst_words = explode(words[0], "%%");
-	    str = subst_words[0] + implode(words[1..], " ") +
-		implode(subst_words[1..], "");
+    }
+
+    /* Resolve nicknames. */
+    if ((words[0] != "unnick") && m_sizeof(m_nick_list))
+    {
+	int size = sizeof(words);
+
+	while(size--)
+	{
+	    if (m_nick_list[words[size]])
+		words[size] = m_nick_list[words[size]];
 	}
-	else
-	    str = implode(words, " ");
+    }
+
+    /* Reconstruct the command. */
+    if (subst_words)
+    {
+	str = subst_words[0] + implode(words[1..], " ") +
+	    implode(subst_words[1..], "");
+    }
+    else
+    {
+	str = implode(words, " ");
     }
 
     /* Save the last command given to be retrieved with %%. */
@@ -382,8 +404,120 @@ unalias(string str)
 	return 0;
     }
 
-    write("Alias \"" + str + "\" removed. Used to be " + m_alias_list[str] +
-	  ".\n");
+    write("Alias \""+ str +"\" removed. Used to be: "+ m_alias_list[str] +".\n");
     m_delkey(m_alias_list, str);
+    return 1;
+}
+
+/*
+ * Function name: nick
+ * Description  : Make a nick, or display one or all current nickname(s).
+ * Arguments    : string str - the command line argument.
+ * Returns      : int - 1/0 - success/failure.
+ */
+static nomask int
+nick(string str)
+{
+    int    index;
+    int    size;
+    string a;
+    string cmd;
+    string *list;
+    object player;
+    mapping n_list;
+
+    /* No-one can be forced to make an alias. */
+    if (this_interactive() != this_object())
+	return 0;
+
+    /* List all nicks. */
+    if (!strlen(str))
+    {
+	list = sort_array(m_indices(m_nick_list));
+	size = sizeof(list);
+	index = -1;
+
+	write("You have " + LANG_WNUM(size) +
+	    ((size == 1) ? " nickname" : " nicknames") + " and " +
+	    ((size >= NICK_LENGTH) ? "NO room for more." :
+		("room for " + LANG_WNUM(NICK_LENGTH - size) + " more.")) +
+	    "\n\n");
+
+	while(++index < size)
+	    write(sprintf("%-8s: %s\n", list[index], m_nick_list[list[index]]));
+
+	return 1;
+    }
+
+    /* List one alias. */
+    if (m_nick_list[str])
+    {
+	write(sprintf("%-8s: %s\n", str, m_nick_list[str]));
+	return 1;
+    }
+
+    /* Add a new nickname, must consist of a name and a value, else we assume
+     * the player wanted to display a non-existant alias.
+     */
+    if (sscanf(str, "%s %s", a, cmd) != 2)
+	return notify_fail("No such nickname: \"" + str + "\".\n");
+
+    /* Wizard may see other people's aliases. */
+    if (a == "-l")
+    {
+	if (SECURITY->query_wiz_rank(query_real_name()) < WIZ_NORMAL)
+	    return notify_fail("You can only see your own nicknames.\n");
+
+	if (!objectp(player = find_player(lower_case(cmd))))
+	    return notify_fail("Player "+ capitalize(cmd) +" is not present.\n");
+
+	n_list = player->query_nicknames();
+	list = sort_array(m_indices(n_list));
+	size = sizeof(list);
+	index = -1;
+
+	write("The nicknames of " + capitalize(cmd) + " are:\n\n");
+	while(++index < size)
+	    write(sprintf("%-8s: %s\n", list[index], n_list[list[index]]));
+
+	return 1;
+    }
+
+    /* Replace the nickname if is already exists.*/
+    if (m_nick_list[a])
+    {
+	write("Replacing previous nick \"" + a + "\" which was nicknamed " +
+	    "to \"" + m_nick_list[a] + "\".\n");
+    }
+    /* See whether there is room for yet another nickname. */
+    else if (m_sizeof(m_nick_list) >= NICK_LENGTH)
+    {
+	write("Sorry, the nickname list is full! The maximum is " +
+	    NICK_LENGTH + " Use \"unnick <cmd>\" to make some space.\n");
+	return 1;
+    }
+
+    m_nick_list[a] = cmd;
+    write("Nickname \"" + a + "\" added to \"" + cmd + "\"\n");
+    return 1;
+}
+
+/*
+ * Function name: unnick
+ * Description  : Remove a nickname.
+ * Arguments    : string str - the command line argument.
+ * Returns      : int - 1/0 - success/failure.
+ */
+static nomask int
+unnick(string str)
+{
+    if (!strlen(str))
+	return notify_fail("Syntax: unnick <nickname>\n");
+
+    if (!m_nick_list[str]) 
+	return notify_fail("Nickname \""+ str +"\" does not exist!\n");
+
+    write("Nickname \""+ str +"\" removed. Used to be: "+ m_nick_list[str] +".\n");
+    m_delkey(m_nick_list, str);
     return 1;
 }
