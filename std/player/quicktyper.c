@@ -87,7 +87,8 @@ modify_command(string str)
     }
 
     /* Resolve nicknames. */
-    if ((words[0] != "unnick") && m_sizeof(m_nick_list))
+    if (m_sizeof(m_nick_list) &&
+        (words[0] != "unnick") && (words[0] != "nick"))
     {
 	int size = sizeof(words);
 
