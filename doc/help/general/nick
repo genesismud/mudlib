@@ -21,5 +21,9 @@ EXAMPLE
 	longsword' if you use 'gls' in a command, for instance when typing
 	'exa gls' or 'give gls to dwarf'.
 
+CAVEAT
+	The nick only works when it is a whole word without the interpunction.
+	A command like 'say See my gls.' will not work due to the period.
+
 SEE ALSO
 	alias, quicktyper, unnick
