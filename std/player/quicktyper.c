@@ -472,7 +472,7 @@ nick(string str)
 	if (!objectp(player = find_player(lower_case(cmd))))
 	    return notify_fail("Player "+ capitalize(cmd) +" is not present.\n");
 
-	n_list = player->query_nicknames();
+	n_list = player->query_nicks();
 	list = sort_array(m_indices(n_list));
 	size = sizeof(list);
 	index = -1;
