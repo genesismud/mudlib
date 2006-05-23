@@ -14,6 +14,6 @@
  *
  * An alternative would be to include <files.h> and then do:
  *
- *     oblist = (object *)COMMAND_DRIVER->parse_this(args);
+ *     oblist = (object *)COMMAND_DRIVER->parse_this(s, p [, ...]);
  */
 
