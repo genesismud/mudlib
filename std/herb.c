@@ -508,6 +508,14 @@ ingest_one_thing(object ob)
     vb=query_verb();
     am = (int) ob->query_amount();
     
+    if (this_player()->query_prop(LIVE_I_HERB_EFFECT) > time() - F_HERB_INTERVAL)
+    {
+        write(capitalize(LANG_ADDART(ob->short())) +
+            " is too much for you.\n");
+        gFail += ({ ob });
+        return 0;
+    }
+    
     if (vb=="eat")
     {
         if (!this_player()->eat_food(am))
@@ -529,6 +537,7 @@ ingest_one_thing(object ob)
 void
 destruct_object()
 {
+    this_player()->add_prop(LIVE_I_HERB_EFFECT, time());
     if (ate_it && ingest_verb != "eat")
     {
 	ate_non_eat_herb();

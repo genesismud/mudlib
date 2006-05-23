@@ -133,6 +133,7 @@
  */
 #define F_EXP_HERBSEARCH(difficulty) \
     (250 + (25 * (((difficulty) > 10) ? 10 : (difficulty))))
+#define F_HERB_INTERVAL             60
 
 /*
  * Thievery.
@@ -198,9 +199,15 @@
 #define F_FATIGUE_FORMULA(stuffed, max) (5 + (stuffed) * 45 / (max))
 
 /* Formula to heal mana with respect to spellcasting, int and intox */
+/*
+ * Old formula, pre 2006-05-23
 #define F_MANA_HEAL_FORMULA(sc,pintox,intel) \
     (((sc) < 31) ? 2 : ((((((sc) - 30) * MAX_MANA_UPDATE * (intel)) / \
 	1000 + 5) * (100 - (pintox)) / 1000) + 2))
+*/
+#define F_MANA_HEAL_FORMULA(sc, pintox, wis) \
+    (1 + ((wis / 10) * (100 - (pintox) / 2)) * ((sc) > 30 ? (sc) : 30) \
+     / 10000)
 
 /*
  * How long can a temporary stat addition be? (In heartbeats)

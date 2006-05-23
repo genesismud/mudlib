@@ -655,20 +655,20 @@ public int
 query_mana()
 {
     int n;
-    int intel;
+    int wis;
     int sc;
     int pintox;
 
     n = (time() - mana_time) / F_INTERVAL_BETWEEN_MANA_HEALING;
     if (n > 0)
     {
-        intel = query_stat(SS_INT);
+        wis = query_stat(SS_WIS);
         pintox = query_intoxicated();
         pintox = ((((pintox < 0) ? 0 : pintox) * 100) / query_prop(LIVE_I_MAX_INTOX));
         sc = query_skill(SS_SPELLCRAFT);
 
         mana_time += n * F_INTERVAL_BETWEEN_MANA_HEALING;
-        add_mana(n * F_MANA_HEAL_FORMULA(sc, pintox, intel));
+        add_mana(n * F_MANA_HEAL_FORMULA(sc, pintox, wis));
     }
 
     return mana;
