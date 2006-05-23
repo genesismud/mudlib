@@ -528,16 +528,18 @@ ingest_one_thing(object ob)
 	/* Test if you ate a non_eat herb */
 	if (vb != ob->query_ingest_verb())
 	    ob->set_ate_it();
+
+        this_player()->add_prop(LIVE_I_HERB_EFFECT, time());
 	return 1;
     }
     
+    this_player()->add_prop(LIVE_I_HERB_EFFECT, time());
     return 1;
 }
 
 void
 destruct_object()
 {
-    this_player()->add_prop(LIVE_I_HERB_EFFECT, time());
     if (ate_it && ingest_verb != "eat")
     {
 	ate_non_eat_herb();
