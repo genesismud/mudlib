@@ -134,6 +134,7 @@
 #define LIVE_I_NO_SCRY          "_live_m_no_scry"
 #define LIVE_M_NO_SCRY          "_live_m_no_scry"
 #define LIVE_AO_SPARRING        "_live_ao_sparring"
+#define LIVE_I_HERB_EFFECT      "_live_i_herb_effect"
 
 /* *********************************************************
  * Magic properties
