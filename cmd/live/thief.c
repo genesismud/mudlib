@@ -592,10 +592,10 @@ perform_backstab(string str, object whom)
             (tmp[0] < 1 ? "tries to stab " : "stabs ") +
             "your " + tmp[1] + " from behind, " + one + ".\n");
 
+        weapon->did_hit(1, tmp[1], tmp[0], ob, W_IMPALE, tmp[2], tmp[3]);
+        
         this_player()->reveal_me(1);
     }
-
-    weapon->did_hit(1, tmp[1], tmp[0], ob, W_IMPALE, tmp[2], tmp[3]);
 
     if (ob->query_hp() < 1)
     {
