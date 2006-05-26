@@ -10,7 +10,7 @@
 #include <options.h>
 
 #define ALIAS_LENGTH (query_wiz_level() ? 45 : 30)
-#define NICK_LENGTH  (query_wiz_level() ? 20 : 10)
+#define NICK_LENGTH  (query_wiz_level() ? 30 : 30)
 
 /*
  * Global variables, all static, i.e. non-savable.
