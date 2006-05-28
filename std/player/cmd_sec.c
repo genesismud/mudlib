@@ -325,7 +325,7 @@ save_character(string str)
 nomask int
 quit(string str)
 {
-    object *inv;
+    object *inv, *deep;
     int    index, loc, size;
 
     if ((index = (query_prop(PLAYER_I_AUTOLOAD_TIME) - time())) > 0)
@@ -356,11 +356,6 @@ quit(string str)
         }
     }
 
-    tell_object(this_object(), "Saving " + query_name() + ".\n");
-    say( ({ METNAME + " leaves the realms.\n",
-	    TART_NONMETNAME + " leaves the realms.\n",
-	    "" }) );
-    
     /* For mortals, always save the 'true' race. */
     if (!query_wiz_level())
     {
@@ -375,55 +370,55 @@ quit(string str)
         remove_prop(TEMP_BACKUP_BRIEF_OPTION);
         set_option(OPT_BRIEF, 0);
     }
-    
-    save_me(0);
-    
+
+    /* Move all objects of the player to the top level. This prevents loss of
+     * items when they are in a container that is recoverable. */
     inv = deep_inventory(this_object());
-    
-    /* Only mortals drop stuff when they quit. */
+    deep = inv - all_inventory(this_object());
+    deep->move(this_object(), 1);
+
+    /* Find out which objects are non-recoverable, non-recoverable and
+     * (not un)droppable. For mortals, we try to drop those. */
     if (!query_wiz_level())
     {
-	index = -1;
-	size = sizeof(inv);
-	while(++index < size)
-	{
-	    /* Objects that are neither recoverable, nor autoloading
- 	     * should not be destructed if they are droppable.
-	     */
-	    if (!((loc && inv[index]->check_recoverable()) ||
-		  stringp(inv[index]->query_auto_load()) ))
-	    {
-		/* However, we only try to drop it if the player is
-		 * carrying it on the top level.
-		 */
-		if ( (environment(inv[index]) == this_object()) &&
-		    !(inv[index]->query_prop(OBJ_M_NO_DROP)) )
-		{
-		    command("$drop " + OB_NAME(inv[index]));
-		    inv[index] = 0;
-		}
-	    }
-	}
-	
-	inv = filter(inv, objectp);
+        inv = filter(inv, &not() @ &->query_auto_load());
+        if (loc)
+            inv = filter(inv, &not() @ &->check_recoverable());
+        inv = filter(inv, &not() @ &->query_prop(OBJ_M_NO_DROP));
+        
+        index = -1;
+        size = sizeof(inv);
+        while(++index < size)
+        {
+            command("$drop " + OB_NAME(inv[index]));
+        }
+
+        /* Fill the array again with everything the player carried. No need
+         * for recursion as we know all is at the top level already. */
+        inv = all_inventory(this_object());
     }
+
+    /* Save whatever needs to be saved. */
+    tell_object(this_object(), "Saving " + query_name() + ".\n");
+    save_me(0);
+
+    say( ({ METNAME + " leaves the realms.\n",
+	    TART_NONMETNAME + " leaves the realms.\n",
+	    "" }) );
+    
     
     /* Remove the objects. If there are some persistant objects left,
      * hammer hard and they will go away eventually.
      */
+    inv->remove_object();
+    inv = filter(inv, objectp);
+
     size = sizeof(inv);
     index = -1;
     while(++index < size)
     {
-	if (objectp(inv[index]))
-	{
-	    inv[index]->remove_object();
-	}
-	if (objectp(inv[index]))
-	{
-	    /* This is the hammer. */
-	    SECURITY->do_debug("destroy", inv[index]);
-	}
+        /* This is the hammer. */
+        SECURITY->do_debug("destroy", inv[index]);
     }
     
     this_object()->remove_object();
