@@ -199,35 +199,58 @@ catch_tell(string str)
 }
 
 /*
- * Function name: catch_msg
- * Description:   This function is called for every normal message sent
- *                to this living.
- * Arguments:     str:       Message to tell the living
- *                from_player: The object that generated the message
- *			     This is only valid if the message is on the
- *			     form ({ "met message", "unmet message",
- *				     "unseen message" })
+ * Function name: catch_vbfc
+ * Description  : This function is called for every normal message sent
+ *                to this living. This used to be called catch_msg().
+ * Arguments    : mixed str - the message to tell the player. The message
+ *                    can be a string or an array in the form
+ *                    ({ "met message", "unmet message", "unseen message" })
+ *                object from_player - the originator of the message in case
+ *                    the message is in array form.
  */
-public void 
-catch_msg(mixed str, object from_player)
+public void
+catch_vbfc(mixed str, object from_player = 0)
 {
     if (!query_interactive(this_object()) && !query_tell_active())
-	return;
-
+    {
+        return;
+    }
+ 
     if (pointerp(str))
     {
-	if (!from_player)
-	    from_player = this_player();
-	if ((sizeof(str) > 2) && (!CAN_SEE_IN_ROOM(this_object()) ||
-		!CAN_SEE(this_object(), from_player)))
-	    catch_tell(str[2]);
-	else if (this_object()->query_met(from_player))
-	    catch_tell(str[0]);
-	else 
-	    catch_tell(str[1]);
+        if (!from_player)
+        {
+            from_player = this_player();
+        }
+        if ((sizeof(str) > 2) &&
+            (!CAN_SEE_IN_ROOM(this_object()) ||
+                !CAN_SEE(this_object(), from_player)))
+        {
+            catch_tell(str[2]);
+        }
+        else if (this_object()->query_met(from_player))
+        {
+            catch_tell(str[0]);
+        }
+        else
+        {
+            catch_tell(str[1]);
+        }
     }
     else
-	catch_tell(process_string(str, 1));
+    {
+        catch_tell(process_string(str, 1));
+    }
+}
+
+/*
+ * Function name: catch_msg
+ * Description  : See catch_vbfc.
+ */
+public void
+catch_msg(mixed str, object from_player = 0)
+{
+    catch_vbfc(str, from_player);
 }
 
 /*

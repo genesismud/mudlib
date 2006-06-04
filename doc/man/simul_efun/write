@@ -6,7 +6,7 @@ SYNOPSIS
 
 DESCRIPTION
 	Writes data to the current 'command giver', ie the object returned by
-	this_player. Data is normally text.	
+	this_player. Data is normally text. The text is not checked for VBFC.
 
 SEE ALSO
-	tell_object, this_player, set_this_player, this_interactive
+	tell_object, this_player, write_vbfc

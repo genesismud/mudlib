@@ -60,6 +60,12 @@ query_prevent_shadow()
 void 
 write(mixed data) = "write";
 
+void
+write_vbfc(mixed data)
+{
+    this_player()->catch_vbfc(data, 0);
+}
+
 void 
 tell_object(object liveob, string message) 
 {

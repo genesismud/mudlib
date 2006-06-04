@@ -59,7 +59,7 @@ inherit "/std/container";
 #include "/std/living/wield.c"
 #include "/std/living/width_height.c"
 
-static int tell_active_flag;      /* Flag to check in catch_msg() */
+static int tell_active_flag;      /* Flag to check in catch_vbfc() */
 
 /*
  * Function name: query_init_master
@@ -209,17 +209,17 @@ can_see_in_room()
 }
 
 /*
- * Function name: catch_msg
- * Description:   This function is called for every normal message sent
- *                to this living.
- * Arguments:     str:       Message to tell the player
- *                from_player: The object that generated the message
- *			     This is only valid if the message is on the
- *			     form ({ "met message", "unmet message",
- *				     "unseen message" })
+ * Function name: catch_vbfc
+ * Description  : This function is called for every normal message sent
+ *                to this living. This used to be called catch_msg().
+ * Arguments    : mixed str - the message to tell the player. The message
+ *                    can be a string or an array in the form
+ *                    ({ "met message", "unmet message", "unseen message" })
+ *                object from_player - the originator of the message in case
+ *                    the message is in array form.
  */
 public void 
-catch_msg(mixed str, object from_player)
+catch_vbfc(mixed str, object from_player = 0)
 {
     if (!query_interactive(this_object()) && !query_tell_active())
     {
@@ -251,6 +251,16 @@ catch_msg(mixed str, object from_player)
     {
 	write_socket(process_string(str, 1));
     }
+}
+
+/*
+ * Function name: catch_msg
+ * Description  : See catch_vbfc.
+ */
+public void 
+catch_msg(mixed str, object from_player = 0)
+{
+    catch_vbfc(str, from_player);
 }
 
 /*
