@@ -91,7 +91,8 @@ desc_many(object *oblist)
  *                acting towards a target. Note that if you omit the
  *                optional second string, a period is automatically added.
  *                A newline is always added. Note the position of the
- *                spaces in the examples.
+ *                spaces in the examples. Possessive form on the target(s)
+ *                is handled automatically.
  * Example      : actor("You smile at", oblist);
  *
  *                You smile at someone.
@@ -107,6 +108,7 @@ desc_many(object *oblist)
  * Arguments    : string str     - the first part of the message to print.
  *                object *oblist - the targets of the emotion.
  *                string str1    - an optional second part of the message.
+ *                                 Start with "'s" for possessive target form.
  */
 public varargs void
 actor(string str, object *oblist, string str1)
@@ -143,14 +145,16 @@ actor(string str, object *oblist, string str1)
 /*
  * Function name: target
  * Description  : Print the message that the target of an action gets. Note
- *                that a newline is automatically added.
+ *                that a newline is added by this routine. Possessive form on
+ *                on the target(s) is automatically handled.
  * Example      : target(" hugs you.", oblist);
  *
  *                Someone hugs you.
  *                Mrpr hugs you.
  *                The darkly robed human wizard hugs you.
  *
- * Arguments    : string str     - the message to print.
+ * Arguments    : string str     - the message to print. Start with "'s" for
+ *                                 possessive actor form.
  *                object *oblist - the people to get the message.
  *                string adverb  - the optional adverb if one was used.
  *                int cmd_attr   - the action attributes (from cmdparse.h)
@@ -221,17 +225,19 @@ targetbb(string str, object *oblist, string adverb = "", int cmd_attr = 0)
  * Function name: all
  * Description  : Print the message that all onlookers get when there is
  *                only one person acting. Ie. those who are watching someone
- *                do something alone. Note that a newline is automatically
- *                added.
+ *                do something alone. Note that a newline is always added by
+ *                this routine added. Possessive form on the actor is handled
+ *                automatically.
  * Example      : all(" screams loudly.");
  *
  *                Someone screams loudly.
  *                Fatty screams loudly.
  *                The big fat gnome wizard screams loudly.
  *
- * Arguments    : string str    - the message to print, starting with a space.
+ * Arguments    : string str    - the message to print, starting with a space,
+ *                                or start with "'s" for possessive actor form.
  *                string adverb - the optional adverb if one was used.
- *                int cmd_attr   - the action attributes (from cmdparse.h)
+ *                int cmd_attr  - the action attributes (from cmdparse.h)
  */
 public varargs void
 all(string str, string adverb = "", int cmd_attr = 0)
@@ -288,6 +294,8 @@ allbb(string str, string adverb = "", int cmd_attr = 0)
  * Description  : Print the message that all onlookers get when two players
  *                interact. A newline is always added. If the second,
  *                optional argument is omitted, a period is also added.
+ *                Possessive form on the actor and target(s) are handled
+ *                automatically.
  * Example      : all2act(" tackles", oblist);
  *
  *                Someone tackles Mrpr.
@@ -296,15 +304,17 @@ allbb(string str, string adverb = "", int cmd_attr = 0)
  *                The big fat gnome wizard tackles Mrpr.
  *                (etc for the other unseen/met/nonmet combinations)
  *
- *                all2act(" kicks", oblist, " in the groin.");
+ *                all2act(" pokes", oblist, " in the ribs.");
  *
- *                Fatty kicks the darkly robed human wizard in the groin.
+ *                Fatty pokes the darkly robed human wizard in the ribs.
  *                (etcetera.)
  *
  * Arguments    : string str     - the first part of the message to print.
+ *                                 Start with "'s" for possessive actor form.
  *                object *oblist - the targets of the emotion, NOT the people
  *                                 who are watching.
  *                string str1    - the optional second part of the message.
+ *                                 Start with "'s" for possessive target form.
  *                string adverb  - the optional adverb if one was used.
  *                int cmd_attr   - the action attributes (from cmdparse.h)
  */
@@ -442,6 +452,7 @@ public object *
 check_block_action(object *targets, int cmd_attr)
 {
     parse_msg = "";
+
     return filter(targets, &cmd_access(, this_player(), cmd_attr));
 }
 
