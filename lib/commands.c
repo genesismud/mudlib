@@ -8,6 +8,7 @@
  */
 
 #pragma no_clone
+#pragma no_shadow
 #pragma save_binary
 #pragma strict_types
 
@@ -17,9 +18,10 @@
 #include <filter_funs.h>
 #include <language.h>
 #include <macros.h>
-#include <std.h>
 #include <stdproperties.h>
-#include <subloc.h>
+
+/* Prototypes. */
+public object * check_block_action(object *targets, int cmd_attr);
 
 /*
  * Global variable.
@@ -36,7 +38,7 @@ static string parse_msg = "";
  * Arguments    : object ob - the living object.
  * Returns      : string - the macro QTNAME applied to the object.
  */
-string
+public string
 desc_vbfc(object ob)
 {
     return QTNAME(ob);
@@ -49,16 +51,24 @@ desc_vbfc(object ob)
  *                possible to treat macros like functionpointers.
  * Arguments    : object ob - the object.
  *                object for_obj - the looking object.
+ *                int poss - return a possessive form string?
  * Returns      : string - the macro LANG_THESHORT applied to the object.
  */
-string
-desc_theshort(object ob, object for_ob)
+public varargs string
+desc_theshort(object ob, object for_ob, int poss)
 {
     if (ob->query_prop(HEAP_I_IS))
     {
-        return ob->short(for_ob);
+	if (!poss)
+	    return ob->short(for_ob);
+	else
+	    return LANG_POSS(ob->short(for_ob));
     }
-    return "the " + ob->short(for_ob);
+    else if (!poss)
+    {
+	return "the " + ob->short(for_ob);
+    }
+    return "the " + LANG_POSS(ob->short(for_ob));
 }
 
 /*
@@ -69,7 +79,7 @@ desc_theshort(object ob, object for_ob)
  * Arguments    : object *oblist - the objects to process and link.
  * Returns      : string - a compound description.
  */
-string
+public string
 desc_many(object *oblist)
 {
     return COMPOSITE_WORDS(map(oblist, desc_vbfc));
@@ -98,20 +108,33 @@ desc_many(object *oblist)
  *                object *oblist - the targets of the emotion.
  *                string str1    - an optional second part of the message.
  */
-varargs void
+public varargs void
 actor(string str, object *oblist, string str1)
 {
+    int poss;
+
+    if (strlen(str1) && (str1[..1] == "'s"))
+    {
+	poss = 1;
+	str1 = str1[2..];
+    }
+
     if (living(oblist[0]))
     {
-        write(str + " " + 
-            COMPOSITE_WORDS(map(oblist, &->query_the_name(this_player()))) +
-            (strlen(str1) ? (str1 + "\n") : ".\n"));
+	function oname = (poss == 0 ?
+	  &->query_the_name(this_player()) :
+	  &->query_the_possessive_name(this_player()));
+
+	write(str + " " +
+	    COMPOSITE_WORDS(map(oblist, oname)) +
+	    (strlen(str1) ? (str1 + "\n") : ".\n"));
     }
     else
     {
-        write(str + " " +
-            COMPOSITE_WORDS(map(oblist, &desc_theshort(, this_player()))) +
-            (strlen(str1) ? (str1 + "\n") : ".\n"));
+	write(str + " " +
+	    COMPOSITE_WORDS(map(oblist,
+		    &desc_theshort(, this_player(), poss))) +
+	    (strlen(str1) ? (str1 + "\n") : ".\n"));
     }
 
     this_player()->emote_hook_actor(query_verb(), oblist);
@@ -132,32 +155,53 @@ actor(string str, object *oblist, string str1)
  *                string adverb  - the optional adverb if one was used.
  *                int cmd_attr   - the action attributes (from cmdparse.h)
  */
-varargs void
+public varargs void
 target(string str, object *oblist, string adverb = "", int cmd_attr = 0)
 {
-    object *players;
+    int size, poss;
+    object *players, *all_oblist;
 
     /* Non-living targets see or feel no emotes, but we can still trigger
      * on it, so call the hook.
      */
     if (!living(oblist[0]))
     {
-        oblist->emote_hook(query_verb(), this_player(), adverb, oblist,
-            cmd_attr, 1);
-        return;
+	oblist->emote_hook(query_verb(), this_player(), adverb, oblist,
+	    cmd_attr, 1);
+	return;
+    }
+
+    if (str[..1] == "'s")
+    {
+	poss = 1;
+	str = str[2..];
+    }
+
+    all_oblist = oblist;
+
+    /* Who gets to see the emote */
+    if (ACTION_BLIND & cmd_attr)
+    {
+	oblist = FILTER_CAN_SEE_IN_ROOM(oblist);
+	oblist = FILTER_IS_SEEN(this_player(), oblist);
     }
 
     /* Give only a hook to NPC's. */
     players = FILTER_PLAYERS(oblist);
 
     /* Tell the message to players. */
-    if (sizeof(players))
+    if (size = sizeof(players))
     {
-        players->catch_msg(QCTNAME(this_player()) + str + "\n");
+	function name = (poss == 0 ?
+	  this_player()->query_The_name :
+	  this_player()->query_The_possessive_name);
+
+	while(--size >= 0)
+	    players[size]->catch_tell(name(players[size]) + str + "\n");
     }
 
-    oblist->emote_hook(query_verb(), this_player(), adverb, oblist,
-            cmd_attr, 1);
+    oblist->emote_hook(query_verb(), this_player(), adverb, all_oblist,
+	cmd_attr, 1);
 }
 
 /*
@@ -167,38 +211,10 @@ target(string str, object *oblist, string adverb = "", int cmd_attr = 0)
  * Example      : targetbb(" smiles happily.", oblist);
  * Arguments    : see target().
  */
-varargs void
+public varargs void
 targetbb(string str, object *oblist, string adverb = "", int cmd_attr = 0)
 {
-    object *players, *all_oblist;
-
-    /* Non-living targets see or feel no emotes, but we can still trigger
-     * on it, so call the hook.
-     */
-    if (!living(oblist[0]))
-    {
-        oblist->emote_hook(query_verb(), this_player(), adverb, oblist,
-            cmd_attr, 1);
-        return;
-    }
-
-    all_oblist = oblist;
-
-    /* Give only a hook to NPC's. */
-    oblist = FILTER_CAN_SEE_IN_ROOM(oblist);
-    oblist = FILTER_IS_SEEN(this_player(), oblist);
-    players = FILTER_PLAYERS(oblist);
-
-    /* Tell the message to players. Since we already parsed out the players
-     * that cannot see us, we can just use catch_msg().
-     */
-    if (sizeof(players))
-    {
-        players->catch_msg(QCTNAME(this_player()) + str + "\n");
-    }
-
-    oblist->emote_hook(query_verb(), this_player(), adverb, all_oblist,
-        cmd_attr, 1);
+    target(str, oblist, adverb, cmd_attr | ACTION_BLIND);
 }
 
 /*
@@ -217,20 +233,38 @@ targetbb(string str, object *oblist, string adverb = "", int cmd_attr = 0)
  *                string adverb - the optional adverb if one was used.
  *                int cmd_attr   - the action attributes (from cmdparse.h)
  */
-varargs void
+public varargs void
 all(string str, string adverb = "", int cmd_attr = 0)
 {
-    int index = -1;
-    int size;
+    int size, poss;
     object *oblist, *players;
 
+    if (str[..1] == "'s")
+    {
+	poss = 1;
+	str = str[2..];
+    }
+
     oblist = FILTER_OTHER_LIVE(all_inventory(environment(this_player())));
+
+    if (ACTION_BLIND & cmd_attr)
+    {
+	oblist = FILTER_CAN_SEE_IN_ROOM(oblist);
+	oblist = FILTER_IS_SEEN(this_player(), oblist);
+    }
+
+    oblist  = check_block_action(oblist, cmd_attr);
     players = FILTER_PLAYERS(oblist);
 
     /* Tell the message to players. */
-    if (sizeof(players))
+    if (size = sizeof(players))
     {
-        oblist->catch_msg(QCTNAME(this_player()) + str + "\n");
+	function name = (poss == 0 ?
+	  this_player()->query_The_name :
+	  this_player()->query_The_possessive_name);
+
+	while(--size >= 0)
+	    players[size]->catch_tell(name(players[size]) + str + "\n");
     }
 
     oblist->emote_hook(query_verb(), this_player(), adverb, 0, cmd_attr, 0);
@@ -243,31 +277,10 @@ all(string str, string adverb = "", int cmd_attr = 0)
  * Example      : allbb(" smiles happily.");
  * Arguments    : see all().
  */
-varargs void
+public varargs void
 allbb(string str, string adverb = "", int cmd_attr = 0)
 {
-    int index = -1;
-    int size;
-    object *oblist, *players;
-
-    /* Since the function can_see_in_room() is only defined in livings, the
-     * filter FILTER_CAN_SEE_IN_ROOM will only return true for livings, so
-     * we don't have to test that ourselves.
-     */
-    oblist = FILTER_CAN_SEE_IN_ROOM(all_inventory(environment(this_player())) -
-        ({ this_player() }) );
-    oblist = FILTER_IS_SEEN(this_player(), oblist);
-    players = FILTER_PLAYERS(oblist);
-
-    /* Tell the message to players. Since we already parsed out the players
-     * that cannot see us, we can just use catch_msg().
-     */
-    if (sizeof(players))
-    {
-        players->catch_msg(QCTNAME(this_player()) + str + "\n");
-    }
-
-    oblist->emote_hook(query_verb(), this_player(), adverb, 0, cmd_attr, 0);
+    all(str, adverb, cmd_attr | ACTION_BLIND);
 }
 
 /*
@@ -295,48 +308,71 @@ allbb(string str, string adverb = "", int cmd_attr = 0)
  *                string adverb  - the optional adverb if one was used.
  *                int cmd_attr   - the action attributes (from cmdparse.h)
  */
-varargs void
+public varargs void
 all2act(string str, object *oblist, string str1, string adverb = "",
     int cmd_attr = 0)
 {
+    int    size, a_poss, o_poss;
     object *livings, *players;
-    int    size;
 
-    livings = FILTER_OTHER_LIVE(all_inventory(environment(this_player())) -
-        oblist);
-    if (!sizeof(livings))
+    livings = all_inventory(environment(this_player()));
+    livings = FILTER_OTHER_LIVE(livings - oblist);
+
+    if (ACTION_BLIND & cmd_attr)
     {
-        return;
+	livings = FILTER_CAN_SEE_IN_ROOM(livings);
+	livings = FILTER_IS_SEEN(this_player(), livings);
+    }
+
+    if (!sizeof(livings))
+	return;
+
+    if (str[..1] == "'s")
+    {
+	a_poss = 1;
+	str = str[2..];
+    }
+
+    if (strlen(str1) &&
+	(str1[..1] == "'s"))
+    {
+	o_poss = 1;
+	str1 = str1[2..];
     }
 
     players = FILTER_PLAYERS(livings);
     if (size = sizeof(players))
     {
-        str1 = (strlen(str1) ? (str1 + "\n") : ".\n");
-        if (living(oblist[0]))
-        {
-            while(--size >= 0)
-            {
-                players[size]->catch_tell(
-                    this_player()->query_The_name(players[size]) + str +
-                    " " + COMPOSITE_WORDS(map(oblist,
-                    &->query_the_name(players[size]))) + str1);
-            }
-        }
-        else
-        {
-            while(--size >= 0)
-            {
-                players[size]->catch_tell(
-                    this_player()->query_The_name(players[size]) + str +
-                    " " + COMPOSITE_WORDS(map(oblist,
-                    &desc_theshort(, players[size]))) + str1);
-            }
-        }
+	function name = (a_poss == 0 ?
+	    this_player()->query_The_name :
+	    this_player()->query_The_possessive_name);
+
+	str1 = (strlen(str1) ? (str1 + "\n") : ".\n");
+	if (living(oblist[0]))
+	{
+	    while(--size >= 0)
+	    {
+		function oname = (o_poss == 0 ?
+		    &->query_the_name(players[size]) :
+		    &->query_the_possessive_name(players[size]));
+
+		players[size]->catch_tell(name(players[size]) + str +
+		  " " + COMPOSITE_WORDS(map(oblist, oname)) + str1);
+	    }
+	}
+	else
+	{
+	    while(--size >= 0)
+	    {
+		players[size]->catch_tell(name(players[size]) + str +
+		    " " + COMPOSITE_WORDS(map(oblist,
+		    &desc_theshort(, players[size], o_poss))) + str1);
+	    }
+	}
     }
 
     livings->emote_hook_onlooker(query_verb(), this_player(), adverb, oblist,
-        cmd_attr);
+	cmd_attr);
 }
 
 /*
@@ -346,53 +382,13 @@ all2act(string str, object *oblist, string str1, string adverb = "",
  *                cannot see that person. For more information. See all2act.
  * Arguments    : See all2act.
  */
-varargs void
+public varargs void
 all2actbb(string str, object *oblist, string str1, string adverb = "",
     int cmd_attr = 0)
 {
-    object *livings, *players;
-    int    size;
-
-    /* This filter will also reject non-livings because non-livings cannot
-     * see in the room.
-     */
-    livings = FILTER_CAN_SEE_IN_ROOM(all_inventory(environment(this_player())) -
-        oblist - ({ this_player() }) );
-    livings = FILTER_IS_SEEN(this_player(), livings);
-    if (!sizeof(livings))
-    {
-        return;
-    }
-
-    players = FILTER_PLAYERS(livings);
-    if (size = sizeof(players))
-    {
-        str1 = (strlen(str1) ? (str1 + "\n") : ".\n");
-        if (living(oblist[0]))
-        {
-            while(--size >= 0)
-            {
-                players[size]->catch_tell(
-                    this_player()->query_The_name(players[size]) + str +
-                    " " + COMPOSITE_WORDS(map(oblist,
-                    &->query_the_name(players[size]))) + str1);
-            }
-        }
-        else
-        {
-            while(--size >= 0)
-            {
-                players[size]->catch_tell(
-                    this_player()->query_The_name(players[size]) + str +
-                    " " + COMPOSITE_WORDS(map(oblist,
-                    &desc_theshort(, players[size]))) + str1);
-            }
-        }
-    }
-
-    livings->emote_hook_onlooker(query_verb(), this_player(), adverb, oblist,
-        cmd_attr);
+    all2act(str, oblist, str1, adverb, cmd_attr | ACTION_BLIND);
 }
+
 
 /*
  * Functon name: cmd_access
@@ -402,7 +398,7 @@ all2actbb(string str, object *oblist, string str1, string adverb = "",
  *               int cmd_attr  - the command's attributes (from cmdparse.h)
  * Returns:      1 - command not blocked
  *               0 - command blocked
- */ 
+ */
 public int
 cmd_access(object ob, object for_obj, int cmd_attr)
 {
@@ -411,21 +407,21 @@ cmd_access(object ob, object for_obj, int cmd_attr)
 
     if (!(env = environment(for_obj)))
     {
-        return 1;
+	return 1;
     }
 
     if (!(acs = env->block_action(query_verb(), ob, for_obj, cmd_attr)))
     {
-        if (!(acs = ob->block_action(query_verb(), for_obj, cmd_attr)))
-        {
-            return 1;
-        }
+	if (!(acs = ob->block_action(query_verb(), for_obj, cmd_attr)))
+	{
+	    return 1;
+	}
     }
 
     if (stringp(acs))
     {
-         parse_msg += acs;
-         return 0;
+	parse_msg += acs;
+	return 0;
     }
 
     return !!acs;
@@ -456,56 +452,67 @@ check_block_action(object *targets, int cmd_attr)
  * Arguments    : see parse_this(), except cmd_attr isn't passed along.
  * Returns      : see parse_this()
  */
-object *
+public object *
 parse_this_one(string str, string form, int allow_self)
 {
     object *oblist;
 
     if (str == "enemy")
     {
-        oblist = ({ this_player()->query_attack() });
-        if (!objectp(oblist[0]) ||
-            !CAN_SEE(this_player(), oblist[0]))
-        {
-            return ({ });
-        }
+	oblist = ({ this_player()->query_attack() });
+	if (!objectp(oblist[0]) ||
+	    !CAN_SEE(this_player(), oblist[0]))
+	{
+	    return ({ });
+	}
 
-        return oblist;
+	return oblist;
     }
 
     if (str == "team")
     {
-        oblist = this_player()->query_team_others();
-        oblist = FILTER_PRESENT(oblist);
-        oblist = FILTER_CAN_SEE(oblist, this_player());
+	oblist = this_player()->query_team_others();
+	oblist = FILTER_PRESENT(oblist);
+	oblist = FILTER_CAN_SEE(oblist, this_player());
 
-        return oblist;
+	return oblist;
     }
 
     /* Some emotes may be performed on the actor himself. */
     if (allow_self &&
-        ((str == "me") ||
-         (str == "myself") ||
-         (str == this_player()->query_real_name())))
+	((str == "me") ||
+	 (str == "myself") ||
+	 (str == this_player()->query_real_name())))
     {
-        return ({ this_player() });
+	return ({ this_player() });
     }
 
     /* No objects found matching 'form'. */
     if (!parse_command(str, environment(this_player()), form, oblist))
     {
-        return ({ });
+	return ({ });
+    }
+
+    /* For the '%o' option which only returns a single object. */
+    if (objectp(oblist))
+    {
+	oblist = ({ oblist });
+
+	if (oblist[0] == this_player())
+	    return ({ });
+	else
+	    return oblist;
     }
 
     /* Use NORMAL_ACCESS to for instance get the 'second dwarf'. Filter for
      * livings only if the argument is "[preoposition ]all".
-     */ 
+     */
     oblist = NORMAL_ACCESS(oblist - ({ this_player() }), 0, 0) - ({ 0 });
 
     if ((str == "all") ||
-        (str[-4..] == " all"))
+	(str[-4..] == " all"))
     {
-        oblist = FILTER_LIVE(oblist);
+	oblist = FILTER_LIVE(oblist);
     }
 
     return oblist;
@@ -518,7 +525,7 @@ parse_this_one(string str, string form, int allow_self)
  * Arguments    : see parse_this(), except cmd_attr isn't passed along.
  * Returns      : see parse_this()
  */
-object *
+public object *
 parse_this_and(string str, string form, int allow_self)
 {
     object *oblist = ({ });
@@ -529,7 +536,7 @@ parse_this_and(string str, string form, int allow_self)
     /* Replace the word "and" by a comma. */
     if (wildmatch("* and *", str))
     {
-        str = implode(explode(str, " and "), ",");
+	str = implode(explode(str, " and "), ",");
     }
 
     parts = explode(str, ",");
@@ -537,12 +544,12 @@ parse_this_and(string str, string form, int allow_self)
     size = sizeof(parts);
     while(++index < size)
     {
-        while(parts[index][0] == ' ')
-        {
-            parts[index] = parts[index][1..];
-        }
+	while(parts[index][0] == ' ')
+	{
+	    parts[index] = parts[index][1..];
+	}
 
-        oblist += parse_this_one(parts[index], form, allow_self);
+	oblist += parse_this_one(parts[index], form, allow_self);
     }
 
     return oblist;
@@ -561,18 +568,17 @@ parse_this_and(string str, string form, int allow_self)
  *                    too. (optional)
  * Returns      : object * - an array of matching objects.
  */
-varargs object *
+public varargs object *
 parse_this(string str, string form, int cmd_attr = 0, int allow_self = 0)
 {
     object *oblist;
-    string target;
-    string except;
+    string target, except;
 
     /* Sanity checks. Player must be able to see in the room. */
     if (!strlen(str) ||
-        !CAN_SEE_IN_ROOM(this_player()))
+	!CAN_SEE_IN_ROOM(this_player()))
     {
-        return ({ });
+	return ({ });
     }
 
     str = lower_case(str);
@@ -580,22 +586,34 @@ parse_this(string str, string form, int cmd_attr = 0, int allow_self = 0)
     /* Replace the word "but" by the word "except". */
     if (wildmatch("* but *", str))
     {
-        str = implode(explode(str, " but "), " except ");
+	str = implode(explode(str, " but "), " except ");
     }
 
     if (sscanf(str, "%s except %s", target, except) == 2)
     {
-        oblist = parse_this_and(target, form, allow_self) -
-            parse_this_and(except, form, allow_self);
+	oblist = parse_this_and(target, form, allow_self) -
+	parse_this_and(except, form, allow_self);
     }
     else
     {
-        oblist = parse_this_and(str, form, allow_self);
+	oblist = parse_this_and(str, form, allow_self);
     }
 
-    oblist = check_block_action(oblist, cmd_attr);
+    return check_block_action(oblist, cmd_attr);
+}
 
-    return oblist;
+/*
+ * Function name: parse_live
+ * Description  : This is a wrapper around the parse_this() routine. It does
+ *                exactly the same and then filters the result for livings.
+ *                It is especially meant for using the %o form.
+ * Arguments    : see 'sman parse_this'
+ * Returns      : see 'sman parse_this'
+ */
+public varargs object *
+parse_live(string str, string form, int attr, int self)
+{
+    return filter(parse_this(str, form, attr, self), living);
 }
 
 /*
@@ -625,17 +643,16 @@ parse_this(string str, string form, int cmd_attr = 0, int allow_self = 0)
  *     parse_adverb("merri Mercade", "gracefully", 1)
  *          ({ "merri Mercade", "gracefully" })
  */
-string *
+public string *
 parse_adverb(string str, string def_adv, int trail)
 {
-    string *words;
-    string adverb;
     int    index;
+    string *words, adverb;
 
     /* No command line argument, so just return the default adverb. */
     if (!strlen(str))
     {
-        return ({ 0, def_adv });
+	return ({ 0, def_adv });
     }
 
     words = explode(str, " ");
@@ -643,31 +660,31 @@ parse_adverb(string str, string def_adv, int trail)
     /* Only one word. */
     if (sizeof(words) == 1)
     {
-        /* If there is a living present in the room that can be called by
-         * the name 'str', we assume that the player tries to point at the
-         * player. So if you 'smile grace', you are more likely to smile
-         * at a darling player named Grace in the room rather than to
-         * smile gracefully in general.
-         */
-        if (objectp(present(str, environment(this_player()))))
-        {
-            return ({ str, def_adv });
-        }
+	/* If there is a living present in the room that can be called by
+	 * the name 'str', we assume that the player tries to point at the
+	 * player. So if you 'smile grace', you are more likely to smile
+	 * at a darling player named Grace in the room rather than to
+	 * smile gracefully in general.
+	 */
+	if (objectp(present(str, environment(this_player()))))
+	{
+	    return ({ str, def_adv });
+	}
 
-        /* Now we check whether the word passed is an adverb. If so, the
-         * player probably only wants to use the adverb on a general emotion.
-         */
-        if (strlen(adverb = FULL_ADVERB(str)) ||
-            strlen(adverb = this_player()->full_adverb(str)))
-        {
-            return ({ 0, adverb });
-        }
+	/* Now we check whether the word passed is an adverb. If so, the
+	 * player probably only wants to use the adverb on a general emotion.
+	 */
+	if (strlen(adverb = FULL_ADVERB(str)) ||
+	  strlen(adverb = this_player()->full_adverb(str)))
+	{
+	    return ({ 0, adverb });
+	}
 
-        /* This case returns all other cases, ie, when a player uses 'all'
-         * to do something to all people, or uses a plural noun. That is
-         * obviously not triggered with the 'present' efun.
-         */
-        return ({ str, def_adv });
+	/* This case returns all other cases, ie, when a player uses 'all'
+	 * to do something to all people, or uses a plural noun. That is
+	 * obviously not triggered with the 'present' efun.
+	 */
+	return ({ str, def_adv });
     }
 
     /* Distinguish whether the adverb should follow the target or whether
@@ -676,9 +693,9 @@ parse_adverb(string str, string def_adv, int trail)
     index = (trail ? sizeof(words) - 1 : 0);
 
     if (strlen(adverb = FULL_ADVERB(words[index])) ||
-        strlen(adverb = this_player()->full_adverb(words[index])))
+	strlen(adverb = this_player()->full_adverb(words[index])))
     {
-        return ({ implode(exclude_array(words, index, index), " "), adverb });
+	return ({ implode(exclude_array(words, index, index), " "), adverb });
     }
 
     return ({ str, def_adv });
@@ -693,11 +710,10 @@ parse_adverb(string str, string def_adv, int trail)
  * Arguments    : see parse_adverb
  * Returns      : see parse_adverb, the description and /sys/adverbs.h
  */
-string *
+public string *
 parse_adverb_with_space(string str, string def_adv, int trail)
 {
     string *pa = parse_adverb(str, def_adv, trail);
-
     return ({ pa[0], ADD_SPACE_TO_ADVERB(pa[1]) });
 }
 
@@ -709,20 +725,20 @@ parse_adverb_with_space(string str, string def_adv, int trail)
  *                def_adv - the default adverb
  * Returns      : string  - the full adverb or NO_ADVERB
  */
-string
+public string
 check_adverb(string str, string def_adv)
 {
     string adverb;
 
     if (!strlen(str))
     {
-        return def_adv;
+	return def_adv;
     }
 
     if (strlen(adverb = FULL_ADVERB(str)) ||
-        strlen(adverb = this_player()->full_adverb(str)))
+	strlen(adverb = this_player()->full_adverb(str)))
     {
-        return adverb;
+	return adverb;
     }
 
     return NO_ADVERB;
@@ -737,8 +753,9 @@ check_adverb(string str, string def_adv)
  * Arguments    : see check_adverb
  * Returns      : see check_adverb, the description and <adverbs.h>
  */
-string
+public string
 check_adverb_with_space(string str, string def_adv)
 {
     return ADD_SPACE_TO_ADVERB(check_adverb(str, def_adv));
 }
+

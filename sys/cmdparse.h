@@ -259,6 +259,11 @@
  */
 #define ACTION_THREATENING 2048
 
+/* ACTION_BLIND - This action is not displayed towards those that
+ * cannot see the actor.
+ */
+#define ACTION_BLIND 4096
+
 /* CMDPARSE_PARALYZE_ALLOWED
  *
  * These commands should always be allowed, even if the person is paralyzed
