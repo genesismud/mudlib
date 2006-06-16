@@ -1275,6 +1275,30 @@ not(mixed x)
 }
 
 /*
+ * Function name: minmax
+ * Description  : Makes sure a value is within a certain range of a minimum
+ *                and defined maximum. The routine works on integers as well
+ *                as floats.
+ * Arguments    : mixed value - the value to test.
+ *                mixed mininum - the minimal value acceptable.
+ *                mixed maximum - the maximal value acceptable.
+ * Returns      : mixed - a value that adheres to: minimum <= value <= maximum
+ */
+mixed
+minmax(mixed value, mixed minimum, mixed maximum)
+{
+    if (value < minimum)
+    {
+        return minimum;
+    }
+    if (value > maximum)
+    {
+        return maximum;
+    }
+    return value;
+}
+
+/*
  * Function name: mkcompare_util
  * Description:   Compare two items and return a value meaningful for
  *                sort_array() (that is, 1, 0, or -1).
