@@ -23,13 +23,11 @@ private string m_in,            /* Messages when entering or leaving a room. */
                mm_out,          /* Message when leaving by teleport. */
                race_name,       /* The name of the race */
                title,           /* Title of the living */
-               *cmdsoul_list,   /* The command souls */
-               *tool_list,      /* Names of tool souls I want */
 #ifndef NO_ALIGN_TITLE
                al_title,        /* Alignment title of the living */
 #endif NO_ALIGN_TITLE
-               *textgivers;     /* Filenames of objects giving names for
-                                          stats, skills etc */
+               *cmdsoul_list,   /* The command souls */
+               *tool_list;      /* Names of tool souls I want */
 
 private int    hit_points,      /* The hitpoints of this lifeform. */
                mana,            /* The magic points of this lifeform */
@@ -440,56 +438,6 @@ query_al_title()
     return al_title;
 }
 #endif
-
-/*
- * Function name: add_textgiver
- * Description:   Add a filename of an object that gives skill/stat
- *                descriptions to the living.
- * Arguments:     obfile: the filename string
- */
-public void
-add_textgiver(string obfile)
-{
-    if (member_array(obfile, textgivers) < 0)
-    {
-        if (!sizeof(textgivers))
-            textgivers = ({ obfile });
-        else
-            textgivers += ({ obfile });
-    }
-}
-
-/*
- * Function name:   query_textgivers
- * Description:     Gives an array of filenames that give skill/stat
- *                  descriptions to the living
- * Returns:         The array with filenames
- */
-public string *
-query_textgivers()
-{
-    return (sizeof(textgivers) ? textgivers + ({}) : ({}));
-}
-
-/*
- * Function name:   remove_textgiver
- * Description:     Remove a filename of an object that gives skill/stat
- *                  from the living.
- * Arguments:       obfile: The filename of the object to remove.
- * Returns:         True if succesfully removed.
- */
-public int
-remove_textgiver(string obfile)
-{
-    int pos;
-
-    if ((pos = member_array(obfile, textgivers)) >= 0)
-    {
-        textgivers = exclude_array(textgivers, pos, pos);
-        return 1;
-    }
-    return 0;
-}
 
 /*
  * Function name: calculate_hp

@@ -338,6 +338,26 @@ update_stat(int stat)
 }
 
 /*
+ * Function name: update_last_stats
+ * Description  : Copies the current stats into the PLAYER_AI_LAST_STATS
+ *                property for later reference.
+ */
+public void
+update_last_stats()
+{
+    int index;
+    int *last_stats = allocate(SS_NO_EXP_STATS + 1);
+    
+    for (index = 0; index < SS_NO_EXP_STATS; index++)
+    {
+        last_stats[index] = query_base_stat(index);
+    }
+    last_stats[SS_NO_EXP_STATS] = query_average_stat();
+    
+    add_prop(PLAYER_AI_LAST_STATS, last_stats);
+}
+
+/*
  * Function name: update_acc_exp
  * Description  : After experience had been added to the total, this function
  *                spreads it over the acc_exp for each stat. An increase in
@@ -437,65 +457,6 @@ check_acc_exp()
 }
 
 /*
- * Function name: object_random
- * Description:   Get a random number depending on player object number
- *		  and the given object's object number. This number will
- *		  always be the same for a given object.
- * Arguments:	  ival - The random number interval,
- *		  obj - The object.
- * Returns:	  -1 if the given object doesn't exist.
- */
-public nomask int
-object_random(int ival, object obj)
-{
-    string *list, s_num;
-    int num;
-
-    if (!objectp(obj))
-	return -1;
-
-    list = explode(file_name(this_object()), "#");
-    if (sizeof(list) > 1)
-	s_num = list[1];
-    else
-	s_num = "0";
-    list = explode(file_name(obj), "#");
-    s_num += list[1];
-    sscanf(s_num, "%d", num);
-    
-    return random(ival, num);
-}
-
-/*
- * Function name: find_stat_describer
- * Description:   Finds the textgiver that describes a certain stat
- * Arguments:     stat: The number of the stat
- * Returns:       Objectpointer of object to call for whatever desc needed
- */
-public object
-find_stat_describer(int stat)
-{
-    string *obf;
-    int il;
-    object ob;
-
-    obf = query_textgivers();
-
-    for (il = 0; il < sizeof(obf); il++)
-    {
-	ob = find_object(obf[il]);
-	if (!ob)
-	{
-	    catch(obf[il]->teleledningsanka());
-	    ob = find_object(obf[il]);
-	}
-	if (ob && ob->desc_stat(stat))
-	    return ob;
-    }
-    return 0;
-}
-
-/*
  * Function name: set_guild_stat
  * Description  : This function allows the guildmaster to alter the
  *                experience a player has gathered in the guild. It can
@@ -551,37 +512,4 @@ public nomask int
 clear_guild_stat(int stat)
 {
     return set_guild_stat(stat, 1);
-}
-
-/*
- * Function name: find_skill_describer
- * Description:   Finds the textgiver that describes a certain skill
- * Arguments:     skill: The number of the skill
- * Returns:       Objectpointer of object to call for whatever desc needed
- */
-public object
-find_skill_describer(int stat)
-{
-    string *obf;
-    int il = -1;
-    int size;
-    object ob;
-
-    obf = query_textgivers();
-
-    size = sizeof(obf);
-    while(++il < size)
-    {
-	ob = find_object(obf[il]);
-	if (!ob)
-	{
-	    catch(obf[il]->teleledningsanka());
-	    ob = find_object(obf[il]);
-	}
-	if (ob && ob->desc_skill(stat))
-        {
-	    return ob;
-        }
-    }
-    return 0;
 }
