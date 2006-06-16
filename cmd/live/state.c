@@ -389,14 +389,7 @@ beauty_text(int  num, int sex)
         num = 99;
     if (num < 0)
         num = 0;
-    if (!pointerp(beauty_strings) ||
-        !pointerp(beauty_strings[sex]))
-    {
-        log_file("SKUMBUG", ctime(time()) + " " +
-                 file_name(this_object()) + "\n");
-        create();
-        return beauty_text(num, sex);
-    }
+
     return beauty_strings[sex][sizeof(beauty_strings[sex]) * num / 100];
 }
 

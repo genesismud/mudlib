@@ -145,10 +145,6 @@ query_cmdlist()
 public void 
 using_soul(object live)
 {
-/*
-    live->add_subloc(SUBLOC_MISCEXTRADESC, file_name(this_object()));
-    live->add_textgiver(file_name(this_object()));
-*/
 }
 
 /* **************************************************************************

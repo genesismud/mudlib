@@ -16,6 +16,7 @@
 #pragma strict_types
 
 #include <composite.h>
+#include <files.h>
 #include <macros.h>
 #include <language.h>
 #include <ss_types.h>
@@ -352,7 +353,6 @@ gs_hook_catch_error(string str)
 int
 gs_meditate(string str)
 {
-    object tgive;
     string primary_desc;
     string secondary_desc;
     int    index;
@@ -412,18 +412,10 @@ gs_meditate(string str)
             SD_STATLEVELS[level+1]) - SD_STATLEVELS[level];
         residue = ((SD_SIZEOF_ADVANCE_DESCS * residue) / spread);
 
-        tgive = this_player()->find_stat_describer(index);
-        if (objectp(tgive))
-        {
-            write("You are " + SD_ADVANCE_DESCS[residue] + " advancing to " +
-                (((level+1) == SD_NUM_STATLEVS) ?
-                ("epic " + SD_LONG_STAT_DESC[index]) :
-                tgive->query_stat_string(index, -(level+1))) + ".\n");
-        }
-        else
-        {
-            write("You are " + SD_ADVANCE_DESCS[residue] + " advancing.\n");
-        }
+        write("You are " + SD_ADVANCE_DESCS[residue] + " advancing to " +
+            (((level+1) == SD_NUM_STATLEVS) ?
+            ("epic " + SD_LONG_STAT_DESC[index]) :
+            CMD_LIVE_STATE->query_stat_string(index, -(level+1))) + ".\n");
     }
 
     prefs = this_player()->query_learn_pref(-1)[..(SS_NO_EXP_STATS-1)];
