@@ -328,7 +328,7 @@ nomask int
 quit(string str)
 {
     object *inv, *deep;
-    int    index, loc, size;
+    int    index, loc, size, manual;
 
     if ((index = (query_prop(PLAYER_I_AUTOLOAD_TIME) - time())) > 0)
     {
@@ -384,8 +384,11 @@ quit(string str)
     if (!query_wiz_level())
     {
         inv = filter(inv, &not() @ &->query_auto_load());
+        /* When checking for recoverable items, take the 'manual reboot'
+         * property into account. */
+        manual = ARMAGEDDON->query_manual_reboot();
         if (loc)
-            inv = filter(inv, &not() @ &->check_recoverable());
+            inv = filter(inv, &not() @ &->check_recoverable(manual));
         inv = filter(inv, &not() @ &->query_prop(OBJ_M_NO_DROP));
         
         index = -1;
