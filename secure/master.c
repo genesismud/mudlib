@@ -1684,6 +1684,7 @@ valid_exec(string name, object to, object from)
     name = "/" + name;
     if ((name == (LOGIN_OBJECT + ".c")) || 
         (name == (POSSESSION_OBJECT + ".c")) ||
+        (name == (LOGIN_TEST_PLAYER + ".c")) ||
         (name == (LOGIN_NEW_PLAYER + ".c")))
     {
         return 1;
@@ -2372,6 +2373,7 @@ remove_interactive(object ob, int linkdied)
     master_ob = MASTER_OB(ob);
     if ((master_ob == LOGIN_OBJECT) ||
         (master_ob == LOGIN_NEW_PLAYER) ||
+        (master_ob == LOGIN_TEST_PLAYER) ||
         (master_ob == GAMEINFO_OBJECT))
     {
         ob->remove_object();
@@ -3485,14 +3487,14 @@ cancel_shutdown()
         return;
     }
 
-    if (rank <= WIZ_RETIRED)
+    if (rank < WIZ_NORMAL)
     {
         write("Illegal euid. Cancel shutdown rejected.\n");
         return;
     }
 
     if ((euid != shutter) &&
-        (rank <= WIZ_LORD))
+        (rank < WIZ_ARCH))
     {
         write("You are not allowed to cancel a shutdown by " +
             shutter + ".\n");

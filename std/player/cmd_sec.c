@@ -112,7 +112,7 @@ compute_values(object *ob_list)
     {
 	if (ob_list[i]->query_recover() || ob_list[i]->query_auto_load())
 	    continue;
-	if (function_exists("create_heap", ob_list[i]) == COINS_OBJECT)
+	if (IS_COINS_OBJECT(ob_list[i]))
 	    continue;
 	tmp = ob_list[i]->query_prop(OBJ_I_VALUE);
 	if (tmp > 1000)
@@ -133,15 +133,14 @@ compute_values(object *ob_list)
 static nomask void
 compute_auto_str()
 {
-    object *ob = deep_inventory(this_object());
+    object *obs = deep_inventory(this_object());
     string str;
     string *auto = ({ });
-    int i = sizeof(ob);
+    int i = sizeof(obs);
 
     while(--i >= 0)
     {
-	str = ob[i]->query_auto_load();
-	if (strlen(str))
+	if (strlen(str = obs[i]->query_auto_load()))
 	{
 	    auto += ({ str });
 	}
@@ -159,7 +158,6 @@ nomask int
 check_recover_loc()
 {
     object tmp;
-    int i;
     string *list, env;
 
     /* Check for armageddon */
@@ -198,41 +196,43 @@ check_recover_loc()
 static nomask void
 compute_recover_str(int verb)
 {
-    object *ob;
-    object *glowing = ({ });
-    object *failing = ({ });
-    string str, *recover;
-    int i, loc, size;
-
-    recover = ({ });
+    object *glowing, *failing;
+    string str;
+    string *recover = ({ });
+    int index, loc, size;
+    int manual;
 
     loc = check_recover_loc();
-
-    if (!(loc || verb))
+    if (!loc && !verb)
     {
 	set_recover_list(recover);
 	return;
     }
 
-    ob = deep_inventory(this_object());
+    /* Find all recoverable items on the player. */
+    glowing = deep_inventory(this_object());
+    glowing = filter(glowing, &->check_recoverable(1));
 
-    i = -1;
-    size = sizeof(ob);
-    while(++i < size)
+    /* If the game reboots automatically, some items may fail to glow. */
+    manual = ARMAGEDDON->query_manual_reboot();
+    if (!manual)
     {
-	if (ob[i]->check_recoverable(1))
+        failing = filter(glowing, &->may_not_recover());
+        glowing -= failing;
+    }
+
+    index = sizeof(glowing);
+    while(--index >= 0)
+    {
+        /* If it's recovering, add it to the recover array, otherwise remove
+         * it from the glowing list. */
+        if (strlen(str = glowing[index]->query_recover()))
+        {
+            recover += ({ str });
+	}
+	else
 	{
-	    if (ob[i]->may_not_recover())
-	    {
-		failing += ({ ob[i] });
-	    }
-	    else
-	    {
-		if (!strlen(str = ob[i]->query_recover()))
-		    continue;
-		recover += ({ str });
-		glowing += ({ ob[i] });
-	    }
+	    glowing[index] = 0;
 	}
     }
 
@@ -240,15 +240,17 @@ compute_recover_str(int verb)
 
     if (loc)
     {
-	if (i = sizeof(glowing))
+        /* Remove cleared items from the array. */
+        glowing = filter(glowing, objectp);
+	if (size = sizeof(glowing))
 	{
 	    write(capitalize(COMPOSITE_DEAD(glowing)) +
-		((i == 1) ? " glows" : " glow") + " briefly.\n");
+		((size == 1) ? " glows" : " glow") + " briefly.\n");
 	}
-	if (i = sizeof(failing))
+	if (size = sizeof(failing))
 	{
 	    write(capitalize(COMPOSITE_DEAD(failing)) +
-		((i == 1) ? " fails" : " fail") + " to glow briefly.\n");
+		((size == 1) ? " fails" : " fail") + " to glow briefly.\n");
 	}
     }
 }

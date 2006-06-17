@@ -67,17 +67,17 @@
  * GET_PROC_DESC and GET_PROC_DESC_SUB do the same, but then with a percentage
  * that runs from 0-100% instead of an arbitrary maximum.
  */
-#define GET_NUM_DESC(v, mx, md)              ((string)LANG_FILE->get_num_desc(v, mx, md))
-#define GET_NUM_DESC_SUB(v, mx, md, sd, ti)  ((string)LANG_FILE->get_num_desc(v, mx, md, sd, ti))
-#define GET_PROC_DESC(v, md)                 ((string)LANG_FILE->get_num_desc(v, 100, md))
-#define GET_PROC_DESC_SUB(v, md, sd, ti)     ((string)LANG_FILE->get_num_desc(v, 100, md, sd, ti))
+#define GET_NUM_DESC(v, mx, md)              ((string)LANG_FILE->get_num_desc((v), (mx), (md)))
+#define GET_NUM_DESC_SUB(v, mx, md, sd, ti)  ((string)LANG_FILE->get_num_desc((v), (mx), (md), (sd), (ti)))
+#define GET_PROC_DESC(v, md)                 ((string)LANG_FILE->get_num_desc((v), 100, (md)))
+#define GET_PROC_DESC_SUB(v, md, sd, ti)     ((string)LANG_FILE->get_num_desc((v), 100, (md), (sd), (ti)))
 
 /*
  * GET_NUM_LVL_DESC - Match a value 'v' to a series of descriptions 'md'. Each
  * description has an associated level 'lv' that you need to have or exceed to
  * get the description.
  */
-#define GET_NUM_LVL_DESC(v, lv, md)          ((string)LANG_FILE->get_num_lvl_desc(v, lv, md))
+#define GET_NUM_LVL_DESC(v, lv, md)          ((string)LANG_FILE->get_num_lvl_desc((v), (lv), (md)))
 
 /* No definitions beyond this line. */
 #endif LANG_DEF

@@ -30,6 +30,7 @@ static private string shutdown_shutter;
 static private string shutdown_reason;
 static private int    shutdown_delay;
 static private int    shutdown_alarm;
+static private int    shutdown_manual;
 
 #define TELLALL(x) WIZ_CMD_NORMAL->tellall(x)
 
@@ -66,6 +67,7 @@ create_creature()
     shutdown_reason  = 0;
     shutdown_delay   = 0;
     shutdown_alarm   = 0;
+    shutdown_manual  = 0;
 }
 
 /*
@@ -110,6 +112,7 @@ shutdown_now()
 	shutdown_delay   = 0;
 	shutdown_reason  = 0;
 	shutdown_shutter = 0;
+        shutdown_manual  = 0;
     }
 }
 
@@ -229,6 +232,7 @@ start_shutdown(string reason, int delay, string shutter)
     shutdown_shutter = shutter;
     shutdown_reason  = reason;
     shutdown_delay   = delay;
+    shutdown_manual  = (shutter != ROOT_UID);
 
     if (!shutdown_delay)
     {
@@ -239,6 +243,11 @@ start_shutdown(string reason, int delay, string shutter)
     shutdown_started();
 
     set_this_player(this_object());
+
+    if (shutdown_manual)
+    {
+        TELLALL("As favour to " + capitalize(shutter) + ", no item will fail to glow.\n");
+    }
 
     TELLALL("Tell me (do not commune) if you want to be sent home.");
     shutdown_dodelay();
@@ -285,6 +294,7 @@ cancel_shutdown(string shutter)
     shutdown_reason  = 0;
     shutdown_alarm   = 0;
     shutdown_delay   = 0;
+    shutdown_manual  = 0;
 
     shutdown_info_domain_link(ARMAGEDDON_CANCEL);
 }
@@ -340,6 +350,19 @@ public nomask string
 query_shutter()
 {
     return shutdown_shutter;
+}
+
+/*
+ * Function name: query_manual_reboot
+ * Description  : Returns whether the game is being shut down manually or not.
+ *                If a wizard called for this reboot, no items will fail to
+ *                glow.
+ * Returns      : int 1/0 - if true, then a wizard manually rebooted the game.
+ */
+public nomask int
+query_manual_reboot()
+{
+    return shutdown_manual;
 }
 
 /*
@@ -436,7 +459,7 @@ catch_tell(string str)
     if (old == environment(this_player()))
     {
 	tell_object(this_player(), "Armageddon tells you: " +
-	    "My magic seems not to work too well at teleportation.\n");
+	    "My magic seems not to work too well at teleporting you.\n");
     }
 }
 
