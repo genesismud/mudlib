@@ -84,12 +84,14 @@
 #define LCALL this_object()->
 
 /*
- * FORMAT_NAME(name) returns the name 'name' in a left aligned format of
- * 11 characters. This is especially useful for displaying player names
- * in a table. CFORMAT_NAME(name) does the same, but capitalized.
+ * FORMAT_NAME(name) returns the name 'name' (cpaitalize) in a left aligned
+ * format of 11 characters. This is especially useful for displaying player
+ * names in a table.
+ * The macro FORMAT_PLNAME(pl) does the same, but bases itself on the player
+ * object pointer instead.
  */
-#define FORMAT_NAME(name)  (sprintf("%-11s", (name)))
-#define CFORMAT_NAME(name) (FORMAT_NAME(capitalize(name)))
+#define FORMAT_NAME(name) (sprintf("%-11s", (capitalize(name))))
+#define FORMAT_PLNAME(pl) ((pl) ? FORMAT_NAME((pl)->query_real_name()) : ("Unknown"))
 
 /*
  * VBFC(fun)    - return the VBFC string for an internal call to the

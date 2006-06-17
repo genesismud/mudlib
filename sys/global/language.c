@@ -1,7 +1,8 @@
 /*
  * /sys/global/language.c
  *
- * This file holds some standard natural language functions.
+ * This file holds some standard natural language functions and routines
+ * to translate a numerical value to an associated state description.
  */
 
 #pragma save_binary
@@ -9,8 +10,9 @@
 
 #include <stdproperties.h>
 
-string *nums, *numt, *numnt, *numo;
-string *offensive;
+/* Global variables. */
+static string *nums, *numt, *numnt, *numo;
+static string *offensive;
 
 void
 create()
@@ -474,4 +476,83 @@ lang_is_offensive(string str)
     }
 
     return 0;
+}
+
+/*
+ * Function name: get_num_desc
+ * Description  : Spreads a value over a set of descriptions consisting of
+ *                of main and (optionally) sub descriptions.
+ * Arguments    : int value - the value, must be in range 0-maximum.
+ *                int maximum - the maximum the value must adhere to.
+ *                string* maindescs - array of main descriptions.
+ *                string* subdescs - array of sub descriptions, or 0.
+ *                    Individual sub descriptions must end with a space.
+ *                int turnpoint - if nonzero, then every value in the maindesc
+ *                    array with an index LOWER than turnpoint will have the
+ *                    selections of the subdesc reversed. This to make it so
+ *                    that someone can be "extremely calm" as highest form of
+ *                    calm but also "extremely panicky" as worst form.
+ * Returns      : string - the associated (sub +) main description.
+ */
+varargs string
+get_num_desc(int value, int maximum, string *maindescs, string *subdescs = 0, int turnindex = 0)
+{
+    int mainindex, subindex;
+
+    if (!maindescs)
+    {
+        return ">unknown<";
+    }
+
+    /* Distribute the value of the range of main descriptions. */
+    value = minmax(value, 0, maximum-1);
+    mainindex = (value * sizeof(maindescs)) / maximum;
+
+    /* No subdescs, return the main description only. */
+    if (!subdescs)
+    {
+        return maindescs[mainindex];
+    }
+
+    /* Distribute the value of the range of sub-descriptions. */
+    value -= (mainindex * maximum) / sizeof(maindescs);
+    subindex = (value * sizeof(maindescs) * sizeof(subdescs)) / maximum;
+
+    /* For the low end of the spectrum, we may reverse the sub-descriptions. */
+    if (mainindex < turnindex)
+    {
+        subindex = sizeof(subdescs) - 1 - subindex;
+    }
+
+    return subdescs[subindex] + maindescs[mainindex];
+}
+
+/*
+ * Function name: get_num_lvl_desc
+ * Description  : Find a description in an array based on levels, rather than
+ *                spreading the descriptions uniformly over the range.
+ *                Simply put: value >= levels[i] returns descs[i].
+ * Arguments    : int value - the value to transform to a description. If it
+ *                    is below the lowest level, the first description is
+ *                    returned.
+ *                int *levels - the levels in ascending order, associated
+ *                    with the descriptions.
+ *                string *descs - the descriptions, must be as many as there
+ *                    are levels.
+ * Returns      : string - the description associated with the level.
+ */
+string
+get_num_lvl_desc(int value, int *levels, string *descs)
+{
+    int index = sizeof(levels);
+
+    while(--index >= 0)
+    {
+        if (value >= levels[index])
+        {
+            return descs[index];
+        }
+    }
+
+    return descs[0];
 }

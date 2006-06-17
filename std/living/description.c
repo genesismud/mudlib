@@ -410,19 +410,13 @@ query_The_possessive_name(object pobj)
 public string
 query_exp_title()
 {
-    int index;
     int average;
 
     if (query_wiz_level())
 	return LD_WIZARD;
  
     average = this_object()->query_average_stat();
-    index = SD_AV_NUM_TITLES;
-    while(--index >= 0)
-        if (average >= SD_AV_LEVELS[index])
-            return SD_AV_TITLES[index];
-
-    return SD_AV_UTTER_NOVICE;
+    return GET_NUM_LVL_DESC(average, SD_AV_LEVELS, SD_AV_TITLES);
 }
 
 /*
