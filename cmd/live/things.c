@@ -1842,7 +1842,7 @@ peek(string str)
     }
 
     MONEY_EXPAND(p[0]);
-    
+
     pp_skill = this_player()->query_skill(SS_PICK_POCKET) / 2;
     if ((pp_skill + random(pp_skill) > p[0]->query_skill(SS_AWARENESS)) &&
         (!p[0]->query_wiz_level()))
@@ -2124,11 +2124,7 @@ search(string str)
     }
 
     /* Find out where we are searching. */
-    if (sscanf(str, "%s here", str) == 1)
-    {
-        item = "here";
-    }
-    else if (sscanf(str, "%s for %s", item, str) != 2)
+    if (sscanf(str, "%s for %s", item, str) != 2)
     {
         item = str;
     }
@@ -2191,7 +2187,11 @@ search(string str)
     }
 
     /* As temporary measure we support "search x for herbs" as argument. */
-    obj->search_object(str == "herbs" ? (item + " for herbs") : str);
+    if (item != str)
+    {
+        str = item + " for " + str;
+    }
+    obj->search_object(str);
     return 1;
 }
 
