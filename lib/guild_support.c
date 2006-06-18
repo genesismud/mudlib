@@ -415,7 +415,7 @@ gs_meditate(string str)
         write("You are " + SD_ADVANCE_DESCS[residue] + " advancing to " +
             (((level+1) == SD_NUM_STATLEVS) ?
             ("epic " + SD_LONG_STAT_DESC[index]) :
-            CMD_LIVE_STATE->query_stat_string(index, -(level+1))) + ".\n");
+            GET_STAT_LEVEL_DESC(index, (level+1))) + ".\n");
     }
 
     prefs = this_player()->query_learn_pref(-1)[..(SS_NO_EXP_STATS-1)];

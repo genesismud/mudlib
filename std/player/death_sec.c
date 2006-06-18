@@ -100,6 +100,7 @@ modify_on_death()
 
     /* Update the progress indicator. */ 
     add_prop(PLAYER_I_LASTXP, query_exp());
+    update_last_stats();
 }
 
 /*

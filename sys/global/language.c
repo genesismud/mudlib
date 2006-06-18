@@ -8,11 +8,16 @@
 #pragma save_binary
 #pragma strict_types
 
+#include <state_desc.h>
+#include <ss_types.h>
 #include <stdproperties.h>
 
 /* Global variables. */
 static string *nums, *numt, *numnt, *numo;
 static string *offensive;
+int    *stat_levels, *exp_levels;
+string *exp_titles;
+mixed  stat_strings;
 
 void
 create()
@@ -33,6 +38,13 @@ create()
     offensive = ({ "*bitch*", "*clit*", "*cock*", "*cunt*", "*dick*", "*fag*",
         "*fart*", "*fuck*", "*peck*", "*penis*", "*pussy*", "*rape*",
         "*shit*", "*slut*", "*suck*" });
+
+    stat_levels  = SD_STATLEVELS;
+    stat_strings = ({ SD_STATLEV_STR, SD_STATLEV_DEX, SD_STATLEV_CON,
+                      SD_STATLEV_INT, SD_STATLEV_WIS, SD_STATLEV_DIS, });
+    exp_levels = SD_AV_LEVELS;
+    exp_titles = SD_AV_TITLES;
+
 }
 
 #define CFUN
@@ -504,6 +516,8 @@ get_num_desc(int value, int maximum, string *maindescs, string *subdescs = 0, in
         return ">unknown<";
     }
 
+    /* Maximum must be positive. */
+    maximum = ((maximum > 0) ? maximum : 1);
     /* Distribute the value of the range of main descriptions. */
     value = minmax(value, 0, maximum-1);
     mainindex = (value * sizeof(maindescs)) / maximum;
@@ -528,7 +542,7 @@ get_num_desc(int value, int maximum, string *maindescs, string *subdescs = 0, in
 }
 
 /*
- * Function name: get_num_lvl_desc
+ * Function name: get_num_level_desc
  * Description  : Find a description in an array based on levels, rather than
  *                spreading the descriptions uniformly over the range.
  *                Simply put: value >= levels[i] returns descs[i].
@@ -542,7 +556,7 @@ get_num_desc(int value, int maximum, string *maindescs, string *subdescs = 0, in
  * Returns      : string - the description associated with the level.
  */
 string
-get_num_lvl_desc(int value, int *levels, string *descs)
+get_num_level_desc(int value, int *levels, string *descs)
 {
     int index = sizeof(levels);
 
@@ -555,4 +569,55 @@ get_num_lvl_desc(int value, int *levels, string *descs)
     }
 
     return descs[0];
+}
+
+/*
+ * Function name: get_stat_level_desc
+ * Description  : Get the description of a stat level based on the value.
+ * Arguments    : int stat - the stat to describe.
+ *                int level - the level to describe.
+ * Returns      : string - the associated description.
+ */
+string
+get_stat_level_desc(int stat, int level)
+{
+    if (stat < 0 || stat >= SS_NO_EXP_STATS)
+    {
+        return "";
+    }
+
+    return get_num_level_desc(level, stat_levels, stat_strings[stat]);
+}
+
+/*
+ * Function name: get_stat_index_desc
+ * Description  : Get the description of a stat level based on the index.
+ * Arguments    : int stat - the stat to describe.
+ *                int index - the index in the array.
+ * Returns      : string - the associated description.
+ */
+string
+get_stat_index_desc(int stat, int index)
+{
+    if (stat < 0 || stat >= SS_NO_EXP_STATS ||
+        index < 0 || index >= SD_NUM_STATLEVS)
+    {
+        return "";
+    }
+
+    return stat_strings[stat][index];
+}
+
+/*
+ * Function name: get_exp_level_desc
+ * Description  : Get the description of a mortal level based on the average
+ *                stat. Basically put here just to use a single variable array
+ *                declaration.
+ * Arguments    : int level - the level to describe.
+ * Returns      : string - the associated description.
+ */
+string
+get_exp_level_desc(int level)
+{
+    return get_num_level_desc(level, exp_levels, exp_titles);
 }

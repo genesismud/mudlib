@@ -19,3 +19,4 @@ object *query_team();
 int stat_to_exp(int stat);
 int query_tell_active();
 string query_align_text();
+public void check_last_stats();

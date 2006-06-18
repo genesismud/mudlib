@@ -8,8 +8,6 @@
  * - CONVTIME(time)
  * - TIME2STR(time, sig)
  * - TIME2NUM(time)
- *
- * /Mercade, July 1 1995
  */
 
 #ifndef TIME_DEFINITIONS
@@ -21,6 +19,11 @@
  * The file defining the time converting functions.
  */
 #define TIME_FILE      ("/sys/global/time")
+
+/*
+ * TIMESTAMP - Simply a shortcut for the ubiquitous ctime(time()).
+ */
+#define TIMESTAMP      (ctime(time()))
 
 /*
  * Name   : CONVTIME(t)

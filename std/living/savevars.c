@@ -836,6 +836,8 @@ add_exp_combat(int exp)
     /* Report the experience added and distribute over the stats. */
     SECURITY->bookkeep_exp("combat", exp);
     update_acc_exp(exp);
+    /* Give player growth message. */
+    check_last_stats();
 }
 
 /*
@@ -909,6 +911,8 @@ add_exp_general(int exp)
     /* Report the experience added and distribute over the stats. */
     SECURITY->bookkeep_exp("general", exp);
     update_acc_exp(exp);
+    /* Give player growth message. */
+    check_last_stats();
 }
 
 /*
@@ -957,6 +961,8 @@ add_exp_quest(int exp)
 
     /* Distribute the experience over the stats using the tax-free method. */
     update_acc_exp(exp, 1);
+    /* Give player growth message. */
+    check_last_stats();
 }
 
 /*

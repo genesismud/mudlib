@@ -14,6 +14,8 @@
 #ifndef SD_DEFINED
 #define SD_DEFINED
 
+#define SD_LANG_FILE "/sys/global/language"
+
 #ifndef SD_AV_TITLES
 #define SD_AV_TITLES    ({ "novice", "beginner", "apprentice", "master" })
 #define SD_AV_LIMITS    ({ 10, 25, 50, 100 })
@@ -63,6 +65,10 @@
 #define SD_ADVANCE_DESCS    ({ "very far from", "far from", "halfway to", \
     "close to", "very close to" })
 #define SD_SIZEOF_ADVANCE_DESCS   5
+
+#define GET_STAT_LEVEL_DESC(stat, level) ((string)SD_LANG_FILE->get_stat_level_desc((stat), (level)))
+#define GET_STAT_INDEX_DESC(stat, index) ((string)SD_LANG_FILE->get_stat_index_desc((stat), (index)))
+#define GET_EXP_LEVEL_DESC(level)        ((string)SD_LANG_FILE->get_exp_level_desc(level))
 
 /* Observe that the denominators below are reversed for the first two
    of the statlev descs above.
@@ -204,4 +210,3 @@
 			  "encumbrance": SD_ENC_WEIGHT,			\
 		       ])
 #endif
-

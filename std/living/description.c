@@ -404,19 +404,16 @@ query_The_possessive_name(object pobj)
 /*
  * Function name: query_exp_title
  * Description  : Returns "wizard" if this living is a wizard, or else
- *                tries to calculate a title from the stats
+ *                calculates a title from the stats.
  * Returns      : string - the title.
  */
 public string
 query_exp_title()
 {
-    int average;
-
     if (query_wiz_level())
 	return LD_WIZARD;
  
-    average = this_object()->query_average_stat();
-    return GET_NUM_LVL_DESC(average, SD_AV_LEVELS, SD_AV_TITLES);
+    return GET_EXP_LEVEL_DESC(this_object()->query_average_stat());
 }
 
 /*

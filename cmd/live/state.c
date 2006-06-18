@@ -30,6 +30,7 @@ inherit "/cmd/std/command_driver";
 #include <const.h>
 #include <files.h>
 #include <filter_funs.h>
+#include <formulas.h>
 #include <language.h>
 #include <login.h>
 #include <macros.h>
@@ -45,22 +46,11 @@ inherit "/cmd/std/command_driver";
 /*
  * Global constants
  */
-private mixed
-        stat_strings, beauty_strings, 
-        denom_strings, brute_fact, panic_state, fatigue_state,
-        intox_state, head_state, stuff_state, soak_state,
-        improve_fact, skillmap, compare_strings;
-
+private mixed beauty_strings, skillmap, compare_strings;
 private string *stat_names, *health_state, *mana_state, *enc_weight;
-
+private string *intox_state, *stuff_state, *soak_state, *improve_fact;
+private string *brute_fact, *panic_state, *fatigue_state;
 private mapping lev_map;
-
-/*
- * Prototypes
- */
-public string beauty_text(int num, int sex);
-public varargs string get_proc_text(int num, mixed maindesc,
-                                    int turnpoint, mixed subdesc);
 
 void
 create()
@@ -73,12 +63,8 @@ create()
     */
 
     skillmap =        SS_SKILL_DESC;
-    denom_strings =   SD_STAT_DENOM;
 
     stat_names =      SD_STAT_NAMES;
-
-    stat_strings =    ({ SD_STATLEV_STR, SD_STATLEV_DEX, SD_STATLEV_CON,
-                         SD_STATLEV_INT, SD_STATLEV_WIS, SD_STATLEV_DIS, });
 
     compare_strings = ({ SD_COMPARE_STR, SD_COMPARE_DEX, SD_COMPARE_CON,
                          SD_COMPARE_INT, SD_COMPARE_WIS, SD_COMPARE_DIS,
@@ -96,6 +82,8 @@ create()
     intox_state =     SD_INTOX;
     improve_fact =    SD_IMPROVE;
     enc_weight =      SD_ENC_WEIGHT;
+
+    lev_map =         SD_LEVEL_MAP;
 }
 
 /* **************************************************************************
@@ -155,6 +143,24 @@ using_soul(object live)
 {
     live->add_subloc(SUBLOC_MISCEXTRADESC, file_name(this_object()));
     live->add_textgiver(file_name(this_object()));
+}
+
+/* **************************************************************************
+ * Here follows some support functions. 
+ * **************************************************************************/
+
+/*
+ * Function name: beauty_text
+ * Description:   Return corresponding text to a certain combination of
+ *                appearance and opinion
+ */
+public string
+beauty_text(int num, int sex)
+{
+    if (sex != 1)
+        sex = 0;
+
+    return GET_PROC_DESC(num, beauty_strings[sex]);
 }
 
 public string
@@ -224,14 +230,7 @@ show_subloc_fights(object on, object for_obj)
 public string
 show_subloc_health(object on, object for_obj)
 {
-    int hp, mhp;
-
-    hp = on->query_hp();
-    mhp = on->query_max_hp();
-    if (mhp == 0)
-        mhp = 1;
-
-    return get_proc_text((hp * 100) / mhp, health_state, 0, ({}) );
+    return GET_NUM_DESC(on->query_hp(), on->query_max_hp(), health_state);
 }
 
 /*
@@ -274,123 +273,25 @@ show_subloc(string subloc, object on, object for_obj)
     return res;
 }
 
-/****************************************************************
- *
- * A textgiver must supply these functions
- */
-
 /*
- * Returns true if this textgiver describes the given stat
+ * Function name: get_proc_text
+ * Description  : This is a service function kept for backward compatibility
+ *                with existing domain code.
+ *                For new code, please use one of the following macros:
+ *                 GET_NUM_DESC, GET_NUM_DESC_SUB
+ *                 GET_PROC_DESC, GET_PROC_DESC_SUB
  */
-public int 
-desc_stat(int stat)
-{
-    return (stat >= 0 && stat <= SS_NO_EXP_STATS);
-}
-
-/*
- * Returns true if this textgiver describes the given skill
- */
-public int 
-desc_skill(int skill)
-{
-    if (sizeof(skillmap[skill]))
-        return 1;
-    else
-        return 0;
-}
-
-/*
- * Function name: query_stat_string
- * Description:   Gives text information corresponding to a stat
- * Parameters:    stat: index in stat array
- *                value: stat value
- *                negative value gives the statstring with index corresponding
- *                to -value
- * Returns:       string corresponding to stat/value
- */
-public string
-query_stat_string(int stat, int value)
-{
-    int level;
-
-    if (stat < 0 || stat >= SS_NO_EXP_STATS)
-    {
-        return "";
-    }
-    if (value <= 0)
-    {
-        if (value < -sizeof(stat_strings[stat]))
-        {
-            value = 1-sizeof(stat_strings[stat]);
-        }
-        return stat_strings[stat][-value];
-    }
-    level = SD_NUM_STATLEVS;
-    while(--level >= 0)
-    {
-        if (value >= SD_STATLEVELS[level])
-        {
-            return stat_strings[stat][level];
-        }
-    }
-    /* Should never happen. */
-    return stat_strings[stat][0];
-}
-
 public varargs string
-get_proc_text(int num, mixed maindesc, int turnpoint, mixed subdesc)
+get_proc_text(int proc, mixed maindescs, int turnindex = 0, mixed subdescs = 0)
 {
-    int a, b, c, d,j;
-    mixed subs;
-
-    if (!sizeof(maindesc))
-        return ">normal<";
-
-    if (num < 0)
-        num = 0;
-    if (num > 99)
-        num = 99;
-
-    j = sizeof(maindesc) * num / 100;    
-    
-    if (!pointerp(subdesc))
-        subs = denom_strings;
-    else if (sizeof(subdesc))
-        subs = subdesc;
+    if (sizeof(subdescs))
+    {
+        return GET_PROC_DESC_SUB(proc, maindescs, subdescs, turnindex);
+    }
     else
-        return maindesc[j];
-
-    a = num - (j * 100 / sizeof(maindesc));
-
-    b = (sizeof(subs) * a * sizeof(maindesc)) / 100;
-
-    if (j < turnpoint)
-        b = (sizeof(subs) - 1) - b;
-
-    return subs[b] + maindesc[j];
-}
-
-/* **************************************************************************
- * Here follows some support functions. 
- * **************************************************************************/
-
-/*
- * Function name: beauty_text
- * Description:   Return corresponding text to a certain combination of
- *                appearance and opinion
- */
-public string
-beauty_text(int  num, int sex)
-{
-    if (sex != 1)
-        sex = 0;
-    if (num >= 100)
-        num = 99;
-    if (num < 0)
-        num = 0;
-
-    return beauty_strings[sex][sizeof(beauty_strings[sex]) * num / 100];
+    {
+        return GET_PROC_DESC(proc, maindescs);
+    }
 }
 
 /* **************************************************************************
@@ -1016,13 +917,10 @@ health(string str)
 
     if (display_self)
     {
-        size = ((this_player()->query_hp() * 100) /
-            this_player()->query_max_hp());
         write("You are physically " +
-            get_proc_text(size, health_state, 0, ({ })));
-        size = ((this_player()->query_mana() * 100) /
-            this_player()->query_max_mana());
-        write(" and mentally " + get_proc_text(size, mana_state, 0, ({ })) +
+            GET_NUM_DESC(this_player()->query_hp(), this_player()->query_max_hp(), health_state) +
+            " and mentally " +
+            GET_NUM_DESC(this_player()->query_mana(), this_player()->query_max_mana(), mana_state) +
             ".\n");
     }
     else if (!sizeof(oblist))
@@ -1049,9 +947,6 @@ levels(string str)
 {
     string *ix, *levs;
 
-    if (!mappingp(lev_map))
-        lev_map = SD_LEVEL_MAP;
-
     ix = sort_array(m_indices(lev_map));
 
     if (!str)
@@ -1060,13 +955,15 @@ levels(string str)
                     break_string(COMPOSITE_WORDS(ix) + ".", 70, 3) + "\n");
         return 0;
     }
+
     levs = lev_map[str];
     if (!sizeof(levs))
     {
         notify_fail("No such level descriptions. Available:\n" + 
                     break_string(COMPOSITE_WORDS(ix) + ".", 70, 3) + "\n");
         return 0;
-    }        
+    }
+
     write("Level descriptions for: " + capitalize(str) + "\n" +
           break_string(COMPOSITE_WORDS(levs) + ".", 70, 3) + "\n");
     return 1;
@@ -1420,57 +1317,48 @@ vitals(string str, object target = this_player())
         return 1;
 
     case "encumbrance":
-        value1 = target->query_encumberance_weight();
         write((self ? "You are" : (name + " is")) + " " +
-            get_proc_text(value1, enc_weight, 0, ({ })) + ".\n");
+            GET_PROC_DESC(target->query_encumberance_weight(), enc_weight) + ".\n");
         return 1;
 
     case "health":
     case "mana":
-        value1 = ((target->query_hp() * 100) / target->query_max_hp());
         write((self ? "You are" : (name + " is")) + " physically " + 
-            get_proc_text(value1, health_state, 0, ({ })));
-        value1 = ((target->query_mana() * 100) / target->query_max_mana());
-        write(" and mentally " + get_proc_text(value1, mana_state, 0, ({ })) +
+            GET_NUM_DESC(target->query_hp(), target->query_max_hp(), health_state) +
+            " and mentally " +
+            GET_NUM_DESC(target->query_mana(), target->query_max_mana(), mana_state) +
             ".\n");
         return 1;
 
     case "intox":
     case "intoxication":
-        value1 = target->query_prop(LIVE_I_MAX_INTOX);
-        value2 = target->query_intoxicated();
-        value1 = (100 * value2 / ((value1 != 0) ? value1 : value2));
-        write((self ? "You are" : (name + " is")) + " " +
-            (value2 ? get_proc_text(value1, intox_state, 0) : "sober") +
-            ".\n");
+        if (target->query_intoxicated())
+        {
+            write((self ? "You are" : (name + " is")) + " " +
+                GET_NUM_DESC(target->query_intoxicated(), target->query_prop(LIVE_I_MAX_INTOX), intox_state) + ".\n");
+        }
+        else
+        {
+            write((self ? "You are" : (name + " is")) + " sober.\n");
+        }
         return 1;
 
     case "panic":
     case "fatigue":
-        value1 = (10 + (target->query_stat(SS_DIS) * 3));
-        value2 = target->query_panic();
-        value1 = (100 * value2 / ((value1 != 0) ? value1 : value2));
+        /* Current fatigue really is an "energy left" value that counts down. */
+        value1 = target->query_max_fatigue() - target->query_fatigue();
         write((self ? "You feel" : (name + " feels")) + " " +
-            get_proc_text(value1, panic_state, 2) + " and ");
-
-        value1 = target->query_max_fatigue();
-        value2 = value1 - target->query_fatigue();
-        value1 = (100 * value2 / ((value1 != 0) ? value1 : value2));
-        write(get_proc_text(value1, fatigue_state, 1) + ".\n");
+            GET_NUM_DESC_SUB(target->query_panic(), F_PANIC_WIMP_LEVEL(target->query_stat(SS_DIS)), panic_state, SD_STAT_DENOM, 2) +
+            " and " +
+            GET_NUM_DESC_SUB(value1, target->query_max_fatigue(), fatigue_state, SD_STAT_DENOM, 1) + ".\n");
         return 1;
 
     case "stuffed":
     case "soaked":
-        value1 = target->query_prop(LIVE_I_MAX_EAT);
-        value2 = target->query_stuffed();
-        value1 = (100 * value2 / ((value1 != 0) ? value1 : value2));
         write((self ? "You can" : (name + " can")) + " " +
-            get_proc_text(value1, stuff_state, 0, ({ })) + " and ");
-
-        value1 = target->query_prop(LIVE_I_MAX_DRINK);
-        value2 = target->query_soaked();
-        value1 = (100 * value2 / ((value1 != 0) ? value1 : value2));
-        write(get_proc_text(value1, soak_state, 0, ({ })) + ".\n");
+            GET_NUM_DESC(target->query_stuffed(), target->query_prop(LIVE_I_MAX_EAT), stuff_state) +
+            " and " +
+            GET_NUM_DESC(target->query_soaked(), target->query_prop(LIVE_I_MAX_DRINK), soak_state) + ".\n");
         return 1;
 
     default:
@@ -1506,17 +1394,15 @@ vitals(string str, object target = this_player())
 varargs int
 show_stats(string str)
 {
-    int a, i, j;
-    float c, d;
+    int a, i, j, c, d;
     object ob;
-    string s, s2, t;
-    int *learn;
+    string start_be, start_have, *stats;
 
     if (!str)
     {
         ob = this_player();
-        s = "You are ";
-        s2 = "You have ";
+        start_be = "You are ";
+        start_have = "You have ";
     }
     else
     {
@@ -1525,8 +1411,8 @@ show_stats(string str)
             notify_fail("Curious aren't we?\n");
             return 0;
         }
-        s = capitalize(str) + " is ";
-        s2 = capitalize(str) + " has ";
+        start_be = capitalize(str) + " is ";
+        start_have = capitalize(str) + " has ";
     }
 
     a = ob->query_prop(PLAYER_I_LASTXP);
@@ -1550,39 +1436,25 @@ show_stats(string str)
         else if (a < SD_IMPROVE_MIN)
             a = SD_IMPROVE_MIN;
         
-        j /= (a / 100);
-        write(s2 + "made " +
-            get_proc_text(j, improve_fact, 0, ({ }) ) +
+        write(start_have + "made " + GET_NUM_DESC(j, a, improve_fact) +
             " progress since you last logged in.\n");
     }
     else
     {
-        write(s2 + "made no measurable progress since you logged " +
+        write(start_have + "made no measurable progress since you logged " +
             "in today.\n");
     }
-    
-    for (t = s, i = 0; i < SS_NO_EXP_STATS; i++)
+
+    stats = ({ });
+    for (i = 0; i < SS_NO_EXP_STATS; i++)
     {
-        s2 = query_stat_string(i, ob->query_stat(i));
-
-        if (!i)
-            s2 = LANG_ADDART(s2);
-        if (i < SS_NO_EXP_STATS - 2) 
-            s2 += ", ";
-        else if (i < SS_NO_EXP_STATS - 1)
-            s2 += " and ";
-        else
-            s2 += " " + ob->query_nonmet_name() + ".";
-        t += s2;
+        stats += ({ GET_STAT_LEVEL_DESC(i, ob->query_stat(i)) });
     }
-    write(t + "\n");
+    write(start_be + LANG_ADDART(COMPOSITE_WORDS(stats)) +  " " + ob->query_nonmet_name() + ".\n");
 
-    /* brutalfactor  
-     */
-    c = itof(ob->query_exp());
-    d = itof(ob->query_exp_combat() + ob->query_exp_general());
-    j = ftoi(((100.0 * d) / ( c != 0 ? c : d)));
-    write(s + get_proc_text(j, brute_fact, 2) + ".\n");
+    /* brutalfactor */
+    d = ob->query_exp_combat() + ob->query_exp_general();
+    write(start_be + GET_NUM_DESC_SUB(d, ob->query_exp(), brute_fact, SD_STAT_DENOM, 2) + ".\n");
 
     return 1;
 }

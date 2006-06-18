@@ -73,11 +73,11 @@
 #define GET_PROC_DESC_SUB(v, md, sd, ti)     ((string)LANG_FILE->get_num_desc((v), 100, (md), (sd), (ti)))
 
 /*
- * GET_NUM_LVL_DESC - Match a value 'v' to a series of descriptions 'md'. Each
+ * GET_NUM_LEVEL_DESC - Match a value 'v' to a series of descriptions 'md'. Each
  * description has an associated level 'lv' that you need to have or exceed to
  * get the description.
  */
-#define GET_NUM_LVL_DESC(v, lv, md)          ((string)LANG_FILE->get_num_lvl_desc((v), (lv), (md)))
+#define GET_NUM_LEVEL_DESC(v, lv, md)        ((string)LANG_FILE->get_num_level_desc((v), (lv), (md)))
 
 /* No definitions beyond this line. */
 #endif LANG_DEF

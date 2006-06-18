@@ -7,7 +7,9 @@
     This file is included into living.c
  */
 
+#include <files.h>
 #include <macros.h>
+#include <state_desc.h>
 #include <ss_types.h>
 
 static int	*delta_stat;  /* Temporary extra stats. */
@@ -355,6 +357,90 @@ update_last_stats()
     last_stats[SS_NO_EXP_STATS] = query_average_stat();
     
     add_prop(PLAYER_AI_LAST_STATS, last_stats);
+}
+
+/*
+ * Function name: check_last_stats
+ * Description  : After experience has been added, check whether the stats
+ *                of the player have changed. If so, inform the player of
+ *                his stat increase.
+ */
+public void
+check_last_stats()
+{
+    int index, changed = 0;
+    int *last_stats = query_prop(PLAYER_AI_LAST_STATS);
+    int *new_stats = allocate(SS_NO_EXP_STATS + 1);
+    string olddesc, newdesc;
+    
+    if (sizeof(last_stats) != (SS_NO_EXP_STATS + 1))
+    {
+        update_last_stats();
+        return;
+    }
+    
+    for (index = 0; index < SS_NO_EXP_STATS; index++)
+    {
+        new_stats[index] = query_base_stat(index);
+        if (new_stats[index] != last_stats[index])
+        {
+            changed = 1;
+            if (new_stats[index] >= SD_STATLEVEL_SUP)
+            {
+                if (last_stats[index] < SD_STATLEVEL_SUP)
+                {
+                    tell_object(this_object(), "You have reached supreme " +
+                        SD_LONG_STAT_DESC[index] + ".\n");
+                }
+            }
+            else if (new_stats[index] >= SD_STATLEVEL_IMM)
+            {
+                if (last_stats[index] < SD_STATLEVEL_IMM)
+                {
+                    tell_object(this_object(), "You have reached the " +
+                        SD_LONG_STAT_DESC[index] + " of an immortal.\n");
+                }
+            }
+            if (new_stats[index] >= SD_STATLEVEL_EPIC)
+            {
+                if (last_stats[index] < SD_STATLEVEL_EPIC)
+                {
+                    tell_object(this_object(), "You have reached epic " +
+                        SD_LONG_STAT_DESC[index] + ".\n");
+                }
+            }
+            else
+            {
+                olddesc = GET_STAT_LEVEL_DESC(index, last_stats[index]);
+                newdesc = GET_STAT_LEVEL_DESC(index, new_stats[index]);
+                if (olddesc != newdesc)
+                {
+                    tell_object(this_object(), "Your " +
+                        SD_LONG_STAT_DESC[index] + " increases from " +
+                        olddesc + " to " + newdesc + ".\n");
+                }
+            }
+        }
+    }
+  
+    index = SS_NO_EXP_STATS;
+    new_stats[index] = query_average_stat();
+    if (new_stats[index] != last_stats[index])
+    {
+        changed = 1;
+        olddesc = GET_EXP_LEVEL_DESC(last_stats[index]);
+        newdesc = GET_EXP_LEVEL_DESC(new_stats[index]);
+        if (olddesc != newdesc)
+        {
+            tell_object(this_object(), "Congratulations. Your are now " +
+                "sufficiently experienced to call yourself " + newdesc + ".\n");
+        }
+    }
+    
+    if (changed)
+    {
+        add_prop(PLAYER_AI_LAST_STATS, new_stats);
+    }
 }
 
 /*
