@@ -37,9 +37,9 @@ find_listval(mixed member)
 /*
  * Kludge to figure out which stat.  This depends on the constants in tasks.h 
  * -1 -> 0    (TS_STR    -> SS_STR) until
- * -9 -> 8    (TS_LAYMAN -> SS_LAYMAN)
+ * -10 -> 9   (TS_CRAFT -> SS_CRAFT)
  */
-    else if (member < 0 && member > -10)
+    else if (member < 0 && member > -11)
 	return this_object()->query_stat((-member) - 1);
     
     else
