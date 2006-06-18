@@ -221,12 +221,12 @@ start_shutdown(string reason, int delay, string shutter)
 
     if (shutter == ROOT_UID)
     {
-	TELLALL("Lo and behold! I am here! " + reason);
+	TELLALL("Lo and behold! I am here! " + reason + "\n");
     }
     else
     {
 	TELLALL("Lo and behold! I am here! " + capitalize(shutter) +
-	    " asked me to shut the game down. " + reason);
+	    " asked me to shut the game down. " + reason + "\n");
     }
 
     shutdown_shutter = shutter;
@@ -244,12 +244,9 @@ start_shutdown(string reason, int delay, string shutter)
 
     set_this_player(this_object());
 
-    if (shutdown_manual)
-    {
-        TELLALL("As favour to " + capitalize(shutter) + ", no item will fail to glow.\n");
-    }
-
-    TELLALL("Tell me (do not commune) if you want to be sent home.");
+    TELLALL("Tell me (do not commune) if you want to be sent home." +
+        (shutdown_manual ? (" NOTE: As favour to " + capitalize(shutter) +
+        ", no item will fail to glow.\n") : "\n"));
     shutdown_dodelay();
 
     shutdown_info_domain_link(ARMAGEDDON_ANNOUNCE);
