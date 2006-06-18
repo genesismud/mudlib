@@ -40,5 +40,6 @@
 #define TS_RACE   -7
 #define TS_LAYMAN -9
 #define TS_OCC    -8
+#define TS_CRAFT  -10
 
 #endif
