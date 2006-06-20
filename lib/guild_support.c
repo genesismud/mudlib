@@ -408,14 +408,14 @@ gs_meditate(string str)
             }
         }
         residue = stat - SD_STATLEVELS[level];
-        spread = (((level+1) >= SD_NUM_STATLEVS) ? SD_STATLEVEL_EPIC :
-            SD_STATLEVELS[level+1]) - SD_STATLEVELS[level];
-        residue = ((SD_SIZEOF_ADVANCE_DESCS * residue) / spread);
+        level++;
+        spread = ((level >= SD_NUM_STATLEVS) ? SD_STATLEVEL_EPIC :
+            SD_STATLEVELS[level]) - SD_STATLEVELS[level-1];
 
-        write("You are " + SD_ADVANCE_DESCS[residue] + " advancing to " +
-            (((level+1) == SD_NUM_STATLEVS) ?
+        write("You are " + GET_NUM_DESC(residue, spread, SD_ADVANCE_DESCS) +
+            " advancing to " + ((level == SD_NUM_STATLEVS) ?
             ("epic " + SD_LONG_STAT_DESC[index]) :
-            GET_STAT_LEVEL_DESC(index, (level+1))) + ".\n");
+            GET_STAT_INDEX_DESC(index, level)) + ".\n");
     }
 
     prefs = this_player()->query_learn_pref(-1)[..(SS_NO_EXP_STATS-1)];
