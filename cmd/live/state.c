@@ -1335,7 +1335,9 @@ vitals(string str, object target = this_player())
         if (target->query_intoxicated())
         {
             write((self ? "You are" : (name + " is")) + " " +
-                GET_NUM_DESC(target->query_intoxicated(), target->query_prop(LIVE_I_MAX_INTOX), intox_state) + ".\n");
+                GET_NUM_DESC_SUB(target->query_intoxicated(),
+                    target->query_prop(LIVE_I_MAX_INTOX), intox_state,
+                    SD_STAT_DENOM, 0) + ".\n");
         }
         else
         {
