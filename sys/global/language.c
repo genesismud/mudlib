@@ -527,12 +527,13 @@ get_num_desc(int value, int maximum, string *maindescs, string *subdescs = 0, in
         mainindex = (value * sizeof(maindescs)) / maximum;
         return maindescs[mainindex];
     }
-
+    
     /* Distribute the value of the range of main and sub-descriptions. */
     value = (value * sizeof(maindescs) * sizeof(subdescs)) / maximum;
+        
     /* Extract the main and sub-indices. */
     mainindex = value / sizeof(subdescs);
-    subindex = value % sizeof(maindescs);
+    subindex = value % sizeof(subdescs);
 
     /* For the low end of the spectrum, we may reverse the sub-descriptions. */
     if (mainindex < turnindex)
