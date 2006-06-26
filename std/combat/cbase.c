@@ -788,7 +788,7 @@ cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
            armour_desc,
            attack_desc;
     int pdam, rndm;
-    object *armours;
+    object *armours, armour;
 
     if ((!objectp(enemy)) || (!objectp(me)))
     {
@@ -865,7 +865,8 @@ cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
         if (sizeof(armours) && sizeof(armours = filter(armours,
             &operator(!=)(A_MAGIC) @ &->query_at())))
         {
-            armour_desc = QSHORT(armours[random(sizeof(armours))]);
+            armour = one_of_list(armours);
+            armour_desc = QSHORT(armour);
 
             if (i_am_real)
             {
@@ -881,7 +882,7 @@ cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
                 enemy->catch_msg(me->query_The_name(enemy) + " " +
                     other_damage_desc + " your " + hdesc + " with " +
                     me->query_possessive() + " " + attack_desc +
-                    ", but your " + armour_desc + " protects you.\n");
+                    ", but your " + armour->short(enemy) + " protects you.\n");
             }
 
             tell_watcher(QCTNAME(me) + " " + other_damage_desc + " " +
