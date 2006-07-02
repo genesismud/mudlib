@@ -292,7 +292,8 @@ check_watchers_see_steal(object place, object victim, object thief,
         /* Does the onlooker attack thieves? */
         if (whom[index]->query_prop(LIVE_I_ATTACK_THIEF))
         {
-            if (CAN_SEE(whom[index], thief))
+            if (CAN_SEE_IN_ROOM(whom[index]) &&
+                CAN_SEE(whom[index], thief))
             {
                 whom[index]->command("$say to " +
                     OB_NAME(thief) + " Stop it, you thief!");
@@ -1320,11 +1321,13 @@ steal(string str)
         }
 
         /* Does the victim attack thieves instinctively? */
-        if (victim->query_prop(LIVE_I_ATTACK_THIEF))
+        if (victim->query_prop(LIVE_I_ATTACK_THIEF) &&
+            CAN_SEE_IN_ROOM(victim) && 
+            CAN_SEE(victim, this_player()))
         {
             victim->command("$say to " + OB_NAME(this_player()) +
                 " Stop it you thief!");
-
+            
             /* Don't switch targets in combat! */
             if (!objectp(victim->query_attack()))
             {
