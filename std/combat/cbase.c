@@ -1536,6 +1536,7 @@ heart_beat()
      * Do something when the enemy is somehow lost
      */
     cb_update_enemies();
+    
     if (!attack_ob || attack_ob->query_ghost() ||
         environment(attack_ob) != environment(me))
     {
@@ -1563,12 +1564,14 @@ heart_beat()
         {
             tell_object(me, "You turn to attack " +
                 attack_ob->query_the_name(me) + ".\n");
-            heart_beat();
-            return;
         }
         else
         {
-            stop_heart();
+            /* We don't stop the heart beat for another 30 seconds */
+            if (time() - cb_query_combat_time() > 30)
+            {
+                stop_heart();
+            }
             return;
         }
     }
@@ -1794,7 +1797,6 @@ heart_beat()
         else
         {
             attack_ob = 0;
-            stop_heart();
             return;
         }
     }
