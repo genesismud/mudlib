@@ -66,10 +66,10 @@ create_container()
     {
 	enable_reset();
     }
-    
+
     create_room();
     reset_auto_objects();
-    
+
     accept_here = all_inventory(this_object());
     if (!sizeof(accept_here))
 	accept_here = ({ });
@@ -124,15 +124,13 @@ reset_container()
 {
     cleanup_loot();
 
-    reset_room();
     reset_auto_objects();
-    
+    reset_room();
+
     if (!sizeof(accept_here))
 	accept_here = ({ });
     else
 	accept_here = filter(accept_here, objectp);
-
-    
 }
 
 /*
