@@ -265,17 +265,23 @@ reset_store()
     int size  = sizeof(default_stock);
     int total;
     int counted;
-    object *inv = FILTER_DEAD(all_inventory(this_object()));
+    object *inv;
 
+    inv = all_inventory();
+    inv -= FILTER_PLAYERS(inv);
+    
     /* For each of the items in the default stock, check the amount of items
      * in stock and clone new items if necessary.
      */
-    while((index += 2) < size)
+    while ((index += 2) < size)
     {
         total = ((default_stock[index + 1] == 1) ? default_stock[index + 1] :
             (default_stock[index + 1] - 1 + random(3)));
+
         counted = sizeof(filter(inv, &operator(==)(default_stock[index]) @
-            &extract(, 0, (strlen(default_stock[index]) - 1)) @ file_name));
+                             &extract(, 0, (strlen(default_stock[index]) - 1)) @
+                             file_name));
+        
         while(++counted <= total)
         {
             clone_object(default_stock[index])->move(this_object(), 1);
