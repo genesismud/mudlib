@@ -353,7 +353,7 @@ lpc_describe(mixed *uarr, function dfun, object for_obj)
  *                string word - the closer. Defaults to "and".
  * Returns      : string - "a, b, c and d"
  */
-string
+varargs string
 composite_words(string *wlist, string word = "and")
 {
     if (!sizeof(wlist))
