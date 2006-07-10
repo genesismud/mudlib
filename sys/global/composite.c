@@ -17,7 +17,7 @@ string desc_same(object *oblist, object for_obj);
 varargs string composite(mixed arr, string sepfunc, function descfunc, 
     object for_obj, int include_no_show);
 string lpc_describe(mixed *uarr, function dfun, object for_obj);
-string composite_words(string *wlist);
+varargs string composite_words(string *wlist, string word);
 
 
 static varargs string
@@ -346,8 +346,15 @@ lpc_describe(mixed *uarr, function dfun, object for_obj)
     return (sizeof(a) ? composite_words(a) : 0);
 }
 
+/*
+ * Function name: composite_words
+ * Description  : Concatenates a range of words with commas and a closer.
+ * Arguments    : string *wlist - the words to concatenate.
+ *                string word - the closer. Defaults to "and".
+ * Returns      : string - "a, b, c and d"
+ */
 string
-composite_words(string *wlist)
+composite_words(string *wlist, string word = "and")
 {
     if (!sizeof(wlist))
     {
@@ -361,11 +368,11 @@ composite_words(string *wlist)
 
     if (sizeof(wlist) == 2)
     {
-	return implode(wlist, " and ");
+	return wlist[0] + " " + word + " " + wlist[1];
     }
 
-    return implode(wlist[0..sizeof(wlist) - 2], ", ") +
-	" and " + wlist[sizeof(wlist) - 1];
+    return implode(wlist[0..sizeof(wlist) - 2], ", ") +	" " + word + " " +
+        wlist[sizeof(wlist) - 1];
 }
 
 /*

@@ -95,10 +95,13 @@
 
 /*
  * COMPOSITE_WORDS
+ * COMPOSITE_WORDS_WITH
  *
  * Simple combination of a wordlist with "," and "and"
+ * Simple combination of a wordlist with "," and another word.
  */
-#define COMPOSITE_WORDS(wl)	((string)COMPOSITE_FILE->composite_words(wl))
+#define COMPOSITE_WORDS(wl)		((string)COMPOSITE_FILE->composite_words((wl), "and"))
+#define COMPOSITE_WORDS_WITH(wl, wrd)	((string)COMPOSITE_FILE->composite_words((wl), (wrd)))
 
 /*
  * HANGING_INDENT

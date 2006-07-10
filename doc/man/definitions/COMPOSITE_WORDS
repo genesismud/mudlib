@@ -12,3 +12,5 @@ Returns    : string - the concatenated array.
 
 Example    : COMPOSITE_WORDS( ({ "a", "b", "c", "d" }) )
                  returns "a, b, c and d"
+
+See also   : COMPOSITE_WORDS_WITH
