@@ -245,7 +245,8 @@ in_guild(object player, string guild)
 {
     return ((player->query_guild_name_occ() == guild) ||
         (player->query_guild_name_lay() == guild) ||
-        (player->query_guild_name_race() == guild));
+        (player->query_guild_name_race() == guild) ||
+        (player->query_guild_name_craft() == guild));
 }
 
 nomask int
