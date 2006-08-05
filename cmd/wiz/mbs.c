@@ -13,6 +13,15 @@ inherit "/cmd/std/command_driver";
 
 #include <mbs.h>
 
+/* Some nifty defines I tend to use */
+#define NF(message)     notify_fail(message)
+#define TP              this_player()
+#define TI              this_interactive()
+#define TO              this_object()
+#define PO              previous_object()
+#define LC(str)         lower_case((str))
+#define UC(str)         capitalize(lower_case((str)))
+
 /*
  * Variables to be saved.
  */

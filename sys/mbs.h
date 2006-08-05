@@ -125,15 +125,6 @@
 #define SB_SPATH	4
 #define SB_LNOTE	5
 
-/* Some nifty defines I tend to use */
-#define NF(message)	notify_fail(message)
-#define TP		this_player()
-#define TI		this_interactive()
-#define TO		this_object()
-#define PO		previous_object()
-#define LC(str)		lower_case((str))
-#define UC(str)		capitalize(lower_case((str)))
-
 /* A check to see who is calling */
 #define CALL_CHECK	(function_exists("get_soul_id", PO) != MBS && \
 			 function_exists("create", PO) != MC)
