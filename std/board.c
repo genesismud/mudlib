@@ -969,10 +969,11 @@ create_note(string header, string author, string body)
     if (!find_player(author) || 
 	find_player(author) != this_interactive())
     {
-	SECURITY->log_syslog("BOARD", ctime(time()) + ": " + capitalize(this_interactive()->query_real_name()) + 
-			     " posted on the board '" + 
-			     query_board_name() + 
-			     "' as '" + author + "'.");
+	SECURITY->log_syslog("BOARD", ctime(time()) + ": " +
+            capitalize(this_interactive()->query_real_name()) + 
+            " posted on the board '" + 
+            query_board_name() + 
+            "' as '" + author + "'.\n");
     }
 
     /* Author's name may only be letters or the dash (-). */
@@ -1139,7 +1140,13 @@ remove_msg(string what_msg)
         say(QCTNAME(this_player()) + " removes a note:\n" +
             headers[note][0] + "\n");
 
+    SECURITY->log_syslog("BOARD", ctime(time()) + ": " +
+        capitalize(this_interactive()->query_real_name()) + 
+        " removed a note on: " + query_board_name() +
+        "\n                          " + headers[note][0] + "\n");
+        
     discard_message(headers[note][1]);
+    
     headers = exclude_array(headers, note, note);
     msg_num--;
 
