@@ -1221,13 +1221,15 @@ query_board_status(string bpath, string last)
 	    st += bd->check_remove() ? "-" : "d";
 	    st += "]";
 
-	    /* News status? */
+            /* News status? */
 	    il = atoi(last[1..]);
-	    ic = atoi(entry[BBP_LNOTE][1..]);
-	    if (il < ic)
-		return "U" + st;
-	    else
-		return "-" + st;
+            if (entry[BBP_LNOTE])
+            {
+                ic = atoi(entry[BBP_LNOTE][1..]);
+                if (il < ic)
+                    return "U" + st;
+            }
+            return "-" + st;
 	}
 	else
 	    return "B [???]";
