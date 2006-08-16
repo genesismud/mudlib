@@ -1182,6 +1182,9 @@ query_unread_news(string bpath, string last)
 
     entry = BbpMap[bpath];
 
+    if (!last || !entry[BBP_LNOTE])
+        return 0;
+    
     il = atoi(last[1..]);
     ic = atoi(entry[BBP_LNOTE][1..]);
 
@@ -1348,7 +1351,8 @@ print_headers(int select, string spath, int lnote, string order, string oitem)
 	write("The board was successfully reloaded.\n");
     }
 
-    if (!select && atoi(blist[BBP_LNOTE][1..]) <= lnote)
+    if (!select && (!blist[BBP_LNOTE] ||
+            atoi(blist[BBP_LNOTE][1..]) <= lnote))
     {
 	write("No news is good news.\n");
 	return MBS_NO_ERR;
