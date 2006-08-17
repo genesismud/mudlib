@@ -358,12 +358,6 @@ quit(string str)
         }
     }
 
-    /* For mortals, always save the 'true' race. */
-    if (!query_wiz_level())
-    {
-        reset_race_name();
-    }
-
     /* If you quit while in a team, switch off the auto-brief. */
     if (query_prop(TEMP_BACKUP_BRIEF_OPTION))
     {
@@ -403,15 +397,22 @@ quit(string str)
         inv = all_inventory(this_object());
     }
 
+    /* Give the message before resetting the race name (but after dropping of
+     * items). */
+    say( ({ METNAME + " leaves the realms.\n",
+	    TART_NONMETNAME + " leaves the realms.\n",
+	    "" }) );
+
+    /* For mortals, always save the 'true' race. */
+    if (!query_wiz_level())
+    {
+        reset_race_name();
+    }
+
     /* Save whatever needs to be saved. */
     tell_object(this_object(), "Saving " + query_name() + ".\n");
     save_me(0);
 
-    say( ({ METNAME + " leaves the realms.\n",
-	    TART_NONMETNAME + " leaves the realms.\n",
-	    "" }) );
-    
-    
     /* Remove the objects. If there are some persistant objects left,
      * hammer hard and they will go away eventually.
      */
