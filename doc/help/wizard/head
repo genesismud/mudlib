@@ -1,0 +1,15 @@
+NAME
+	head - display the first part of a file
+
+SYNOPSIS
+	head [lines] <path>
+
+DESCRIPTION
+	Display the first part of a file.
+
+ARGUMENTS
+	<path>  - the path to the file to display the start of.
+	[lines] - the number of lines to display. Default: 10 lines.
+
+SEE ALSO
+	cat, more, tail

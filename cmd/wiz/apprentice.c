@@ -163,6 +163,7 @@ query_cmdlist()
         "gwize":"gwiz",
 #endif UDP_ENABLED
 
+        "head":"head",
         "home":"home",
 
         "last":"last",

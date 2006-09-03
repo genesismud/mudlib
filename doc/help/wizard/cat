@@ -6,7 +6,7 @@ SYNOPSIS
 
 DESCRIPTION
 	With this command you display the contents of a file. Note
-	that the listing is truncated after 70 lines.
+	that the listing is truncated after about 70 lines.
 
 SEE ALSO
-	more
+	head, more, tail

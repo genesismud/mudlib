@@ -31,5 +31,5 @@ OPTIONS
 		          this value with the command 'wizopt'.
 
 SEE ALSO
-	cat, wizopt
+	cat, head, wizopt, tail
 

@@ -10,6 +10,7 @@
  * - cat
  * - cd
  * - dirs
+ * - head
  * - ls
  * - more
  * - popd
@@ -166,6 +167,67 @@ dirs(string str)
 	write(" " + implode(paths, " ") + "\n");
     else
 	write("\n");
+    return 1;
+}
+
+/* **************************************************************************
+ * head - display the header of a file
+ */
+int
+head(string path)
+{
+    int lines = 10;
+    int size;
+    string text;
+
+    CHECK_SO_WIZ;
+
+    if (!strlen(path))
+    {
+	notify_fail("Syntax: head [lines] <filename>\n");
+	return 0;
+    }
+
+    /* User may want to display a different number of lines. */
+    sscanf(path, "%d %s", lines, path);
+    if (lines <= 0)
+    {
+        notify_fail("Number of lines (" + lines + ") must be positive.\n");
+        return 0;
+    }
+
+    path = FTPATH(this_interactive()->query_path(), path);
+    if (!strlen(path))
+    {
+	notify_fail("Bad file name format.\n");
+	return 0;
+    }
+
+    if (!(SECURITY->valid_read(path, geteuid(), "head")))
+    {
+	notify_fail("You have no read access to: " + path + "\n");
+	return 0;
+    }
+
+    size = file_size(path);
+    if (size <= 0)
+    {
+	notify_fail("No such file: " + path + "\n");
+	return 0;
+    }
+
+    text = read_file(path, 1, lines);
+    if (!strlen(text))
+    {
+        notify_fail("Failed to read " + lines + " lines from: " + path + "\n");
+        return 0;
+    }
+
+    write(text);
+    if (size == strlen(text))
+    {
+        write("EOF\n");
+    }
     return 1;
 }
 

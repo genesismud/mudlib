@@ -13,4 +13,4 @@ ARGUMENTS
                  file, allowing you to scroll up in it.
 
 SEE ALSO
-	cat, more
+	cat, head, more
