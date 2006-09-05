@@ -24,19 +24,16 @@ inherit "/std/projectile";
  * Description  : Constructor. Use this constructor to create arrow type
  *                projectiles.
  */
-
 public void
 create_arrow()
 {
   return;
 }
 
-
 /*
  * Function name: get_projectile_long
  * Description  : Use this function to return the proper long description
  *                of this arrow.
- *                
  * Arguments    : string str     - the pseudo-item to describe. This is an
  *                                 item added with add_item. If this is 0, it
  *                                 will return the description of the whole
@@ -46,7 +43,6 @@ create_arrow()
  * Returns      : string         - the description of the object or
  *                                 pseudo-item.
  */
-
 string
 get_projectile_long(string str, object for_obj, int num)
 {
@@ -54,18 +50,17 @@ get_projectile_long(string str, object for_obj, int num)
         ((num == 1) ? " is" : "s are") + " unusually plain.\n";
 }
 
-
 /*
  * Function name: create_projectile
  * Description  : Constructor. This sets some internal state of the arrow
  *                Mask create_arrow instead if you want to create an
  *                arrow.
  */
-
 public nomask void
 create_projectile()
 {
     set_name("arrow");
+    set_pname("arrows");
 
     add_prop(HEAP_I_UNIT_WEIGHT, 22);
     add_prop(HEAP_I_UNIT_VOLUME, 26);
@@ -77,7 +72,6 @@ create_projectile()
     create_arrow();
 }
 
-
 /*
  * Function name: is_arrow
  * Description  : A function that indentifies this projectile as an arrow
@@ -85,7 +79,6 @@ create_projectile()
  *
  * Returns      : (int) 1 - Since this is an arrow.
  */
-
 public nomask int
 is_arrow()
 {

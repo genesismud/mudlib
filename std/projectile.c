@@ -88,7 +88,6 @@ enter_env(object to, object from)
  * Description  : This function marks this projectile as loaded and hides it
  *                from the player shooting it.
  */
-
 public nomask void
 load()
 {
@@ -102,7 +101,6 @@ load()
  * Description  : This function marks this projectile as unloaded and makes
  *                it visible to the player again.
  */
-
 public nomask void
 unload()
 {
@@ -115,10 +113,8 @@ unload()
 /*
  * Function name: query_broken
  * Description  : Gives information of the broken status of this projectile.
- *
  * Returns      : 1 - Projectile broken. 0 - Projectile whole.
  */
-
 public int
 query_broken()
 {
@@ -129,10 +125,8 @@ query_broken()
 /*
  * Function name: set_broken
  * Description  : This functions sets the broken status of this projectile.
- *                
  * Arguments    : int b - The new broken status. 1 - Broken. 0 - Whole.
  */
-
 public void
 set_broken(int b)
 {
@@ -155,7 +149,6 @@ set_broken(int b)
  * Description  : This functions updates the heap_id of the arrow so it
  *                stacks properly whith other hidden/broken arrows as well.
  */
-
 public void
 update_heap_id()
 {
@@ -178,7 +171,6 @@ update_heap_id()
  * Arguments    : int new_num - the number of coins in this new heap.
  *                object orig - the heap we are split from.
  */
-
 void
 config_split(int new_num, object orig)
 {
@@ -191,28 +183,22 @@ config_split(int new_num, object orig)
     ::config_split(new_num, orig);
 }
 
-
 /*
  * Function name: query_hit
  * Description  : Returns the to hit value of this projectile.
- *                
  * Returns      : (int) Hit value.
  */
-
 public int
 query_hit()
 {
     return hit;
 }
 
-
 /*
  * Function name: query_pen
  * Description  : Returns the penetration value of this projectile.
- *
  * Returns      : (int) Penetration value.
  */
-
 public int
 query_pen()
 {
@@ -223,10 +209,8 @@ query_pen()
 /*
  * Function name: set_hit
  * Description  : Sets the to hit value of this projectile.
- *
  * Arguments    : (int) To hit value.
  */
-
 public void
 set_hit(int h)
 {
@@ -237,10 +221,8 @@ set_hit(int h)
 /*
  * Function name: set_pen
  * Description  : Sets the penetration value of this projectiles.
- *                
  * Arguments    : (int) Penetration value.
  */
-
 public void
 set_pen(int p)
 {
@@ -252,10 +234,8 @@ set_pen(int p)
  * Function name: stat_object
  * Description  : This function is called when a wizard wants to get more
  *                information about an object.
- *
- * Returns      : str - The string to write.
+ * Returns      : strint - The string to write.
  */
-
 public string
 stat_object()
 {
@@ -264,21 +244,17 @@ stat_object()
       "Heap id: " + query_prop(HEAP_S_UNIQUE_ID) + "\n";
 }
 
-
 /*
  * Function name: set_projectile_id
  * Description  : Sets the id of this projectile. Projectiles with the same
  *                id will stack together.
- *
  * Arguments    : string - Projectile id.
  */
-
 public void
 set_projectile_id(string id)
 {
     projectile_id = id;
 }
-
 
 /*
  * Function name: set_long
@@ -286,19 +262,16 @@ set_projectile_id(string id)
  *                Redefine the get_projectile_long to return the proper
  *                long description instead.
  */
-
 private nomask void
 set_long(string long)
 {
     return;
 }
 
-
 /*
  * Function name: get_projectile_long
  * Description  : Use this function to return the proper long description
  *                of this projectile.
- *                
  * Arguments    : string str     - the pseudo-item to describe. This is an
  *                                 item added with add_item. If this is 0, it
  *                                 will return the description of the whole
@@ -321,7 +294,6 @@ get_projectile_long(string str, object for_obj, int num)
     }
 }
 
-
 /*
  * Function name: long
  * Description  : Describe the object or one pseudo item in it. This
@@ -330,7 +302,6 @@ get_projectile_long(string str, object for_obj, int num)
  *                description that get_projectile_long returns. You 
  *                should probably redefine get_projectile_long instead 
  *                of this function.
- *                
  * Arguments    : string str - the pseudo-item to describe. This is an
  *                             item added with add_item. If this is 0, it
  *                             will return the description of the whole
@@ -353,33 +324,27 @@ long(string str, object for_obj)
     }
 }
 
-
 /*
  * Function name: singular_short
  * Description  : This function will return the singular short descritpion
  *                for this projectile prepended with the broken status of
  *                the projectile.
- *                
  * Arguments    : object for_obj - who wants to know.
  * Returns      : string - the singular short description.
  */
-
 public string
 singular_short(object for_obj)
 {
     return (broken ? "broken " : "" ) + ::singular_short(for_obj);
 }
 
-
 /*
  * Function name: short
  * Description  : Get the short description for the projectile. Prepends
  *                the proper description of the broken status.
- *
  * Arguments    : object for_obj - who wants to know.
  * Returns      : string - the short description.
  */
-
 public varargs string
 short(object for_obj)
 {
@@ -402,41 +367,19 @@ short(object for_obj)
         return LANG_ADDART(str);
     }
 
-    str = plural_short(for_obj);
+    str = (broken ? "broken " : "") + plural_short(for_obj);
 
     if (num_heap() < 12) 
     {
-        if (broken)
-        { 
-	    return LANG_WNUM(num_heap()) + " broken " + str;
-	}
-	else
-	{
-	    return LANG_WNUM(num_heap()) + " " + str;
-	}
+	return LANG_WNUM(num_heap()) + " " + str;
     }
     
     if (this_player()->query_stat(SS_INT) / 2 > num_heap())
     {
-        if (broken) 
-	{
-	    return num_heap() + " broken " + str;
-	}
-	else
-	{
-	    return num_heap() + " " + str;
-	}
+	return num_heap() + " " + str;
     }
 
-    if (broken)
-    {
-        return (num_heap() < 1000 ? "many" : "a huge heap of") +
-	  " broken " + str;
-    }
-    else
-    {
-        return (num_heap() < 1000 ? "many" : "a huge heap of") + " " + str;
-    }
+    return (num_heap() < 1000 ? "many " : "a huge heap of ") + str;
 }
 
 
@@ -457,7 +400,6 @@ short(object for_obj)
  *                          points.
  *                hid:      The hit location id.
  */
-
 public varargs void 
 projectile_hit_target(object archer, int aid, string hdesc, int phurt, 
 		      object enemy, int dt, int phit, int dam, int hid)
@@ -494,7 +436,7 @@ init_recover(string arg)
 /*
  * Function name: may_not_recover
  * Description  : This function will be true if the projectile may not recover.
- * Returns      : 1 - no recovery, 0 - recovery.
+ * Returns      : int 1 - no recovery, 0 - recovery.
  */
 nomask int
 may_not_recover()
