@@ -2,8 +2,8 @@ NAME
         modify - modify a player's experience or stats
 
 SYNOPSIS
-        modify <player> exp    <type> <amount> <reason>
-        modify <player> <stat> <type> <amount> <reason>
+        modify <player> exp    <type> <amount> [<reason>]
+        modify <player> <stat> <type> <amount> [<reason>]
 
 DESCRIPTION
         Using this command, it is possible to alter the experience of a
@@ -34,10 +34,11 @@ ARGUMENTS
                    "quest", "combat" or "general" experience.
         <amount> - when changing experience, this is the amount to add or
                    remove, when changing a stat, this is the new stat value.
-        <reason> - a nice description of why you make this change.
+        <reason> - a nice description of why you make this change. The reason
+	           is optional only for changes to yourself or your junior.
 
 NOTICE
         All stat and experience modifications in players are logged.
         Misuse == demotion (or worse). In case you are doubtful about the
         exact way this command works, ask knowledgeble people rather than
-        to starting to fiddle with it to find out.
+        starting to fiddle with it to find out.

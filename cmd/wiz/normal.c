@@ -710,8 +710,10 @@ modify(string str)
 {
     string *words;
     string reason;
+    string name;
     int    amount;
     int    stat;
+    int    self;
     object player;
 
     CHECK_SO_WIZ;
@@ -723,22 +725,24 @@ modify(string str)
     }
 
     words = explode(str, " ");
-    if (sizeof(words) < 5)
+    name = lower_case(words[0]);
+    self = (name == this_player()->query_real_name()) || wildmatch("*jr", name);
+    if (sizeof(words) < (5 - self))
     {
         notify_fail("Syntax: modify <person> <stat>/exp <type> <amount> " +
-            "<reason>\n");
+            "[<reason>]\n");
         return 0;
     }
 
-    if (!objectp(player = find_player(lower_case(words[0]))))
+    if (!objectp(player = find_player(name)))
     {
-        notify_fail("Player \"" + capitalize(words[0]) +
+        notify_fail("Player \"" + capitalize(name) +
             "\" is not found in the game.\n");
         return 0;
     }
 
     amount = atoi(words[3]);
-    reason = implode(words[4..], " ");
+    reason = (self ? "self" : implode(words[4..], " "));
 
     words[2] = lower_case(words[2]);
     if (member_array(words[2], ({ "quest", "combat", "general" }) ) < 0)
