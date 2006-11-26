@@ -17,9 +17,9 @@ public string
 round_stat(int stat)
 {
     if (stat > 100000)
-	return sprintf("%2.1fM", itof(stat) / 1000000.0);
+	return sprintf("%3.1fM", itof(stat) / 1000000.0);
     else if (stat > 1000)
-	return sprintf("%2.1fk", itof(stat) / 1000.0);
+	return sprintf("%3.1fk", itof(stat) / 1000.0);
 		
     return sprintf("%d", stat);
 }
@@ -39,63 +39,68 @@ stat_living()
 
     to = this_object();
     str = sprintf(
-		  "Name: %-11s Rank: %-10s " +
+	  "Name: %-11s Rank: %-10s " +
 #ifdef USE_WIZ_LEVELS
-                  "(%-2d) " +
+          "(%-2d) " +
 #endif
-		  "Race: %-10s Gender: %-10s\n" +
-	          "File: %-35s Uid: %-11s  Euid: %-11s\n"  +
-		  "------------------------------------------------------" +
-		  "--------------------\n" +
-		  "Exp: %-8d  Quest: %-7d  Combat: %-7d General: %-7d " +
-		  "Av.Stat: %d\n" +
-		  "Hp: %4d(%4d) Mana: %4d(%4d)\n" +  
-		  "Fatigue: %5d(%5d)  Weight: %7d(%7d)   Volume: %7d(%7d)\n\n" +
-		  "Stat: %@7s\n"  +
-                  "Value:%@7d\n" +
-                  "Base: %@7d\n" +
-                  "Exp:  %@7s\n" +
-	          "Learn:%@7d\n\n" +
-	  "Intox: %4d  Stuffed: %3d Soaked: %3d  Panic : %3d  Align : %d\n" +
-	  "Scar : %4d  Ghost  : %3d Invis : %3d  Npc   : %3d  Whimpy: %3d\n",
+	  "Gender: %-10s Race: %s (%s)\n" +
+          "File: %-35s  Uid&Euid: %s\n"  +
+	  "--------------------------------------------------------------------------\n" +
+	  "Exp: %9d %8s)  Quest: %7d  Combat: %8d  General: %8d\n" +
+ 	  "Weight: %6d %8s)  Volume: %6d %8s)\n" +
+	  "Hp:  %4d %5s)  Mana:  %4d %5s)  Panic: %4d %5s)  Fatigue: %4d %5s)\n" +  
+	  "Eat: %4d %5s)  Drink: %4d %5s)  Intox: %4d %5s)  Av.Stat: %4d\n" +  
+ 	  "\n" +
+	  "Stat: %@7s\n"  +
+          "Value:%@7d\n" +
+          "Base: %@7d\n" +
+          "Exp:  %@7s\n" +
+	  "Learn:%@7d\n\n" +
+	  "Align: %d   Hide: %d   Invis: %d   Scar : %d   Ghost: %d   Npc: %d   Whimpy: %d%%\n",
 		  capitalize(query_real_name()),
 		  WIZ_RANK_NAME(SECURITY->query_wiz_rank(query_real_name())),
 #ifdef USE_WIZ_LEVELS
 		  SECURITY->query_wiz_level(query_real_name()),
 #endif
-		  to->query_race_name(),
 		  to->query_gender_string(),
-		  extract(RPATH(file_name(this_object())), 0, 30),
-		  getuid(this_object()),
-		  geteuid(this_object()),
+		  to->query_race_name(),
+		  to->query_race(),
+		  extract(RPATH(file_name(this_object())), 0, 34),
+		  getuid(this_object()) + ":" + geteuid(this_object()),
 		  to->query_exp(),
+		  ((to->query_max_exp() > to->query_exp()) ? "(" + to->query_max_exp() : "(max"),
 		  to->query_exp_quest(),
 		  to->query_exp_combat(),
 		  to->query_exp_general(),
-		  to->query_average_stat(),
-		  to->query_hp(),
-		  to->query_max_hp(),
-		  to->query_mana(),
-		  to->query_max_mana(),
-		  to->query_fatigue(),
-		  to->query_max_fatigue(),
 		  to->query_prop(OBJ_I_WEIGHT),
-		  to->query_prop(CONT_I_MAX_WEIGHT),
+		  "(" + to->query_prop(CONT_I_MAX_WEIGHT),
 		  to->query_prop(OBJ_I_VOLUME),
-		  to->query_prop(CONT_I_MAX_VOLUME),
+		  "(" + to->query_prop(CONT_I_MAX_VOLUME),
+		  to->query_hp(),
+		  "(" + to->query_max_hp(),
+		  to->query_mana(),
+		  "(" + to->query_max_mana(),
+		  to->query_panic(),
+		  "(" + F_PANIC_WIMP_LEVEL(to->query_stat(SS_DIS)),
+		  to->query_fatigue(),
+		  "(" + to->query_max_fatigue(),
+		  to->query_stuffed(),
+		  "(" + to->query_prop(LIVE_I_MAX_EAT),
+		  to->query_soaked(),
+		  "(" + to->query_prop(LIVE_I_MAX_DRINK),
+		  to->query_intoxicated(),
+		  "(" + to->query_prop(LIVE_I_MAX_INTOX),
+		  to->query_average_stat(),
 		  SS_STAT_DESC,
                   map(stats, &to->query_stat()),
                   map(map(stats, &to->query_acc_exp()), base_stat),
                   map(map(stats, &to->query_acc_exp()), round_stat),
 		  to->query_learn_pref(-1),
-		  to->query_intoxicated(),
-		  to->query_stuffed(),
-		  to->query_soaked(),
-		  to->query_panic(),
 		  to->query_alignment(),
+		  to->query_prop(OBJ_I_HIDE),
+		  to->query_invis(),
 		  to->query_scar(),
 		  to->query_ghost(),
-		  to->query_invis(),
 		  to->query_npc(),
 		  to->query_whimpy());
 
