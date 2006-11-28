@@ -35,13 +35,14 @@ private int    hit_points,      /* The hitpoints of this lifeform. */
                exp_points,      /* Amount of quest experience */
                exp_combat,      /* Amount of exp gained in combat */
                exp_general,     /* Amount of general experience */
+               exp_max_total,   /* Maximum amount of exp the player ever had */
                is_ghost,        /* If lifeform is dead */
                alignment,       /* Depends on good or chaotic lifeform */
-               gender,          /* 0 neut("it"),1 male("he"),2 female("she") */
+               gender,          /* G_NEUTER, G_MALE or G_FEMALE (0-2) */
                appearance,      /* What we look like (0-99) */
                opinion,         /* What we think of others appearance */
                intoxicated,     /* How drunk are we? */
-               stuffed,         /* Are we fed up or not */
+               stuffed,         /* Are we fed or not */
                soaked,          /* How soaked are we ? */
                *learn_pref,     /* Prefered % to learn / stat */
                *acc_exp,        /* Accumulated exp / stat */
@@ -230,7 +231,7 @@ query_mm_out()
  *                living object. The real function is moved to the player
  *                object.
  *
- *                WARNING! This function is not nomasked! People can
+ *                WARNING! This function is NOT nomasked! People can
  *                redefine this and make themselves appear to be a wizard.
  *                In case you need to be certain of the level of the person,
  *                call the following function.
@@ -763,6 +764,32 @@ public int
 query_exp()
 {
     return (exp_points + exp_combat + exp_general);
+}
+
+/* 
+ * Function name: query_max_exp
+ * Description  : Gives the total amount of experience the living ever had,
+ *                i.e. before death took any.
+ * Returns      : int - the maximum experience points.
+ */
+public int
+query_max_exp()
+{
+    return exp_max_total;
+}
+
+/*
+ * Function name: update_max_exp
+ * Description  : Remember the maximum amount of experience the living ever
+ *                had, i.e. before death took any.
+ */
+public void
+update_max_exp()
+{
+    if (query_exp() > exp_max_total)
+    {
+        exp_max_total = query_exp();
+    }
 }
 
 /*
