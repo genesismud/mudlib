@@ -154,26 +154,18 @@
  */
 #define F_KILL_NEUTRAL_ALIGNMENT        (10)
 #define F_MAX_ABS_ALIGNMENT		(1200)
-#define F_KILL_ADJUST_ALIGN(killer_al, victim_al) \
-    (int)call_other(MATH_FILE, "delta_align_on_kill", (killer_al), (victim_al))
+#define F_KILL_ADJUST_ALIGN(k_al, v_al) \
+    (int)call_other(MATH_FILE, "delta_align_on_kill", (k_al), (v_al))
 #define F_QUEST_ADJUST_ALIGN(my_align, quest_align) \
     (F_KILL_ADJUST_ALIGN((my_align), -(quest_align)))
 #define F_PANIC_WIMP_LEVEL(dis)		(10 + 3 * (dis))
 #define F_PANIC_DEPR_PROC		(4)
 #define F_PANIC_DEPR_CONST		(1)
-#define F_DIE_REDUCE_XP(xp) 		((xp) / 5)
-#define F_DIE_START_HP(max_hp) 		((max_hp) / 10)
 
-#define F_EXP_ON_KILL(ka, va) \
-    (int)call_other(MATH_FILE, "exp_on_kill", (ka), (va))
-#define F_KILL_GIVE_EXP(av)	        (((av) * (av) * 400) / ((av) + 50))
-#define F_EXP_TEAM_BONUS(size)          (100 + ((size) * 10))
-#define F_RELAX_TIME_AFTER_COMBAT(tme)  ((tme) + 60 + (6 * ((tme) % 10)))
 #define F_MAX_SCAR			(10)
-#define F_SCAR_DESCS ({ 					       \
-			  "left leg", "right leg", "nose", "left arm", \
+#define F_SCAR_DESCS ({   "left leg", "right leg", "nose", "left arm", \
 			  "right arm", "left hand", "right hand",      \
-			  "forehead", "left cheek", "right cheek"       \
+			  "forehead", "left cheek", "right cheek"      \
 		     })
 /*
  * The following constants define how quickly a living heals.
@@ -199,8 +191,7 @@
 #define F_FATIGUE_FORMULA(stuffed, max) (5 + (stuffed) * 45 / (max))
 
 /* Formula to heal mana with respect to spellcasting, int and intox */
-/*
- * Old formula, pre 2006-05-23
+/* Old formula, pre 2006-05-23
 #define F_MANA_HEAL_FORMULA(sc,pintox,intel) \
     (((sc) < 31) ? 2 : ((((((sc) - 30) * MAX_MANA_UPDATE * (intel)) / \
 	1000 + 5) * (100 - (pintox)) / 1000) + 2))
@@ -245,6 +236,16 @@
 #define F_GHOST_MSGOUT 	     "blows"
 #define F_NAME_OF_GHOST	     "some mist"
 
+#define F_DIE_REDUCE_XP(xp) 		((xp) / 5)
+#define F_DIE_KEEP_XP(xp)		((xp) - (F_DIE_REDUCE_XP(xp)))
+#define F_DIE_STAT_FACT(q, t)		(itof((t) - F_DIE_REDUCE_XP((t) - (q))) / itof(t))
+#define F_DIE_START_HP(max_hp) 		((max_hp) / 10)
+
+#define F_EXP_ON_KILL(k_av, v_av) \
+    (int)call_other(MATH_FILE, "exp_on_kill", (k_av), (v_av))
+#define F_KILL_GIVE_EXP(av)	        (((av) * (av) * 400) / ((av) + 50))
+#define F_EXP_TEAM_BONUS(size)          (100 + ((size) * 10))
+
 /*
  * Combat 
  */
@@ -266,6 +267,8 @@
 #define F_UNARMED_HIT(skill, dex)    ((skill) / 7 + (dex) / 20)
 #define F_UNARMED_PEN(skill, str)    ((skill) / 10 + (str) / 20)
 #define F_UNARMED_DEFAULT	     (40)
+
+#define F_RELAX_TIME_AFTER_COMBAT(tme)  ((tme) + 60 + (6 * ((tme) % 10)))
 
 /*
  * Healing alco
@@ -301,4 +304,4 @@
 #define F_ALIVE_TELEOUT 		"disappears in a puff of smoke."
 
 /* No definitions beyond this line. */
-#endif
+#endif F_FORMULAS

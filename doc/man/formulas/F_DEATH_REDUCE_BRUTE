@@ -1,0 +1,12 @@
+Definition : F_DEATH_REDUCE_BRUTE(float brute)
+
+Defined in : #include <formulas.h>
+
+Description: When a player is recovering from a death, we can modify the
+             brute factor. The brute factor is the fraction of the added
+	     experience that is lost due to brutality. If you lower the
+	     brute factor, the player keeps more of the added experience.
+
+Arguments  : float brute - the brute factor.
+
+Returns    : float - the modified (lowered!) brute factor.

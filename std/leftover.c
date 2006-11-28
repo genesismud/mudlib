@@ -20,9 +20,11 @@ inherit "/std/food";
 #include <composite.h>
 #include <files.h>
 #include <language.h>
+#include <living_desc.h>
 #include <macros.h>
 #include <stdproperties.h>
 
+/* Global variables. */
 int decay_time;		/* The time it takes for the food to decay in min */
 int simple_names;	/* Setup of simple names or not */
 string l_organ, l_race; /* Race and organ name */
@@ -37,6 +39,20 @@ create_leftover()
     add_name("leftover");
     add_pname("leftovers");
     set_amount(1);
+}
+
+string
+long_description()
+{
+    if ((num_heap() < 2) ||
+	(num_heap() >= 1000))
+    {
+	return "It is the torn and bloody remains of " + short() + ".\n";
+    }
+    else
+    {
+	return "There are the torn and bloody remains of " + short() + ".\n";
+    }
 }
 
 /*
@@ -55,8 +71,18 @@ leftover_init(string organ, string race)
 	set_name(organ);
 	set_pname(LANG_PWORD(organ));
         set_short(race + " " + organ);
-	set_long("This is the torn and bloody remains of " +
-	    LANG_ADDART(race + " " + organ) + ".\n");
+	set_long(long_description);
+	
+	if (IN_ARRAY(organ, LD_BONES))
+	{
+	    add_name("bone");
+	    add_pname("bones");
+	}
+	if (IN_ARRAY(organ, LD_ORGANS))
+	{
+	    add_name("organ");
+	    add_pname("organs");
+	}
     }
 
     add_prop(HEAP_S_UNIQUE_ID, "_leftover_" + race + "_" + organ);

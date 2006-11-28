@@ -31,12 +31,10 @@
 #define LD_SPELL_CONC_BROKEN	"Your concentration is broken. " + 	\
   				"No spell will be cast.\n"
   
-/* Day / Night things
-*/
+/* Day / Night things */
 #define LD_IS_NIGHT(o)		"It's Night.\n" + o->short() + ".\n"
 
-/* combat
-*/
+/* combat */
 #define LD_FIGHT1(c)		c + (c != "you" ? " is" : " are")
 #define LD_FIGHT_MANY(cl)	implode(cl[0..sizeof(ctants)-2], ", ") + \
   				" and " + cl[sizeof(ctants)-1] + " are"
@@ -44,8 +42,11 @@
 #define LD_FIGHT_DESC(tx, o)	capitalize(tx) + " fighting " +		\
 		  		o->query_the_name(this_object()) + ".\n"
 
-/* scars
- */
+/* leftovers */
+#define LD_BONES  ({ "skull", "thighbone", "kneecap", "rib" })
+#define LD_ORGANS ({ "heart", "kidney", "intestine", "ear", "eye", "nose" })
+
+/* scars */
 #define LD_SCARS(n)		(n == 1 ? "a scar on" : "scars on")
 #define LD_YOUR_SCARS(n, d)     "You have " + LD_SCARS(n) + " your " + d
 #define LD_HAS_SCARS(n)		" has " + LD_SCARS(n)
@@ -61,8 +62,7 @@
 #define SCAR_LEFT_CHEEK    256
 #define SCAR_RIGHT_CHEEK   512
 
-/* longdesc
-*/
+/* longdesc */
 #define LD_PRESENT_YOU(o)	"You are " + 				\
   				LANG_ADDART(o->query_nonmet_name()) + 	\
                                 ", presenting yourself as:\n" +		\
@@ -79,8 +79,7 @@
 
 #define LD_MET_GHOST(o)		"It is the " + o->query_name() + "\n"
 
-/* drink_eat.c
-*/
+/* drink_eat.c */
 #define LD_NOTICE_HEADACHE	"You notice that you have " + \
 				"a terrible headache.\n"
 
@@ -89,8 +88,7 @@
 
 #define LD_GONE_HEADACHE	"Your headache seems to be gone.\n"
 
-/* gender.c
-*/
+/* gender.c */
 #define LD_GENDER_MAP		([ G_MALE : "male", G_FEMALE : "female",\
 				   G_NEUTER : "neuter"])
 
@@ -98,15 +96,13 @@
 #define LD_POSSESSIVE_MAP	([ G_MALE:"his",G_FEMALE:"her",G_NEUTER:"its"])
 #define LD_OBJECTIVE_MAP	([ G_MALE:"him",G_FEMALE:"her",G_NEUTER:"it"])
 
-/* heart_beat.c
-*/
+/* heart_beat.c */
 #ifdef STATUE_WHEN_LINKDEAD
 #define LD_STATUE_TURN(o)	"Suddenly, " + QTNAME(o) + " " +	\
 			        STATUE_TURNS_INTO + ".\n"
 #endif STATUE_WHEN_LINKDEAD
  
-/* move.c
-*/
+/* move.c */
 #define LD_ALIVE_MSGIN		F_ALIVE_MSGIN
 #define LD_ALIVE_MSGOUT		F_ALIVE_MSGOUT
 #define LD_ALIVE_TELEIN		F_ALIVE_TELEIN
@@ -117,4 +113,5 @@
 #define LD_UNWANTED_PREFIX	({ "king*" })
 #endif  LD_UNWANTED_PREFIX
 
-#endif
+/* No definitions beyond this line. */
+#endif LD_DEFINED
