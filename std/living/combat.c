@@ -433,6 +433,22 @@ move_all_to(object dest)
     }
 }
 
+#if 0
+/*
+ * Function name: notify_you_killed_me
+ * Description  : This routine is called in the killer when it causes the death
+ *                of the victim. It can be used for additional processing.
+ *
+ *                This routin does not actually exist. It is a trick to fool
+ *                the document maker.
+ * Arguments    : object victim - the victim we caused to perish.
+ */
+void
+notify_you_killed_me(object victim)
+{
+}
+#endif
+
 /*************************************************
  *
  * Whimpy routines
