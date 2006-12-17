@@ -55,6 +55,7 @@
 #define F_ARMOUR_CLASS_PROC(proc_of_max) 	(proc_of_max)
 #define F_LEGAL_ARMOUR_REPAIR(rep, cond)	((rep) <= (cond)  && \
 							(rep) < (cond) / 2 + 3)
+#define F_ARMOUR_REPAIR_COST_FACTOR             (10)
 #define F_ARMOUR_VALUE_REDUCE(m_cond)		(max((100 - (m_cond) * 5), 10))
 #define F_ARMOUR_BREAK(m_cond, likely)		((m_cond)>(20 - (likely) / 2 ) \
 		|| (m_cond) > random(40 - (likely)))
@@ -96,6 +97,7 @@
 							(rep)< 2*(dull)/ 3 + 3)
 #define F_LEGAL_WEAPON_REPAIR_CORR(rep, corr)	((rep) <= (corr) && \
 							(rep) < (corr) / 2 + 1)
+#define F_WEAPON_REPAIR_COST_FACTOR             (10)
 #define F_WEAPON_BREAK(dull, corr, likely)	((dull) > (20 - (likely)) || \
 		(corr) > (5 -(likely)/ 4) || (dull) > random(40 -(likely)) || \
 		(corr) > random(10 - (likely) / 4))

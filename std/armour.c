@@ -103,7 +103,7 @@ create_object()
     set_looseness(2);
     set_layers(4);
     worn = 0;
-    add_prop(OBJ_I_VALUE, "@@query_value");
+    add_prop(OBJ_I_VALUE, "@@query_value@@");
     add_prop(OBJ_I_VOLUME, 1000);
     add_prop(OBJ_I_WEIGHT, 500);
 
@@ -472,6 +472,18 @@ int
 query_repair()
 {
     return repair;
+}
+
+/*
+ * Function Name: query_repair_cost
+ * Description  : Returns the cost to repair this armour one level.
+ * Returns      : int - the cost in cc
+ */ 
+int
+query_repair_cost()
+{
+    return max(max_value, F_VALUE_ARMOUR(query_ac())) *
+        F_ARMOUR_REPAIR_COST_FACTOR / 100;
 }
 
 /*

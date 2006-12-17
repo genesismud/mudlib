@@ -950,6 +950,31 @@ query_value()
 }
 
 /*
+ * Function Name: query_repair_cost_dull
+ * Description  : Returns the cost to repair this weapon one dull step.
+ * Returns      : int - the cost in cc
+ */
+int
+query_repair_cost_dull()
+{
+    return max(max_value, F_VALUE_WEAPON(query_hit(), query_pen())) *
+        F_WEAPON_REPAIR_COST_FACTOR / 100;
+}
+
+/*
+ * Function Name: query_repair_cost_corr
+ * Description  : Returns the cost to repair this weapon from one level of
+ *                corrosion
+ * Returns      : int - the cost in cc
+ */ 
+int
+query_repair_cost_corr()
+{
+    return max(max_value, F_VALUE_WEAPON(query_hit(), query_pen())) *
+        F_WEAPON_REPAIR_COST_FACTOR / 100;
+}
+    
+/*
  * Function name: query_wf
  * Description:   Query if/what object defines wield/unwield functions
  */
