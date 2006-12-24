@@ -45,7 +45,7 @@ stat_living()
 #endif
 	  "Gender: %-10s Race: %s (%s)\n" +
           "File: %-35s  Uid&Euid: %s\n"  +
-	  "--------------------------------------------------------------------------\n" +
+	  "-----------------------------------------------------------------------------\n" +
 	  "Exp: %9d %8s)  Quest: %7d  Combat: %8d  General: %8d\n" +
  	  "Weight: %6d %8s)  Volume: %6d %8s)\n" +
 	  "Hp:  %4d %5s)  Mana:  %4d %5s)  Panic: %4d %5s)  Fatigue: %4d %5s)\n" +  
@@ -56,7 +56,7 @@ stat_living()
           "Base: %@7d\n" +
           "Exp:  %@7s\n" +
 	  "Learn:%@7d\n\n" +
-	  "Align: %d   Hide: %d   Invis: %d   Scar : %d   Ghost: %d   Npc: %d   Whimpy: %d%%\n",
+	  "Align: %d  Scar: %d  Hide: %d  Invis: %d  Ghost: %d  Npc: %d  Whimpy: %d%%\n",
 		  capitalize(query_real_name()),
 		  WIZ_RANK_NAME(SECURITY->query_wiz_rank(query_real_name())),
 #ifdef USE_WIZ_LEVELS
@@ -97,9 +97,9 @@ stat_living()
                   map(map(stats, &to->query_acc_exp()), round_stat),
 		  to->query_learn_pref(-1),
 		  to->query_alignment(),
+		  to->query_scar(),
 		  to->query_prop(OBJ_I_HIDE),
 		  to->query_invis(),
-		  to->query_scar(),
 		  to->query_ghost(),
 		  to->query_npc(),
 		  to->query_whimpy());
