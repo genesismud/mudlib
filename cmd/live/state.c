@@ -1396,9 +1396,10 @@ vitals(string str, object target = this_player())
 varargs int
 show_stats(string str)
 {
-    int a, i, j, c, d;
+    int a, i, j, c;
     object ob;
     string start_be, start_have, *stats;
+    string orig_brute, actual_brute;
 
     if (!str)
     {
@@ -1455,8 +1456,14 @@ show_stats(string str)
     write(start_be + LANG_ADDART(COMPOSITE_WORDS(stats)) +  " " + ob->query_nonmet_name() + ".\n");
 
     /* brutalfactor */
-    d = ob->query_exp_combat() + ob->query_exp_general();
-    write(start_be + GET_NUM_DESC_SUB(d, ob->query_exp(), brute_fact, SD_STAT_DENOM, 2) + ".\n");
+    actual_brute = GET_NUM_DESC_SUB(ftoi(ob->query_brute_factor(0) * 1000.0), 1000, brute_fact, SD_STAT_DENOM, 2);
+    orig_brute = GET_NUM_DESC_SUB(ftoi(ob->query_brute_factor(1) * 1000.0), 1000, brute_fact, SD_STAT_DENOM, 2);
+
+    write(start_be + actual_brute + ".\n");
+    if (actual_brute != orig_brute)
+    {
+        write("After recovery from death, " + lower_case(start_be) + " " + orig_brute + ".\n");
+    }
 
     return 1;
 }

@@ -280,7 +280,7 @@ int query_exp_quest() { return exp_points; }
 
 int query_exp_general() { return exp_general; }
 
-int query_exp_max_total() { return exp_max_total; }
+int query_max_exp() { return exp_max_total; }
 
 public string
 query_exp_title()
