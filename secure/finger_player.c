@@ -16,6 +16,7 @@ inherit SPECIAL_INFO_OBJ;
 #include <language.h>
 #include <living_desc.h>
 #include <login.h>
+#include <options.h>
 #include <ss_types.h>
 #include <state_desc.h>
 #include <std.h>
@@ -30,11 +31,13 @@ private string	race_name,
 		password,
 		*adj_desc,
 		mentor,
+		options,
 		*student;
 
 private int	exp_points,
 		exp_combat,
                 exp_general,
+                exp_max_total,
 		age_heart,
 		gender,
 		login_time,
@@ -42,7 +45,8 @@ private int	exp_points,
 		*learn_pref,
 		alignment,
 		*acc_exp,
-                restricted;
+                restricted,
+                scar;
 
 private mapping m_remember_name = ([ ]),
                 m_seconds = ([ ]);
@@ -213,6 +217,8 @@ int    query_age() { return age_heart; }
 
 int    query_alignment() { return alignment; }
 
+int    query_scar() { return scar; }
+
 /*
  * Function name: query_password
  * Description  : Return the password of the player. Only SECURITY may do
@@ -249,29 +255,32 @@ match_password(string p)
     return (password == crypt(p, password));
 }
 
-int
-query_exp()
+nomask int
+query_option(int opt)
 {
-    return (exp_points + exp_combat + exp_general);
+    if (!stringp(options))
+        options = OPT_DEFAULT_STRING;
+
+    switch(opt)
+    {
+    case OPT_WHIMPY:
+        return atoi(options[6..7]);
+    default:
+        return 0;
+    }
 }
 
-int
-query_exp_combat()
-{
-    return exp_combat;
-}
+int query_whimpy() { return query_option(OPT_WHIMPY); }
 
-int
-query_exp_quest()
-{
-    return exp_points;
-}
+int query_exp() { return (exp_points + exp_combat + exp_general); }
 
-int
-query_exp_general()
-{
-    return exp_general;
-}
+int query_exp_combat() { return exp_combat; }
+
+int query_exp_quest() { return exp_points; }
+
+int query_exp_general() { return exp_general; }
+
+int query_exp_max_total() { return exp_max_total; }
 
 public string
 query_exp_title()
@@ -417,25 +426,36 @@ stat_living()
 
     to = this_object();
     str = sprintf(
-                  "Name: %15s(%-15s   Race: %-10s    Gender: %-10s\n" +
-                  "------------------------------------------------------" +
-                  "----------------------\n" +
-                  "Exp: %-8d Quest: %-7d Combat: %-7d General: %-7d " +
-		  "Av.Stat: %d\n" +
-                  "Stat: %@7s\n"  +
-                  "Value:%@7d\n" +
-                  "Base: %@7d\n" +
-                  "Exp:  %@7s\n" +
-                  "Learn:%@7d\n" 
-                  ,
-                  to->query_name(), query_real_name()+")",
-                  to->query_race_name(),
+	  "Name: %-11s Rank: %-10s " +
+#ifdef USE_WIZ_LEVELS
+          "(%-2d) " +
+#endif
+	  "Gender: %-10s Race: %s (%s)\n" +
+          "File: %-35s\n"  +
+	  "-----------------------------------------------------------------------------\n" +
+	  "Exp: %9d %8s)  Quest: %7d  Combat: %8d  General: %8d\n" +
+ 	  "\n" +
+	  "Stat: %@7s\n"  +
+          "Value:%@7d\n" +
+          "Base: %@7d\n" +
+          "Exp:  %@7s\n" +
+	  "Learn:%@7d\n\n" +
+	  "Align: %d   Scar: %d   Ghost: %d   Whimpy: %d%%   Av.Stat: %4d\n",
+
+                  capitalize(query_real_name()),
+		  WIZ_RANK_NAME(SECURITY->query_wiz_rank(query_real_name())),
+#ifdef USE_WIZ_LEVELS
+		  SECURITY->query_wiz_level(query_real_name()),
+#endif
                   to->query_gender_string(),
-                  to->query_exp(),
-                  to->query_exp_quest(),
-                  to->query_exp_combat(),
-                  to->query_exp_general(),
-                  to->query_average_stat(),
+                  to->query_race_name(),
+                  to->query_race(),
+                  to->query_player_file(),
+		  to->query_exp(),
+		  ((to->query_max_exp() > to->query_exp()) ? "(" + to->query_max_exp() : "(max"),
+		  to->query_exp_quest(),
+		  to->query_exp_combat(),
+		  to->query_exp_general(),
                   SS_STAT_DESC,
 
                   ({ query_stat(SS_STR), query_stat(SS_DEX),
@@ -456,13 +476,18 @@ stat_living()
                      F_EXP_TO_STAT(query_acc_exp(SS_CRAFT)) }),
 
                   map(({ query_acc_exp(SS_STR), query_acc_exp(SS_DEX),
-			     query_acc_exp(SS_CON), query_acc_exp(SS_INT),
-			     query_acc_exp(SS_WIS), query_acc_exp(SS_DIS),
-			     query_acc_exp(SS_RACE), query_acc_exp(SS_OCCUP),
-			     query_acc_exp(SS_LAYMAN), query_acc_exp(SS_CRAFT) }), round_stat),
+			 query_acc_exp(SS_CON), query_acc_exp(SS_INT),
+			 query_acc_exp(SS_WIS), query_acc_exp(SS_DIS),
+			 query_acc_exp(SS_RACE), query_acc_exp(SS_OCCUP),
+			 query_acc_exp(SS_LAYMAN), query_acc_exp(SS_CRAFT) }), round_stat),
 
-                  to->query_learn_pref(-1)
-                  );
+                  to->query_learn_pref(-1),
+		  to->query_alignment(),
+		  to->query_scar(),
+		  to->query_ghost(),
+		  to->query_whimpy(),                  
+                  to->query_average_stat()
+          );
     return str;
 }
 
