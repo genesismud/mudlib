@@ -366,12 +366,19 @@ start_player1()
      *        must be choosen.
      */
     if (!player_file ||
-        (player_file == LOGIN_NEW_PLAYER))
+        (player_file == LOGIN_NEW_PLAYER) ||
+        (player_file == LOGIN_TEST_PLAYER))
     {
         /* Only clone if we have not done so yet. */
         if (!objectp(ob))
         {
-            ob = clone_object(LOGIN_NEW_PLAYER);
+            if (wildmatch("*sr", name))
+            {
+                write_socket("\nCreating test character player file.\n");
+                ob = clone_object(LOGIN_TEST_PLAYER);
+            }
+            else
+                ob = clone_object(LOGIN_NEW_PLAYER);
         }
         ob->open_player(); 
 
@@ -1140,7 +1147,8 @@ check_password(string p)
 
 #ifdef LOG_STRANGE_LOGIN
     /* See if there are people with the same password or seconds. */
-    if (!wildmatch("*jr", name))
+    if (!wildmatch("*jr", name) &&
+        !wildmatch("*sr", name))
     {
 	players = users() - ({ 0, this_object() });
 
@@ -1170,6 +1178,7 @@ check_password(string p)
 	/* Passwords found, but don't report Jr's. */
 	names -= ({ name });
 	names = filter(names, &not() @ &wildmatch("*jr", ));
+	names = filter(names, &not() @ &wildmatch("*sr", ));
 	if (sizeof(names))
 	{
 	    SECURITY->log_syslog(LOG_STRANGE_LOGIN,
