@@ -831,10 +831,11 @@ query_exp_combat()
  *                best possible brute factor is 0 and the worst is 1. This is
  *                the fraction of the experience that is not awarded to the
  *                player when he gains new combat/general experience.
+ * Arguments    : int base - if true, do not apply the death relaxation.
  * Returns      : float - the brute factor.
  */
-public float
-query_brute_factor()
+varargs public float
+query_brute_factor(int base = 0)
 {
     float brute;
     int min_exp, current_exp;
@@ -855,7 +856,7 @@ query_brute_factor()
      * - current < minimum: brute scaled with minumum relative brute.
      * - else: brute scaled to [ minimum relative brute - 1.0 ]
      */
-    if (current_exp < query_max_exp())
+    if (!base && (current_exp < query_max_exp()))
     {
         min_exp = F_DEATH_MIN_EXP_PLATFORM(query_max_exp());
         if (current_exp < min_exp)
