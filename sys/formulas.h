@@ -238,10 +238,13 @@
 #define F_GHOST_MSGOUT 	     "blows"
 #define F_NAME_OF_GHOST	     "some mist"
 
-#define F_DIE_REDUCE_XP(xp) 		((xp) / 5)
+#define F_DIE_REDUCE_XP(xp) 		((xp) / 4)
 #define F_DIE_KEEP_XP(xp)		((xp) - (F_DIE_REDUCE_XP(xp)))
-#define F_DIE_STAT_FACT(q, t)		(itof((t) - F_DIE_REDUCE_XP((t) - (q))) / itof(t))
 #define F_DIE_START_HP(max_hp) 		((max_hp) / 10)
+#define F_DEATH_MIN_RELATIVE_BRUTE	(0.3)
+#define F_DEATH_RELATIVE_BRUTE_RANGE	(1.0 - F_DEATH_MIN_RELATIVE_BRUTE)
+#define F_DEATH_MAX_EXP_PLATFORM(m)	(((m) * 9) / 10)
+#define F_DEATH_MIN_EXP_PLATFORM(m)	(((m) * 6) / 10)
 
 #define F_EXP_ON_KILL(k_av, v_av) \
     (int)call_other(MATH_FILE, "exp_on_kill", (k_av), (v_av))

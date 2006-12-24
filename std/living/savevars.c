@@ -1,7 +1,7 @@
 /*
  *  /std/living/savevars.c
  *
- *  This file contains all player variables that are saved in the 
+ *  This file contains all player variables that are saved in the
  *  player save file. The corresponding set- and query functions
  *  can also be found here.
  *
@@ -95,7 +95,7 @@ savevars_delay_reset()
  * Description:     Resets some variables which are used to keep track
  *                  of how variables change with time.
  */
-static nomask void 
+static nomask void
 save_vars_reset()
 {
     int t = time();
@@ -259,7 +259,7 @@ set_race_name(string str)
     {
         remove_name(race_name);
     }
-        
+
     race_name = str;
     add_name(race_name);
 }
@@ -538,7 +538,7 @@ heal_hp(int hp)
 
 	if (strlen(text))
 	    SECURITY->log_syslog(LOG_REDUCE_HP, text);
-    }        
+    }
 #endif
 
     hit_points = min(max(hit_points + hp, 0), query_max_hp());
@@ -550,9 +550,9 @@ heal_hp(int hp)
  * Arguments:       dam: The number of damage hitpoints.
  */
 public int
-reduce_hit_point(int dam) 
+reduce_hit_point(int dam)
 {
-    heal_hp(-dam); 
+    heal_hp(-dam);
 }
 
 /*
@@ -673,7 +673,7 @@ calculate_fatigue()
         add_fatigue(n *
             F_FATIGUE_FORMULA(tmpstuffed, query_prop(LIVE_I_MAX_EAT)));
         last_stuffed = stuffed;
-    } 
+    }
 
 }
 
@@ -725,7 +725,7 @@ refresh_living()
  *                WARNING: Since this is an internal call, we do not check
  *                whether the argument 'stat' points to a valid stat. You
  *                must make sure that the internal consistency of the mudlib
- *                is not compromised. 
+ *                is not compromised.
  * Arguments    : int stat - The stat to set.
  *                int val  - The amount of experience to set the stat to.
  */
@@ -736,7 +736,7 @@ set_acc_exp(int stat, int val)
         val = 1;
 
     acc_exp[stat] = val;
-}  
+}
 
 /*
  * Function name:   query_acc_exp
@@ -766,7 +766,7 @@ query_exp()
     return (exp_points + exp_combat + exp_general);
 }
 
-/* 
+/*
  * Function name: query_max_exp
  * Description  : Gives the total amount of experience the living ever had,
  *                i.e. before death took any.
@@ -786,7 +786,17 @@ query_max_exp()
 public void
 update_max_exp()
 {
-    if (query_exp() > exp_max_total)
+    int new_max_exp = F_DEATH_MAX_EXP_PLATFORM(exp_max_total);
+
+    /* When a player dies, he is helped to regain his former self. However,
+     * when he dies a second time before he is fully recovered, we only help
+     * him to a lower platform. Otherwise help him to regain his former self.
+     * This is also true if there is no platform yet. */
+    if (query_exp() < new_max_exp)
+    {
+        exp_max_total = new_max_exp;
+    }
+    else
     {
         exp_max_total = query_exp();
     }
@@ -815,6 +825,62 @@ query_exp_combat()
 }
 
 /*
+ * Function name: query_brute_factor
+ * Description  : Calculates the brutality factor, that is, the factor between
+ *                the combat+general experience and the total experience. The
+ *                best possible brute factor is 0 and the worst is 1. This is
+ *                the fraction of the experience that is not awarded to the
+ *                player when he gains new combat/general experience.
+ * Returns      : float - the brute factor.
+ */
+public float
+query_brute_factor()
+{
+    float brute;
+    int min_exp, current_exp;
+
+    current_exp = query_exp();
+    brute = itof(exp_combat + exp_general) / itof(current_exp + 1);
+
+    /* When recovering from death, we can limit the brute penalty. Use
+     * linear extrapolation to find the actual brute fraction within the
+     * experience range where brute lowering is applied.
+     *
+     * Read carefully:
+     *   Brute is a fraction on the exp gained, but here we scaling the
+     *   the brute itself; a fraction on the fraction of exp, if you will.
+     *
+     * The following scaling takes place:
+     * - current > maximum: full application of brute.
+     * - current < minimum: brute scaled with minumum relative brute.
+     * - else: brute scaled to [ minimum relative brute - 1.0 ]
+     */
+    if (current_exp < query_max_exp())
+    {
+        min_exp = F_DEATH_MIN_EXP_PLATFORM(query_max_exp());
+        if (current_exp < min_exp)
+        {
+	    brute = brute * F_DEATH_MIN_RELATIVE_BRUTE;
+        }
+        else
+        {
+	    brute = brute * (F_DEATH_MIN_RELATIVE_BRUTE +
+	       (F_DEATH_RELATIVE_BRUTE_RANGE * (itof(current_exp - min_exp) / itof(query_max_exp() - min_exp))));
+	}
+    }
+
+    /* For small players, we can limit the brute factor. */
+#ifdef MAX_EXP_RED_FRIENDLY
+    if ((current_exp < MAX_EXP_RED_FRIENDLY) && (brute > MAX_COMB_EXP_RED))
+    {
+        brute = MAX_COMB_EXP_RED;
+    }
+#endif
+
+    return brute;
+}
+
+/*
  * Function name: add_exp_combat
  * Description  : This function should be called to add combat experience
  *                to the living. To remove combat experience, add a negative
@@ -830,16 +896,8 @@ add_exp_combat(int exp)
     /* Positive combat experience. */
     if (exp > 0)
     {
-        /* Take the brute factor into account. */
-        fact = itof(exp_combat + exp_general) / itof(query_exp() + 1);
-
-#ifdef MAX_EXP_RED_FRIENDLY
-        if ((exp_points < MAX_EXP_RED_FRIENDLY) &&
-            (fact > MAX_COMB_EXP_RED))
-            fact = MAX_COMB_EXP_RED;
-#endif
-        
-        exp -= ftoi(itof(exp) * fact);
+	/* Modify the added experience with the brute factor. */
+        exp -= ftoi(itof(exp) * query_brute_factor());
 
         /* Add the experience to the total. */
         exp_combat += exp;
@@ -899,22 +957,13 @@ query_exp_general()
 public void
 add_exp_general(int exp)
 {
-    float fact;
     int taxed;
 
     /* Positive general experience. */
     if (exp > 0)
     {
-        /* Take the brute factor into account. */
-        fact = itof(exp_combat + exp_general) / itof(query_exp() + 1);
-
-#ifdef MAX_EXP_RED_FRIENDLY
-        if ((exp_general < MAX_EXP_RED_FRIENDLY) &&
-            (fact > MAX_COMB_EXP_RED))
-            fact = MAX_COMB_EXP_RED;
-#endif
-        
-        exp -= ftoi(itof(exp) * fact);
+	/* Modify the added experience with the brute factor. */
+        exp -= ftoi(itof(exp) * query_brute_factor());
 
         /* Add the experience to the total. */
         exp_general += exp;
@@ -1107,7 +1156,7 @@ modify_stat(string type, int stat, int amount, string reason)
             }
             exp_points += delta;
             break;
-    
+
         case "combat":
             if (delta < -exp_combat)
             {
@@ -1117,7 +1166,7 @@ modify_stat(string type, int stat, int amount, string reason)
             }
             exp_combat += delta;
             break;
-    
+
         case "general":
             if (delta < -exp_general)
             {
@@ -1127,7 +1176,7 @@ modify_stat(string type, int stat, int amount, string reason)
             }
             exp_general += delta;
             break;
-    
+
         default:
             write("Invalid experience type.\n");
             return;
@@ -1164,7 +1213,7 @@ set_ghost(int flag)
 
         add_name(LD_GHOST);
     }
-    else 
+    else
     {
         set_m_in(F_ALIVE_MSGIN);
         set_m_out(F_ALIVE_MSGOUT);
@@ -1396,13 +1445,13 @@ query_intoxicated()
     if (n == 0)
         return intoxicated;
 
-    if (intoxicated > 0) 
+    if (intoxicated > 0)
     {
         intoxicated -= n * F_SOBER_RATE;
         intoxicated = MAX(0, intoxicated);
     }
     intoxicated_time += n * F_INTERVAL_BETWEEN_INTOX_HEALING;
-    
+
     return intoxicated;
 }
 
@@ -1425,7 +1474,7 @@ query_stuffed()
     stuffed = MAX(0, stuffed);
 
     stuffed_time += n * F_INTERVAL_BETWEEN_STUFFED_HEALING;
-    
+
     return stuffed;
 }
 
@@ -1448,7 +1497,7 @@ query_soaked()
     soaked = MAX(0, soaked);
 
     soaked_time += n * F_INTERVAL_BETWEEN_SOAKED_HEALING;
-    
+
     return soaked;
 }
 
@@ -1515,7 +1564,7 @@ query_stat_pref_total()
 /*
  * Function name:   set_learn_pref
  * Description:     Calculate learning preferences summing up to 100
- *                  from an array containing arbitrary numbers. 
+ *                  from an array containing arbitrary numbers.
  * Arguments:       pref_arr: An array with relative preference settings
  */
 void
@@ -1570,10 +1619,10 @@ set_learn_pref(int *pref_arr)
         for (i = 0; i < SS_NO_EXP_STATS; i++)
             learn_pref[i] = tmp;
     }
-        
+
     for(i = 0, sum = 0; i < SS_NO_EXP_STATS; i++)
         sum += learn_pref[i];
-    
+
     sum = mval - sum;
     i = 0;
 
@@ -1630,7 +1679,7 @@ query_learn_pref(int stat)
 public void
 set_guild_pref(int guildstat, int tax)
 {
-    if (guildstat >= SS_NO_EXP_STATS && 
+    if (guildstat >= SS_NO_EXP_STATS &&
         guildstat < SS_NO_STATS &&
         tax >= 0)
     {
@@ -1816,7 +1865,7 @@ set_scar(int s)
     scar = s;
 }
 
-/* 
+/*
  * Function name: valid_change_soul
  * Description  : This function checks whether the soul of a wizard may
  *                may be added or removed.

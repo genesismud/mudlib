@@ -72,28 +72,28 @@ static void
 modify_on_death()
 {
     int index = (SS_STR - 1);
+    int reduce_combat, reduce_general;
     float stat_factor;
 
     /* Remember how much experience we had. */
     update_max_exp();
 
-    /* We should just reduce our combat and general experience and affect the
-     * stats accordingly. Notice that death' penalty is calculated only over
-     * the combat and general experience. This means that you don't pay
-     * anything on your quest experience. Every stat is lowered by ratio of the
-     * combat exp death takes and the total exp. This way a 50% higher stat
-     * will loose 50% more exp points.
-     */
-    stat_factor = 1.0 - (itof(F_DIE_REDUCE_XP(query_exp_combat() +
-        query_exp_general())) / itof(query_exp()));
+    /* Note that only combat and general experience are affected by death.
+     * Every stat is adjusted for the ratio between death' taking and the
+     * total experience. This means that on a higher stat you will loose
+     * more points. */
+    reduce_combat = F_DIE_REDUCE_XP(query_exp_combat());
+    reduce_general = F_DIE_REDUCE_XP(query_exp_general());
+    stat_factor = 1.0 - (itof(reduce_combat + reduce_general) / itof(query_exp()));
 
     while(++index < SS_NO_EXP_STATS)
     {
         set_acc_exp(index, ftoi(itof(query_acc_exp(index)) * stat_factor));
     }
 
-    set_exp_combat(query_exp_combat() - F_DIE_REDUCE_XP(query_exp_combat()));
-    set_exp_general(query_exp_general() - F_DIE_REDUCE_XP(query_exp_general()));
+    /* Remove the death penalty from the combat and general experience. */
+    set_exp_combat(query_exp_combat() - reduce_combat);
+    set_exp_general(query_exp_general() - reduce_general);
 
     /* Recalculate the stats. */
     acc_exp_to_stats();
