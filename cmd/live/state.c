@@ -1462,7 +1462,8 @@ show_stats(string str)
     write(start_be + actual_brute + ".\n");
     if (actual_brute != orig_brute)
     {
-        write("After recovery from death, " + lower_case(start_be) + " " + orig_brute + ".\n");
+        write("After recovery from death, " + lower_case(start_be) +
+	    orig_brute + ".\n");
     }
 
     return 1;
