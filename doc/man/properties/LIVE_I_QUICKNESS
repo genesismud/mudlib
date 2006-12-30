@@ -1,2 +1,21 @@
-LIVE_I_QUICKNESS	Determines the delay between combat rounds.  Positive
-			values reduce the delay; negative values increase it.
+Property   : LIVE_I_QUICKNESS
+
+Description: Determines the delay between combat rounds. Positive values reduce
+             the delay (and thus increase speed) and negative values increase
+	     it (and thus slow the person down).
+
+Formula    : Relative Delay = 250 - LIVE_I_QUICKNESS ; Speed = 1 / Rel.Delay
+
+Range      : Maximum QUICKNESS = 150. No minimum.
+
+Effect     : Due to the nature of the formula, the positive and negative scales
+	     are not the same. You have to set to 125 to effectively double the
+	     speed of the person, and to -250 to halve the speed.
+
+	     QUICKNESS = -250    Rel.Delay = 500    Speed  -  50%
+	     QUICKNESS =  100    Rel.Delay = 350    Speed  -  28%
+	     QUICKNESS =    0    Rel.Delay = 250    Speed  default
+	     QUICKNESS =   50    Rel.Delay = 200    Speed  +  25%
+	     QUICKNESS =  100    Rel.Delay = 150    Speed  +  67%
+	     QUICKNESS =  125    Rel.Delay = 125    Speed  + 100%
+	     QUICKNESS =  150    Rel.Delay = 100    Speed  + 150%
