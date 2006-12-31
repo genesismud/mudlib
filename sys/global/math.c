@@ -9,9 +9,10 @@
 
 /*
  * Function name: find_exp
+ * Called from  : MATH_FIND_EXP(sum) in <math.h>
  * Description  : Find the solution to 2^x = sum.
- * Arguments    : sum - The sum to find the solution to.
- * Returns      : x
+ * Arguments    : int sum - The sum to find the solution to.
+ * Returns      : int - x
  */
 public nomask int
 find_exp(int sum)
@@ -36,6 +37,7 @@ static private mapping lookup =
 
 /*
  * Function name: quick_find_exp
+ * Called from  : QUICK_FIND_EXP(sum) in <math.h>
  * Description  : This function is a quick hack that returns the solution
  *                to the function 2^x = sum for a rather limited set of
  *                sum. Accepted values are the powers of 2 ranging from 1
@@ -51,9 +53,10 @@ quick_find_exp(int sum)
 
 /*
  * Function name: decimal_to_binary
+ * Called from  : DEC2BIN(num) in <math.h>
  * Description  : Convert a base 10 unsigned integer to its base 2
  *                representation.
- * Arguments    : num: The number to convert.
+ * Arguments    : int num: The number to convert.
  * Returns      : A binary array with the base 2 number, MSB first.
  */
 public nomask int *
@@ -80,10 +83,11 @@ decimal_to_binary(int num)
 
 /*
  * Function name: binary_to_decimal
+ * Called from  : BIN2DEC(arr) in <math.h>
  * Description  : Convert a base 2 unsigned integer to its base 10
  *                representation.
- * Arguments    : A binary array of the base 2 number, MSB first.
- * Returns      : The unsigned decimal integer.
+ * Arguments    : int * - a binary array of the base 2 number, MSB first.
+ * Returns      : int - the unsigned decimal integer.
  */
 public nomask int
 binary_to_decimal(int *bit_array)
@@ -102,9 +106,13 @@ binary_to_decimal(int *bit_array)
 
 /*
  * Function name: square_root
+ * Called from  : SQUARE_ROOT(square) in <math.h>
  * Description  : Find the x for which x^2 = y, the square root
- *                If y < 0, x will be 0
- * Arguments    : square - the square to find the root to
+ *                If y < 0, x will be 0. The result is truncated.
+ *
+ *                For floats, use: float pow(float value, float exponent)
+ *
+ * Arguments    : int square - the square to find the root to
  * Returns      : int - the root
  */
 public nomask int
@@ -124,6 +132,7 @@ square_root(int square)
 
 /*
  * Function name: name_to_random
+ * Called from  : NAME_TO_RANDOM(name, seed, range) in <math.h>
  * Description  : With this function, each combination of name, seed and
  *                range will return the same value each time you call it.
  *                This way, for quests or other hints, the same player
@@ -170,7 +179,7 @@ name_to_random(string name, int seed, int range)
 
 /*
  * Function name: delta_align_on_kill
- * Called from  : <formulas.h>
+ * Called from  : F_KILL_ADJUST_ALIGN(k_al, v_al) in <formulas.h>
  * Description  : This function returns the adjustment of the alignment of the
  *                killer when he has killed something.
  * Arguments    : int k_align - the current alignment of the killer.
@@ -201,7 +210,7 @@ delta_align_on_kill(int k_align, int v_align)
 
 /*
  * Function name: exp_on_kill
- * Called from  : <formulas.h>
+ * Called from  : F_EXP_ON_KILL(k_av, v_av) in <formulas.h>
  * Description  : This is the amount of experience a person gets when he kills
  *                another living. The amount is dependant on both the size of
  *                the killer and that of the target.
