@@ -56,6 +56,7 @@ inherit "/lib/wearable_item";
 string arm_condition_desc();
 void update_prop_settings();
 varargs void remove_broken(int silent = 0);
+int query_value();
 
 /*
  * Variables. They are all static which means that they will not be saved.
@@ -103,7 +104,7 @@ create_object()
     set_looseness(2);
     set_layers(4);
     worn = 0;
-    add_prop(OBJ_I_VALUE, "@@query_value@@");
+    add_prop(OBJ_I_VALUE, &query_value());
     add_prop(OBJ_I_VOLUME, 1000);
     add_prop(OBJ_I_WEIGHT, 500);
 

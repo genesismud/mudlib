@@ -72,6 +72,7 @@ static private int      will_not_recover;       /* True if it won't recover */
  */
 string  wep_condition_desc();
 void    update_prop_settings();
+int     query_value();
 varargs void remove_broken(int silent = 0);
 
 /*
@@ -103,7 +104,7 @@ create_object()
     set_pname("weapons");
     add_adj("unwielded");
     wielded = 0;
-    add_prop(OBJ_I_VALUE, "@@query_value");
+    add_prop(OBJ_I_VALUE, &query_value());
     add_prop(OBJ_I_VOLUME, 500);
     add_prop(OBJ_I_WEIGHT, 200);
     m_pen = ({ 0, 0, 0 });
