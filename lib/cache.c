@@ -254,7 +254,7 @@ remove_from_cache(string filename)
     if (member_array(filename, cache_order) > -1)
     {
     	cache_order -= ({ filename });
-    	cache_map = m_delete(cache_map, filename);
+    	m_delkey(cache_map, filename);
     }
 }
 

@@ -11,4 +11,4 @@ DESCRIPTION
 	If an integer is given as argument, 0 is returned. 
 
 SEE ALSO
-	mkmapping, m_indexes, m_sizeof, m_delete, mappingp
+	mkmapping, m_indexes, m_sizeof, m_delete, m_delkey, mappingp

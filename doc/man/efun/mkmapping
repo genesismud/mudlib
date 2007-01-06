@@ -26,5 +26,5 @@ DESCRIPTION
 	     (["apa":0, 3:1, "gustav":2 ])
 
 SEE ALSO
-	m_indexes, m_values, m_sizeof, m_delete, mappingp
+	m_indexes, m_values, m_sizeof, m_delete, m_delkey, mappingp
 

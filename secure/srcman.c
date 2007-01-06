@@ -122,7 +122,7 @@ init_docdir(string mdir)
     if (m_sizeof(docdirs) >= MAXLOCAL_DIRS)
     {
 	stmp = m_indexes(docdirs)[random(m_sizeof(docdirs) - 1) + 1];
-	docdirs = m_delete(docdirs, stmp);
+	m_delkey(docdirs, stmp);
     }
 
     sdirs = read_index(mdir);

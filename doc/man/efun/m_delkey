@@ -13,8 +13,10 @@ DESCRIPTION
 	The second argument `index' should be the index part of the mapping
 	pair you want to remove from the mapping.
 
+NOTA BENE
         The difference to m_delete is that m_delkey will remove the entry
-        indexed by index while m_delete will not change map.
+        from the original map, while m_delete will not change the original map
+	and return a modified copy. Using m_delkey is generally preferred.
 
 SEE ALSO
 	mkmapping, m_indexes, m_values, m_delete, mappingp
