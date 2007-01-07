@@ -109,7 +109,6 @@ start_spell(string spell, mixed arg, object spellob)
     current_spell = spell;
     current_spellob = spellob;
 
- /* add_attack_delay(t, 0); */
     return 1;
 }
 
@@ -172,13 +171,35 @@ break_spell(string msg, object breaker)
 	}
 
         current_spellob->break_spell(current_spell, breaker);
-
         current_spellob = current_spell = 0;
 
         return 1;
     }
 
     return 0;
+}
+
+/*
+ * Function Name: interrupt_spell
+ * Description  : Attempt to interrupt a spell cast.
+ *                This currently has a very small chance of breaking the
+ *                the casters concentration.
+ * Returns      : 1 / 0 - a spell was interrupted / not interrupted
+ */
+public int
+interrupt_spell()
+{
+    if (!aid || !get_alarm(aid))
+        return 0;
+    
+    if (random(100) < 1)
+    {
+        break_spell();
+        return 1;
+    }
+
+    current_spellob->interrupt_spell(current_spell);
+    return 1;
 }
 
 /*

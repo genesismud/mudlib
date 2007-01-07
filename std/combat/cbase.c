@@ -2005,10 +2005,7 @@ cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc =
 #ifdef CB_HIT_REWARD
         me->combat_reward(attacker, dam, 0);
 #endif
-        if (random(dam) > random(me->query_stat(SS_DIS)))
-        {
-            me->cmdhooks_break_spell();
-        }
+        me->interrupt_spell();
     }
 
     return ({ proc_hurt, hitloc_ac[hloc][HIT_DESC], phit, dam, hit_id[hloc] });
