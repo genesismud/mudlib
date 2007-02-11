@@ -14,6 +14,7 @@
 #include <files.h>
 #include <log.h>
 #include <login.h>
+#include <macros.h>
 #include <money.h>
 #include <std.h>
 #include <stdproperties.h>
@@ -318,7 +319,7 @@ do_die(object killer)
      * weaker party.
      */
     sparring = query_prop(LIVE_AO_SPARRING);
-    if (member_array(killer, sparring) >= 0)
+    if (IN_ARRAY(killer, sparring))
     {
         killer->stop_fight(this_object());
         this_object()->stop_fight(killer);
@@ -449,6 +450,23 @@ notify_you_killed_me(object victim)
 }
 #endif
 
+#if 0
+/*
+ * Function name: notify_enemy_leaves
+ * Description  : This routine is called when an enemy leaves the room, that
+ *                is, when someone leaves us. It is not called when we walk
+ *                away from someone who is subsequently hunting us.
+ *
+ *                This routin does not actually exist. It is a trick to fool
+ *                the document maker.
+ * Arguments    : object enemy - the enemy who left us.
+ */
+void
+notify_enemy_leaves(object enemy)
+{
+}
+#endif
+
 /*************************************************
  *
  * Whimpy routines
@@ -561,7 +579,7 @@ team_join(object member)
     if (!member->set_leader(this_object()))
         return 0;
 
-    if (member_array(member, query_team()) >= 0)
+    if (IN_ARRAY(member, query_team()))
         return 1;               /* Already member */
     if (!my_team)
         my_team = ({ member });
@@ -584,21 +602,15 @@ query_team()
 }
 
 /*
- * Function name:   team_leave
- * Description:     Removes this living as the leader of another
- * Arguments:       member: The objectpointer to the member leaving my team
+ * Function name: team_leave
+ * Description  : Someone leaves my team.
+ * Arguments    : object member - the member leaving my team.
  */
 public void 
 team_leave(object member)
 {
-    int a;
-
-    a = member_array(member, my_team);
-    if (a >= 0)
-    {
-        my_team[a]->set_leader(0);
-        my_team = exclude_array(my_team, a, a);
-    }
+    member->set_leader(0);
+    my_team -= ({ member });
 }
 
 /*
@@ -693,7 +705,7 @@ attack_object(object ob)
     CEX; combat_extern->cb_attack(ob);
 
     /* Check for sparring, and give the appropriate message if necessary. */
-    if (member_array(ob, query_prop(LIVE_AO_SPARRING)) >= 0)
+    if (IN_ARRAY(ob, query_prop(LIVE_AO_SPARRING)))
     {
         tell_object(this_object(), "You are sparring with " +
             ob->query_the_name(this_object()) + ".\n");
@@ -712,7 +724,7 @@ attacked_by(object ob)
     CEX; combat_extern->cb_attacked_by(ob);
 
     /* Check for sparring, and give the appropriate message if necessary. */
-    if (member_array(ob, query_prop(LIVE_AO_SPARRING)) >= 0)
+    if (IN_ARRAY(ob, query_prop(LIVE_AO_SPARRING)))
     {
         tell_object(this_object(), "You are sparring with " +
             ob->query_the_name(this_object()) + ".\n");
@@ -751,7 +763,7 @@ combat_init()
     if (!CAN_SEE(this_object(), this_player()))
         return;
 
-    if ((member_array(this_player(), query_enemy(-1)) >= 0) &&
+    if (IN_ARRAY(this_player(), query_enemy(-1)) &&
         !NPATTACK(this_player()))
     {
         this_object()->reveal_me(1);
@@ -1200,7 +1212,7 @@ remove_sparring_partner(object partner)
 public int
 query_sparring_partner(object partner)
 {
-    return (member_array(partner, query_prop(LIVE_AO_SPARRING)) >= 0);
+    return IN_ARRAY(partner, query_prop(LIVE_AO_SPARRING));
 }
 
 #if 0

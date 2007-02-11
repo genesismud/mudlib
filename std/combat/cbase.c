@@ -1197,6 +1197,7 @@ cb_adjust_combat_on_move(int leave)
                     rest += ({ inv[i] });
                     tell_object(inv[i], "You are now hunting " +
                         me->query_the_name(inv[i]) + ".\n");
+                    inv[i]->notify_enemy_leaves(me);
                 }
             }
 
