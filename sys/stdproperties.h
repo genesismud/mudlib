@@ -64,6 +64,7 @@
  */
 #define CORPSE_S_RACE		"_corpse_s_race"
 #define CORPSE_AS_KILLER        "_corpse_as_killer"
+#define CORPSE_S_LIVING_FILE	"_corpse_s_living_file"
 
 /* *********************************************************
  * Door properties

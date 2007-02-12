@@ -373,6 +373,7 @@ do_die(object killer)
 
         corpse->add_prop(CORPSE_AS_KILLER,
             ({ killer->query_real_name(), killer->query_nonmet_name() }) );
+	corpse->add_prop(CORPSE_S_LIVING_FILE, MASTER_OB(this_object()));
         corpse->move(environment(this_object()), 1);
         move_all_to(corpse);
     }
