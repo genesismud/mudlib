@@ -139,7 +139,7 @@ set_heap_size(int num)
 
     if (num <= 0)
     {
-        remove_object();
+	set_alarm(0.0, 0.0, remove_object);
         leave_behind = 0;
         num = 0;
     }
@@ -402,8 +402,7 @@ enter_env(mixed env, object old)
             leave_behind = 0;
             add_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT, 1);
             catch(move(ob[i], 1));
-//          set_alarm(0.0, 0.0, remove_object);
-            remove_object();
+	    set_alarm(0.0, 0.0, remove_object);
             return;
         }
     }
@@ -446,7 +445,7 @@ force_heap_merge()
             !ob[i]->query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
         {
             ob[i]->set_heap_size(item_count + ob[i]->num_heap());
-            remove_object();
+            set_alarm(0.0, 0.0, remove_object);
         }
     }
 }

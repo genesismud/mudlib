@@ -137,7 +137,7 @@ short(object for_object)
     /* No identifier: BAD coins. Remove them. */
     if (!strlen(query_prop(HEAP_S_UNIQUE_ID)))
     {
-	remove_object();
+	set_alarm(0.0, 0.0, remove_object);
 	return "ghost coins";
     }
 
