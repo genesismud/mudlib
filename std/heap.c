@@ -1,4 +1,5 @@
-/* * /std/heap.c
+/*
+ * /std/heap.c
  *
  * This is a heap object for things like coins, matches and such stuff.
  */
@@ -127,7 +128,9 @@ restore_heap()
 }
 
 /*
- * Description: Set the size of the heap to num.
+ * Function name: set_heap_size
+ * Description  : Set the size of the heap to num.
+ * Arguments    : int num - the size of the heap.
  */
 public void
 set_heap_size(int num)
@@ -136,19 +139,20 @@ set_heap_size(int num)
 
     if (num <= 0)
     {
-        set_alarm(0.0, 0.0, remove_object);
+        remove_object();
+        leave_behind = 0;
         num = 0;
     }
     item_count = num;
 
-    /*
-     * We must update the weight and volume of what we reside in
-     */
+    /* We must update the weight and volume of what we reside in. */
     update_state();
 }
 
 /*
- * Description: Returns the size of the heap.
+ * Function name: num_heap
+ * Description  : Returns the size of the heap.
+ * Returns      : int - the number of elements in the heap.
  */
 public int
 num_heap()
@@ -249,13 +253,16 @@ short(object for_obj)
     {
         return LANG_WNUM(num_heap()) + " " + str;
     }
-    
+    if (num_heap() == 12)
+    {
+        return "a dozen " + str;
+    }
     if (this_player()->query_stat(SS_INT) / 2 > num_heap())
     {
         return num_heap() + " " + str;
     }
 
-    return (num_heap() < 1000 ? "many" : "a huge heap of") + " " + str;
+    return (num_heap() < 1000 ? "many " : "a huge heap of ") + str;
 }
 
 /*
@@ -315,7 +322,7 @@ query_pronoun()
 public object
 make_leftover_heap()
 {
-    object          ob;
+    object ob;
 
     if (!leave_behind)
         return 0;
@@ -357,7 +364,8 @@ public void
 enter_env(mixed env, object old)
 {
     object *ob;
-    int i;
+    int i, tmphide, tmpinvis;
+    string unique;
 
     ::enter_env(env, old);
 
@@ -372,13 +380,17 @@ enter_env(mixed env, object old)
     }
     ob = filter(all_inventory(env) - ({ this_object() }),
         &->query_prop(HEAP_I_IS));
-    
+
+    tmphide = !!query_prop(OBJ_I_HIDE);
+    tmpinvis = !!query_prop(OBJ_I_INVIS);
+    unique = query_prop(HEAP_S_UNIQUE_ID);
+
     for (i = 0; i < sizeof(ob); i++)
     {
-        if ((!!ob[i]->query_prop(OBJ_I_HIDE) == !!query_prop(OBJ_I_HIDE)) &&
-            (!!ob[i]->query_prop(OBJ_I_INVIS) == !!query_prop(OBJ_I_INVIS)) &&
-            !ob[i]->query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT) &&
-            query_prop(HEAP_S_UNIQUE_ID) == ob[i]->query_prop(HEAP_S_UNIQUE_ID))
+        if ((ob[i]->query_prop(HEAP_S_UNIQUE_ID) == unique) &&
+            (!!ob[i]->query_prop(OBJ_I_HIDE) == tmphide) &&
+            (!!ob[i]->query_prop(OBJ_I_INVIS) == tmpinvis) &&
+            !ob[i]->query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
         {
             ob[i]->set_heap_size(item_count + ob[i]->num_heap());
  
@@ -388,8 +400,10 @@ enter_env(mixed env, object old)
             }
 
             leave_behind = 0;
-            move(ob[i], 1); /* Better place to move it? void? */
-            set_alarm(0.0, 0.0, remove_object);
+            add_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT, 1);
+            catch(move(ob[i], 1));
+//          set_alarm(0.0, 0.0, remove_object);
+            remove_object();
             return;
         }
     }
@@ -397,7 +411,7 @@ enter_env(mixed env, object old)
 
 /*
  * Function name: set_no_merge
- * Description:   Make sure that the heap wont merge
+ * Description:   Make sure that the heap won't merge
  */
 public void
 set_no_merge(int i)
@@ -414,20 +428,24 @@ public void
 force_heap_merge()
 {
     object *ob;
-    int i;
+    int i, tmphide, tmpinvis;
+    string unique;
 
     ob = filter(all_inventory(environment(this_object())) - ({ this_object() }),
         &->query_prop(HEAP_I_IS));
-    
+
+    tmphide = !!query_prop(OBJ_I_HIDE);
+    tmpinvis = !!query_prop(OBJ_I_INVIS);
+    unique = query_prop(HEAP_S_UNIQUE_ID);
+
     for (i = 0; i < sizeof(ob); i++)
     {
-        if ((!!ob[i]->query_prop(OBJ_I_HIDE) == !!query_prop(OBJ_I_HIDE)) &&
-            (!!ob[i]->query_prop(OBJ_I_INVIS) == !!query_prop(OBJ_I_INVIS)) &&
-            !ob[i]->query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT) &&
-            query_prop(HEAP_S_UNIQUE_ID) == ob[i]->query_prop(HEAP_S_UNIQUE_ID))
+        if ((ob[i]->query_prop(HEAP_S_UNIQUE_ID) == unique) &&
+            (!!ob[i]->query_prop(OBJ_I_HIDE) == tmphide) &&
+            (!!ob[i]->query_prop(OBJ_I_INVIS) == tmpinvis) &&
+            !ob[i]->query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
         {
             ob[i]->set_heap_size(item_count + ob[i]->num_heap());
-            
             remove_object();
         }
     }
@@ -519,8 +537,7 @@ count(string str)
     intg = this_player()->query_stat(SS_INT);
     delay = 60.0 / itof(intg);
     /* count_arg contains interval, coins per count and total so far */
-    count_alarm =
-        set_alarm(delay, 0.0, &count_up(delay, 5 * (intg / 10 + 1), 0));
+    count_alarm = set_alarm(delay, 0.0, &count_up(delay, 5 * (intg / 10 + 1), 0));
     add_action(stop, "", 1);
 
     write("You start counting your " + plural_short(this_player()) + ".\n");

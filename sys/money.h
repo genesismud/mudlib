@@ -44,7 +44,15 @@
 #define MONEY_MAKE(num, ctype) ((object)MONEY_FN->make_coins(ctype, num))
 
 /*
- * MONEY_MOVE moves a certain ammoint of coins from 'from' to 'to'. You
+ * MONEY_MAKE_HERE does the same beautiful thing as MONEY_MAKE and also
+ * delivers it to the inventory of the calling object. Use MONEY_MAKE_HERE_CC
+ * and such to create money of a specific type.
+ */
+#define MONEY_MAKE_HERE(num, ctype) \
+    MONEY_MAKE((num), (ctype))->move(this_object(), 1)
+
+/*
+ * MONEY_MOVE moves a certain amount of coins from 'from' to 'to'. You
  * can move s particular type of coins with MONEY_MOVE_CC and such.
  *
  * Returns: -1 - money (type) not found

@@ -92,14 +92,6 @@ reset_heap()
 public string
 query_auto_load()
 {
-    /* If the player quits, we do not want him/her to drop the coins, so
-     * we set the OBJ_M_NO_DROP property when the player saves. However,
-     * if the player stays in the game, we remove the property immediately
-     * again.
-     */
-//    add_prop(OBJ_M_NO_DROP, 1);
-//    set_alarm(0.1, 0.0, &remove_prop(OBJ_M_NO_DROP));
-
     return (MASTER + ":" + num_heap() + "," + coin_type);
 }
 
@@ -134,7 +126,7 @@ init_arg(string arg)
 public varargs string
 short(object for_object)
 {
-    string str = ((strlen(coin_type) ? " " : "") + coin_type);
+    string str = (strlen(coin_type) ? (coin_type + " ") : "") + "coin";
 
     /* No elements in the heap == no show. */
     if (num_heap() < 1)
@@ -145,21 +137,24 @@ short(object for_object)
     /* No identifier: BAD coins. Remove them. */
     if (!strlen(query_prop(HEAP_S_UNIQUE_ID)))
     {
-	set_alarm(0.1, 0.0, remove_object);
-	
+	remove_object();
 	return "ghost coins";
     }
 
     /* One coin, singular, not really a heap. */
     if (num_heap() < 2)
     {
-	return "a" + str + " coin";
+	return LANG_ADDART(str);
     }
 
     /* Less than a dozen, we see the number as a word. */
     if (num_heap() < 12)
     {
-	return LANG_WNUM(num_heap()) + str + " coins";
+	return LANG_WNUM(num_heap()) + " " + str + "s";
+    }
+    if (num_heap() == 12)
+    {
+        return "a dozen " + str + "s";
     }
 
     /* No onlooker, default to this_player(). */
@@ -171,11 +166,11 @@ short(object for_object)
     /* If we are smart enough, we can see the number of coins. */
     if (for_object->query_stat(SS_INT) / 2 > num_heap())
     {
-	return num_heap() + str + " coins";
+	return num_heap() + " " + str + "s";
     }
 
     /* Else, default to 'many' or to a 'huge heap'. */
-    return (num_heap() < 1000 ? "many" : "a huge heap of") + str + " coins";
+    return (num_heap() < 1000 ? "many " : "a huge heap of ") + str + "s";
 }
 
 /*
@@ -192,11 +187,11 @@ long()
     if ((num_heap() < 2) ||
 	(num_heap() >= 1000))
     {
-	return "It is " + short() + ", it looks like good money.\n";
+	return "It is " + short() + "; it looks like good money.\n";
     }
     else
     {
-	return "There are " + short() + ", they look like good money.\n";
+	return "There are " + short() + "; they look like good money.\n";
     }
 }
 
