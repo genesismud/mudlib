@@ -1,4 +1,6 @@
-Definition : FORMAT_NAME(name)
+Defined in : <macros.h>
+
+Definition : string FORMAT_NAME(string name)
 
 Description: Displays a (capitalized) player name in an 11 space field with
              justification to the left to make it easier to print in tables.
