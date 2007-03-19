@@ -37,6 +37,7 @@
  * - skillstat
  * - snoop
  * - stat
+ * - teams
  * - tellall
  * - toolsoul
  * - tradestat
@@ -66,10 +67,11 @@ inherit "/lib/cache";
 #include <log.h>
 #include <macros.h>
 #include <money.h>
+#include <options.h>
 #include <ss_types.h>
 #include <std.h>
 #include <stdproperties.h>
-#include <options.h>
+#include <time.h>
 
 #define CHECK_SO_WIZ    if (WIZ_CHECK < WIZ_NORMAL) return 0; \
                         if (this_interactive() != this_player()) return 0
@@ -179,6 +181,7 @@ query_cmdlist()
              "snoop":"snoop_on",
              "stat":"stat",
 
+             "teams":"teams",
              "tellall":"tellall",
              "toolsoul":"toolsoul",
              "tradestat":"tradestat",
@@ -1711,6 +1714,76 @@ skillstat(string str)
     }
 
     write(ob->skill_living());
+    return 1;
+}
+
+/* **************************************************************************
+ * teams - list info about all present teams
+ */
+
+/*
+ * Function name: team_member_description
+ * Description  : Print the name and idle/ld status of a team member.
+ * Arguments    : object player - the player object
+ * Returns      : string - the name of the player with idle/ld status.
+ */
+static string
+team_member_description(object player)
+{
+    string name = capitalize(player->query_real_name());
+    int idle;
+
+    if (!interactive(player))
+    {
+        name += "(LD)";
+    }
+    else if ((idle = query_idle(player)) > 60)
+    {
+        name += "(" + TIME2STR(idle, 1) + ")";
+    }
+    return name;
+}
+
+nomask int
+teams(string str)
+{
+    object *players;
+    object *members;
+    int index;
+    int size;
+    int num_teams;
+
+    CHECK_SO_WIZ;
+
+    players = users();
+#ifdef STATUE_WHEN_LINKDEAD
+#ifdef OWN_STATUE
+    /* If there is a room where statues of linkdead people can be found,
+     * we add that to the list.
+     */
+    if (objectp(find_object(OWN_STATUE)))
+    {
+        players += ((object *)find_object(OWN_STATUE)->query_linkdead_players() - players);
+    }
+#endif OWN_STATUE
+#endif STATUE_WHEN_LINKDEAD
+    num_teams = 0;
+    size = sizeof(players);
+    while(--index >= size)
+    {
+        members = players[index]->query_team();
+        if (!sizeof(members))
+        {
+            continue;
+        }
+        num_teams++;
+        write(HANGING_INDENT(sprintf("%-11s (%2d) %s",
+            capitalize(players[index]->query_real_name()), sizeof(members), 
+            COMPOSITE_WORDS(sort_array(map(members, team_member_description)))),
+            12, 0));
+    }
+    write("There " + ((num_teams == 1) ? "is " : "are ") +
+        LANG_WNUM(num_teams) + " teams in the realms.\n");
     return 1;
 }
 

@@ -28,3 +28,6 @@ OPTIONS
 	<mail alias>	A list of all wizards in a global (mail) alias.
 	-l		Long finger information on players (including sublocs)
 	-l		List domains / teams memberships with presence info.
+
+SEE ALSO
+	"help g finger" for the general (mortal) finger command.

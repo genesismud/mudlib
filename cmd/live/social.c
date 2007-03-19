@@ -41,13 +41,14 @@ inherit "/cmd/std/command_driver";
 #include <formulas.h>
 #include <language.h>
 #include <macros.h>
+#include <mail.h>
 #include <options.h>
 #include <std.h>
 #include <stdproperties.h>
 #include <time.h>
-#include <mail.h>
 
 nomask int sort_name(object a, object b);
+varargs int team(string str);
 
 /*
  * Function name: create
@@ -331,7 +332,7 @@ assist(string str)
 int
 emote(string str)
 {
-    if (!stringp(str) ||
+    if (!strlen(str) ||
         !this_player()->query_npc())
     {
         return 0;
@@ -588,87 +589,7 @@ introduced_list(string str)
 int
 invite(string str)
 {
-    object *oblist;
-    object member;
-    string fail = "";
-    int index;
-    int size;
-
-    if (!strlen(str))
-    {
-        oblist = (object *)this_player()->query_invited();
-        if (!oblist || !sizeof(oblist))
-            write("You have not invited anyone to join you.\n");
-        else
-        {
-            if (sizeof(oblist) == 1)
-                write("You have invited " + oblist[0]->short() + ".\n");
-            else
-            {
-                write("You have invited " + LANG_WNUM(sizeof(oblist)) +
-                    " people:\n" +
-                    break_string(COMPOSITE_ALL_LIVE(oblist), 76, 3) + "\n");
-            }
-        }
-        return 1;
-    }
-
-    if (this_player()->query_leader())
-    {
-        notify_fail("You cannot be a leader when you have a leader!\n");
-        return 0;
-    }
-
-    oblist = parse_this(str, "[the] %l");
-    size = sizeof(oblist);
-    if (!size)
-    {
-        notify_fail("Invite whom to your team?\n");
-        return 0;
-    }
-
-    index = -1;
-    while(++index < size)
-    {
-        /*
-         * Allow players to make a team with people they have not been
-         * introduced to.
-         *
-        if (!this_player()->query_met(oblist[index]))
-        {
-            fail += (oblist[index]->query_The_name(this_player()) +
-                " has not introduced " + oblist[index]->query_objective() +
-                "self to you.\n");
-            oblist[index] = 0;
-        }
-         */
-
-        if (oblist[index]->query_npc())
-        {
-            fail += oblist[index]->query_The_name(this_player()) +
-                " declines the invitation to become part of your team.\n";
-            oblist[index] = 0;
-        }
-
-        this_player()->reveal_me(1);
-        oblist[index]->reveal_me(1);
-        this_player()->team_invite(oblist[index]);
-    }
-
-    oblist = filter(oblist, objectp);
-    if (!sizeof(oblist))
-    {
-        notify_fail(fail);
-        return 0;
-    }
-
-    write(fail);
-    write("You invite " + COMPOSITE_ALL_LIVE(oblist) + " to join your team.\n");
-    targetbb(" invites you to join " + this_player()->query_possessive() +
-        " team.", oblist);
-    all2actbb(" invites", oblist, " to join " +
-        this_player()->query_possessive() + " team.");
-    return 1;
+    return team("invite " + str);
 }
 
 /*
@@ -677,76 +598,7 @@ invite(string str)
 varargs int 
 join(string str)
 {
-    object leader;
-    object *oblist;
-
-    if (!strlen(str))
-    {
-        notify_fail("Whose team do you want to join?\n");
-        return 0;
-    }
-
-    if (this_player()->query_leader())
-    {
-        write("You already have a leader!\n");
-        return 1;
-    }
-
-    oblist = parse_this(str, "[the] %l");
-    switch (sizeof(oblist))
-    {
-    case 0:
-        notify_fail("Join whose team?\n");
-        return 0;
-
-    case 1:
-        leader = oblist[0];
-        break;
-
-    default:
-        notify_fail("You can only join one team at a time.\n");
-        return 0;
-    }
-
-    if (member_array(this_player(), leader->query_invited()) < 0)
-    {
-        write(leader->query_The_name(this_player()) +
-            " has not invited you as a team member.\n");
-        return 1;
-    }
-
-    /*
-     * Can not have a leader with too low DIS
-     *
-    if (leader->query_stat(SS_DIS) + 10 < this_player()->query_stat(SS_DIS) &&
-        !this_player()->query_wiz_level())
-    {
-        write("You do not have enough faith in " + 
-            LANG_POSS(leader->short()) + " discipline.\n");
-        return 1;
-    }
-     */
-
-    if (!leader->team_join(this_player()))
-    {
-        write("You fail to join your leader. Maybe you are leading someone " +
-            "else yourself.\n");
-        return 1;
-    }
- 
-    if (!this_player()->query_option(OPT_BRIEF))
-    {
-        write("As you enter the team, you switch to brief mode.\n");
-        this_player()->add_prop(TEMP_BACKUP_BRIEF_OPTION, 1);
-        this_player()->set_option(OPT_BRIEF, 1);
-    }
- 
-    write("Your leader is now: " + leader->short() + ".\n");
-    say(QCTNAME(this_player()) + " joined the team of " +
-        QTNAME(leader) + ".\n", ({ leader, this_player() }));
-    tell_object(leader, this_player()->query_The_name(leader) +
-        " joined your team.\n");
-    return 1;
+    return team("join " + str);
 }
 
 /*
@@ -997,122 +849,16 @@ last(string str)
 /*
  * leave - Leave a team or force someone to leave a team
  */
-
-varargs void
-team_leave(object ob, object leader, int force)
-{
-    leader->team_leave(ob);
-
-    if (force)
-    {
-        leader->remove_invited(ob); /* disallow him/her to rejoin. */
-    }
-
-    if (ob->query_prop(TEMP_BACKUP_BRIEF_OPTION))
-    {
-        tell_object(ob, "As you leave the team, you switch back to " +
-            "verbose mode.\n");
-        ob->remove_prop(TEMP_BACKUP_BRIEF_OPTION);
-        ob->set_option(OPT_BRIEF, 0);
-    }
-}
-
 int 
 leave(string str)
 {
-    object leader;
-    object member;
-    int index;
-    object *team;
-
-    /* Member leaving the team. */
     if (!strlen(str))
     {
-        leader = this_player()->query_leader();
-        if (objectp(leader))
-        {
-            write("You leave your leader.\n");
-            tell_object(leader, this_player()->query_The_name(leader) +
-                " left your team.\n");
-            team_leave(this_player(), leader);
- 
-            return 1;
-        }
-
-        notify_fail("You are not a member of a team. If you lead a team " +
-            "and want to disband it, use \"leave team\".\n");
+        notify_fail("Leave what? Your team?\n");
         return 0;
     }
 
-    /* Leader disbands team. */
-    if (str == "team")
-    {
-        team = this_player()->query_team();
-        if (!sizeof(team))
-        {
-            notify_fail("You are not the leader of a team. Do \"leave\" to " +
-                "leave your leader.\n");
-            return 0;
-        }
-
-        write("You disband your team.\n");
-        for (index = 0; index < sizeof(team); index++)
-	{
-            tell_object(team[index],
-                this_player()->query_The_name(team[index]) +
-                " forces you to leave " + this_player()->query_possessive() +
-                " team.\n");
-            team_leave(team[index], this_player(), 1);
-	}
-
-        return 1;
-    }
-
-    if (!sizeof(this_player()->query_team()))
-    {
-        notify_fail("You are not the leader of a team. Do \"leave\" to " +
-            "leave your leader.\n");
-        return 0;
-    }
-
-    team = parse_this(str, "[the] %l");
-    switch (sizeof(team))
-    {
-    case 0:
-        /* Check the name if the player isn't in the room. */
-        member = find_player(lower_case(str));
-        if (objectp(member) &&
-            !this_player()->query_met(member))
-        {
-            member = 0;
-        }
-        break;
-
-    case 1:
-        member = team[0];
-        break;
-
-    default:
-        notify_fail("Please eject only one member from your team at a time.\n");
-        return 0;
-    }
-
-    if (!objectp(member) ||
-        (member->query_leader() != this_player()))
-    {
-        notify_fail("No such player in your team.\n");
-        return 0;
-    }
-
-    write("You force " + member->query_the_name(this_player()) +
-        " to leave your team.\n");
-    tell_object(member, this_player()->query_The_name(member) +
-         " forces you to leave " + this_player()->query_possessive() +
-         " team.\n");
-
-    team_leave(member, this_player(), 1);
- 
-    return 1;
+    return team("leave " + str);
 }
 
 /*
@@ -1194,44 +940,8 @@ remember_live(string str)
 }
 
 /*
- * stop - Stop fighting
+ * spar - fight someone for practice.
  */
-
-/*
- * Function name: remove_stop_fighting_offer
- * Description  : Called to make sure the offer is revoked after 10 seconds.
- * Arguments    : object live - who made the offer.
- *                string str  - the target to which we made the offer.
- */
-static void
-remove_stop_fighting_offer(object live, string str)
-{
-    mapping offers = live->query_prop(LIVE_M_STOP_FIGHTING);
-
-    /* There is no mapping. */
-    if (!mappingp(offers))
-    {
-        return;
-    }
-
-    /* The offer is still valid, do not touch. */
-    if (offers[str] >= (time() - 10))
-    {
-        return;
-    }
-
-    /* Revoke the offer. */
-    offers = m_delete(offers, str);
-    if (m_sizeof(offers))
-    {
-        live->add_prop(LIVE_M_STOP_FIGHTING, offers);
-    }
-    else
-    {
-        live->remove_prop(LIVE_M_STOP_FIGHTING);
-    }
-}
-
 int
 spar(string str)
 {
@@ -1284,6 +994,45 @@ spar(string str)
         this_player()->add_sparring_partner(oblist[index]);
     }
     return 1;
+}
+
+/*
+ * stop - Stop fighting
+ */
+
+/*
+ * Function name: remove_stop_fighting_offer
+ * Description  : Called to make sure the offer is revoked after 10 seconds.
+ * Arguments    : object live - who made the offer.
+ *                string str  - the target to which we made the offer.
+ */
+static void
+remove_stop_fighting_offer(object live, string str)
+{
+    mapping offers = live->query_prop(LIVE_M_STOP_FIGHTING);
+
+    /* There is no mapping. */
+    if (!mappingp(offers))
+    {
+        return;
+    }
+
+    /* The offer is still valid, do not touch. */
+    if (offers[str] >= (time() - 10))
+    {
+        return;
+    }
+
+    /* Revoke the offer. */
+    offers = m_delete(offers, str);
+    if (m_sizeof(offers))
+    {
+        live->add_prop(LIVE_M_STOP_FIGHTING, offers);
+    }
+    else
+    {
+        live->remove_prop(LIVE_M_STOP_FIGHTING);
+    }
 }
 
 int
@@ -1423,98 +1172,346 @@ stop(string str)
 }
 
 /*
- * team - Tell me what team I am a member 
+ * team - Handles all the team related commands.
  */
-static string
-team_member_description(object player)
-{
-    string name = capitalize(player->query_real_name());
-    int idle;
 
-    if (!interactive(player))
+#define FAIL_IF_LEADER(text) if (leader) { notify_fail("You cannot " + (text) + " as you are lead by " + leader->query_the_name(this_player()) + ".\n"); return 0; }
+#define FAIL_IF_NOT_LEADER(text) if (!sizeof(members)) { notify_fail("You cannot " + (text) + " as you are not leading a team.\n"); return 0; }
+
+static int
+team_invite(object *oblist)
+{
+    object *npcs = ({ });
+    string fail = "";
+
+    this_player()->reveal_me(1);
+    npcs = filter(oblist, &->query_npc());
+    if (sizeof(npcs))
     {
-        name += "(LD)";
+        fail = capitalize(COMPOSITE_ALL_LIVE(npcs)) + " decline" +
+            ((sizeof(npcs) == 1) ? "s" : "") +
+            " the invitation to join your team.\n";
+        oblist -= npcs;
     }
-    else if ((idle = query_idle(player)) > 60)
+
+    npcs = filter(oblist, &operator(==)(, this_player()) @ &->query_leader());
+    if (sizeof(npcs))
     {
-        name += "(" + TIME2STR(idle, 1) + ")";
+        fail += capitalize(COMPOSITE_ALL_LIVE(npcs)) +
+            ((sizeof(npcs) == 1) ? " is" : " are") + " already in your team.\n";
+        oblist -= npcs;
     }
-    return name;
+
+    if (!sizeof(oblist))
+    {
+        notify_fail(fail);
+        return 0;
+    }
+
+    map(oblist, &->reveal_me(1));
+    foreach(object ob: oblist)
+    {
+        this_player()->team_invite(ob);
+    }
+
+    write(fail + "You invite " + COMPOSITE_ALL_LIVE(oblist) + " to join your team.\n");
+    targetbb(" invites you to join " + this_player()->query_possessive() +
+        " team.", oblist);
+    all2actbb(" invites", oblist, " to join " +
+        this_player()->query_possessive() + " team.");
+    return 1;
 }
+
+static int
+team_join(object leader)
+{
+    if (sizeof(this_player()->query_team()))
+    {
+        write("You cannot join a team while you are leading a team.\n");
+        return 1;
+    }
+    if (!IN_ARRAY(this_player(), leader->query_invited()))
+    {
+        write(leader->query_The_name(this_player()) +
+            " has not invited you as a team member.\n");
+        return 1;
+    }
+    if (leader->query_leader())
+    {
+        write("You cannot join " + leader->query_the_name(this_player()) +
+            " as " + leader->query_pronoun() + " joined a team " +
+            leader->query_objective() + "self.\n");
+        return 1;
+    }
+    if (!leader->team_join(this_player()))
+    {
+        write("You fail to join your leader.\n");
+        return 1;
+    }
  
+    if (!this_player()->query_option(OPT_BRIEF))
+    {
+        write("As you enter the team, you switch to brief mode.\n");
+        this_player()->add_prop(TEMP_BACKUP_BRIEF_OPTION, 1);
+        this_player()->set_option(OPT_BRIEF, 1);
+    }
+ 
+    write("Your leader is now " + leader->short() + ".\n");
+    say(QCTNAME(this_player()) + " joined the team of " +
+        QTNAME(leader) + ".\n", ({ leader, this_player() }));
+    tell_object(leader, this_player()->query_The_name(leader) +
+        " joined your team.\n");
+    return 1;
+}
+
+static void
+team_leave(object member, object leader, int force)
+{
+    leader->team_leave(member);
+
+    /* In case of force, don't allow the person to join again. */
+    if (force)
+    {
+        leader->remove_invited(member);
+    }
+
+    if (member->query_prop(TEMP_BACKUP_BRIEF_OPTION))
+    {
+        tell_object(member, "As you leave the team, you switch back to " +
+            "verbose mode.\n");
+        member->remove_prop(TEMP_BACKUP_BRIEF_OPTION);
+        member->set_option(OPT_BRIEF, 0);
+    }
+}
+
 varargs int
 team(string str)
 {
-    object leader;
-    object *players;
-    object *members;
-    int index;
-    int size;
-    int num_teams;
+    string  arg;
+    int     done;
+    int     size = 0;
+    object *oblist = ({ });
+    object  leader = this_player()->query_leader();
+    object  rear;
+    object  member;
+    object *members = this_player()->query_team();
 
-    if ((str == "-l") &&
-        (SECURITY->query_wiz_rank(this_player()->query_real_name()) >= WIZ_NORMAL))
+    if (!strlen(str))
     {
-        players = users();
-#ifdef STATUE_WHEN_LINKDEAD
-#ifdef OWN_STATUE
-        /* If there is a room where statues of linkdead people can be found,
-         * we add that to the list.
-         */
-        if (objectp(find_object(OWN_STATUE)))
-        {
-            players += ((object *)find_object(OWN_STATUE)->query_linkdead_players() - players);
-        }
-#endif OWN_STATUE
-#endif STATUE_WHEN_LINKDEAD
-        num_teams = 0;
-        index = -1;
-        size = sizeof(players);
-        while(++index < size)
-        {
-            members = players[index]->query_team();
-            if (!sizeof(members))
-            {
-                continue;
-            }
-            num_teams++;
-            write(HANGING_INDENT(sprintf("%-11s (%2d) %s",
-                capitalize(players[index]->query_real_name()), sizeof(members), 
-                COMPOSITE_WORDS(sort_array(map(members, team_member_description)))),
-                12, 0));
-        }
-        write("There " + ((num_teams == 1) ? "is " : "are ") +
-            LANG_WNUM(num_teams) + " teams in the realms.\n");
-        return 1;    
+        str = "list";
     }
 
-    if (leader = (object)this_player()->query_leader()) 
+    if (sscanf(str, "%s %s", str, arg) == 2)
     {
-        members = (object *)leader->query_team();
-        write("You are a member of " + leader->short() + "'s team.");
-        members = FILTER_LIVE(members - ({ this_player() }) );
-        if (!sizeof(members)) 
+        oblist = parse_this(arg, "[the] %l");
+        size = sizeof(oblist);
+    }
+    
+    switch(str)
+    {
+    case "disband":
+        FAIL_IF_NOT_LEADER("disband your team");
+        write("You disband your team.\n");
+	members->catch_msg(QCTNAME(this_player()) + " disbands " +
+            this_player()->query_possessive() + " team and forces you to leave.\n");
+        members = FILTER_PRESENT(members);
+        all2actbb(" disbands " + this_player()->query_possessive() +
+            " team, forcing", members, " to leave.");
+
+        map(members, &team_leave(, this_player(), 1));
+        return 1;
+    
+    case "invite":
+        FAIL_IF_LEADER("invite anyone");
+        if (!size)
         {
-            write(" You are the only member.\n");
+            notify_fail("Invite who to your team?\n");
+            return 0;
+        }
+        return team_invite(oblist);
+
+    case "invited":
+        oblist = (object *)this_player()->query_invited();
+        if (sizeof(oblist))
+        {
+            write("You have invited " + COMPOSITE_ALL_LIVE(oblist) +
+                " to join your team.\n");
+            done = 1;
+        }
+        oblist = filter(users(), &operator(>)(, -1) @ &member_array(this_player(), ) @ &->query_invited());
+        if (sizeof(oblist))
+        {
+            write("You have been invited to join the team of " +
+                COMPOSITE_ALL_LIVE(oblist) + ".\n");
+            done = 1;
+        }
+        if (!done)
+        {
+            write("You have neither invited anyone to join your team, " +
+                "nor been invited to join any team.\n");
+        }
+        return 1;
+
+    case "join":
+        FAIL_IF_LEADER("join another team");
+        switch(size)
+        {
+        case 0:
+            notify_fail("Whose team do you want to join?\n");
+            return 0;
+        case 1:
+            break;
+        default:
+            notify_fail("You can join only one team at a time.\n");
+            return 0;
+        }
+        return team_join(oblist[0]);
+
+    case "leader":
+        FAIL_IF_NOT_LEADER("assign a new team leader");
+        if (this_player()->query_attack())
+        {
+            notify_fail("You cannot re-arrange your team while you are in combat.\n");
+            return 0;
+        }
+        switch(size)
+        {
+        case 0:
+            notify_fail("Assign who to be the leader of your team?\n");
+            return 0;
+        case 1:
+            leader = oblist[0];
+            break;
+        default:
+            notify_fail("You can assign only a single leader.\n");
+            return 0;
+        }
+
+        foreach(object ob: members)
+        {
+            this_player()->team_leave(ob);
+        }
+    
+        members -= ({ leader });
+        map(members, &leader->team_join());
+        leader->team_join(this_player());
+    
+        write("You make " + leader->query_the_name(this_player()) +
+            " the leader of your team.\n");
+        leader->catch_tell(this_player()->query_The_name(leader) +
+            " makes you the leader of " + this_player()->query_possessive() + " team.\n");
+        all2actbb(" makes", ({ leader}), " the leader of " +
+            this_player()->query_possessive() + " team.");
+        members->catch_msg("You are now lead by " + QTNAME(leader) + ".\n");
+        return 1;
+
+    case "leave":
+        if (objectp(leader))
+        {
+            if (strlen(arg))
+            {
+                notify_fail("Leave your team and what else?\n");
+                return 0;
+            }
+            tell_object(leader, this_player()->query_The_name(leader) +
+                " left your team.\n");
+            write("You leave the team of " +
+                leader->query_the_name(this_player()) + ".\n");
+            team_leave(this_player(), leader, 0);
             return 1;
         }
-        else
+        FAIL_IF_NOT_LEADER("remove someone from your team");
+        if (!sizeof(oblist))
         {
-            write(" The other members are:\n");
+            member = find_player(arg);
+            if (!objectp(member) || !(this_player()->query_met(member)))
+            {
+                notify_fail("Remove whom from your team?\n");
+                return 0;
+            }
+            oblist = ({ member });
         }
-    }
-    else if (sizeof(members = (object *) this_player()->query_team()) > 0)
-    {
-        write("You are the leader of your team. The members are:\n");
+
+        map(oblist, &team_leave(, this_player(), 1));
+        write("You force " + COMPOSITE_ALL_LIVE(oblist) + " to leave your team.\n");
+        oblist->catch_msg(QCTNAME(this_player()) + " forces you to leave " +
+            this_player()->query_possessive() + " team.");
+        oblist = FILTER_PRESENT(oblist);
+        all2actbb(" forces", oblist, " to leave " +
+            this_player()->query_possessive() + " team.");
+        return 1;
+
+    case "list":
+        if (leader)
+        {
+            members = (object *)leader->query_team() - ({ this_player() });
+            write("The leader of your team is " +
+                leader->query_the_name(this_player()) + ". ");
+            switch(sizeof(members))
+            {
+            case 0:
+                write("You are the only member.\n");
+                return 1;
+            case 1:
+                write("The other member is " + members[0]->query_the_name(this_player()) + ".\n");
+                return 1;
+            default:
+                write("The other members are " + COMPOSITE_ALL_LIVE(members) + ".\n");
+                return 1;
+            }
+            /* Not reached. */
+        }
+        if (sizeof(members))
+        {
+            write("You are the leader of your team. The members are " +
+                COMPOSITE_ALL_LIVE(members) + ".\n");
+            return 1;
+        }
+        notify_fail("You are not in a team.\n");
+        return 0;
+
+    case "rear":
+        FAIL_IF_NOT_LEADER("assign a new rear guard");
+        switch(size)
+        {
+        case 0:
+            notify_fail("Who do you want to be the rear guard?\n");
+            return 0;
+        case 1:
+            rear = oblist[0];
+            break;
+        default:
+            notify_fail("You can assign only one person to be the rear guard.\n");
+            return 0;
+        }
+
+        if (rear == members[sizeof(members)-1])
+        {
+            write(rear->query_The_name(this_player()) +
+                "already is the rearguard of the team.\n");
+            return 1;
+        }
+    
+        this_player()->team_leave(rear);
+        this_player()->team_join(rear);
+        members -= ({ rear });
+    
+        write("You alter the formation of the team, placing "+
+            rear->query_the_name(this_player()) + " at the rearguard.\n");
+        all2actbb(" alters the formation of " + this_player()->query_possessive() +
+            " team, placing", ({ rear }), " at the rearguard.");
+        rear->catch_tell(this_player()->query_The_name(rear) +
+            " places you at the rearguard of " + this_player()->query_possessive() +
+            " team.\n");
+        return 1;
+
+    default:
+        notify_fail("The command \"team " + str + "\" is not know.\n");
+        return 0;
     }
 
-    if (sizeof(members))
-    {
-        write(break_string(COMPOSITE_ALL_LIVE(members), 76, 3) + "\n");
-        return 1;
-    }
-    notify_fail("You are not a member of a team.\n");
-    return 0;
+    write("Impossible end of team command.\n");
+    return 1;
 }
 
 /*

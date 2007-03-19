@@ -1,0 +1,14 @@
+NAME
+	teams - list all teams in the realms.
+
+ACCESS LEVEL
+	domain wizard
+
+SYNOPSIS
+	teams
+
+DESCRIPTION
+	List the teams currently formed in the realms.
+
+OPTIONS
+	<none>	Display the list of teams in the realms.
