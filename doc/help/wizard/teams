@@ -12,3 +12,6 @@ DESCRIPTION
 
 OPTIONS
 	<none>	Display the list of teams in the realms.
+
+SEE ALSO
+	"help g teams" for the general (mortal) help on teams.
