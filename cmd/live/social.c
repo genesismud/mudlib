@@ -1387,6 +1387,13 @@ team(string str)
             return 0;
         }
 
+        if (!IN_ARRAY(leader, members))
+        {
+            write(rear->query_The_name(this_player()) +
+                " is not a member of your team.\n");
+            return 1;
+        }
+
         foreach(object ob: members)
         {
             this_player()->team_leave(ob);
@@ -1396,10 +1403,23 @@ team(string str)
         map(members, &leader->team_join());
         leader->team_join(this_player());
     
+        done = this_player()->query_option(OPT_BRIEF);
         write("You make " + leader->query_the_name(this_player()) +
-            " the leader of your team.\n");
+            " the leader of your team" +
+            (done ? "" : " and switch into brief mode") + ".\n");
+        if (!done)
+        {
+            this_player()->add_prop(TEMP_BACKUP_BRIEF_OPTION, 1);
+            this_player()->set_option(OPT_BRIEF, 1);
+        }
         leader->catch_tell(this_player()->query_The_name(leader) +
             " makes you the leader of " + this_player()->query_possessive() + " team.\n");
+        if (leader->query_prop(TEMP_BACKUP_BRIEF_OPTION))
+        {
+            tell_object(leader, "As you lead the team, you switch back to verbose mode.\n");
+            leader->remove_prop(TEMP_BACKUP_BRIEF_OPTION);
+            leader->set_option(OPT_BRIEF, 0);
+        }
         all2actbb(" makes", ({ leader}), " the leader of " +
             this_player()->query_possessive() + " team.");
         members->catch_msg("You are now lead by " + QTNAME(leader) + ".\n");
@@ -1435,7 +1455,7 @@ team(string str)
         map(oblist, &team_leave(, this_player(), 1));
         write("You force " + COMPOSITE_ALL_LIVE(oblist) + " to leave your team.\n");
         oblist->catch_msg(QCTNAME(this_player()) + " forces you to leave " +
-            this_player()->query_possessive() + " team.");
+            this_player()->query_possessive() + " team.\n");
         oblist = FILTER_PRESENT(oblist);
         all2actbb(" forces", oblist, " to leave " +
             this_player()->query_possessive() + " team.");
@@ -1485,6 +1505,12 @@ team(string str)
             return 0;
         }
 
+        if (!IN_ARRAY(rear, members))
+        {
+            write(rear->query_The_name(this_player()) +
+                " is not a member of your team.\n");
+            return 1;
+        }
         if (rear == members[sizeof(members)-1])
         {
             write(rear->query_The_name(this_player()) +
