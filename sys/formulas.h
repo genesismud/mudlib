@@ -69,6 +69,8 @@
     (((type) & A_BODY) ? 40 : 0) + \
     (((type) & A_LEGS) ? 30 : 0) + \
     (((type) & A_HEAD) ? 10 : 0) + \
+    (((type) & A_R_FOOT) ? 10 : 0) + \
+    (((type) & A_L_FOOT) ? 10 : 0) + \
     (((type) & A_R_ARM) ? 10 : 0) + \
     (((type) & A_L_ARM) ? 10 : 0) + \
     (((type) & A_R_HAND) ? 7 : 0) + \
