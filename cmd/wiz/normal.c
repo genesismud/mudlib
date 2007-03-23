@@ -1735,11 +1735,11 @@ team_member_description(object player)
 
     if (!interactive(player))
     {
-        name += "(LD)";
+        name += " (LD)";
     }
     else if ((idle = query_idle(player)) > 60)
     {
-        name += "(" + TIME2STR(idle, 1) + ")";
+        name += " (" + TIME2STR(idle, 1) + ")";
     }
     return name;
 }
@@ -1750,7 +1750,6 @@ teams(string str)
     object *players;
     object *members;
     int index;
-    int size;
     int num_teams;
 
     CHECK_SO_WIZ;
@@ -1768,8 +1767,8 @@ teams(string str)
 #endif OWN_STATUE
 #endif STATUE_WHEN_LINKDEAD
     num_teams = 0;
-    size = sizeof(players);
-    while(--index >= size)
+    index = sizeof(players);
+    while(--index >= 0)
     {
         members = players[index]->query_team();
         if (!sizeof(members))
@@ -1777,10 +1776,11 @@ teams(string str)
             continue;
         }
         num_teams++;
-        write(HANGING_INDENT(sprintf("%-11s (%2d) %s",
-            capitalize(players[index]->query_real_name()), sizeof(members), 
-            COMPOSITE_WORDS(sort_array(map(members, team_member_description)))),
-            12, 0));
+        write(HANGING_INDENT(sprintf("%-11s %d %s %s",
+            capitalize(players[index]->query_real_name()), sizeof(members),
+            ((sizeof(members) == 1) ? "member :": "members:"),
+            COMPOSITE_WORDS(map(members, team_member_description))),
+            23, 0));
     }
     write("There " + ((num_teams == 1) ? "is " : "are ") +
         LANG_WNUM(num_teams) + " teams in the realms.\n");
