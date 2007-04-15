@@ -700,11 +700,12 @@ nomask static void
 finger_player(string name, int show_long)
 {
     int    real;
+    int    pinfo;
     object player;
     object env;
     string pronoun;
     string domain;
-    string str;
+    string str, line;
     string *names;
     int    chtime;
     int    restricted;
@@ -742,24 +743,28 @@ finger_player(string name, int show_long)
     /* Display the rank/level of the player. */
     if (SECURITY->query_wiz_rank(name) >= WIZ_APPRENTICE)
     {
-        write(pronoun +
-              LANG_ADDART(WIZ_RANK_NAME(SECURITY->query_wiz_rank(name))) +
+        line = pronoun +
+            LANG_ADDART(WIZ_RANK_NAME(SECURITY->query_wiz_rank(name))) +
 #ifdef USE_WIZ_LEVELS
-              " (level " + SECURITY->query_wiz_level(name) + ")" +
+            " (level " + SECURITY->query_wiz_level(name) + ")" +
 #endif USE_WIZ_LEVELS
-              ", set by " +
-              (strlen(str = SECURITY->query_wiz_chl(name)) ?
-               capitalize(str) : "root") +
+            ", set by " +
+            (strlen(str = SECURITY->query_wiz_chl(name)) ?
+             capitalize(str) : "root");
 #ifdef FOB_KEEP_CHANGE_TIME
-              ((chtime = SECURITY->query_wiz_chl_time(name)) ?
-               (" on " + ctime(chtime)) : "") +
+        line += ((chtime = SECURITY->query_wiz_chl_time(name)) ?
+             (" on " + ctime(chtime)) : "");
 #endif FOB_KEEP_CHANGE_TIME
-              ".\n");
+        line += ".";
     }
     else
     {
-        write(pronoun + "a mortal player.\n");
+        line = pronoun + "a mortal player.";
     }
+    /* Display pinfo hint to those who have a need to know. */
+    pinfo = (WIZ_CMD_HELPER->valid_user() && (file_size(PINFO_FILE(name)) > 0));
+    line += (pinfo ? " PInfo available." : "") + "\n";
+    write(line);
 
     /* Display the domain the player is in. */
     if (strlen(domain = SECURITY->query_wiz_dom(name)))
@@ -930,6 +935,7 @@ finger(string str)
     int    index;
     int    size;
     int    arg_l;
+    int    pinfo;
     string *names;
     mapping gread;
     mixed *banished;
@@ -1055,14 +1061,17 @@ finger(string str)
     }
 
     banished = SECURITY->banish(str, 0);
+    pinfo = (WIZ_CMD_HELPER->valid_user() && (file_size(PINFO_FILE(str)) > 0));
     if (sizeof(banished) == 2)
     {
         write("The name " + capitalize(str) + " was banished by " +
-            capitalize(banished[0]) + " on " + ctime(banished[1]) + ".\n");
+            capitalize(banished[0]) + " on " + ctime(banished[1]) +
+            "." + (pinfo ? " PInfo available." : "") + "\n");
         return 1;
     }
  
-    write("There is no such player, domain, category, etcetera.\n");
+    write("There is no such player, domain, category, etcetera." +
+        (pinfo ? " PInfo available." : "") + "\n");
     return 1;
 }
 
