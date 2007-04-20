@@ -1514,7 +1514,7 @@ team(string str)
         if (rear == members[sizeof(members)-1])
         {
             write(rear->query_The_name(this_player()) +
-                "already is the rearguard of the team.\n");
+                " already is the rearguard of the team.\n");
             return 1;
         }
     

@@ -2225,7 +2225,12 @@ appraise_object(int num)
         appraise_light(num));
     if (this_object()->check_recoverable() == 1)
     {
-        write(" This object seems to be able to last a while.");
+        write(" " + capitalize(LANG_THESHORT(this_object())) +
+	    " seems to be able to last a while.");
+    }
+    if (this_object()->query_keepable())
+    {
+        write(this_object()->appraise_keep(num));
     }
     write("\n");
 }

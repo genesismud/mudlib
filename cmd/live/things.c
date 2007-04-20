@@ -620,9 +620,9 @@ show_exec(object ob)
         env = environment(env);
     }
 
-    if (strlen(str)) {
-        str += ".\n";
-        write(break_string(str, 76));
+    if (strlen(str))
+    {
+        write(str + ".\n");
     }
 
     write(ob->long());
@@ -1451,8 +1451,7 @@ keep(string str)
     /* None of the objects are keepable. */
     if (sizeof(keep_objs) == sizeof(objs))
     {
-        notify_fail(break_string("Not keepable: " +
-            COMPOSITE_DEAD(keep_objs) + ".", 75) + "\n");
+        notify_fail("Not keepable: " + COMPOSITE_DEAD(keep_objs) + ".\n");
         return 0;
     }
 
@@ -1472,15 +1471,36 @@ keep(string str)
     /* No objects to process. */
     if (!sizeof(keep_objs))
     {
-        notify_fail(break_string((keep ? "Already kept: " : "Not kept: ") +
-            COMPOSITE_DEAD(objs) + ".", 75) + "\n");
+        notify_fail((keep ? "Already kept: " : "Not kept: ") +
+            COMPOSITE_DEAD(objs) + ".\n");
         return 0;
     }
 
     keep_objs->set_keep(keep);
-    write(break_string((keep ? "Set keep protection on " :
-        "Removed keep protection from ") + COMPOSITE_DEAD(keep_objs) + ".",
-        75) + "\n");
+
+    /* See if we failed to (un)keep any items. */
+    if (keep)
+    {
+        objs = filter(keep_objs, &not() @ &->query_keep());
+    }
+    else
+    {
+        objs = filter(keep_objs, &->query_keep());
+    }
+    if (sizeof(objs))
+    {
+        write((keep ? "Failed to set keep protection on " :
+            "Failed to remove keep protection from ") +
+	    COMPOSITE_DEAD(keep_objs) + ".\n");
+        keep_objs -= objs;
+	if (!sizeof(keep_objs))
+	{
+	    return 1;
+	}
+    }
+
+    write((keep ? "Set keep protection on " :
+        "Removed keep protection from ") + COMPOSITE_DEAD(keep_objs) + ".\n");
     return 1;
 }
 

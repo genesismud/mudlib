@@ -70,9 +70,9 @@ query_keepable()
 public string
 keep_obj_m_no_sell()
 {
-    return break_string(capitalize(LANG_THESHORT(this_object())) +
-	" rejects being sold since it is 'keep' protected. In case you " +
-	"want to sell it, 'unkeep' it first.", 75) + "\n";
+    return capitalize(LANG_THESHORT(this_object())) + " rejects being sold " +
+        "since it is 'keep' protected. In case you want to sell it, " +
+	"'unkeep' it first.\n";
 }
 
 /*
@@ -80,13 +80,16 @@ keep_obj_m_no_sell()
  * Description  : Call this function in order to set or remove the 'keep'
  *                protection of this object. If no argument is passed to the
  *                function, the default will be 1 - i.e. set the 'keep'
- *                protection.
+ *                protection. If the OBJ_M_NO_SELL property is not set to
+ *                our own function, keep the item kept.
  * Arguments    : int 1 - set the 'keep' protection.
  *                    0 - remove the 'keep' protection.
  */
 public void
 set_keep(int keep = 1)
 {
+    mixed pvalue;
+
     if (keep)
     {
         if (!this_object()->query_prop_setting(OBJ_M_NO_SELL))
@@ -96,12 +99,10 @@ set_keep(int keep = 1)
     }
     else
     {
-        mixed   pvalue;
-
         pvalue = this_object()->query_prop_setting(OBJ_M_NO_SELL);
 
         if (functionp(pvalue) &&
-            wildmatch("*->keep_obj_m_no_sell", function_name(pvalue)))
+	    wildmatch("*->keep_obj_m_no_sell", function_name(pvalue)))
         {
             this_object()->remove_prop(OBJ_M_NO_SELL);
         }
@@ -129,6 +130,24 @@ public int
 query_keep()
 {
     return (this_object()->query_prop_setting(OBJ_M_NO_SELL) != 0);
+}
+
+/*
+ * Function name: appraise_keep
+ * Description  : Composte a text about the keepability of this item.
+ * Arguments    : int num - a certain number related to appraise skill.
+ * Returns      : string - the description. Note it must start with a space.
+public string
+appraise_keep(int num)
+{
+    if (query_keep())
+    {
+        return " It rejects being sold as it is keep protected.";
+    }
+    else
+    {
+        return " It could reject being sold by keep protecting it.";
+    }
 }
 
 /*
