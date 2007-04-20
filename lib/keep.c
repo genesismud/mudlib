@@ -137,6 +137,7 @@ query_keep()
  * Description  : Composte a text about the keepability of this item.
  * Arguments    : int num - a certain number related to appraise skill.
  * Returns      : string - the description. Note it must start with a space.
+ */
 public string
 appraise_keep(int num)
 {
