@@ -19,23 +19,23 @@ inherit "/std/container";
 #include <stdproperties.h>
 #include <wa_types.h>
 
-/*
- * Prototypes
- */
+#define DECAY_TIME      10    /* times DECAY_UNIT == minutes */
+#define DECAY_LIMIT      3    /* times DECAY_UNIT == minutes */
+#define DECAY_UNIT      60.0  /* one minute */
+#define DECAY_FUN "decay_fun" /* Name of the intermediate decay routine. */
+
+/* Prototypes */
 void decay_fun();
 void set_decay(int d);
 string short_func();
 string pshort_func();
 string long_func();
 
-#define DECAY_TIME	10
-#define DECAY_LIMIT	 3
-#define DECAY_UNIT	60.0
-
-int             decay;
-int             decay_id;
-string          met_name, nonmet_name, state_desc, pstate_desc;
-mixed		leftover_list;
+/* Global variables. */
+int     decay;
+int     decay_id;
+string  met_name, nonmet_name, state_desc, pstate_desc;
+mixed           leftover_list;
 
 #if 0
 /*
@@ -122,8 +122,8 @@ set_name(string name)
     add_name("remains of " + met_name);
     if (nonmet_name)
     {
-	add_name("corpse of " + nonmet_name);
-	add_name("remains of " + nonmet_name);
+        add_name("corpse of " + nonmet_name);
+        add_name("remains of " + nonmet_name);
     }
 }
 
@@ -221,13 +221,13 @@ short_func()
     if (!pob || !query_interactive(pob) || pob == this_object())
         pob = previous_object(-1);
     if (!pob || !query_interactive(pob))
-	pob = this_player();
+        pob = this_player();
     if (pob && pob->query_real_name() == lower_case(met_name))
-	return state_desc + "yourself";
+        return state_desc + "yourself";
     else if (pob && pob->query_met(met_name))
-	return state_desc + capitalize(met_name);
+        return state_desc + capitalize(met_name);
     else
-	return state_desc + LANG_ADDART(nonmet_name);
+        return state_desc + LANG_ADDART(nonmet_name);
 }
 
 /*
@@ -245,13 +245,13 @@ pshort_func()
     if (!pob || !query_interactive(pob) || pob == this_object())
         pob = previous_object(-1);
     if (!pob || !query_interactive(pob))
-	pob = this_player();
+        pob = this_player();
     if (pob && pob->query_real_name() == lower_case(met_name))
-	return pstate_desc + "yourself";
+        return pstate_desc + "yourself";
     else if (pob && pob->query_met(met_name))
-	return pstate_desc + capitalize(met_name);
+        return pstate_desc + capitalize(met_name);
     else
-	return pstate_desc + LANG_PWORD(nonmet_name);
+        return pstate_desc + LANG_PWORD(nonmet_name);
 }
 
 /*
@@ -267,13 +267,13 @@ long_func()
 
     pob = vbfc_caller();
     if (!pob || !query_interactive(pob) || pob == this_object())
-	pob = this_player();
+        pob = this_player();
     if (pob->query_real_name() == lower_case(met_name))
-	return "This is your own dead body.\n";
+        return "This is your own dead body.\n";
     if (pob->query_met(met_name))
-	return "This is the dead body of " + capitalize(met_name) + ".\n";
+        return "This is the dead body of " + capitalize(met_name) + ".\n";
     else
-	return "This is the dead body of " + nonmet_name + ".\n";
+        return "This is the dead body of " + nonmet_name + ".\n";
 }
 
 /*
@@ -315,16 +315,16 @@ decay_remove()
 
     for (i = 0; i < sizeof(leftover_list); i++)
     {
-	if (leftover_list[i][4])
-	{
-	    for (j = 0 ; j < leftover_list[i][2] ; j++)
-	    {
-		obj = clone_object(leftover_list[i][0]);
-		obj->leftover_init(leftover_list[i][1], query_prop(CORPSE_S_RACE));
-		obj->move(environment(this_object()), 0);
-		flag = 1;
-	    }
-	}
+        if (leftover_list[i][4])
+        {
+            for (j = 0 ; j < leftover_list[i][2] ; j++)
+            {
+                obj = clone_object(leftover_list[i][0]);
+                obj->leftover_init(leftover_list[i][1], query_prop(CORPSE_S_RACE));
+                obj->move(environment(this_object()), 0);
+                flag = 1;
+            }
+        }
     }
 
     if (flag)
@@ -356,10 +356,10 @@ decay_fun()
          ((ob[0]->query_prop(HEAP_I_IS)) ? (int)ob[0]->num_heap() : 1));
     if (strlen(desc = COMPOSITE_DEAD(ob)))
     {
-	tell_room(environment(this_object()),
-	    "As the " + QSHORT(this_object()) + " rapidly decays, " +
+        tell_room(environment(this_object()),
+            "As the " + QSHORT(this_object()) + " rapidly decays, " +
             desc + " appear" +
-	    ((i == 1 || desc == "something" || desc == "nothing") ? "s" : "") +
+            ((i == 1 || desc == "something" || desc == "nothing") ? "s" : "") +
             " from it.\n");
     }
     state_desc = "heap with decayed remains of ";
@@ -374,7 +374,7 @@ decay_fun()
  * Function name: set_decay
  * Description  : Sets the decay time in minutes. Preferably, only call this
  *                routine from within create_corpse(), not externally. It will
- *                reset the alarm time to the new delay.
+ *                reset the alarm time to the new decay time.
  * Arguments    : int d - the decay time in minutes.
  */
 void
@@ -385,7 +385,13 @@ set_decay(int d)
     if (decay_id)
     {
         remove_alarm(decay_id);
+        decay_id = 0;
     }
+    if (!decay)
+    {
+        return;
+    }
+
     /* If we are too far away, do some decay first. */
     if (decay > DECAY_LIMIT)
     {
@@ -408,6 +414,32 @@ query_decay()
     return decay;
 }
 
+/*
+ * Function name: query_decay_left
+ * Description  : Find out how much time (in seconds) there is left till the
+ *                corpse decays. Note: query_decay() returns minutes!
+ * Returns      : int - the decay time in seconds.
+ */
+int
+query_decay_left()
+{
+    mixed call;
+    int left;
+
+    /* If it is active, find out how much time left in the alarms. */
+    if (decay_id)
+    {
+        call = get_alarm(decay_id);
+        left = ftoi(call[2]);
+        if (call[1] == DECAY_FUN)
+            left += (DECAY_LIMIT * ftoi(DECAY_UNIT));
+        return left;
+    }
+
+    /* If we end up here, the decay has been stopped, so the answer will
+     * probably be 0. */
+    return decay * ftoi(DECAY_UNIT);
+}
 
 /*
  * Function name: query_race
@@ -458,10 +490,10 @@ appraise_object(int num)
 /*
  * Function name: add_leftover
  * Description:   Add leftovers (at death) to the body.
- *		  The returned list should be an array of arrays, containing
+ *                The returned list should be an array of arrays, containing
  *                the following entries:
- *		    ({ ({ objpath, organ, nitems, vbfc, hard, cut }), ... })
- * Arguments:	  mixed list - The leftover list to use.
+ *                  ({ ({ objpath, organ, nitems, vbfc, hard, cut }), ... })
+ * Arguments:     mixed list - The leftover list to use.
  */
 varargs public void
 add_leftover(mixed list)
@@ -472,11 +504,11 @@ add_leftover(mixed list)
 /*
  * Function name: query_leftover
  * Description:   Return the leftover list. If an organ is specified, that
- *		  actual entry is looked for, otherwise, return the entire
- *		  list.
- *		  The returned list contains the following entries:
- *		      ({ objpath, organ, nitems, vbfc, hard, cut})
- * Arguments:	  string organ - The organ to search for, or 0 to get the
+ *                actual entry is looked for, otherwise, return the entire
+ *                list.
+ *                The returned list contains the following entries:
+ *                    ({ objpath, organ, nitems, vbfc, hard, cut})
+ * Arguments:     string organ - The organ to search for, or 0 to get the
  *                    whole list.
  */
 varargs public mixed
@@ -486,27 +518,27 @@ query_leftover(string organ)
 
     if (!sizeof(leftover_list))
     {
-	return ({ });
+        return ({ });
     }
 
     if (!strlen(organ))
     {
-	return leftover_list;
+        return leftover_list;
     }
 
     for (i = 0 ; i < sizeof(leftover_list) ; i++)
     {
-	if (leftover_list[i][1] == organ)
-	{
-	    return leftover_list[i];
-	}
+        if (leftover_list[i][1] == organ)
+        {
+            return leftover_list[i];
+        }
     }
 }
 
 /*
  * Function name: remove_leftover
  * Description:   Remove a leftover entry from a body.
- * Arguments:	  string organ - Which entry to remove.
+ * Arguments:     string organ - Which entry to remove.
  * Returns:       1 - Ok, removed, 0 - Not found.
  */
 public int
@@ -516,15 +548,15 @@ remove_leftover(string organ)
 
     if (!sizeof(leftover_list))
     {
-	return 0;
+        return 0;
     }
 
     for (i = 0 ; i < sizeof(leftover_list) ; i++)
     {
-	if (leftover_list[i][1] == organ)
-	{
-	    leftover_list[i] = 0;
-	}
+        if (leftover_list[i][1] == organ)
+        {
+            leftover_list[i] = 0;
+        }
     }
     leftover_list = filter(leftover_list, pointerp);
 }
@@ -538,23 +570,23 @@ remove_leftover(string organ)
 public int
 get_leftover(string arg)
 {
-    mixed	corpses, leftovers;
-    object 	*found, *weapons, theorgan;
-    int		i, slash;
-    string	organ, vb, fail;
+    mixed       corpses, leftovers;
+    object      *found, *weapons, theorgan;
+    int         i, slash;
+    string      organ, vb, fail;
 
     if (this_player()->query_prop(TEMP_STDCORPSE_CHECKED))
-	return 0;
+        return 0;
 
     vb = query_verb(); 
     
     notify_fail(capitalize(vb) + " what from what?\n");  /* access failure */
     if (!arg)
-	return 0;
+        return 0;
 
     if (!parse_command(arg, environment(this_player()), "%s 'from' %i",
-		organ, corpses))
-	return 0;
+                organ, corpses))
+        return 0;
 
     found = VISIBLE_ACCESS(corpses, "find_corpse", this_object());
     
@@ -563,27 +595,27 @@ get_leftover(string arg)
         set_alarm(0.5, 0.0, &(this_player())->remove_prop(TEMP_STDCORPSE_CHECKED));
         this_player()->add_prop(TEMP_STDCORPSE_CHECKED, 1);
         if (sizeof(found))
-	    notify_fail("Please try to be more specific with what corpses you choose.\n");
+            notify_fail("Please try to be more specific with what corpses you choose.\n");
         else
-	    notify_fail("There is no such corpse lying around here.\n");
+            notify_fail("There is no such corpse lying around here.\n");
         return 0;
     }
     if (vb == "cut")
     {
-	weapons = this_player()->query_weapon(-1);
-	for (i = 0 ; i < sizeof(weapons) ; i++)
-	{
-	    if (weapons[i]->query_dt() & W_SLASH)
-	    {
-		slash = 1;
-		break;
-	    }
-	}
-	if (!slash)
-	{
-	    notify_fail("Better find something sharper than that to cut with.\n");
-	    return 0;
-	}
+        weapons = this_player()->query_weapon(-1);
+        for (i = 0 ; i < sizeof(weapons) ; i++)
+        {
+            if (weapons[i]->query_dt() & W_SLASH)
+            {
+                slash = 1;
+                break;
+            }
+        }
+        if (!slash)
+        {
+            notify_fail("Better find something sharper than that to cut with.\n");
+            return 0;
+        }
     }
 
     leftovers = query_leftover(organ);
@@ -596,13 +628,13 @@ get_leftover(string arg)
     if (leftovers[5] && !slash)
     {
         notify_fail("You can't just tear this loose, use a knife or " +
-    	    "something...\n");
-	return 0;
+            "something...\n");
+        return 0;
     }
 
     if (strlen(leftovers[3]))
     {
-	fail = check_call(leftovers[3]);
+        fail = check_call(leftovers[3]);
         if (strlen(fail))
         {
             notify_fail(fail + ".\n");
@@ -610,7 +642,7 @@ get_leftover(string arg)
         }
     }
 
-    if(leftovers[2]-- == 0)
+    if (leftovers[2]-- == 0)
     {
         remove_leftover(leftovers[1]);
     }
@@ -648,10 +680,10 @@ public int
 find_corpse(object ob)
 {
     if (IS_CORPSE_OBJECT(ob) &&
-	((environment(ob) == this_player()) ||
-	 (environment(ob) == environment(this_player()))))
+        ((environment(ob) == this_player()) ||
+         (environment(ob) == environment(this_player()))))
     {
-	return 1;
+        return 1;
     }
 
     return 0;
@@ -660,9 +692,9 @@ find_corpse(object ob)
 /*
  * Function name: search_for_leftovers
  * Description:   This function is called when someone searches the corpse
- *		  as set up in create_container()
- * Arguments:	  player - The player searching
- *		  str    - If the player specifically said what to search for
+ *                as set up in create_container()
+ * Arguments:     player - The player searching
+ *                str    - If the player specifically said what to search for
  * Returns:       A string describing what, if anything the player found.
  */
 string
@@ -677,20 +709,20 @@ search_for_leftovers(object player, string str)
 
     for (i = 0; i < sizeof(left); i++)
     {
-	if (left[i][2] == 1)
-	{
-	    found += ({ LANG_ADDART(left[i][1]) });
-	}
-	else if (left[i][2] > 1)
-	{
-	    found += ({ LANG_WNUM(left[i][2]) + " " + LANG_PWORD(left[i][1]) });
-	}
+        if (left[i][2] == 1)
+        {
+            found += ({ LANG_ADDART(left[i][1]) });
+        }
+        else if (left[i][2] > 1)
+        {
+            found += ({ LANG_WNUM(left[i][2]) + " " + LANG_PWORD(left[i][1]) });
+        }
     }
 
     if (sizeof(found) > 0)
     {
-	return "After searching the corpse you believe you " +
-	    "can tear out or cut off " + COMPOSITE_WORDS(found) + ".\n";
+        return "After searching the corpse you believe you " +
+            "can tear out or cut off " + COMPOSITE_WORDS(found) + ".\n";
     }
 
     return "";
