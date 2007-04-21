@@ -1114,7 +1114,7 @@ set_default_weapon(int hit, int pen, int wt, int dt, int hands, object obj)
     set_dt(dt ? dt : (W_IMPALE | W_SLASH));
 
     /* Set the hand(s) used to wield the weapon. */
-    set_hands(hands ? hands : W_NONE)
+    set_hands(hands ? hands : W_NONE);
     
     /* Sets the name of the object that contains the function to call for
      * extra defined wield() and unwield() functions. */
