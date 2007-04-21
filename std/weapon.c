@@ -192,9 +192,9 @@ plural_short(object for_obj)
  * Function name: long
  * Description  : The long description. We add the information about the
  *                condition to it.
- * Arguments     : string str - a possible add-item to look for.
- *                 object for_obj - the object that wants to know.
- * Returns       : string - the long description.
+ * Arguments    : string str - a possible add-item to look for.
+ *                object for_obj - the object that wants to know.
+ * Returns      : string - the long description.
  */
 public varargs string   
 long(string str, object for_obj)
@@ -206,7 +206,8 @@ long(string str, object for_obj)
  * Function name: wield_me
  * Description  : When the player tries to wield this weapon, this function
  *                is called. If the player managed to wield the weapon,
- *                the message is printed.
+ *                the message is printed in this routine. Error messages are
+ *                returned.
  * Returns      : int 1  - success
  *                string - a fail message (nothing is printed).
  */
@@ -279,7 +280,7 @@ wield_me()
     /*
      * A wield function in another object.
      */
-    if ((!wield_func) || (!(wret=wield_func->wield(this_object()))))
+    if (!wield_func || !(wret=wield_func->wield(this_object())))
     {
         if (wielded_in_hand == W_BOTH)
             write("You wield " + LANG_THESHORT(this_object()) +
@@ -314,7 +315,6 @@ wield_me()
         return 1;
     }
 
-
     /*
      * If the wieldfunc returned a value <0 the we can not wield
      * likewise if it returned a string, but then we use that string
@@ -328,8 +328,8 @@ wield_me()
 
 /*
  * Function name: command_wield
- * Description:   Called to wear this armour.
- * Returns:       see wield_me()
+ * Description  : Called to wear this weapon.
+ * Returns      : See wield_me()
  */
 mixed
 command_wield()
@@ -339,10 +339,13 @@ command_wield()
 
 /*
  * Function name: unwield_me
- * Description:   unwield this weapon
- * Returns:       1 - success
- *                0 - weapon not wielded
- *                string - an error message (failure)
+ * Description  : When the player tries to unwield this weapon, this function
+ *                is called. If the player managed to unwield the weapon,
+ *                the message is printed in this routine. Error messages are
+ *                returned.
+ * Returns      : int 1  - success
+ *                int 0  - failure: the weapon was not wielded to begin with.
+ *                string - a fail message (nothing is printed).
  */
 public nomask mixed
 unwield_me()
@@ -356,7 +359,7 @@ unwield_me()
 
     wret = 0;
 
-    if ((!wield_func) || (!(wret = wield_func->unwield(this_object()))))
+    if (!wield_func || !(wret = wield_func->unwield(this_object())))
     {
         if (check_seen(wielder))
         {
@@ -388,8 +391,8 @@ unwield_me()
 
 /*
  * Function name: command_unwield
- * Description:   Called to wear this armour.
- * Returns:       see unwield_me()
+ * Description  : Called to wear this weapon.
+ * Returns      : See unwield_me()
  */
 mixed
 command_unwield()
@@ -413,8 +416,7 @@ leave_env(object from, object dest)
     if (!wielded)
         return;
 
-    if ((!wield_func ||
-         !wield_func->unwield(this_object())) &&
+    if ((!wield_func || !wield_func->unwield(this_object())) &&
         wielder)
     {
         tell_object(wielder, "You stop wielding " +
@@ -429,50 +431,56 @@ leave_env(object from, object dest)
 
 /*
  * Function name: set_hit
- * Description  : Set the to hit value in the weapon. This can only be done
- *                if the lock has not been set.
- * Arguments    : int class - the new weapon class.
+ * Description  : Set the to hit value in the weapon. This relates to how easy
+ *                it is to make a hit with this weapon.
+ *                When the lock has been set, no changes are allowed anymore.
+ * Arguments    : int class - the hit value.
  */
 void
 set_hit(int class)
 {
     if (query_lock())
-    {
         return;
-    }
 
     wep_hit = class;
 }
 
 /*
  * Function name: query_hit
- * Description:   Query the to hit value in the weapon
+ * Description  : Query the to hit value in the weapon.
+ * Returns      : int - the hit value.
  */
 int query_hit() { return wep_hit; }
 
 /*
  * Function name: set_pen
- * Description:   Set penetration of the weapon
+ * Description  : Set penetration value of the weapon. This relates to how
+ *                badly it hurts when you are hit by this weapon.
+ *                When the lock has been set, no changes are allowed anymore.
+ * Arguments    : int class - the pen value.
  */
 void
 set_pen(int class)
 {
     if (query_lock())
-        return;                 /* All changes has been locked out */
+        return;
 
     wep_pen = class;
 }
 
 /*
  * Function name: query_pen
- * Description:   Query penetration of the weapon
+ * Description  : Query penetration value of the weapon.
+ * Returns      : int - the pen value.
  */
 int query_pen() { return wep_pen; }
 
 /*
  * Function name: set_pm
- * Description:   Set the modifiers for damage types.
- * Arguments:     list, an array of modifiers like ({ impale, slash, bludgeon })
+ * Description  : Set the modifiers for damage types. These modify the pen
+ *                value for the individual damage types.
+ *                When the lock has been set, no changes are allowed anymore.
+ * Arguments    : int *list - array of modifiers ({ impale, slash, bludgeon })
  *                The sum of the modifiers should be 0 and a modifier for
  *                a damage type that is not used should also be 0.
  */
@@ -488,13 +496,16 @@ set_pm(int *list)
 
 /*
  * Function name: query_pm
- * Description:   Query the modifiers of damage type
+ * Description  : Query the modifiers for the damage types.
+ * Returns      : int * - array of modifiers ({ impale, slash, bludgeon })
  */
 int *query_pm() { return m_pen + ({}); }
 
 /*
- * Function name; query_modified_pen
- * Description:   Query for pen modified for different damage types
+ * Function name: query_modified_pen
+ * Description  : Query the effective (modified) pen values for the different
+ *                damage types. These take corrosion and dulling into account.
+ * Returns      : int * - array of modified pen values ({ impale, slash, blg })
  */
 int *
 query_modified_pen()
@@ -523,7 +534,9 @@ query_modified_pen()
 
 /*
  * Function name: set_wt
- * Description:   Set the weapon type
+ * Description  : Set the weapon type, W_SWORD, W_AXE, ...
+ *                When the lock has been set, no changes are allowed anymore.
+ * Arguments    : int type - the weapon type.
  */
 void
 set_wt(int type)
@@ -531,7 +544,7 @@ set_wt(int type)
     int *likely;
 
     if (query_lock())
-        return;                 /* All changes has been locked out */
+        return;
 
     if (type >= 0 && type < W_NO_T)
     {
@@ -545,19 +558,27 @@ set_wt(int type)
 
 /*
  * Function name: query_wt
- * Description:   Query the weapon type
+ * Description  : Query the type of weapon.
+ * Returns      : int - the weapon type.
  */
 int query_wt() { return wep_wt; }
 
 /*
  * Function name: set_dt
- * Description:   Set the damage type of the weapon
+ * Description  : Set the damage type of the weapon. This should naturally
+ *                make a logical match with the weapon type. The damage type
+ *                is a binary combination of W_IMPALE | W_SLASH | W_BLUDGEON
+ *                  - impale   = for stabbing
+ *                  - slash    = for cutting
+ *                  - bludgeon = for (dull) hitting with force
+ *                When the lock has been set, no changes are allowed anymore.
+ * Arguments    : int type - the damage type.
  */
 void
 set_dt(int type)
 {
     if (query_lock())
-        return;                 /* All changes has been locked out */
+        return;
 
     if (F_LEGAL_DT(type))
         wep_dt = type;
@@ -565,36 +586,46 @@ set_dt(int type)
 
 /*
  * Function name: query_dt
- * Description:   Query damage type of weapon
+ * Description  : Query the damage type of the weapon.
+ * Returns      : int - the damage type of the weapon.
  */
 int query_dt() { return wep_dt; }
 
 /*
  * Function name: set_hands
- * Description:   Set how the weapon should be wielded
+ * Description  : Set how the weapon should be wielded, W_ANYH, W_BOTH, ...
+ *                When the lock has been set, no changes are allowed anymore.
+ * Arguments    : int which - the hands.
  */
 void
 set_hands(int which)
 {
     if (query_lock())
-        return;                 /* All changes has been locked out */
+        return;
 
     if (F_LEGAL_HANDS(which))
         wep_hands = which;
 }
 
 /*
- * Description: The hands that we can use for this weapon
+ * Function name: query_hands
+ * Description  : Find out the hands that we can use for this weapon.
+ * Returns      : int - the hands.
  */
 int query_hands() { return wep_hands; }
 
 /*
- * Description: This is the attack that it supports
+ * Function name: query_attack_id
+ * Description  : When wielded, this returns in which hands the weapon is
+ *                actually wielded.
+ * Returns      : int - the hands, or 0 if not wielded.
  */
 int query_attack_id() { return wielded_in_hand; }
 
 /*
- * Description: This is the tool slot that the weapon occupies now
+ * Function name: query_slots
+ * Description  : Find out the tool slot(s) that the weapon occupies now.
+ * Returns      : int * - the tool slots.
  */
 int *
 query_slots()
@@ -612,7 +643,10 @@ query_slots()
 }
 
 /*
- * Description: The slots the weapon protects
+ * Function name: query_protects
+ * Description  : Find out the slots the weapon protects. A weapon protects
+ *                the whole arm when wielded in a hand.
+ * Returns      : int * - the slots.
  */
 int *
 query_protects()
@@ -635,21 +669,34 @@ query_protects()
 }
 
 /*
- * Sets the object to call wield/unwield in when this occurs.
- * Those functions can return:
- *              0 - No affect the weapon can be wielded / unwielded
- *              1 - It can be wielded / unwielded but no text should be printed
- *                  (it was done in the function)
- *              -1  It can not be wielded / unwielded default failmsg will be 
- *                  written
- *             string  It can not be wielded / unwielded 'string' is the 
- *                     fail message to print
+ * Function name: set_wf
+ * Description  : To do special checks or processing when a weapon is wielded
+ *                or unwielded. the routines wield and unwield can be defined
+ *                either in this object, or in an external object.
+ *
+ *                mixed wield(object weapon) { }
+ *                mixed unwield(object weapon) { } 
+ *
+ *                Note that while wield() may operate on this_player(), the
+ *                unwield() routine cannot rely on that. In unwield(), use
+ *                the query_wielded() routine to find out who is wielding it.
+ *
+ *                Those functions can return:
+ *                   0 - No effect; the weapon can be wielded / unwielded.
+ *                   1 - It can be wielded / unwielded but no text should be
+ *                       printed (it was done in the function).
+ *                  -1 - It can not be wielded / unwielded. A default fail
+ *                       message will be written.
+ *                 str - It can not be wielded / unwielded. The string 'str'
+ *                       is the fail message to print.
+ *
+ * Arguments     : object obj - the object that defines the routines.
  */
 void
 set_wf(object obj)
 {
     if (query_lock())
-        return;                 /* All changes has been locked out */
+        return;
 
     wield_func = obj;
 }
@@ -660,6 +707,8 @@ set_wf(object obj)
  * Description  : This function might be called when someone tries to wield
  *                this weapon. To have this function called, use the function
  *                set_wf().
+ *                Note: this routine does not actually exist in /std/weapon.
+ *                      A trick is used to fool the document maker.
  * Arguments    : object obj - the weapon someone tried to wield.
  * Returns      : int  0 - wield this weapon normally.
  *                     1 - wield the weapon, but print no messages.
@@ -677,6 +726,8 @@ wield(object obj)
  * Description  : This function might be called when someone tries to unwield
  *                this weapon. To have this function called, use the function
  *                set_wf().
+ *                Note: this routine does not actually exist in /std/weapon.
+ *                      A trick is used to fool the document maker.
  * Arguments    : object obj - the weapon to stop wielding.
  * Returns      : int  0 - the weapon can be unwielded normally.
  *                     1 - unwield the weapon, but print no messages.
@@ -692,9 +743,9 @@ unwield(object obj)
 
 /*
  * Function name: set_corroded
- * Description:   Use this to increases the corroded status on weapons.
- * Arguments:     cond - The new condition we want (can only be raised)
- * Returns:       1 if new condition accepted, 0 if no corrosion
+ * Description  : Use this to increases the corroded status on weapons.
+ * Arguments    : int cond - The new condition we want (can only be raised)
+ * Returns      : int - 1 if new condition accepted, 0 if no corrosion.
  */
 int
 set_corroded(int corr)
@@ -714,8 +765,8 @@ set_corroded(int corr)
 
 /*
  * Function name: query_corroded
- * Description:   Returns how many times this weapon has become corroded
- * Returns:       The number of times
+ * Description  : Returns how many times this weapon has become corroded.
+ * Returns      : int - The number of times.
  */
 int query_corroded()
 {
@@ -725,7 +776,7 @@ int query_corroded()
 /*
  * Function name: set_likely_corr
  * Description:   Set how likely it is this weapon will corrode when in acid 
- *                or something like that. 0 means it won|t corrode at all.
+ *                or something like that. 0 means it won't corrode at all.
  * Arguments:     i - how likely it will corrode, probably corrode if random(i)
  *                    [0, 20] recommended
  */
@@ -740,9 +791,9 @@ int query_likely_corr() { return likely_corr; }
 
 /*
  * Function name: set_dull
- * Description:   Use this to increases the dull status on weapons.
- * Arguments:     cond - The new condition we want (can only be raised)
- * Returns:       1 if new condition accepted
+ * Description  : Use this to increases the dull status on weapons.
+ * Arguments    : int cond - The new condition we want (can only be raised)
+ * Returns      : int - 1 if new condition accepted, 0 if not.
  */
 int
 set_dull(int du)
@@ -762,8 +813,8 @@ set_dull(int du)
 
 /* 
  * Function name: query_dull
- * Description:   Returns how many times this weapon has become duller 
- * Returns:       The number of times
+ * Description  : Returns how many times this weapon has become duller.
+ * Returns      : int - The number of times.
  */
 int query_dull() { return dull; }
 
@@ -778,7 +829,7 @@ void set_likely_dull(int i) { likely_dull = i; }
 /*
  * Function name: query_likely_dull
  * Description:   How likely it is this weapon will become duller when used
- * Returns:       How likely it is
+ * Returns:       int - How likely it is
  */
 int query_likely_dull() { return likely_dull; }
 
@@ -792,7 +843,7 @@ void set_likely_break(int i) { likely_break = i; }
 /*
  * Function name: query_likely_break
  * Description:   How likely is it this weapon will break with use
- * Returns:       How likely it is
+ * Returns:       int - How likely it is
  */
 int query_likely_break() { return likely_break; }
 
@@ -845,8 +896,8 @@ remove_broken(int silent = 0)
  * Function name: set_repair_dull
  * Description:   When trying to repair the weapon, call this function. Repairs
  *                can only increase the repair factor. (This is sharpening)
- * Arguments:     rep - The new repair number
- * Returns:       1 if new repair status accepted
+ * Arguments:     int rep - The new repair number
+ * Returns:       int - 1 if new repair status accepted
  */
 int
 set_repair_dull(int rep)
@@ -864,7 +915,7 @@ set_repair_dull(int rep)
 /*
  * Function name: query_repair_dull
  * Description:   How many times has this weapon been sharpened
- * Returns:       The number of times
+ * Returns:       int - The number of times
  */
 int query_repair_dull() { return repair_dull; }
 
@@ -872,8 +923,8 @@ int query_repair_dull() { return repair_dull; }
  * Function name: set_repair_corr
  * Description:   When trying to repair the weapon, call this function. Repairs
  *                can only increase the repair factor. This repairs corroded.
- * Arguments:     rep - The new repair number
- * Returns:       1 if new repair status accepted
+ * Arguments:     int rep - The new repair number
+ * Returns:       int 1 - if new repair status accepted
  */
 int
 set_repair_corr(int rep)
@@ -891,7 +942,7 @@ set_repair_corr(int rep)
 /*
  * Function name: query_repair_corr
  * Description:   How many times this weapon has been repaired from corrosion
- * Returns:       How many times
+ * Returns:       int - How many times
  */
 int query_repair_corr() { return repair_corr; }
 
@@ -901,7 +952,7 @@ int query_repair_corr() { return repair_corr; }
  *                likely the weapon is to get in a worse condition. The hits
  *                variable keeps track of how many times this piece of weapon
  *                has hit something.
- * Argument:      new_hits - integer
+ * Argument:      int new_hits
  */
 public void
 set_weapon_hits(int new_hits) { hits = new_hits; }
@@ -918,8 +969,8 @@ query_weapon_hits() { return hits; }
 /*
  * Function name: add_prop_obj_i_value
  * Description:   Someone is adding the value prop to this object.
- * Arguments:     val - The new value (mixed)
- * Returns:       1 if not to let the val variable through to the prop
+ * Arguments:     mixed val - The new value
+ * Returns:       int - 1 if not to let the val variable through to the prop
  */
 int
 add_prop_obj_i_value(mixed val)
@@ -938,7 +989,8 @@ add_prop_obj_i_value(mixed val)
 
 /*
  * Function name: query_value
- * Description:   Qhat's the value of this armour
+ * Description  : What's the value of this armour based on corrosion status.
+ * Returns      : int - the value.
  */
 int
 query_value()
@@ -977,15 +1029,18 @@ query_repair_cost_corr()
     
 /*
  * Function name: query_wf
- * Description:   Query if/what object defines wield/unwield functions
+ * Description  : Query if/what object defines wield/unwield functions.
+ *                See set_wf() for details.
+ * Returns      : object
  */
 object query_wf() { return wield_func; }
 
 /*
  * Function name: try_hit
- * Description:   Called from living when weapon used.
- * Arguments:     target - Who I intend to hit.
- * Returns:       False if weapon miss. If true it might hit.
+ * Description  : Called from living when weapon used. This routine can be
+ *                redefined to skip the use of this weapon (for this target).
+ * Arguments    : object target - Who I intend to hit.
+ * Returns      : int - 0 if weapon miss. If true it might hit.
  */
 int try_hit(object target) { return 1; }
 
@@ -1034,51 +1089,43 @@ check_weapon()
 
 /*
  * Function name: set_default_weapon
- * Description:   Configures the weapon
- * Arguments:
- * Returns:
+ * Description  : Configures the weapon by replacing up to six calls with
+ *                just one. For details, see the respective functions.
+ * Arguments    : int hit    - set_hit(hit)
+ *                int pen    - set_pen(pen)
+ *                int wt     - set_wt(wt)
+ *                int dt     - set_dt(dt)
+ *                int hands  - set_hands(hands)
+ *                object obj - set_wf(obj)
  */
 varargs void
 set_default_weapon(int hit, int pen, int wt, int dt, int hands, object obj)
 {
-    /* Sets the weapon "to hit" value.
-    */
-    if (hit) set_hit(hit);
-    else set_hit(5);
+    /* Sets the weapon "to hit" value. */
+    set_hit(hit ? hit : 5);
 
-    /* Sets the weapon penetration value.
-    */
-    if (pen) set_pen(pen);
-    else set_pen(10);
+    /* Sets the weapon penetration value. */
+    set_pen(pen ? pen : 10);
 
-    /* Set the weapon type.
-    */
-    if (hit) set_wt(wt);
-    else set_wt(W_FIRST);
+    /* Set the weapon type. */
+    set_wt(wt ? wt : W_FIRST);
 
-    /* Set the damage type.
-    */
-    if (hit) set_dt(dt);
-    else set_dt(W_IMPALE | W_SLASH);
+    /* Set the damage type. */
+    set_dt(dt ? dt : (W_IMPALE | W_SLASH));
 
-    /* Set the hand(s) used to wield the weapon.
-    */
-    if (hands) set_hands(hands);
-    else set_hands(W_NONE);
+    /* Set the hand(s) used to wield the weapon. */
+    set_hands(hands ? hands : W_NONE)
     
-    /* Sets the name of the object that contains the function
-       to call for extra defined wield() and unwield()
-       functions.
-    */
+    /* Sets the name of the object that contains the function to call for
+     * extra defined wield() and unwield() functions. */
     if (obj) set_wf(obj);
 }
 
-
 /*
  * Function name: query_wield_desc
- * Description:   Describe this weapon as wielded by a something.
- * Argumensts:    p: Possessive description of wielder
- * Returns:       Description string.
+ * Description  : Describe this weapon as wielded by a something.
+ * Argumensts   : string p: Possessive description of wielder
+ * Returns      : string - the description.
  */
 public nomask string 
 query_wield_desc(string p)
@@ -1120,8 +1167,8 @@ update_prop_settings()
 
 /*
  * Function name: query_wielded
- * Description:   If this object is wielded or not
- * Returns:       The object who wields this object if this object is wielded
+ * Description  : Find out whether this weapon is wielded or not.
+ * Returns      : object - the wielder, or 0 if it isn't wielded.
  */
 object
 query_wielded()
@@ -1131,8 +1178,8 @@ query_wielded()
 
 /*
  * Function name: query_am
- * Description:   Called when wielding the weapon, to check for the parry.
- * Returns:       The armour modifier
+ * Description  : Called when wielding the weapon, to check for the parry.
+ * Returns      : int * - the armour modifier.
  */
 public nomask int *
 query_am()
@@ -1189,9 +1236,9 @@ query_ac_modifier()
 
 /*
  * Function name: stat_object
- * Description:   This function is called when a wizard wants to get more
+ * Description  : This function is called when a wizard wants to get more
  *                information about an object.
- * Returns:       str - The string to write..
+ * Returns      : string - the info.
  */
 string
 stat_object()
@@ -1210,7 +1257,8 @@ stat_object()
 
 /*
  * Function name: wep_condition_desc
- * Description:   Returns the description of the condition of the weapon
+ * Description  : Returns the description of the condition of the weapon.
+ * Returns      : string - the descriptive text.
  */
 string
 wep_condition_desc()
@@ -1263,9 +1311,8 @@ wep_condition_desc()
 
 /*
  * Function name: weapon_type
- * Description:   This function shuold return the type of the weapon in
- *                text.
- * Returns:       The type
+ * Description  : This function shuold return the type of the weapon in text.
+ * Returns      : string - the name of the weapon type.
  */
 string
 weapon_type()
@@ -1316,6 +1363,7 @@ wep_usage_desc()
  * Function name: appraise_object
  * Description  : Someone tries to appraise the object. We add information
  *                about the way you should use this weapon.
+ * Arguments    : int num - a number based on the skill of the person.
  */
 void
 appraise_object(int num)
@@ -1330,9 +1378,9 @@ appraise_object(int num)
  * Description:   Tells us that this weapon was used to parry an attack. It can
  *                be used to wear down a weapon. Note that his method is called
  *                before the combat messages are printed out.
- * Arguments:     att:   Attacker
- *                aid:   The attack id
- *                dt:    The damagetype
+ * Arguments:     object att - the attacker
+ *                int aid:   - the attack id
+ *                int dt     - the damagetype
  */
 public varargs void
 did_parry(object att, int aid, int dt)
@@ -1342,7 +1390,7 @@ did_parry(object att, int aid, int dt)
 /*
  * Function name: may_not_recover
  * Description  : This function will be true if the weapon may not recover.
- * Returns      : 1 - no recovery, 0 - recovery.
+ * Returns      : int - 1 - no recovery, 0 - recovery.
  */
 nomask int
 may_not_recover()
@@ -1378,8 +1426,8 @@ set_may_not_recover()
 
 /*
  * Function name: query_wep_recover
- * Description:   Return the recover strings for changing weapon variables.
- * Returns:       A recover string
+ * Description  : Return the recover strings for changing weapon variables.
+ * Returns      : string - a recover string.
  */
 string
 query_wep_recover()
@@ -1391,8 +1439,8 @@ query_wep_recover()
 
 /*
  * Function name: init_wep_recover
- * Description:   Initialize the weapon variables at recover.
- * Arguments:     arg - String with variables to recover
+ * Description  : Initialize the weapon variables at recover.
+ * Arguments    : string arg - the variables to recover
  */
 void
 init_wep_recover(string arg)
