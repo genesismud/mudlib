@@ -1287,7 +1287,7 @@ team_leave(object member, object leader, int force)
 varargs int
 team(string str)
 {
-    string  arg;
+    string  arg = "";
     int     done;
     int     size = 0;
     object *oblist = ({ });
@@ -1443,6 +1443,12 @@ team(string str)
         FAIL_IF_NOT_LEADER("remove someone from your team");
         if (!sizeof(oblist))
         {
+            if (!strlen(arg))
+            {
+                notify_fail("You are leading the team. " +
+                    "To disband it, please \"team disband\".\n");
+                return 0;
+            }
             member = find_player(arg);
             if (!objectp(member) || !(this_player()->query_met(member)))
             {
