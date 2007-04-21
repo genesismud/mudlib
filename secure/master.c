@@ -3207,7 +3207,8 @@ void
 note_something(string str, int id, object env)
 {
     string file;
-    string text = extract(ctime(time()), 4, 10) + extract(ctime(time()), -4);
+    string ts = ctime(time());
+    string text = ts[4..10] + ts[-4..] + ts[10..15]; /* mmm dd yyyy HH:MM */
 
     /* If there is a SYS-related log, write it to the proper log file in the
      * OPEN_LOG_DIR.
