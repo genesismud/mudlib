@@ -94,7 +94,6 @@ combat_reload()
 /*
  * Function name:   combat_reset
  * Description:     Reset the combat functions of the living object.
- * Arguments:       arg: Reset argument.
  */
 static nomask void
 combat_reset()
@@ -535,28 +534,27 @@ query_whimpy_dir()
  */
 
 /*
- * Function name:    set_leader
- * Description:      Sets this living as a member in a team
- *                   It will fail if this living is a leader itself
- * Arguments:        leader: The objectpointer to the leader of the team
- * Returns:          True if successfull
+ * Function name: set_leader
+ * Description  : Sets this living as a member in a team by assigning a leader.
+ *                It will fail if this living is a leader of a team already.
+ * Arguments    : object leader - the leader of the team.
+ * Returns      : int - 1/0 success/failure.
  */
 public int
 set_leader(object leader)
 {
     if (sizeof(my_team))
-        return 0;                       /* We can't be both leader and led */
+        return 0;
 
     my_leader = leader;
-
     return 1;
 }
 
 /*
- * Function name:   query_leader
- * Description:     Gives the object of the living who is the leader of the
- *                  team that we are in.
- * Returns:         The object with the leader, or 0 if we're not in a team
+ * Function name: query_leader
+ * Description  : Find the living who is the leader of our team. If this
+ *                returns an objectpointer, it means we are a team member.
+ * Returns      : object - the leader of my team, or 0 if we are not lead.
  */
 public object
 query_leader()
@@ -565,11 +563,11 @@ query_leader()
 }
 
 /*
- * Function name:   team_join
- * Description:     Sets this living as the leader of another
- *                  Fails if we have a leader, then we can't lead others.
- * Arguments:       member: The objectpointer to the new member of my team
- * Returns:         True if member accepted in the team
+ * Function name: team_join
+ * Description  : Make someone a member of our team.
+ *                Fails if we have a leader, then we can't lead others.
+ * Arguments    : object member - The new member of my team.
+ * Returns      : int - 1/0 success/failure.
  */
 public int
 team_join(object member)
@@ -581,25 +579,23 @@ team_join(object member)
         return 0;
 
     if (IN_ARRAY(member, query_team()))
-        return 1;               /* Already member */
-    if (!my_team)
-        my_team = ({ member });
-    else
-        my_team = my_team + ({ member });
+        return 1;
+
+    my_team += ({ member });
     return 1;
 }
 
 /*
- * Function name:   query_team
- * Description:     Gives an array with all objects of team members in it
- * Returns:         The array with team members
+ * Function name: query_team
+ * Description  : Find out the members of our team (if we are the leader).
+ * Returns      : object * - the array with team members.
  */
 public object *
 query_team()
 {
     my_team = filter(my_team, objectp);
 
-    return my_team ? my_team : ({ });
+    return my_team + ({ });
 }
 
 /*
@@ -615,9 +611,10 @@ team_leave(object member)
 }
 
 /*
- * Function name:   query_team_others
- * Description:     Gives all members/leader that we are joined up with
- * Returns:         The array with all other members
+ * Function name: query_team_others
+ * Description  : Gives all members/leader that we are joined up with,
+ *                regardless of whether we are the leader or a member.
+ * Returns      : object * - the array with all other members.
  */
 public mixed
 query_team_others()
