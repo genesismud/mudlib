@@ -43,11 +43,12 @@
  *       to set_book_directory().
  */
 
-#include <files.h>
-#include <stdproperties.h>
-#include <macros.h>
 #include <cmdparse.h>
+#include <files.h>
 #include <language.h>
+#include <macros.h>
+#include <mail.h>
+#include <stdproperties.h>
 
 #define BOOK_TYPE  book_types[0]
 #define PLURAL_BOOK_TYPE \
@@ -1477,6 +1478,21 @@ get_book_name(string dir)
     return dir + text_file_name + (last + 1);
 }
 
+/*
+ * Function name: library_hook_get_approval_names
+ * Description  : This routine can be redefined in the library code to provide
+ *                the names of the players who are authorized to approve books
+ *                before they are added to the library. If this is the case,
+ *                those players will receive a mail informing them of the fact
+ *                that a new book has been submitted.
+ * Returns      : string * - the list of names (in lower case).
+ */
+public mixed
+library_hook_get_approval_names()
+{
+    return ({ });
+}
+
 /* 
  * Function name: add_book
  * Description:   Add a new book to the library
@@ -1488,10 +1504,11 @@ get_book_name(string dir)
  * Returns:       1/0 - book added/not added
  */
 public int
-add_book(string title, string summary, string author, 
+add_book(string title, string summary, string author,
          string text, int approval)
 {
     string dir = (approval ? appr_dir : book_dir);
+    string *names;
 
     if (!approval && strlen(default_shelf))
     {
@@ -1500,6 +1517,14 @@ add_book(string title, string summary, string author,
 
     setuid();
     seteuid(getuid());
+
+    /* Guild approval agents may be informed of the new book. */
+    if (approval && sizeof(names = library_hook_get_approval_names()))
+    {
+        CREATE_MAIL("New book " + author, "Librarian",
+            implode(names, ","), "",
+            "Title: " + title + "\nSummary: " + summary + "\n");
+    }
 
     if (!write_file(get_book_name(dir),
         sprintf("%|75s\n%|75s\n%|75s\n", title, summary, author) + text))
