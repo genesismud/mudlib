@@ -1214,7 +1214,8 @@ team_invite(object *oblist)
         this_player()->team_invite(ob);
     }
 
-    write(fail + "You invite " + COMPOSITE_ALL_LIVE(oblist) + " to join your team.\n");
+    write(fail + "You invite " + COMPOSITE_ALL_LIVE(oblist) +
+        " to join your team.\n");
     targetbb(" invites you to join " + this_player()->query_possessive() +
         " team.", oblist);
     all2actbb(" invites", oblist, " to join " +
@@ -1394,14 +1395,20 @@ team(string str)
             return 1;
         }
 
+        /* Remove the members from the old leader (me).
+	 * Note: both this and the next foreach are written as foreach instead
+	 * of map as a functionpointer (as used in map)  cannot be shadowed. */
         foreach(object ob: members)
         {
             this_player()->team_leave(ob);
         }
-    
+        members += ({ this_player() });
         members -= ({ leader });
-        map(members, &leader->team_join());
-        leader->team_join(this_player());
+        /* Add the members to the new leader. */
+        foreach(object ob: members)
+        {
+            leader->team_join(ob);
+        }
     
         done = this_player()->query_option(OPT_BRIEF);
         write("You make " + leader->query_the_name(this_player()) +
