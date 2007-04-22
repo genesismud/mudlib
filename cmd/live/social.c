@@ -589,7 +589,7 @@ introduced_list(string str)
 int
 invite(string str)
 {
-    return team("invite " + str);
+    return team("invite" + (strlen(str) ? (" " + str) : ""));
 }
 
 /*
@@ -598,7 +598,7 @@ invite(string str)
 varargs int 
 join(string str)
 {
-    return team("join " + str);
+    return team("join" + (strlen(str) ? (" " + str) : ""));
 }
 
 /*
@@ -852,13 +852,13 @@ last(string str)
 int 
 leave(string str)
 {
-    if (!strlen(str))
+    if (str == "team")
     {
-        notify_fail("Leave what? Your team?\n");
-        return 0;
+        return team("leave");
     }
-
-    return team("leave " + str);
+    
+    notify_fail("Leave what? Your team?\n");
+    return 0;
 }
 
 /*
@@ -1258,10 +1258,10 @@ team_join(object leader)
     }
  
     write("Your leader is now " + leader->short() + ".\n");
-    say(QCTNAME(this_player()) + " joined the team of " +
+    say(QCTNAME(this_player()) + " joins the team of " +
         QTNAME(leader) + ".\n", ({ leader, this_player() }));
     tell_object(leader, this_player()->query_The_name(leader) +
-        " joined your team.\n");
+        " joins your team.\n");
     return 1;
 }
 
@@ -1441,9 +1441,11 @@ team(string str)
                 return 0;
             }
             tell_object(leader, this_player()->query_The_name(leader) +
-                " left your team.\n");
+                " leaves your team.\n");
             write("You leave the team of " +
                 leader->query_the_name(this_player()) + ".\n");
+            say(QCTNAME(this_player()) + " leaves the team of " +
+                QTNAME(leader) + ".\n", ({ leader, this_player() }));
             team_leave(this_player(), leader, 0);
             return 1;
         }
