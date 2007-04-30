@@ -490,8 +490,7 @@ load_recover_files()
     }
 
     /* Do not restore after a certain time. */
-    if (time() - file_time(PLAYER_FILE(query_real_name()) + ".o") >
-        F_RECOVERY_LIMIT)
+    if (time() - query_logout_time() > F_RECOVERY_LIMIT)
     {
         return;
     }

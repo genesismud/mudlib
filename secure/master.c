@@ -49,10 +49,12 @@
 /* All prototypes have been placed in /secure/master.h */
 #include "/secure/master.h"
 
+/* This order is related to how functions may be called internally. */
 #include "/secure/master/fob.c"
 #include "/secure/master/siteban.c"
 #include "/secure/master/spells.c"
 #include "/secure/master/language.c"
+#include "/secure/master/player.c"
 #include "/secure/master/notify.c"
 #include "/secure/master/sanction.c"
 #include "/secure/master/guild.c"
@@ -499,7 +501,7 @@ valid_write(string file, mixed writer, string func)
 	     * or if the ateam code is writing in its own dir. Otherwise we
 	     * disallow it.
 	     */
-	    return ((member_array(dir, query_team_membership(writer)) >= 0) ||
+	    return IN_ARRAY(dir, query_team_membership(writer) ||
 		((dname == writer) && (sizeof(wpath) > 3) && (wpath[2] == "ateam") &&
 		 (wpath[3] == dirs[3])));
 	}
@@ -537,7 +539,7 @@ valid_write(string file, mixed writer, string func)
             if (size > 5 && 
                 (dirs[3] == "private" && dirs[4] == "restrictlog"))
             {
-                return (member_array(dirs[5], query_students(writer)) >= 0);
+                return IN_ARRAY(dirs[5], query_students(writer));
             }
 
             return valid_write_all_sanction(writer, dname);
@@ -594,7 +596,7 @@ valid_write(string file, mixed writer, string func)
         }
 
         /* A mentor can write in all the directories of his students. */
-        if (member_array(wname, query_students(writer)) >= 0)
+        if (IN_ARRAY(wname, query_students(writer)))
         {
             return 1;
         }
@@ -731,7 +733,7 @@ valid_read(string file, mixed reader, string func)
              */
             if ((size > 5) && (dirs[3] == "private") && (dirs[4] == "restrictlog"))
             {
-                return (member_array(dirs[5], query_students(reader)) >= 0);
+                return IN_ARRAY(dirs[5], query_students(reader));
             }
         }
 
@@ -746,9 +748,9 @@ valid_read(string file, mixed reader, string func)
 	     * or if the ateam code is reading in its own dir. Otherwise we
 	     * disallow it.
 	     */
-	    return ((member_array(dir, query_team_membership(reader)) >= 0) ||
+	    return IN_ARRAY(dir, query_team_membership(reader)) ||
 		((dname == reader) && (sizeof(rpath) > 3) && (rpath[2] == "ateam") &&
-		 (rpath[3] == dirs[3])));
+		 (rpath[3] == dirs[3]));
 	}
 
         /* The domain can read in itself, unless it is the domain for lonely
@@ -836,7 +838,7 @@ valid_read(string file, mixed reader, string func)
         }
 
         /* A mentor can read in all the directories of his students. */
-        if (member_array(wname, query_students(reader)) >= 0)
+        if (IN_ARRAY(wname, query_students(reader)))
         {
             return 1;
         }
@@ -883,7 +885,7 @@ valid_read(string file, mixed reader, string func)
         if ((size > 2) &&
             ((query_wiz_rank(reader) >= WIZ_LORD) ||
               query_team_member("aop", reader)) &&
-            (member_array(dirs[2], AOP_TEAM_LOGS) > -1))
+            IN_ARRAY(dirs[2], AOP_TEAM_LOGS))
         {
             return 1; 
         }
@@ -1000,6 +1002,62 @@ valid_query_ip(mixed actor, object target)
 }
 
 /*
+ * Function name: valid_player_info
+ * Description  : Find out whether the actor is allowed to access certain
+ *                player information.
+ * Arguments    : mixed actor - the actor that wants to know the info.
+ *                string name - the name of the person to get info about.
+ *                string func - the type of info the actor wants to know.
+ * Returns      : int 1/0 - allowed/disallowed.
+ */
+public int
+valid_player_info(mixed actor, string name, string func)
+{
+    if (objectp(actor))
+    {
+        actor = geteuid(actor);
+    }
+
+    /* Root has all access. */
+    if (actor == ROOT_UID)
+    {
+        return 1;
+    }
+
+    switch(query_wiz_rank(actor))
+    {
+    case WIZ_ARCH:
+    case WIZ_KEEPER:
+	/* Arches and keepers do all. */
+	return 1;
+
+    case WIZ_LORD:
+	/* Lieges have some special commands. */
+	if (IN_ARRAY(func, ALLOWED_LIEGE_COMMANDS))
+	{
+	    return 1;
+	}
+	/* Lords can do onto their subject wizards. */
+	if (query_domain_lord(query_wiz_dom(name)) == actor)
+	{
+	    return 1;
+	}
+	/* Intentionally no break; */
+
+    default:
+	/* Wizard may have been allowed on the commands. */
+	if (query_team_member("aod", actor) ||
+	    query_team_member("aop", actor))
+	{
+	    return 1;
+	}
+    }
+
+    /* All others, no show. */
+    return 0;
+}
+
+/*
  * Function name: check_snoop_validity
  * Description  : Do the actual validity checking.
  * Arguments    : object snooper - the prospective snooper.
@@ -1077,9 +1135,8 @@ check_snoop_validity(object snooper, object snoopee, int sanction)
         return valid_snoop_sanction(by_name, on_name);
     }
 
-    // Mentors can snoop their students
-    if (member_array(on_name,
-        query_students(snooper->query_real_name())) >= 0)
+    /* Mentors can snoop their students. */
+    if (IN_ARRAY(on_name, query_students(snooper->query_real_name())))
     {
         return 1;
     }
@@ -1354,6 +1411,8 @@ start_boot(int load_empty)
 
     /* Initialise the siteban structure. */
     init_sitebans();
+    /* Initialise the player info (seconds). */
+    init_player_info();
 
     if (load_empty) 
     {
@@ -1392,6 +1451,12 @@ start_boot(int load_empty)
     return prefiles;
 }
 
+/*
+ * Function name: preload_boot
+ * Description  : Called at game start time for every file that needs to be
+ *                preloaded to load it into memory.
+ * Arguments    : string file - the file to preload (without ".c" suffix).
+ */
 static void
 preload_boot(string file)
 {
@@ -1812,13 +1877,13 @@ modify_command(string cmd, object ob)
 	return cmd;
     }
 
-    while(wildmatch("$*", cmd))
+    while(cmd[0] == '$')
     {
         cmd = extract(cmd, 1);
         no_subst = 1;
     }
 
-    while(wildmatch(" *", cmd))
+    while(cmd[0] == ' ')
     {
         cmd = extract(cmd, 1);
     }
@@ -1928,8 +1993,6 @@ memory_reconfigure(int mem)
 {
     string mess = "a different";
     object *list;
-    int    index;
-    int    size;
 
 #ifdef LARGE_MEMORY_LIMIT
     if (((mem == 0) &&
@@ -1954,13 +2017,7 @@ memory_reconfigure(int mem)
 #endif LARGE_MEMORY_LIMIT
 
     list = filter(users(), &->query_wiz_level());
-    size = sizeof(list);
-    index = -1;
-    while(++index < size)
-    {
-        tell_object(list[index], "@ Armageddon: I have switched to " + mess +
-            " memory mode.\n");
-    }
+    list->catch_tell("@ Armageddon: I have switched to " + mess + " memory mode.\n");
 }
 
 /*
@@ -2680,7 +2737,7 @@ proper_password(string str)
  * Description  : This function will generate a six character password that
  *                consists of letters, numbers and or special characters.
  *                Passwords generated with this function are considered to
- *                be safe enough against cracking programs.
+ *                be safe enough other than for a brute force attack.
  * Returns      : string - the password.
  */
 public string
@@ -2727,8 +2784,7 @@ generate_password()
 void
 remote_setuid()
 {
-    if (function_exists("open_soul", previous_object()) ==
-        COMMAND_DRIVER)
+    if (function_exists("open_soul", previous_object()) == COMMAND_DRIVER)
     {
         set_auth(previous_object(), "0:0");
     }
@@ -2904,12 +2960,7 @@ rem_def_start_loc(string str)
     }
 
     set_auth(this_object(), "#:root");
-    /* Delete copies. */
-    while (member_array(str, def_locations) >= 0)
-    {
-        def_locations = def_locations - ({ str });
-    }
-
+    def_locations -= ({ str });
     def_locations = sort_array(def_locations);
     save_master();
 }
@@ -2935,11 +2986,7 @@ add_def_start_loc(string str)
     }
 
     /* Delete copies */
-    while (member_array(str, def_locations) >= 0)
-    {
-        def_locations = def_locations - ({ str });
-    }
-
+    def_locations -= ({ str });
     def_locations = sort_array(def_locations + ({ str }) );
     save_master();
 }
@@ -2959,11 +3006,7 @@ rem_temp_start_loc(string str)
     }
 
     /* Delete copies */
-    while (member_array(str, temp_locations) >= 0)
-    {
-        temp_locations = temp_locations - ({ str });
-    }
-
+    temp_locations -= ({ str });
     temp_locations = sort_array(temp_locations);
     save_master();
 }
@@ -2988,11 +3031,7 @@ add_temp_start_loc(string str)
     }
     
     /* Delete copies */
-    while (member_array(str, temp_locations) >= 0)
-    {
-        temp_locations = temp_locations - ({ str });
-    }
-
+    temp_locations -= ({ str });
     temp_locations = sort_array(temp_locations + ({ str }) );
     save_master();
 }
@@ -3012,7 +3051,7 @@ query_list_temp_start()
 int
 check_temp_start_loc(string str)
 {
-    return member_array(str, temp_locations);
+    return IN_ARRAY(str, temp_locations);
 }
 
 int
@@ -3020,7 +3059,7 @@ check_def_start_loc(string str)
 {
     if (!def_locations)
         def_locations = STARTING_PLACES;
-    return member_array(str, def_locations);
+    return IN_ARRAY(str, def_locations);
 }
 
 public varargs void
@@ -3103,6 +3142,8 @@ log_restrict(string verb, string arg)
  * Function name: query_player_file_time()
  * Description  : This function will return the file-time the playerfile
  *                of a player was last saved.
+ *                This routine in its current incarnation is obsolete!
+ *                The logout_time is now included in the player file.
  * Arguments    : string pl_name - the name of the player.
  * Returns      : int - the file-time of the players save-file.
  */
@@ -3708,7 +3749,7 @@ do_debug(string icmd, mixed a1, mixed a2, mixed a3)
     /* Some debug() commands are not meant to be called by just anybody. Only
      * 'root' and the administration may call them.
      */
-    if (member_array(icmd, DEBUG_RESTRICTED) >= 0)
+    if (IN_ARRAY(icmd, DEBUG_RESTRICTED))
     {
         if ((euid != ROOT_UID) &&
             (previous_object() != this_object()) &&

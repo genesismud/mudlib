@@ -11,6 +11,7 @@
  * - health
  * - levels
  * - options
+ * - second
  * - skills
  * - stats
  * - v
@@ -51,6 +52,10 @@ private string *stat_names, *health_state, *mana_state, *enc_weight;
 private string *intox_state, *stuff_state, *soak_state, *improve_fact;
 private string *brute_fact, *panic_state, *fatigue_state;
 private mapping lev_map;
+
+/* Prototype */
+public int second(string str);
+
 
 void
 create()
@@ -124,6 +129,7 @@ query_cmdlist()
 
               "options":"options",
 
+              "second":"second",
               "skills":"show_skills",
               "stats":"show_stats",
 
@@ -1272,6 +1278,72 @@ options(string arg)
         return notify_fail("Syntax error: No such option.\n");
         break;
     }
+    return 1;
+}
+
+/* **************************************************************************
+ * second - note someone as second.
+ */
+
+/*
+ * Function name: second_password
+ * Description  : For security reasons, player has to enter the password of
+ *                the second to verify that it is really his.
+ * Arguments    : string password - the command-line input of the player.
+ *                string name - the name of the second to add.
+ * Returns      : int 1/0 - success/failure.
+ */
+static void
+second_password(string password, string name)
+{
+    if (SECURITY->register_second(name, password))
+    {
+        second("list");
+    }
+}
+
+public int
+second(string str)
+{
+    string *args;
+
+    if (!stringp(str))
+    {
+        str = "list";
+    }
+
+    args = explode(lower_case(str), " ");
+    switch (args[0])
+    {
+    case "add":
+        if (sizeof(args) != 2)
+        {
+            notify_fail("Syntax: second add <player>");
+            return 0;
+        }
+        write("Please enter the password of " + capitalize(args[1]) + ": ");
+        input_to(&second_password(, args[1]), 1);
+        return 1;
+        /* Not reached. */
+
+    case "list":
+        args = SECURITY->query_player_seconds();
+        if (!sizeof(args))
+        {
+            write("No seconds listed.\n");
+            return 1;
+        }
+        write("Currently listed seconds: " +
+            COMPOSITE_WORDS(map(args, capitalize)) + ".\n");
+        return 1;
+        /* Not reached. */
+
+    default:
+        notify_fail("Invalid subcommand \"" + args[0] + "\".\n");
+        return 0;
+    }
+
+    write("This should never happen. Please report.\n");
     return 1;
 }
 

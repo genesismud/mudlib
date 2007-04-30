@@ -829,12 +829,10 @@ last(string str)
 
     player = SECURITY->finger_player(str);
     write("Login time : " + ctime(player->query_login_time()) + "\n");
-    duration = (file_time(PLAYER_FILE(str) + ".o") -
-        player->query_login_time());
+    duration = (player->query_logout_time() - player->query_login_time());
     if (duration < 86400)
     {
-        write("Logout time: " + ctime(file_time(PLAYER_FILE(str) + ".o")) +
-            "\n");
+        write("Logout time: " + ctime(player->query_login_time()) + "\n");
         write("Duration   : " + TIME2STR(duration, 3) + "\n");
     }
     else

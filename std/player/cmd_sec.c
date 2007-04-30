@@ -100,27 +100,22 @@ cmd_sec_reset()
 public nomask int
 compute_values(object *ob_list)
 {
-    int v, i, size, tmp;
+    int value;
 
     if (!pointerp(ob_list))
 	return 0;
 
-    v = 0;
-    i = -1;
-    size = sizeof(ob_list);
-    while(++i < size)
+    value = 0;
+    foreach(object item: ob_list)
     {
-	if (ob_list[i]->query_recover() || ob_list[i]->query_auto_load())
+	if (item->query_recover() || item->query_auto_load())
 	    continue;
-	if (IS_COINS_OBJECT(ob_list[i]))
+	if (IS_COINS_OBJECT(item))
 	    continue;
-	tmp = ob_list[i]->query_prop(OBJ_I_VALUE);
-	if (tmp > 1000)
-	    tmp = 1000;
-	v += tmp;
+	value += min(item->query_prop(OBJ_I_VALUE), 1000);
     }
 
-    return ((2 * v) / 3);
+    return ((2 * value) / 3);
 }
 
 /*
@@ -133,19 +128,12 @@ compute_values(object *ob_list)
 static nomask void
 compute_auto_str()
 {
-    object *obs = deep_inventory(this_object());
-    string str;
-    string *auto = ({ });
-    int i = sizeof(obs);
+    string *list;
 
-    while(--i >= 0)
-    {
-	if (strlen(str = obs[i]->query_auto_load()))
-	{
-	    auto += ({ str });
-	}
-    }
-    set_auto_load(auto);
+    list = map(deep_inventory(this_object()), &->query_auto_load());
+    list = filter(list, stringp);
+
+    set_auto_load(list);
 }
 
 /*
@@ -286,6 +274,7 @@ save_me(int value_items)
 #ifndef NO_SKILL_DECAY
     query_decay_time();
 #endif NO_SKILL_DECAY
+    set_logout_time();
     seteuid(0);
     SECURITY->save_player();
     seteuid(getuid(this_object()));
@@ -336,9 +325,9 @@ quit(string str)
         write("Please wait another " + CONVTIME(index) + ".\n");
         return 1;
     }
-    
+
     loc = check_recover_loc();
-    
+
     /* No way to chicken out of combat like that, but do allow it when
      * the game is being shut down.
      */
@@ -384,12 +373,10 @@ quit(string str)
         if (loc)
             inv = filter(inv, &not() @ &->check_recoverable(manual));
         inv = filter(inv, &not() @ &->query_prop(OBJ_M_NO_DROP));
-        
-        index = -1;
-        size = sizeof(inv);
-        while(++index < size)
+
+        foreach(object item: inv)        
         {
-            command("$drop " + OB_NAME(inv[index]));
+            command("$drop " + OB_NAME(item));
         }
 
         /* Fill the array again with everything the player carried. No need
@@ -419,12 +406,10 @@ quit(string str)
     inv->remove_object();
     inv = filter(inv, objectp);
 
-    size = sizeof(inv);
-    index = -1;
-    while(++index < size)
+    foreach(object item: inv)
     {
         /* This is the hammer. */
-        SECURITY->do_debug("destroy", inv[index]);
+        SECURITY->do_debug("destroy", item);
     }
     
     this_object()->remove_object();

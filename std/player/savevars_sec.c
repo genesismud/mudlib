@@ -48,11 +48,11 @@ private int     *bit_savelist,          /* Saved bits */
 #endif NO_SKILL_DECAY
                 restricted,             /* Restriction on playing */
                 login_time,             /* Last time logging in */
+                logout_time,            /* Last time logging out / saving */
                 wiz_unmet;              /* If wizards want to be unmet */
 private mapping m_remember_name,        /* Names of players we have met */
                 m_alias_list,           /* Aliases for the quicktyper */
-                m_nick_list,            /* Nick(name)s for the quicktyper */
-                m_seconds;              /* Second characters */
+                m_nick_list;            /* Nick(name)s for the quicktyper */
 
 /*
  * Static global variables. These variables are used internally and are not
@@ -653,6 +653,31 @@ query_login_time()
 }
 
 /*
+ * Function name:   set_logout_time
+ * Description:     sets the time of the logout / save.
+ * Arguments:       (int) t: the logout time
+ */
+static nomask varargs void
+set_logout_time(int t = time()) 
+{ 
+    logout_time = t;
+}
+
+/*
+ * Function name:   query_logout_time
+ * Description:     Gives back the logout-time.
+ * Returns:         The logout-time.
+ */
+public nomask int
+query_logout_time() 
+{
+    /* For the purpose of backward compatibility, we use the file time
+     * if no logout_time was remembered.
+     */
+    return logout_time ? logout_time : file_time(PLAYER_FILE(name) + ".o");
+}
+
+/*
  * Function name:   set_login_from
  * Description:     Sets from which site the player is logged in.
  */
@@ -977,138 +1002,6 @@ query_nicks()
         return ([ ]) + m_nick_list;
     else
         return ([ ]);
-}
-
-/*
- * Function name: add_second
- * Description  : Add a second to the player list.
- * Arguments    : string second - the name of the second to add.
- * Returns      : int 1/0 - success/failure.
- */
-public nomask int
-add_second(string second)
-{
-    string query = this_interactive()->query_real_name();
-
-    if (this_interactive() != this_player() &&
-        WIZ_CHECK < WIZ_ARCH &&
-        SECURITY->query_team_member("aop", query) == 0 &&
-        SECURITY->query_team_member("aod", query) == 0)
-        return 0;
-
-    if (!strlen(second))
-        return 0;
-
-    if (!m_sizeof(m_seconds))
-        m_seconds = ([]);
-
-    second = lower_case(second);
-    if (!(SECURITY->exist_player(second)) ||
-        SECURITY->query_wiz_rank(second))
-        return 0;
-
-    if (sizeof(m_seconds[second]) == 0)
-        m_seconds[second] = ({ query, time() });
-
-#ifdef LOG_SECONDS
-    if (query == query_real_name())
-        SECURITY->log_syslog(LOG_SECONDS, (ctime(time()) + " " +
-            capitalize(query) + " added " + capitalize(second) + ".\n"));
-    else
-        SECURITY->log_syslog(LOG_SECONDS, (ctime(time()) + " " +
-            capitalize(query) + " added " + capitalize(second) + " to " +
-            capitalize(query_real_name()) + ".\n"));
-#endif LOG_SECONDS
-    return 1;
-}
-
-/*
- * Function name: remove_second
- * Description  : Remove a second from the player list.
- * Arguments    : string second - the name of the second to remove.
- * Returns      : int 1/0 - success/failure.
- */
-public nomask int
-remove_second(string second)
-{
-    string query = this_interactive()->query_real_name();
-
-    if (this_interactive() != this_player() &&
-        WIZ_CHECK < WIZ_ARCH &&
-        SECURITY->query_team_member("aop", query) == 0 &&
-        SECURITY->query_team_member("aod", query) == 0)
-        return 0;
-
-    if (!strlen(second))
-        return 0;
-
-    if (!m_sizeof(m_seconds))
-        return 1;
-
-    second = lower_case(second);
-    if (sizeof(m_seconds[second]) == 0)
-        return 1;
-
-    m_delkey(m_seconds, second);
-
-#ifdef LOG_SECONDS
-    if (query == query_real_name())
-        SECURITY->log_syslog(LOG_SECONDS, (ctime(time()) + " " +
-            capitalize(query) + " removed " + capitalize(second) + ".\n"));
-    else
-        SECURITY->log_syslog(LOG_SECONDS, (ctime(time()) + " " +
-            capitalize(query) + " removed " + capitalize(second) + " from " +
-            capitalize(query_real_name()) + ".\n"));
-#endif LOG_SECONDS
-    return 1;
-}
-
-/*
- * Function name: query_seconds
- * Description  : Return the seconds array.
- * Returns      : string * - the seconds if you are allowed or ({}).
- */
-public nomask string *
-query_seconds()
-{
-    string query = this_interactive()->query_real_name();
-
-    if (this_interactive() != this_object() &&
-        WIZ_CHECK < WIZ_ARCH &&
-        query != SECURITY->query_domain_lord(SECURITY->query_wiz_dom(name)) &&
-        (function_exists("create_object", previous_object()) != LOGIN_OBJECT) &&
-        SECURITY->query_team_member("aop", query) == 0 &&
-        SECURITY->query_team_member("aod", query) == 0)
-        return ({});
-
-    if (!m_sizeof(m_seconds))
-        m_seconds = ([]);
-
-    return m_indices(m_seconds);
-}
-
-/*
- * Function name: query_second_info
- * Description  : Return the second entry info
- * Arguments    : string second - the second to query
- * Returns      : mixed - the second info
- */
-public nomask mixed
-query_second_info(string second)
-{
-    string query = this_interactive()->query_real_name();
-
-    if (this_interactive() != this_object() &&
-        WIZ_CHECK < WIZ_ARCH &&
-        query != SECURITY->query_domain_lord(SECURITY->query_wiz_dom(name)) &&
-        SECURITY->query_team_member("aop", query) == 0 &&
-        SECURITY->query_team_member("aod", query) == 0)
-        return ({});
-
-    if (!m_sizeof(m_seconds))
-        m_seconds = ([]);
-
-    return secure_var(m_seconds[second]);
 }
 
 /*

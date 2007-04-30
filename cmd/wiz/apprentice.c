@@ -35,7 +35,6 @@
  * - rsupport
  * - rwho
  * - sanction
- * - second
  * - setmin
  * - setmmin
  * - setmmout
@@ -199,7 +198,6 @@ query_cmdlist()
 #endif UDP_ENABLED
 
         "sanction":"sanction",
-        "second":"second",
         "setmin":"set_m_in",
         "setmmin":"set_mm_in",
         "setmmout":"set_mm_out",
@@ -666,16 +664,14 @@ finger_domain(string domain)
 }
 
 /*
- * Function name: filter_interactive_seconds
+ * Function name: map_interactive_seconds
  * Description  : For seconds, display whether they are in the game or not,
- *                and if so, see whether they are LD. The name is appended
- *                with a plus (+) if the person is in the game and an asterisk
- *                (*) if the person is LD.
+ *                and if so, see whether they are LD.
  * Arguments    : string name - the name of the player.
- * Returns      : string - the name of the player with possible appendix.
+ * Returns      : string - the name of the player with possible suffix.
  */
 nomask static string
-filter_interactive_seconds(string name)
+map_interactive_seconds(string name)
 {
     object player = find_player(name);
     if (!objectp(player))
@@ -790,10 +786,10 @@ finger_player(string name, int show_long)
             COMPOSITE_WORDS(map(names, capitalize)) + ".\n");
     }
 
-    /* Display the seconds the wizard has listed. */
-    if (sizeof(names = player->query_seconds()))
+    /* Display the seconds the player has listed. */
+    if (sizeof(names = SECURITY->query_seconds(name)))
     {
-        names = map(names, filter_interactive_seconds);
+        names = map(names, map_interactive_seconds);
         write("Listed second" + ((sizeof(names) == 1) ? "" : "s") + ": " +
             COMPOSITE_WORDS(map(names, capitalize)) + ".\n");
     }
@@ -855,8 +851,7 @@ finger_player(string name, int show_long)
             (" from " + player->query_login_from() +
             SITEBAN_SUFFIXES[SECURITY->check_newplayer(player->query_login_from())]) :
             ".") + "\n");
-        chtime = file_time(PLAYER_FILE(name) + ".o") -
-            player->query_login_time();
+        chtime = player->query_logout_time() - player->query_login_time();
         if (chtime < 86400) /* 24 hours, guard against patched files */
         {
             write("Duration of stay was " + CONVTIME(chtime) + ".\n");
@@ -1342,23 +1337,19 @@ last_check(string who, int login)
     }
     else
     {
-        /* Get the time the file was last modified. If the file_time is
-         * false, it means that the name is not valid for a player.
+        /* Get a finger-player to get the login time, then clean out the
+         * finger-player again. We do not want to waste the memory.
          */
-        t_out = SECURITY->query_player_file_time(who[1..]);
-        if (!t_out)
+        pl = SECURITY->finger_player(who[1..]);
+        if (!pl)
         {
             if (who[0..0] == "<")
                 return sprintf("%-14s No such player", capitalize(who[1..]));
             else
                 return sprintf("  %-12s No such player", capitalize(who[1..]));
         }
-
-        /* Get a finger-player to get the login time, then clean out the
-         * finger-player again. We do not want to waste the memory.
-         */
-        pl = SECURITY->finger_player(who[1..]);
         t_in = pl->query_login_time();
+        t_out = pl->query_logout_time();
         pl->remove_object();
 
         /* This test checks whether the alleged duration of the last
@@ -1473,10 +1464,7 @@ last(string str)
         for (i = 0, sz = sizeof(args) ; i < sz ; i++)
         {
             plist += ({ "<" + args[i] });
-            if (!objectp(player = find_player(args[i])))
-                player = SECURITY->finger_player(args[i]);
-        if (objectp(player))
-            plist += map(sort_array(filter(player->query_seconds(), &SECURITY->exist_player())), &operator(+)(">"));
+            plist += map(sort_array(SECURITY->query_seconds(args[i])), &operator(+)(">"));
         }
     }
     else
@@ -1935,67 +1923,6 @@ sanction(string str)
     CHECK_SO_WIZ;
 
     return SECURITY->sanction(str);
-}
-
-/* **************************************************************************
- * second - note someone as second.
- */
-nomask int
-second(string str)
-{
-    string *args;
-
-    if (!stringp(str))
-    {
-        str = "list";
-    }
-
-    args = explode(lower_case(str), " ");
-    switch (args[0])
-    {
-    case "a":
-    case "add":
-        if (!this_player()->add_second(args[1]))
-        {
-            write("Operation failed, either the named second was not " +
-                  "mortal or did not exist.\n");
-            return 1;
-        }
-        write("Added second " + capitalize(args[1]) + ".\n");
-        return second("list");
-        /* Not reached. */
-
-    case "r":
-    case "remove":
-        if (!this_player()->remove_second(args[1]))
-        {
-            write("Operation failed. You probably have no such second.\n");
-            return 1;
-        }
-        write("Removed second " + capitalize(args[1]) + ".\n");
-        return second("list");
-        /* Not reached. */
-
-    case "l":
-    case "list":
-        args = this_player()->query_seconds();
-        if (!sizeof(args))
-        {
-            write("No seconds listed.\n");
-            return 1;
-        }
-        write("Currently listed seconds: " +
-              COMPOSITE_WORDS(map(args, capitalize)) + ".\n");
-        return 1;
-        /* Not reached. */
-
-    default:
-        notify_fail("Invalid subcommand \"" + args[0] + "\".\n");
-        return 0;
-    }
-
-    write("This should never happen. Please report.\n");
-    return 1;
 }
 
 /* **************************************************************************

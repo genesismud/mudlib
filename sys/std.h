@@ -208,6 +208,13 @@
 #define SITEBAN_SUFFIXES ({ "", "-all", "-new" })
 
 /*
+ * ALLOWED_LIEGE_COMMANDS
+ *
+ * A list of player info commands allowed to lieges.
+ */
+#define ALLOWED_LIEGE_COMMANDS ({ "pinfo" })
+
+/*
  * MUDLIST_SERVER
  *
  * Address to the mudlist server. /secure/master will send a message to

@@ -41,6 +41,7 @@ private int	exp_points,
 		age_heart,
 		gender,
 		login_time,
+		logout_time,
 		is_ghost,
 		*learn_pref,
 		alignment,
@@ -48,8 +49,7 @@ private int	exp_points,
                 restricted,
                 scar;
 
-private mapping m_remember_name = ([ ]),
-                m_seconds = ([ ]);
+private mapping m_remember_name = ([ ]);
 
 private static int wiz_level;
 private static int stats_set=0;
@@ -204,6 +204,14 @@ string query_player_file() { return player_file; }
 string query_login_from() { return login_from; }
 
 int    query_login_time() { return login_time; }
+
+int query_logout_time()
+{
+    /* For the purpose of backward compatibility, we use the file time
+     * if no logout_time was remembered.
+     */
+    return logout_time ? logout_time : file_time(PLAYER_FILE(name) + ".o");
+}
 
 string query_pronoun() { return LD_PRONOUN_MAP[gender]; }
 
@@ -495,42 +503,6 @@ void
 remove_object()
 {
     destruct();
-}
-
-public string *
-query_seconds()
-{
-    string query = this_interactive()->query_real_name();
-
-    if (this_interactive() != this_object() &&
-    	WIZ_CHECK < WIZ_ARCH &&
-    	query != SECURITY->query_domain_lord(SECURITY->query_wiz_dom(name)) &&
-	SECURITY->query_team_member("aop", query) == 0 &&
-	SECURITY->query_team_member("aod", query) == 0)
-    	return ({});
-
-    if (!m_sizeof(m_seconds))
-	m_seconds = ([]);
-
-    return m_indices(m_seconds);
-}
-
-public nomask mixed
-query_second_info(string second)
-{
-    string query = this_interactive()->query_real_name();
-
-    if (this_interactive() != this_object() &&
-    	WIZ_CHECK < WIZ_ARCH &&
-    	query != SECURITY->query_domain_lord(SECURITY->query_wiz_dom(name)) &&
-	SECURITY->query_team_member("aop", query) == 0 &&
-	SECURITY->query_team_member("aod", query) == 0)
-    	return ({});
-
-    if (!m_sizeof(m_seconds))
-	m_seconds = ([]);
-
-    return secure_var(m_seconds[second]);
 }
 
 public int

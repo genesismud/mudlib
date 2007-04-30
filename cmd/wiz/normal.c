@@ -26,6 +26,7 @@
  * - leave
  * - modify
  * - money
+ * - msecond
  * - peace
  * - possess
  * - praiselog
@@ -161,6 +162,7 @@ query_cmdlist()
              "mkdir":"makedir",
              "modify":"modify",
              "money":"money",
+             "msecond":"msecond",
              "mv":"mv_cmd",
 
              "pad":"pad",
@@ -868,6 +870,98 @@ money(string str)
     }
         
     write(sprintf("%11s: %6d\n", "Total value", MONEY_MERGE(coins)));
+    return 1;
+}
+
+/* ***************************************************************************
+ *  msecond - Modify seconds entry in mortals
+ */
+
+public int
+msecond(string str)
+{
+    string *args;
+    mixed info;
+
+    if (!strlen(str))
+    {
+	notify_fail("Syntax: msecond <player>\n" +
+		    "        msecond a[dd] <name> to <player>\n" +
+		    "        msecond r[emove] <name> from <player>\n");
+	return 0;
+    }
+
+    args = explode(lower_case(str), " ");
+    switch (args[0])
+    {
+    case "a":
+    case "add":
+	if (sizeof(args) != 4 || args[2] != "to")
+	{
+	    msecond("");
+	    return 0;
+	}
+	if (!SECURITY->exist_player(args[1]))
+	{
+	    notify_fail("The player " + capitalize(args[1]) + " does not exist.\n");
+	    return 0;
+	}
+	if (!SECURITY->exist_player(args[3]))
+	{
+	    notify_fail("The player " + capitalize(args[3]) + " does not exist.\n");
+	    return 0;
+	}
+        if (!SECURITY->add_second(args[3], args[1]))
+        {
+            return 0;
+        }
+
+	write("Added second " + capitalize(args[1]) + " to " + capitalize(args[3]) + ".\n");
+	return msecond(args[3]);
+
+    case "r":
+    case "remove":
+	if (sizeof(args) != 4 || args[2] != "from")
+	{
+	    msecond("");
+	    return 0;
+	}
+        if (!SECURITY->remove_second(args[3], args[1]))
+        {
+            return 0;
+        }
+	
+	write("Removed second " + capitalize(args[1]) + " from " + capitalize(args[3]) + ".\n");
+	return msecond(args[3]);
+
+    default:
+	if (sizeof(args) != 1)
+	{
+	    msecond("");
+	    return 0;
+	}
+        str = SECURITY->query_find_first(args[0]);
+        if (!str)
+        {
+            notify_fail("No player " + capitalize(args[0]) + " or no seconds.\n");
+            return 0;
+        }
+	args = sort_array(SECURITY->query_seconds(str));
+	if (!sizeof(args))
+	{
+	    write(sprintf("%-11s: ", capitalize(str)) + "No seconds\n");
+	    return 1;
+	}
+
+        write("Seconds for " + capitalize(str) + ":\n");
+        foreach(string second: args)
+        {
+           info = SECURITY->query_second_info(str, second);
+           write(sprintf("- %-11s added %s by %s\n", capitalize(second), ctime(info[1]), capitalize(info[0])));
+        }
+	return 1;
+    }
+    write("Impossible end of msecond.\n");
     return 1;
 }
 
