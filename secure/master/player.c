@@ -7,6 +7,8 @@
 
 #include "/sys/log.h"
 
+#define SECONDS_SAVE "/players/seconds"
+
 /* Indices to the m_seconds mapping. */
 #define SNDS_REPORTER 0
 #define SNDS_TIME     1
@@ -22,7 +24,7 @@
  *                ([ (string) second :
  *                   ({ (string) reporter, (int) time }) ]) ])
  */
-private mapping m_seconds = ([ ]);
+static private mapping m_seconds = ([ ]);
 
 /*
  * Global run-time variable.
@@ -32,6 +34,18 @@ private mapping m_seconds = ([ ]);
  * m_firsts = ([ (string) player : (string) first ])
  */
 static private mapping m_firsts = ([ ]);
+
+/*
+ * Function name: save_seconds
+ * Description  : Since the seconds information is stored in a separate
+ *                place, we have a separate routine for it.
+ */
+static void
+save_seconds()
+{
+    set_auth(this_object(), "root:root");
+    save_map(m_seconds, SECONDS_SAVE);
+}
 
 /*
  * Function name: query_find_first
@@ -206,7 +220,7 @@ add_second(string first, string second)
     }
     m_seconds[first] += ([ second : ({ wname, time() }) ]);
     m_firsts[second] = first;
-    save_master();
+    save_seconds();
 #ifdef LOG_SECONDS
     SECURITY->log_syslog(LOG_SECONDS, (ctime(time()) + " " +
         capitalize(wname) + " added " + capitalize(second) +
@@ -254,7 +268,7 @@ remove_second(string first, string second)
         m_delkey(m_seconds, first);
     }
     m_delkey(m_firsts, second);
-    save_master();
+    save_seconds();
 #ifdef LOG_SECONDS
     SECURITY->log_syslog(LOG_SECONDS, (ctime(time()) + " " +
         capitalize(wname) + " removed " + capitalize(second) +
@@ -344,7 +358,7 @@ register_second(string second, string password)
             capitalize(m_seconds[first][second][SNDS_REPORTER]) + ").\n"));
 #endif LOG_SECONDS
         m_seconds[first][second] = ({ first, time() });
-        save_master();
+        save_seconds();
         write("You registered " + capitalize(second) + " as second.\n");
         return 1;
     }
@@ -356,7 +370,7 @@ register_second(string second, string password)
     }
     m_seconds[first] += ([ second : ({ first, time() }) ]);
     m_firsts[second] = first;
-    save_master();
+    save_seconds();
 #ifdef LOG_SECONDS
     SECURITY->log_syslog(LOG_SECONDS, (ctime(time()) + " " +
         capitalize(pname) + " registers " + capitalize(second) + ".\n"));
@@ -364,8 +378,6 @@ register_second(string second, string password)
     write("You registered " + capitalize(second) + " as second.\n");
     return 1;
 }
-
-
 
 /*
  * Function name: init_player_info
@@ -375,9 +387,16 @@ register_second(string second, string password)
 static void
 init_player_info()
 {
-    string *firsts = m_indices(m_seconds);
+    string *firsts;
     string *seconds;
 
+    m_seconds = restore_map(SECONDS_SAVE);
+    if (!mappingp(m_seconds))
+    {
+        m_seconds = ([ ]);
+    }
+
+    firsts = m_indices(m_seconds);
     foreach(string first: firsts)
     {
         seconds = m_indices(m_seconds[first]);
