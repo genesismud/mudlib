@@ -109,7 +109,7 @@ TERRAIN_STEEP - This type is to be used also for areas that are difficult
 	to travel through, but instead are at an incline rather than
 	flat or horizontal.
 
-TERRAIN_SHADOW - This type controles if it is esy to hide, if there
+TERRAIN_SHADOWS - This type controles if it is esy to hide, if there
         is a lightsource present. Alleys and ruins are typical of this 
         type, that can be used to increase the effectiveness of hide and sneak.
 

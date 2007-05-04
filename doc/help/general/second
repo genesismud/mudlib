@@ -11,7 +11,7 @@ DESCRIPTION
         of the second player. For the purpose of this registration, the oldest
         character of a player is seen as the main character.
 
-        Only the administration of Genesis can see this information.
+        Only the administration of the game can see this information.
 
 ARGUMENTS
         none   - list your currently registered seconds.

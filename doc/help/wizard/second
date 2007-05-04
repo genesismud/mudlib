@@ -1,33 +1,22 @@
 NAME
-	second - add or remove a name from your list of seconds
+	second - add a name to your list of seconds
 
 SYNOPSIS
 	second [list]
 	second a[dd] <name>
-	second r[emove] <name>
 
 DESCRIPTION
-	With this command a wizard lists the seconds he is having in
-	the game. Please note that it is MANDATORY to register all your
-	seconds.
+	With this command a wizard lists the seconds he is having in the game.
+	For verification purposes, the password of the second will have to be
+	entered. Please note that it is MANDATORY to register all your seconds.
 
-	The information is available with the use of the finger command,
-	and can be seen only by the administration of the realms and the
-	Liege of the domain you are a member of.
+	The information is available with the use of the finger command, and
+	can be seen only by the administration of the realms and the Liege of
+	the domain you are a member of.
  
-	Only existing mortals can be added. However, do not list a mortal
-	as your second unless he really is just that.
-
 ARGUMENTS
 	list   - List your registered seconds.
-	add    - Add a second to the list.
-	remove - Remove a second from the list.
 	<name> - The name of the second to add.
 
-EXAMPLES
-	second a otto  - Adds otto as your second.
-	second r filip - Removes filip from your list of seconds.
-
 SEE ALSO
-        msecond
-
+        msecond, "g second"
