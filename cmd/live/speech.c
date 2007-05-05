@@ -260,6 +260,7 @@ commune(string str)
     string wiz;
     string mess;
     string *alias;
+    string timestamp = ctime(time())[11..15] + " ";
 
     if (!query_interactive(this_player()))
     {
@@ -334,6 +335,7 @@ commune(string str)
             if (!(us[il]->query_prop(WIZARD_I_BUSY_LEVEL) & BUSY_C))
             {
                 tell_object(us[il],
+                    (us[il]->query_option(OPT_TIMESTAMP) ? timestamp : "") +
                     "COMMUNE anyone from " + str + ": " + mess);
                 flag = 1;
             }
@@ -365,6 +367,7 @@ commune(string str)
                 !(spec->query_prop(WIZARD_I_BUSY_LEVEL) & BUSY_C))
             {
                 tell_object(spec,
+                    (spec->query_option(OPT_TIMESTAMP) ? timestamp : "") +
                     "COMMUNE " + wiz + " from " + str + ": " + mess);
                 flag = 1;
             }
@@ -391,8 +394,9 @@ commune(string str)
                     continue;
                 }
 
-                tell_object(spec, "COMMUNE to " + wiz + " from " +
-                     str +  ": " + mess);
+                tell_object(spec,
+                    (spec->query_option(OPT_TIMESTAMP) ? timestamp : "") +
+                    "COMMUNE to " + wiz + " from " + str +  ": " + mess);
 
                 if (!spec->query_invis())
                 {
@@ -425,9 +429,9 @@ commune(string str)
             return 1;
         }
 
-        wiz = capitalize(wiz);
-
-        tell_object(spec, "COMMUNE to you from " + str + ": " + mess);
+        tell_object(spec,
+            (spec->query_option(OPT_TIMESTAMP) ? timestamp : "") +
+            "COMMUNE to you from " + str + ": " + mess);
         flag = 1;
         break;
     }
