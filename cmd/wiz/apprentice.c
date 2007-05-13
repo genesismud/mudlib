@@ -1364,10 +1364,10 @@ last_check(string who, int login)
         if ((t_out - t_in) < 172800)
         {
             tmp = time() - (login ? t_in : t_out);
-            result = " " + TIME2STR(tmp, 2);
+            result = TIME2STR(tmp, 2);
 
             tmp = t_out - t_in;
-            result += "  " + TIME2STR(tmp, 2);
+            result += "   " + TIME2STR(tmp, 2);
         }
         else
         {
@@ -1376,7 +1376,7 @@ last_check(string who, int login)
              * correct.
              */
             tmp = time() - t_in;
-            result = " " + TIME2STR(tmp , 2) + "         -";
+            result = TIME2STR(tmp , 2) + "          -";
         }
     }
 
@@ -1472,13 +1472,13 @@ last(string str)
 
     if (login)
     {
-        write("Who            Last login     Duration    Idle time\n");
-        write("---            ----------     --------    ---------\n");
+        write("Who            Last login    Duration     Idle time\n");
+        write("---            ----------    ---------    ---------\n");
     }
     else
     {
-        write("Who            Last logout    Duration    Idle time\n");
-        write("---            -----------    --------    ---------\n");
+        write("Who            Last logout   Duration     Idle time\n");
+        write("---            -----------   ---------    ---------\n");
     }
 
     write(implode(map(plist, &last_check(, login)), "\n") + "\n");
