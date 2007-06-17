@@ -802,8 +802,9 @@ run_away()
 }
 
 /*
- * Function name:   stop_fight
- * Description:     Stops the current fight
+ * Function name: stop_fight
+ * Description  : Makes this living stop fighting others.
+ * Arguments    : mixed elist - the enemy or enemies to stop fighting.
  */
 public void
 stop_fight(mixed elist)

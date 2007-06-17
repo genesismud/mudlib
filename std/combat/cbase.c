@@ -2075,7 +2075,8 @@ cb_attacked_by(object ob)
 
 /*
  * Function name: cb_stop_fight
- * Description:   Stop fighting certain enemies
+ * Description  : Stop fighting certain enemies.
+ * Arguments    : mixed elist - the enemy or array of enemies to stop fighting.
  */
 public nomask void
 cb_stop_fight(mixed elist)
