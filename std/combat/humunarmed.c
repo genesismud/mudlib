@@ -95,7 +95,7 @@ cr_reset_attack(int aid)
  * Description:   Set the values for a specific hitlocation
  * Arguments:     hid: The hitlocation (bodypart) id
  */
-public nomask void
+public void
 cr_reset_hitloc(int hid)
 {
     ::cr_reset_hitloc(hid);
