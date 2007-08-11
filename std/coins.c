@@ -92,6 +92,10 @@ reset_heap()
 public string
 query_auto_load()
 {
+    /* Don't auto load if we are about to destroy. */
+    if (query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
+        return 0;
+
     return (MASTER + ":" + num_heap() + "," + coin_type);
 }
 

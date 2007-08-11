@@ -619,6 +619,10 @@ set_may_not_recover()
 string
 query_recover()
 {
+    /* Don't recover if we're about to destruct. */
+    if (query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
+        return 0;
+
     return MASTER + ":" + query_herb_recover();
 }
 
