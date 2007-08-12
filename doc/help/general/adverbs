@@ -15,7 +15,7 @@ DESCRIPTION
         with those emotions.
 
 ADVERB USAGE
-        When using an adverb in conjunction with an emotion. you can identify
+        When using an adverb in conjunction with an emotion, you can identify
         it by abbreviating it to a minimum of three characters. The search
         algorithm will then always find the first adverb in the list that
         matches your abbreviation. Note that not all adverbs can be accessed
@@ -36,7 +36,7 @@ NOTE ON USAGE
         use an adverb at all, use the period. "smile ." will just make you
         smile and not smile happily for happily is the default adverb for
         the emotion smile. Also note that some emotions (like hug) are by
-        by default with the adverb ".", so by default without adverb.
+        default with the adverb ".", so by default without adverb.
 
 OPTIONS
         all list *  - list all adverbs.
