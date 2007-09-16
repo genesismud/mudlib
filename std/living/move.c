@@ -41,7 +41,7 @@ move_reset()
  *                use set_dircmd() and set it to 'tree' in the room to allow
  *                teammembers to follow their leader.
  * Arguments:     how:      The direction of travel, like "north".
- *                          "X" for teleportation
+ *                          "X" for teleportation, team does not follow.
  *                          "M" if you write leave and arrive messages yourself.
  *                to_dest:  Destination
  *                dont_follow: A flag to indicate group shall not follow this
@@ -111,6 +111,8 @@ move_living(string how, mixed to_dest, int dont_follow, int no_glance)
     {
         msgin = this_object()->query_mm_in() + "\n";
         msgout = this_object()->query_mm_out() + "\n";
+	/* When transing, the team does not follow. */
+	dont_follow = 1;
     }
     else
     {
