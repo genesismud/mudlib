@@ -767,6 +767,7 @@ sk_list(int steps)
     if (steps < 0)
     {
         sk_hook_skillisting();
+        guild_sk = all_sk;
         steps = 1;
     }
     else if (query_verb() == "learn")
