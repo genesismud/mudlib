@@ -46,7 +46,8 @@ static void stop_heart();
 public mixed cb_query_weapon(int which);
 public mixed * query_attack(int id);
 public nomask void cb_update_enemies();
-
+public nomask mixed cb_query_attack();
+public nomask mixed cb_update_attack();
 
 /*
     Format of each element in the attacks array:
@@ -1537,44 +1538,16 @@ heart_beat()
      * Do something when the enemy is somehow lost
      */
     cb_update_enemies();
+    cb_update_attack();
     
-    if (!attack_ob || attack_ob->query_ghost() ||
-        environment(attack_ob) != environment(me))
+    if (!cb_query_attack())
     {
-        me->notify_enemy_gone(attack_ob);
-
-        /* To cling to an enemy we must fight it. */
-        me->remove_prop(LIVE_O_ENEMY_CLING);
-
-        /* Switch enemy if we have an alternate. */
-        new = (all_inventory(environment(me)) & enemies) - ({ attack_ob });
-
-        if (sizeof(new))
-            attack_ob = new[0];
-        else {
-            if (attack_ob && attack_ob->query_ghost())
-            {
-                me->remove_prop(LIVE_I_ATTACK_DELAY);
-                me->remove_prop(LIVE_I_STUNNED);
-            }
-            attack_ob = 0;
-        }
-
-        /* We attack another enemy when old enemy left. */
-        if (attack_ob)
+        /* We don't stop the heart beat for another 30 seconds */
+        if (time() - cb_query_combat_time() > 30)
         {
-            tell_object(me, "You turn to attack " +
-                attack_ob->query_the_name(me) + ".\n");
+            stop_heart();
         }
-        else
-        {
-            /* We don't stop the heart beat for another 30 seconds */
-            if (time() - cb_query_combat_time() > 30)
-            {
-                stop_heart();
-            }
-            return;
-        }
+        return;
     }
 
     /* First do some check if we actually attack. */
@@ -1740,7 +1713,7 @@ heart_beat()
             }
 
             /* Oops, Lifeform turned into a deadform. Reward the killer. */
-            if ((int)attack_ob->query_hp() <= 0)
+            if (attack_ob->query_hp() <= 0)
             {
                 enemies = enemies - ({ attack_ob });
                 attack_ob->do_die(me);
@@ -1748,7 +1721,7 @@ heart_beat()
             }
         }
     }
-
+    
     /*
      * We might actually turn into a deadform here also,
      * some armours do damage when they're hit.
@@ -1776,31 +1749,12 @@ heart_beat()
         me->reduce_hit_point(ftg);
     }
 
-    /*
-     * Fighting is frightening, we might panic!
-     */
+    /* Fighting is frightening, we might panic!  */
     cb_may_panic();
-
-    if (attack_ob && !attack_ob->query_ghost())
-    {
-        return;
-    }
-    else
-    {
-        new = (all_inventory(environment(me)) & enemies) - ({ attack_ob });
-        if (sizeof(new))
-        {
-            attack_ob = new[0];
-            if (attack_ob)
-                tell_object(attack_ob, "You turn to attack " +
-                    attack_ob->query_the_name(me) + ".\n");
-        }
-        else
-        {
-            attack_ob = 0;
-            return;
-        }
-    }
+    
+    /* Success? Maybe, Look for new foes! */
+    cb_update_attack();
+    
     return;
 }
 
@@ -2153,20 +2107,66 @@ cb_query_enemy(int arg)
  */
 public nomask mixed
 cb_query_attack() 
-{ 
-    return attack_ob; 
+{
+    if (attack_ob && !attack_ob->query_ghost() &&
+        environment(attack_ob) == environment(me))
+    {
+        return attack_ob;
+    }
+
+    return 0;    
 }
 
 /*
- * Function name:  cb_heal
- * Description:    Heals the living object. Adds hp, mana and fatigue, panic
- * Arguments:      delay: Number of heart_beats since last heal
- * Returns:        0 if we healed 'me'
+ * Function Name: cb_update_attack
+ * Description  : Update the current attack_ob by looking for new
+ *                enemies to attack. Only call this when attack_ob used
+ *                to be correct.
+ * Returns      : object - the target to attack
  */
-public nomask int
-cb_heal(int delay)
-{
-    return 0;
+public nomask mixed
+cb_update_attack()
+{    
+    object *targets, old_enemy;
+
+
+    /* Old enemy valid? */
+    old_enemy = attack_ob;
+    if (cb_query_attack())
+    {
+        return attack_ob;
+    }
+        
+    me->notify_enemy_gone(attack_ob);    
+    /* To cling to an enemy we must fight it. */
+    if (me->query_prop(LIVE_O_ENEMY_CLING) == attack_ob)
+        me->remove_prop(LIVE_O_ENEMY_CLING);
+
+    old_enemy = attack_ob;
+    attack_ob = 0;
+
+
+    /* Look for any new enemies to attack. */
+    targets = (all_inventory(environment(me)) & enemies) - ({ attack_ob });
+
+    if (sizeof(targets))
+        attack_ob = targets[0];
+
+    /* We attack another enemy when old enemy left. */
+    if (attack_ob)
+    {
+        tell_object(me, "You turn to attack " +
+            attack_ob->query_the_name(me) + ".\n");
+    } 
+    else
+    {
+        /* If we killed our previous enemy and have no more we're nice
+         * enough to remove some stuns. */
+        me->remove_prop(LIVE_I_ATTACK_DELAY);
+        me->remove_prop(LIVE_I_STUNNED);
+    }
+
+    return attack_ob; 
 }
 
 /**********************************************************
