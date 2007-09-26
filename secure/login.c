@@ -5,12 +5,9 @@
  * the Game. This object decides which player object is to be used by
  * the player and swaps the socket to that object.
  */
-
 #pragma no_inherit
 #pragma save_binary
 #pragma strict_types
-
-inherit "/std/object";
 
 #include <composite.h>
 #include <const.h>
@@ -32,7 +29,6 @@ private string  name;            /* The real name of the player        */
 private string  password;        /* The password of the player         */
 private string  player_file;     /* The racefile to use for the player */
 private mapping m_remember_name; /* The players we have remembered.    */
-private mapping m_seconds;       /* Seconds we have registered.        */
 #ifdef FORCE_PASSWORD_CHANGE
 private int     password_time;   /* Time the password was changed      */
 #endif FORCE_PASSWORD_CHANGE
@@ -105,7 +101,7 @@ clean_up()
 {
     if (!query_interactive(this_object()))
     {
-        remove_object();
+        destruct();
     }
     else
     {
@@ -118,12 +114,25 @@ clean_up()
  * Description  : Called to construct this object.
  */
 static void
-create_object()
+create()
 {
-    set_name("logon");
-
     set_alarm(CLEANUP_TIME, 0.0, clean_up);
+
+    setuid();
+    seteuid(getuid());
 }
+
+/*
+ * Function name: short
+ * Description  : This function returns the short description of this object.
+ * Returns      : string - the short description.
+ */
+string 
+short() 
+{
+    return "login"  + (name ? " (" + name + ")" : "");
+}
+
 
 /*
  * Function name: query_pl_name
@@ -157,7 +166,7 @@ time_out()
 {
     write_socket("Time out! Join us another time.\n");
 
-    remove_object();
+    destruct();
 }
 
 /*
@@ -173,7 +182,7 @@ logon()
 
     if (!query_interactive(this_object()))
     {
-        remove_object();
+        destruct();
         return 0;
     }
 
@@ -182,7 +191,7 @@ logon()
     {
         write_socket("\nYour site is blocked due to repeated offensive " +
             "behaviour by users from your site.\n\n");
-        remove_object();
+        destruct();
         return 0;
     }
 
@@ -326,7 +335,7 @@ start_player2(object ob)
     SECURITY->notify(ob, login_type);
 
     ob->update_hooks();
-    remove_object();
+    destruct();
 }
 
 /*
@@ -387,7 +396,7 @@ start_player1()
         ob->set_trusted(1); 
         exec(ob, this_object());
         ob->enter_new_player(name, password);
-        remove_object();
+        destruct();
         return;
     }
 
@@ -445,8 +454,7 @@ start_player()
         /* Check enter quota. Don't check if the player already queued, which
          * is signalled by a positive 'login_flag'.
          */
-        if (login_flag ||
-            ((pos = QUEUE->should_queue(name)) == 0))
+        if (login_flag || ((pos = QUEUE->should_queue(name)) == 0))
         {
             start_player1();
             return;
@@ -610,7 +618,7 @@ confirm_use_name(string str)
     if (str[0] == 'q')
     {
         write_socket("\nWelcome another time then!\n");
-        remove_object();
+        destruct();
         return;
     }
 
@@ -662,7 +670,7 @@ get_name(string str)
     if (str == "quit")
     {
         write_socket("\nWelcome another time then!\n");
-        remove_object();
+        destruct();
         return;
     }
 
@@ -707,7 +715,7 @@ get_name(string str)
             }
 
             remove_alarm(time_out_alarm);
-            remove_object();
+            destruct();
             return;
         }
     }
@@ -736,7 +744,7 @@ get_name(string str)
             write_socket("NOTE: After the game shut down, it may take a few " +
                 "minutes before the game\nis up and accessible again.\n");
             remove_alarm(time_out_alarm);
-            remove_object();
+            destruct();
             return;
         }
     }
@@ -750,7 +758,7 @@ get_name(string str)
             ":00 hours, daily. Please come back then!\n" +
             "Local time is " + ctime(time()) + ".\n");
         remove_alarm(time_out_alarm);
-        remove_object();
+        destruct();
         return;
     }
 #endif LOCKOUT_START_TIME
@@ -761,7 +769,7 @@ get_name(string str)
         exec(g_info, this_object());
         g_info->enter_game();
         remove_alarm(time_out_alarm);
-        remove_object();
+        destruct();
         return;
     }
 
@@ -771,7 +779,7 @@ get_name(string str)
         exec(a_player, this_object());
         a_player->enter_game();
         remove_alarm(time_out_alarm);
-        remove_object();
+        destruct();
         return;
     }
 
@@ -894,7 +902,7 @@ get_name(string str)
             "accept login from the 'guest' character. You may choose to " +
             "create real character to play this mud.\n\n");
         remove_alarm(time_out_alarm);
-        remove_object();
+        destruct();
         return;
 #endif NO_GUEST_LOGIN
 
@@ -937,7 +945,7 @@ new_password(string p)
     if (p == "quit")
     {
         write_socket("Very well. Until another time, perhaps.\n");
-        remove_object();
+        destruct();
         return;
     }
 
@@ -1048,7 +1056,7 @@ check_restriction()
                 "you for now. Therefore\nyou will not be allowed to enter " +
                 "the game at this time.\n\nNext login is accepted on: " +
                 ctime(-restricted) + "\n\n");
-            remove_object();
+            destruct();
             return 1;
         }
     }
@@ -1059,10 +1067,36 @@ check_restriction()
             "Therefore\nyou will not be allowed to enter the game at this " +
             "time.\n\nNext login is accepted on: " + ctime(restricted) +
             "\n\n");
-        remove_object();
+        destruct();
         return 1;
     }
 
+    return 0;
+}
+
+/*
+ * Function name: check_double_login
+ * Description  : Check if this player already has one of his seconds logged in.
+
+ * Returns      : int 1/0 - true/not true.
+ */
+static int
+check_double_login()
+{
+    if (SECURITY->query_wiz_rank(query_pl_name()) > WIZ_NORMAL)
+        return 0;
+    
+    foreach (string name : SECURITY->query_seconds(query_pl_name()))
+    {
+        if (find_player(name))
+        {
+            write_socket("You may only login one of your characthers at the same " +
+                "time.\n\n");
+            destruct();
+            return 1;
+        }
+    }
+    
     return 0;
 }
 
@@ -1112,7 +1146,7 @@ check_password(string p)
         /* Player already had a second chance. Kick him/her out. */
         if (login_flag)
         {
-            remove_object();
+            destruct();
             return;
         }
 
@@ -1123,10 +1157,13 @@ check_password(string p)
     }
 
     if (check_restriction())
-    {
         return;
-    }
 
+#ifdef BLOCK_DOUBLE_LOGIN
+    if (check_double_login())
+        return;
+#endif
+    
     /* Reset the login flag so people won't skip the queue. */
     login_flag = 0;
 
@@ -1201,20 +1238,11 @@ check_password(string p)
 #ifndef LOG_SECOND_LOGIN
 #define LOG_SECOND_LOGIN LOG_STRANGE_LOGIN
 #endif LOG_SECOND_LOGIN
-        /* Check for seconds. Check both ways for consistency. */
-	names = mappingp(m_seconds) ? m_indices(m_seconds) : ({});
-	names &= map(players, &->query_real_name());
-	size = sizeof(players);
-	while(--size >= 0)
-	{
-	    if (member_array(name, players[size]->query_seconds()) > -1)
-	    {
-		names -= ({ players[size]->query_real_name() });
-		names += ({ players[size]->query_real_name() });
-	    }
-	}
-
-	if (sizeof(names))
+        /* Check for seconds. */
+        names = SECURITY->query_seconds(name);
+        names &= map(players, &->query_real_name());
+        
+        if (sizeof(names))
 	{
 	    SECURITY->log_syslog(LOG_SECOND_LOGIN,
 		sprintf("%s: %s is second of %s.\n", ctime(time()),
@@ -1256,7 +1284,7 @@ try_throw_out(string str)
         (str[0] == 'n'))
     {
         write_socket("Welcome another time then!\n");
-        remove_object();
+        destruct();
         return;
     }
 
@@ -1326,7 +1354,7 @@ queue(string str)
         (str[0] == 'n'))
     {
         write_socket("Welcome another time then!\n");
-        remove_object();
+        destruct();
         return;
     }
 
@@ -1424,7 +1452,7 @@ position()
     {
         write_socket("You are not in the queue somehow! Very strange!\n" +
             "Please try to connect again.\n");
-        remove_object();
+        destruct();
         return;
     }
     else
@@ -1478,7 +1506,7 @@ waitfun(string str)
 
     case 'q':
         write_socket("See you another time then.\n");
-        remove_object();
+        destruct();
         return;
 
     case 'w':
