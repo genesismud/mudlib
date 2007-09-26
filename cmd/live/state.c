@@ -1318,7 +1318,7 @@ second(string str)
     case "add":
         if (sizeof(args) != 2)
         {
-            notify_fail("Syntax: second add <player>");
+            notify_fail("Syntax: second add <player>\n");
             return 0;
         }
         write("Please enter the password of " + capitalize(args[1]) + ": ");
