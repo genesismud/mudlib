@@ -257,6 +257,9 @@ answer_question(mixed msg, int cmd)
     {
 	msg = this_object()->check_call(msg, this_player());
 
+        if (!msg)
+            return;
+        
 	if (cmd)
 	    command(msg);
 	else
