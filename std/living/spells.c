@@ -46,7 +46,7 @@ remove_spellobj(object obj)
 public object *
 query_spellobjs()
 {
-    spell_objs -= ({ 0 });
+    spell_objs = filter(spell_objs, objectp);
 
     return secure_var(spell_objs); 
 }

@@ -60,7 +60,7 @@ public varargs int
 move_living(string how, mixed to_dest, int dont_follow, int no_glance)
 {
     int    index, size, invis;
-    object *team, *drag, env, oldtp;
+    object *team, *dragged, env, oldtp;
     string vb = query_verb();
     string com, msgout, msgin;
     mixed msg;
@@ -228,23 +228,19 @@ move_living(string how, mixed to_dest, int dont_follow, int no_glance)
  
     /* See is people were hunting us or if we were hunting people. */
     this_object()->adjust_combat_on_move(0);
- 
-    if (sizeof(drag = query_prop(TEMP_DRAGGED_ENEMIES)))
-    {
-        index = -1;
-        size = sizeof(drag -= ({ 0 }));
 
-        while(++index < size)
+    dragged = filter(query_prop(TEMP_DRAGGED_ENEMIES), objectp);
+    if (sizeof(dragged))
+    {
+	foreach(object dragee: dragged)
         {
-            tell_room(environment(drag[index]), QCTNAME(drag[index]) +
-                " leaves following " + QTNAME(this_object()) + ".\n",
-                drag[index]);
-            drag[index]->move_living("M", to_dest);
-            tell_room(environment(drag[index]), QCTNAME(drag[index]) +
+            tell_room(environment(dragee), QCTNAME(dragee) +
+                " leaves following " + QTNAME(this_object()) + ".\n", dragee);
+            dragee->move_living("M", to_dest);
+            tell_room(environment(dragee), QCTNAME(dragee) +
                 " arrives following " + QTNAME(this_object()) + ".\n",
-                ({ drag[index], this_object() }) );
-            tell_object(this_object(),
-                drag[index]->query_The_name(this_object()) +
+                ({ dragee, this_object() }) );
+            tell_object(this_object(), dragee->query_The_name(this_object()) +
                 " arrives following you.\n");
         }
         remove_prop(TEMP_DRAGGED_ENEMIES);

@@ -68,9 +68,9 @@ show_held(object ob)
 
     a = (object *)this_object()->query_tool(-1) - 
         (object *)this_object()->query_weapon(-1) -
-        (object *)this_object()->query_armour(-1) - ({ 0 });
+        (object *)this_object()->query_armour(-1);
 
-    if (!sizeof(a))
+    if (!sizeof(a = filter(a, objectp)))
     {
         return "";
     }
@@ -86,7 +86,7 @@ show_held(object ob)
         pr = "You are";
     }
 
-    a = map(a, &->query_hold_desc(ob)) - ({ 0 });
+    a = filter(map(a, &->query_hold_desc(ob)), objectp);
     str = pr + " holding " + COMPOSITE_WORDS(a) + ".";
 
     return HANGING_INDENT(str, 2, 0);

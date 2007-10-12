@@ -242,7 +242,7 @@ cb_data()
         fixnorm(60, me->query_encumberance_weight() +
             me->query_encumberance_volume());
     
-    if (sizeof((object *)me->query_weapon(-1) - ({ 0 })))
+    if (sizeof(filter(me->query_weapon(-1), objectp)))
     {
         tmp = me->query_skill(SS_PARRY);
     }
@@ -552,7 +552,7 @@ cb_tohit(int aid, int wchit, object vic)
      * These are weighted with the factors (4, 1, 1, 2)
      */
 
-    if (sizeof((object *)vic->query_weapon(-1) - ({ 0 })))  /* Any weapons ? */
+    if (sizeof(filter(vic->query_weapon(-1), objectp)))
     {
         tmp = (int) vic->query_skill(SS_PARRY);
     }
@@ -1372,7 +1372,7 @@ cb_query_weapon(int which)
 
     if (which == -1)
     {
-        return map(attacks, &operator([])(, ATT_OBJ)) - ({ 0 });
+        return filter(map(attacks, &operator([])(, ATT_OBJ)), objectp);
     }
 
     if ((pos = member_array(which, att_id)) < 0)

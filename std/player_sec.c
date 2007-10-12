@@ -248,7 +248,7 @@ decay_skills()
     obs += pointerp(otmp) ? otmp : ({ otmp });
     otmp = this_object()->query_guild_trainer_craft();
     obs += pointerp(otmp) ? otmp : ({ otmp });
-    obs -= ({ 0 });
+    obs = filter(obs, objectp);
 
     /* Filter all relevant skills */
     skills = filter(query_all_skill_types(), &operator(>)(99999));
@@ -261,6 +261,7 @@ decay_skills()
     {
         tmp = ((tmp = this_object()->query_guild_name_occ()) ? tmp : "") + ", " +
             ((tmp = this_object()->query_guild_name_lay()) ? tmp : "") + ", " +
+	    ((tmp = this_object()->query_guild_name_craft()) ? tmp : "") + ", " +
             ((tmp = this_object()->query_guild_name_race()) ? tmp : "");
         
         str = sprintf("%s\t\t%s\n%s\t\t", this_object()->query_name(), tmp,

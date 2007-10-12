@@ -49,7 +49,7 @@ show_wielded(object for_obj)
         pr = "You are";
     }
 
-    a = map(a, &->query_wield_desc(p)) - ({ 0 });
+    a = filter(map(a, &->query_wield_desc(p)), objectp);
     str = pr + " wielding " + COMPOSITE_WORDS(a) + ".";
 
     return HANGING_INDENT(str, 2, 0);

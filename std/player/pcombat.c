@@ -64,8 +64,7 @@ query_invited()
         return ({ });
     }
 
-    team_invited -= ({ 0 });
-
+    team_invited = filter(team_invited, objectp);
     return ({ }) + team_invited;
 }
 

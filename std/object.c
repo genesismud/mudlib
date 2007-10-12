@@ -1577,7 +1577,7 @@ query_magic_effects()
 {
     if (!pointerp(magic_effects))
         magic_effects = ({});
-    magic_effects -= ({ 0 });
+    magic_effects = filter(magic_effects, objectp);
     return magic_effects;
 }
 

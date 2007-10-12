@@ -656,7 +656,7 @@ describe_combat(object *livings)
     object  victim;
     mapping fights = ([ ]);
 
-    livings -= ({ 0 });
+    livings = filter(livings, objectp);
 
     /* Sanity check. No need to print anything if there aren't enough
      * people to actually fight. Note that if there is only one living, it
