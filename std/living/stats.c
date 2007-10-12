@@ -158,13 +158,19 @@ query_average_stat()
 public int
 query_relative_stat(int stat)
 {
+    int average;
+
     if ((stat < 0) ||
         (stat >= SS_NO_STATS))
     {
 	return 0;
     }
 
-    return (100 * query_base_stat(stat)) / query_average_stat();
+    /* The average should not be 0, but even so, let's test to be sure. */
+    if (average = query_average_stat())
+        return (100 * query_base_stat(stat)) / average;
+    else
+        return 0;
 }
 
 /*
