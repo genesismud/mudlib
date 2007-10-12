@@ -2063,7 +2063,7 @@ trans(string str)
         if (!(strlen(room = ob->query_prop(PLAYER_S_TRANSED_FROM))))
         {
             write(capitalize(args[0]) +
-                " was not transed. Using previous location instaed.\n");
+                " was not transed. Using previous location instead.\n");
             room = ob->query_prop(LIVE_O_LAST_ROOM);
         }
         if (!room)

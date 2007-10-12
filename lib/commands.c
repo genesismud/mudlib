@@ -115,6 +115,10 @@ actor(string str, object *oblist, string str1)
 {
     int poss;
 
+    /* Sanity check. */
+    if (!sizeof(oblist))
+        return;
+
     if (strlen(str1) && (str1[..1] == "'s"))
     {
 	poss = 1;
@@ -162,8 +166,12 @@ actor(string str, object *oblist, string str1)
 public varargs void
 target(string str, object *oblist, string adverb = "", int cmd_attr = 0)
 {
-    int size, poss;
+    int poss;
     object *players, *all_oblist;
+
+    /* Sanity check. */
+    if (!sizeof(oblist))
+	return;
 
     /* Non-living targets see or feel no emotes, but we can still trigger
      * on it, so call the hook.
@@ -194,14 +202,15 @@ target(string str, object *oblist, string adverb = "", int cmd_attr = 0)
     players = FILTER_PLAYERS(oblist);
 
     /* Tell the message to players. */
-    if (size = sizeof(players))
+    if (sizeof(players))
     {
-	function name = (poss == 0 ?
-	  this_player()->query_The_name :
-	  this_player()->query_The_possessive_name);
+	function name = (poss ? this_player()->query_The_possessive_name :
+	    this_player()->query_The_name);
 
-	while(--size >= 0)
-	    players[size]->catch_tell(name(players[size]) + str + "\n");
+	foreach(object player: players)
+	{
+	    player->catch_tell(name(player) + str + "\n");
+	}
     }
 
     oblist->emote_hook(query_verb(), this_player(), adverb, all_oblist,
@@ -242,7 +251,7 @@ targetbb(string str, object *oblist, string adverb = "", int cmd_attr = 0)
 public varargs void
 all(string str, string adverb = "", int cmd_attr = 0)
 {
-    int size, poss;
+    int poss;
     object *oblist, *players;
 
     if (str[..1] == "'s")
@@ -263,14 +272,15 @@ all(string str, string adverb = "", int cmd_attr = 0)
     players = FILTER_PLAYERS(oblist);
 
     /* Tell the message to players. */
-    if (size = sizeof(players))
+    if (sizeof(players))
     {
-	function name = (poss == 0 ?
-	  this_player()->query_The_name :
-	  this_player()->query_The_possessive_name);
+	function name = (poss ? this_player()->query_The_possessive_name :
+	    this_player()->query_The_name);
 
-	while(--size >= 0)
-	    players[size]->catch_tell(name(players[size]) + str + "\n");
+	foreach(object player: players)
+	{
+	    player->catch_tell(name(player) + str + "\n");
+	}
     }
 
     oblist->emote_hook(query_verb(), this_player(), adverb, 0, cmd_attr, 0);
@@ -322,8 +332,12 @@ public varargs void
 all2act(string str, object *oblist, string str1, string adverb = "",
     int cmd_attr = 0)
 {
-    int    size, a_poss, o_poss;
+    int    a_poss, o_poss;
     object *livings, *players;
+
+    /* Sanity check. */
+    if (!sizeof(oblist))
+	return;
 
     livings = all_inventory(environment(this_player()));
     livings = FILTER_OTHER_LIVE(livings - oblist);
@@ -351,32 +365,29 @@ all2act(string str, object *oblist, string str1, string adverb = "",
     }
 
     players = FILTER_PLAYERS(livings);
-    if (size = sizeof(players))
+    if (sizeof(players))
     {
-	function name = (a_poss == 0 ?
-	    this_player()->query_The_name :
-	    this_player()->query_The_possessive_name);
+	function name = (a_poss ? this_player()->query_The_possessive_name :
+	    this_player()->query_The_name);
 
 	str1 = (strlen(str1) ? (str1 + "\n") : ".\n");
 	if (living(oblist[0]))
 	{
-	    while(--size >= 0)
+	    foreach(object player: players)
 	    {
-		function oname = (o_poss == 0 ?
-		    &->query_the_name(players[size]) :
-		    &->query_the_possessive_name(players[size]));
+		function oname = (o_poss ? &->query_the_possessive_name(player) :
+		    &->query_the_name(player));
 
-		players[size]->catch_tell(name(players[size]) + str +
-		  " " + COMPOSITE_WORDS(map(oblist, oname)) + str1);
+		player->catch_tell(name(player) + str + " " +
+		    COMPOSITE_WORDS(map(oblist, oname)) + str1);
 	    }
 	}
 	else
 	{
-	    while(--size >= 0)
+	    foreach(object player: players)
 	    {
-		players[size]->catch_tell(name(players[size]) + str +
-		    " " + COMPOSITE_WORDS(map(oblist,
-		    &desc_theshort(, players[size], o_poss))) + str1);
+		player->catch_tell(name(player) + str + " " +
+		    COMPOSITE_WORDS(map(oblist, &desc_theshort(, player, o_poss))) + str1);
 	    }
 	}
     }
