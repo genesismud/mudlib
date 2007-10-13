@@ -284,6 +284,7 @@ all(string str, string adverb = "", int cmd_attr = 0)
     }
 
     oblist->emote_hook(query_verb(), this_player(), adverb, 0, cmd_attr, 0);
+    this_player()->emote_hook_actor(query_verb(), oblist);
 }
 
 /*
