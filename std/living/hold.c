@@ -86,7 +86,7 @@ show_held(object ob)
         pr = "You are";
     }
 
-    a = filter(map(a, &->query_hold_desc(ob)), objectp);
+    a = filter(map(a, &->query_hold_desc(ob)), stringp);
     str = pr + " holding " + COMPOSITE_WORDS(a) + ".";
 
     return HANGING_INDENT(str, 2, 0);
