@@ -236,6 +236,7 @@ query_cmdlist()
              "steam":"steam",
              "stick":"stick",
              "stomp":"stomp",
+             "strangle":"strangle",
              "stretch":"stretch",
              "strut":"strut",
              "stumble":"stumble",
@@ -250,6 +251,7 @@ query_cmdlist()
              "tease":"tease",
              "thank":"thank",
              "think":"think",
+             "threaten":"threaten",
              "thumb":"thumb",
              "tickle":"tickle",
              "tingle":"tingle",
@@ -5090,6 +5092,37 @@ stomp(string str)
 }
 
 int
+strangle(string str)
+{
+    object *oblist;
+    string *how;
+
+    how = parse_adverb_with_space(str, "angrily", 1);
+
+    oblist = parse_this(how[0], "[the] %l",
+        ACTION_CONTACT | ACTION_MACTIVITY | ACTION_OFFENSIVE);
+
+    if (!sizeof(oblist))
+    {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
+
+        notify_fail("Strangle whom/what [how]?\n");
+        return 0;
+    }
+
+    actor("You strangle", oblist, how[1] + ".");
+    all2act(" strangles", oblist, how[1] + ".", how[1],
+        ACTION_CONTACT | ACTION_MACTIVITY | ACTION_OFFENSIVE);
+    target(" strangles you" + how[1] + ".", oblist, how[1],
+        ACTION_CONTACT | ACTION_MACTIVITY | ACTION_OFFENSIVE);
+    return 1;
+}
+
+int
 stretch(string str)
 {
     if (stringp(str))
@@ -5400,6 +5433,57 @@ think(string str)
     allbb(" looks like " + this_player()->query_pronoun() +
         " is thinking hard about " + str);
     SOULDESC("thinking hard about something");
+    return 1;
+}
+
+int
+threaten(string str)
+{
+    object *oblist;
+    string *how;
+
+    if (!strlen(str))
+    {
+        str = "";
+    }
+
+    if (sizeof(how = explode(str, " with ")) == 2)
+    {
+        how[1] = " with " + how[1];
+
+        if ((strlen(how[1]) > 60) &&
+            (!(this_player()->query_wiz_level())))
+        {
+            SOULDESC("threatening everyone and everything");
+            write("You threaten beyond the end of the line and become incoherent.\n");
+            all(" threatens everyone with everything.");
+            return 1;
+        }
+    }
+    else
+    {
+        how = parse_adverb_with_space(str, BLANK_ADVERB, 1);
+    }
+
+    oblist = parse_this(how[0], "[the] %i", ACTION_AURAL | ACTION_OFFENSIVE);
+
+    if (!sizeof(oblist))
+    {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
+
+        notify_fail("Threaten whom/what [how]?\n");
+        return 0;
+    }
+
+    actor("You threaten", oblist, how[1] + ".");
+    all2act(" threatens", oblist, how[1] + ".", how[1],
+        ACTION_AURAL | ACTION_OFFENSIVE);
+    target(" threatens you" + how[1] + ".", oblist, how[1],
+        ACTION_AURAL | ACTION_OFFENSIVE);
     return 1;
 }
 

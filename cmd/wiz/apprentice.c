@@ -1376,7 +1376,7 @@ last_check(string who, int login)
              * correct.
              */
             tmp = time() - t_in;
-            result = TIME2STR(tmp , 2) + "          -";
+            result = TIME2STR(tmp , 2) + "    (unknown)";
         }
     }
 
