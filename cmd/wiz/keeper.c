@@ -24,9 +24,11 @@ inherit "/cmd/std/command_driver";
 get_soul_list()
 {
     return ({ WIZ_CMD_KEEPER,
-	      WIZ_CMD_ARCH,
-	      WIZ_CMD_LORD,
+              WIZ_CMD_ARCH,
+              WIZ_CMD_LORD,
 	      WIZ_CMD_NORMAL,
+	      WIZ_CMD_HELPER,
+	      WIZ_CMD_PILGRIM,
 	      WIZ_CMD_APPRENTICE,
 	      MBS_SOUL });
 }
