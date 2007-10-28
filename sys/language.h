@@ -28,6 +28,7 @@
  * LANG_ORDW     -- Kept for backward compatibility.
  * LANG_ORD2WORD -- Get the text in ordinal from from a number, 2 -> "second"
  * LANG_WORD     -- Kept for backward compatibility.
+ * LANG_ORD2EXT  -- Get the text in ordrinal extension, 2 -> "2nd"
  */
 
 #define LANG_PWORD(x)    ((string)LANG_FILE->plural_word(x))
@@ -48,6 +49,7 @@
 #define LANG_ORDW(x)     LANG_WORD2ORD(x)
 #define LANG_ORD2WORD(x) ((string)LANG_FILE->word_ord_number(x))
 #define LANG_WORD(x)     LANG_ORD2WORD(x)
+#define LANG_ORD2EXT(x)  ((string)LANG_FILE->word_ord_ext(x))
 
 /*
  * LANG_IS_OFFENSIVE(x) -- Returns true if the term contains offensive words

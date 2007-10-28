@@ -84,8 +84,13 @@ add_article(string str)
     return strlen(s) ? (s + " " + str) : str;
 }
 
-/* This routine returns a number in text form
-*/
+/*
+ * Function name: word_number
+ * Description  : Transform a number into text: 1 -> "one"
+ * Macro        : LANG_NUM2WORD(num) in <language.h>
+ * Arguments    : int num - the number.
+ * Returns      : string - the text representation.
+ */
 string
 word_number(int num)
 {
@@ -111,6 +116,13 @@ word_number(int num)
     return numt[num / 10 - 2] + (tmp ? "-" + nums[tmp - 1] : "");
 }
 
+/*
+ * Function name: word_ord_number
+ * Description  : Transform an ordinal number into text: 1 -> "first"
+ * Macro        : LANG_ORD2WORD(num) in <language.h>
+ * Arguments    : int num - the number.
+ * Returns      : string - the text representation.
+ */
 string
 word_ord_number(int num)
 {
@@ -145,6 +157,36 @@ word_ord_number(int num)
         return numt[num / 10 - 2] + " " + numo[tmp - 1];
 }
 
+/*
+ * Function name: word_ord_ext
+ * Description  : Transform an ordinal number into extension text: 1 -> "1st"
+ * Macro        : LANG_ORD2EXT(num) in <language.h>
+ * Arguments    : int num - the number.
+ * Returns      : string - the text representation.
+ */
+string
+word_ord_ext(int num)
+{
+    switch(num % 10)
+    {
+    case 1:
+        return num + "st";
+    case 2:
+        return num + "nd";
+    case 3:
+        return num + "rd";
+    default:
+        return num + "th";
+    }
+}
+
+/*
+ * Function name: number_ord_word
+ * Description  : Transform an ordinal text into number: "first" -> 1
+ * Macro        : LANG_WORD2ORD(str) in <language.h>
+ * Arguments    : string str - the text representation of an ordinal number.
+ * Returns      : int - the number.
+ */
 int
 number_ord_word(string str)
 {
@@ -287,7 +329,12 @@ name_possessive(string str)
     return (str + "'s");
 }
 
-/* This routine returns a textform as a number
+/*
+ * Function name: number_word
+ * Description  : Transform a text number number into integer: "one" -> 1
+ * Macro        : LANG_WORD2NUM(str) in <language.h>
+ * Arguments    : string str - the text representation of the number.
+ * Returns      : int - the number.
  */
 int
 number_word(string str)
