@@ -241,6 +241,7 @@
 #define PLAYER_I_LAST_NOTE	"_player_i_last_note"
 #define PLAYER_I_LASTXP		"_player_i_lastxp"
 #define PLAYER_I_MORE_LEN	"_player_i_more_len"
+#define PLAYER_I_NEWBIE_HELPER  "_player_i_newbie_helper"
 #define PLAYER_I_NO_NOTES       "_player_i_no_notes"
 #define PLAYER_I_SEE_ERRORS     "_player_i_see_errors"
 #define PLAYER_S_TRANSED_FROM   "_player_s_transed_from"
