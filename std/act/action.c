@@ -18,15 +18,16 @@
 #include <macros.h>
 
 static	int	monster_act_time,      /* Intervall between actions */
-		monster_cact_time;     /* Intervall between combat actions */
+                monster_cact_time;     /* Intervall between combat actions */
+
 static  string  *monster_act,          /* Action strings */
 		*monster_cact,         /* Combat action strings */
-		*monster_act_left,     /* Action strings left */
-		*monster_cact_left;    /* Combat action strings left */
+                *monster_act_left,     /* Action strings left */
+                *monster_cact_left;    /* Combat action strings left */
 
 #define SEQ_ACT   "_mon_ran_act"
 
-void monster_do_act();
+varargs mixed monster_do_act(int waited = 0);
 
 /*
  * Function name: add_act
@@ -54,7 +55,7 @@ add_act(mixed str, int flag)
 
     if (!str)
         return;
-
+    
     if (!sizeof(monster_act))
         monster_act = ({});
 
@@ -81,7 +82,7 @@ query_act()
 void
 add_cact(mixed str)
 {
-    if (!IS_CLONE)
+    if (!IS_CLONE || !str)
 	return;
 
     add_act(0); /* Init act sequence */
@@ -109,7 +110,7 @@ query_cact()
 
 /*
  * Function name: set_act_time
- * Description:   Set the mean value for action intervall
+ * Description:   Set the number of SEQ_SLOW iterations to wait between acts.
  * Arguments:     tim: Intervall
  */
 void
@@ -120,7 +121,7 @@ set_act_time(int tim)
 
 /*
  * Function name: set_cact_time
- * Description:   Set the mean value for cchat intervall
+ * Description:   Set the number of SEQ_SLOW iterations to wait between cacts.
  * Arguments:     tim: Intervall
  */
 void
@@ -132,42 +133,51 @@ set_cact_time(int tim)
 /*
  *  Description: The actual function action, called by VBFC in seq_heartbeat
  */
-void
-monster_do_act()
+varargs mixed
+monster_do_act(int waited = 0)
 {
     int il;
-    string actstr;
-
+    string act;
+    
+    this_object()->seq_clear(SEQ_ACT);
+    this_object()->seq_addfirst(SEQ_ACT, &monster_do_act(waited + 1));
+    
     if (!this_object()->query_attack())
     {
+        
+        if (waited < monster_act_time)
+            return 0;
+        
         if (!sizeof(monster_act_left))
             monster_act_left = monster_act;
-
+        
         if (!(il = sizeof(monster_act_left)))
-            return;
+            return 0;
 
         il = random(il);
-        actstr = monster_act_left[il];
+        act = monster_act_left[il];
         monster_act_left = exclude_array(monster_act_left, il, il);
-        il = monster_act_time;
     }
     else  /* In combat */
     {
+        if (waited < monster_cact_time)
+            return 0;
+        
         if (!sizeof(monster_cact_left))
             monster_cact_left = monster_cact;
-
+        
         if (!(il = sizeof(monster_cact_left)))
-            return;
-
+            return 0;
+        
         il = random(il);
-        actstr = monster_cact_left[il];
+        act = monster_cact_left[il];
         monster_cact_left = exclude_array(monster_cact_left, il, il);
-        il = monster_cact_time;
-
     }
+
     this_object()->seq_clear(SEQ_ACT);
-    this_object()->seq_addfirst(SEQ_ACT, actstr);
-    this_object()->seq_addlast(SEQ_ACT, ({ il, monster_do_act }) );
+    this_object()->seq_addfirst(SEQ_ACT, &monster_do_act(0));
+
+    return act;
 }
 
 /*
