@@ -340,11 +340,12 @@ search_for_herbs(object herbalist, string herb_file = 0)
         return no_find();
 
     if (!stringp(herb_file))
-        herb_file = herbs[random(sizeof(herbs))];
-    else if (!herb_file->do_id_check(herbalist))
+        herb_file = one_of_list(herbs);
+
+    if (!herb_file || LOAD_ERR(herb_file))
         return no_find();
 
-    if (!herb_file)
+    if (!herb_file->do_id_check(herbalist))
         return no_find();
 
     difficulty = herb_file->query_find_diff();
@@ -484,7 +485,7 @@ track_now(object player, int track_skill)
                 break;
             case 51..75:
                 if(random(2))
-                    race = races[random(sizeof(races))];
+                    race = one_of_list(races);
                 result += "They were probably made by " +LANG_ADDART(race) +
                     " and are leading " + dir + ".\n";
                 break;
