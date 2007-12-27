@@ -177,7 +177,7 @@ monster_do_act(int waited = 0)
     this_object()->seq_clear(SEQ_ACT);
     this_object()->seq_addfirst(SEQ_ACT, &monster_do_act(0));
 
-    return act;
+    return this_object()->check_call(act);
 }
 
 /*
