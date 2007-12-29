@@ -12,7 +12,7 @@ DESCRIPTION
 	init() is generally available to wizards using standard
 	objects.  It is preferable however to use an init_xxx function
 	if it is defined.  If you redefine this function, you should
-	ordinarily call ::init() smowhere in your function.
+	ordinarily call ::init() somewhere in your function.
 
 SEE ALSO
     add_action, enable_commands, disable_commands

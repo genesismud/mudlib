@@ -438,7 +438,7 @@ check_last_stats()
         newdesc = GET_EXP_LEVEL_DESC(new_stats[index]);
         if (olddesc != newdesc)
         {
-            tell_object(this_object(), "Congratulations. Your are now " +
+            tell_object(this_object(), "Congratulations. You are now " +
                 "sufficiently experienced to call yourself " + newdesc + ".\n");
         }
     }

@@ -5,12 +5,12 @@ SYNOPSIS
         this is no command, just information
 
 DESCRIPTION
-        The following commands are availabe everywhere
+        The following commands are available everywhere
 
         Fighting
         --------
         wear|remove <armour>, wield|unwield <weapon>, kill <enemy>,
-        wimpy <state>, see <fights|no fights>
+        options wimpy <state>, see <fights|no fights>
 
         Activities
         ----------
@@ -22,11 +22,11 @@ DESCRIPTION
         
         Information
         -----------
-        stats, vitals, i(inventory), skills, spells
+        stats, vitals, i(inventory), options, skills, spells
 
         Communication
         -------------
         '(say), commune <wizard> <msg>, who, 
 
 SEE ALSO
-        the specific help-page
+        the specific help-page, see also "help topics".

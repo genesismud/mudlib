@@ -1044,7 +1044,7 @@ detail.
 Debugging
 ---------
 If you are new at coding in LPC, you are bound to make errors in your code.
-If your are not new at it, you will still make errors. They just slip into
+If you are not new at it, you will still make errors. They just slip into
 the code. Luckily the gamedriver offers you a way to debug your programs.
 
 When you have edited an object, say "bulb.c", you want to see your result.

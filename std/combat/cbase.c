@@ -1792,7 +1792,7 @@ cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc =
     if (me->query_ghost())
     {
         tell_object(attacker, me->query_The_name(attacker) +
-            " is a already dead, quite dead.\n");
+            " is already dead, quite dead.\n");
         tell_room(environment(me),
             QCTNAME(attacker) + " is trying to kill the already dead.\n",
             ({ me, attacker }) );
