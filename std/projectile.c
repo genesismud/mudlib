@@ -6,7 +6,6 @@
  * this point is /std/arrow.c. You should probably not inherit
  * this class directly, but use one of its known subclasses
  * instead.
- *
  */
 
 #pragma strict_types
@@ -19,9 +18,16 @@ inherit "/std/heap";
 #include <stdproperties.h>
 #include <wa_types.h>
 
-string projectile_id;
-int hit, pen, broken, loaded, defered_join, will_not_recover;
+/* Global variables */
+static string projectile_id;
+static int hit,
+           pen,
+           broken,
+           loaded,
+           defered_join,
+           will_not_recover;
 
+/* Prototype */
 public void update_heap_id();
 
 /*
@@ -34,7 +40,6 @@ create_projectile()
 {
     return;
 }
-
 
 /*
  * Function name: create_heap
@@ -82,7 +87,6 @@ enter_env(object to, object from)
     }
 }
 
-
 /*
  * Function name: load
  * Description  : This function marks this projectile as loaded and hides it
@@ -120,7 +124,6 @@ query_broken()
 {
     return broken;
 }
-
 
 /*
  * Function name: set_broken
@@ -163,7 +166,6 @@ update_heap_id()
 	     projectile_id);
 }
 
-
 /*
  * Function name: config_split
  * Description  : Copies the internal state of this projectile when it is
@@ -205,7 +207,6 @@ query_pen()
     return pen;
 }
 
-
 /*
  * Function name: set_hit
  * Description  : Sets the to hit value of this projectile.
@@ -217,7 +218,6 @@ set_hit(int h)
     hit = h;
 }
 
-
 /*
  * Function name: set_pen
  * Description  : Sets the penetration value of this projectiles.
@@ -228,7 +228,6 @@ set_pen(int p)
 {
     pen = p;
 }
-
 
 /*
  * Function name: stat_object
@@ -272,12 +271,10 @@ set_long(string long)
  * Function name: get_projectile_long
  * Description  : Use this function to return the proper long description
  *                of this projectile.
- * Arguments    : string str     - the pseudo-item to describe. This is an
- *                                 item added with add_item. If this is 0, it
- *                                 will return the description of the whole
- *                                 object.
+ * Arguments    : string str     - the pseudo-item to describe. Not used in
+ *                                 this routine. It's intercepted in long().
  *                object for_obj - the object trying to get the long.
- *                int num        - The number of projectile in this stack.
+ *                int num        - The number of projectiles in this stack.
  * Returns      : string         - the description of the object or
  *                                 pseudo-item.
  */
@@ -313,15 +310,14 @@ get_projectile_long(string str, object for_obj, int num)
 varargs public mixed
 long(string str, object for_obj)
 {
-    if (broken)
+    /* Refer to the basic long for add_items. */
+    if (str)
     {
-        return get_projectile_long(str, for_obj, num_heap()) +
-	  ((num_heap() > 1) ? "They are broken.\n" : "It is broken.\n");
+        return ::long(str, for_obj);
     }
-    else
-    {
-        return get_projectile_long(str, for_obj, num_heap());
-    }
+
+    return get_projectile_long(str, for_obj, num_heap()) +
+	  (broken ? ((num_heap() > 1) ? "They are broken.\n" : "It is broken.\n") : "");
 }
 
 /*

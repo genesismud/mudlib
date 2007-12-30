@@ -34,10 +34,8 @@ create_arrow()
  * Function name: get_projectile_long
  * Description  : Use this function to return the proper long description
  *                of this arrow.
- * Arguments    : string str     - the pseudo-item to describe. This is an
- *                                 item added with add_item. If this is 0, it
- *                                 will return the description of the whole
- *                                 object.
+ * Arguments    : string str     - the pseudo-item to describe. Not used in
+ *                                 this routine. It's intercepted in long().
  *                object for_obj - the object trying to get the long.
  *                int num        - The number of arrows in this stack.
  * Returns      : string         - the description of the object or
@@ -76,7 +74,6 @@ create_projectile()
  * Function name: is_arrow
  * Description  : A function that indentifies this projectile as an arrow
  *                type projectile.
- *
  * Returns      : (int) 1 - Since this is an arrow.
  */
 public nomask int
