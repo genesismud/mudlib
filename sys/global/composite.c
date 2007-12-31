@@ -401,7 +401,7 @@ hanging_indent(string to_print, int length, int width)
 	/* No screen width set. The person won't get any indentation. */
 	if (!scrw)
 	{
-	    return to_print;
+	    return to_print + "\n";
 	}
         scrw -= 3;
         break;
