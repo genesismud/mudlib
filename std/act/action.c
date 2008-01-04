@@ -27,7 +27,7 @@ static  string  *monster_act,          /* Action strings */
 
 #define SEQ_ACT   "_mon_ran_act"
 
-varargs mixed monster_do_act(int waited = 0);
+varargs string monster_do_act(int waited = 0);
 
 /*
  * Function name: add_act
@@ -133,7 +133,7 @@ set_cact_time(int tim)
 /*
  *  Description: The actual function action, called by VBFC in seq_heartbeat
  */
-varargs mixed
+varargs string
 monster_do_act(int waited = 0)
 {
     int il;
@@ -177,7 +177,10 @@ monster_do_act(int waited = 0)
     this_object()->seq_clear(SEQ_ACT);
     this_object()->seq_addfirst(SEQ_ACT, &monster_do_act(0));
 
-    return this_object()->check_call(act);
+    act = this_object()->check_call(act);
+    if (!stringp(act))
+        return "";
+    return act;
 }
 
 /*
