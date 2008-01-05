@@ -22,6 +22,11 @@
 #define QUICK_FIND_EXP(sum) (int)call_other(MATH_FILE, "quick_find_exp", (sum))
 
 /*
+ * SUM_ARRAY returns the sum of an array of values.
+ */
+#define SUM_ARRAY(arr) reduce( &operator(+)(,) , (arr) )
+
+/*
  * INT_MULT_FLOAT_TRUNC - Multiply an int with a float. Returns truncated int.
  * INT_MULT_FLOAT_ROUND - Multiply an int with a float. Returns rounded inc.
  * INT_MULT_FLOAT       - Default to rounding.
