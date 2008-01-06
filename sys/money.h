@@ -88,9 +88,15 @@
 
 /*
  * MONEY_TEXT will return a string describing the money in the array.
+ *
+ * MONEY_COL_TEXT will return a string in columns using the short code
+ * for each coin and two digits per number.
+ * MONEY_WCOL_TEXT will do the same, but with an arbitrary column width.
  * The array must be ({ cc, sc, gc, pc })
  */
-#define MONEY_TEXT(arr) ((string)MONEY_FN->money_text(arr))
+#define MONEY_TEXT(arr)     ((string)MONEY_FN->money_text(arr))
+#define MONEY_COL_TEXT(arr) ((string)MONEY_FN->money_col_text(arr, 2))
+#define MONEY_WCOL_TEXT(arr, width) ((string)MONEY_FN->money_col_text(arr, width))
 
 /*
  * MONEY_TEXT_SPLIT returns a string describing the value of the coins

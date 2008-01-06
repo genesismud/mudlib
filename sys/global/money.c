@@ -460,6 +460,42 @@ money_text(int *coins)
 }
 
 /*
+ * Function name: money_col_text
+ * Description  : This function will return a string describing the money
+ *                using the short codes, fit for use in columns.
+ * Arguments    : int *coins - the array with the coins, smallest denomination
+ *                             first.
+ *                int width - the number of digits per column (default: 2)
+ * Returns      : string - a string describing the coins.
+ */
+public varargs string
+money_col_text(int *coins, int width = 2)
+{
+    string text = "";
+    int index = SIZEOF_MONEY_TYPES;
+
+    if (sizeof(coins) != SIZEOF_MONEY_TYPES)
+    {
+        return "a strange number of coins";
+    }
+    
+    while (--index >= 0)
+    {
+        if (coins[index] > 0)
+        {
+            text += sprintf(" %*d %s", width, coins[index], MONEY_SHORT[index]);
+        }
+        else
+        {
+            /* This assumes a short code is 2 characters. */
+            text += sprintf(" %*s", width + 3, "");
+        }
+    }
+    /* Skip the first space. */
+    return text[1..];
+}
+
+/*
  * Function name: money_condense
  * Description  : This function will take the coin objects in the inventory of
  *                the object 'obj' and store the total value into the property
