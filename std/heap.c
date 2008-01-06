@@ -70,8 +70,9 @@ reset_object()
 }
 
 /*
- * Description: This function is called each time the object 'meets' another
- *              object.
+ * Function name: init
+ * Description  : This function is called each time the object 'meets' another
+ *                object.
  */
 void
 init()
@@ -81,7 +82,9 @@ init()
 }
 
 /*
- * Description: The weight of the heap, used by OBJ_I_WEIGHT
+ * Function name: heap_weight
+ * Description  : The weight of the heap, used by OBJ_I_WEIGHT
+ * Returns      : int - the weight of the heap, in grams.
  */
 public int
 heap_weight()
@@ -90,7 +93,9 @@ heap_weight()
 }
 
 /*
- * Description: The volume of the heap, used by OBJ_I_VOLUME
+ * Function name: heap_volume
+ * Description  : The volume of the heap, used by OBJ_I_VOLUME
+ * Returns      : int - the volume of the heap, in ml.
  */
 public int
 heap_volume()
@@ -99,7 +104,9 @@ heap_volume()
 }
 
 /*
- * Description: The value of the heap, used by OBJ_I_VALUE
+ * Function name: heap_value
+ * Description  : The value of the heap, used by OBJ_I_VALUE
+ * Returns      : int - the value of the heap.
  */
 public int
 heap_value()
@@ -108,7 +115,9 @@ heap_value()
 }
 
 /*
- * Description: The lightvalue of the heap, used by OBJ_I_LIGHT
+ * Function name: heap_light
+ * Description  : The light emitted by the heap, used by OBJ_I_LIGHT
+ * Returns      : int - the light of the heap.
  */
 public int
 heap_light()
@@ -117,14 +126,20 @@ heap_light()
 }
 
 /*
- * Description: Called to restore the heap to its origional state
+ * Function name: restore_heap
+ * Description  : Called to restore the heap to its origional state after
+ *                preparations were made to split it were made with
+ *                split_heap().
  */
 public void
 restore_heap()
 {
-    mark_state();
-    leave_behind = 0;
-    update_state();
+    if (leave_behind)
+    {
+        mark_state();
+        leave_behind = 0;
+        update_state();
+    }
 }
 
 /*
@@ -139,6 +154,7 @@ set_heap_size(int num)
 
     if (num <= 0)
     {
+	add_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT, 1);
 	set_alarm(0.0, 0.0, remove_object);
         leave_behind = 0;
         num = 0;
@@ -151,13 +167,27 @@ set_heap_size(int num)
 
 /*
  * Function name: num_heap
- * Description  : Returns the size of the heap.
+ * Description  : Returns the size of the heap. In case preparations were
+ *                made to split the heap, this will return how many items are
+ *                going to be moved.
  * Returns      : int - the number of elements in the heap.
  */
 public int
 num_heap()
 {
     return item_count - leave_behind;
+}
+
+/*
+ * Function name: query_leave_behind
+ * Descriptioon : Returns the size of the heap that remains after some
+ *                elements have been moved away from the heap.
+ * Returns      : int - the number of elements that will remain behind.
+ */
+public int
+query_leave_behind()
+{
+    return leave_behind;
 }
 
 /*
@@ -184,6 +214,28 @@ split_heap(int num)
     set_alarm(0.0, 0.0, restore_heap);
     update_state();
     return num;
+}
+
+/*
+ * Function name: remove_split_heap
+ * Description  : Whenever a heap is split in order to be moved, we can also
+ *                simply destroy that part. This effectively lowers the heap
+ *                with the number of elements that were going to be moved.
+ */
+public void
+remove_split_heap()
+{
+    mark_state();
+    item_count = leave_behind;
+    leave_behind = 0;
+
+    if (item_count <= 0)
+    {
+	add_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT, 1);
+	set_alarm(0.0, 0.0, remove_object);
+    }
+
+    update_state();
 }
 
 /*
@@ -233,6 +285,7 @@ short(object for_obj)
 
     if (!strlen(query_prop(HEAP_S_UNIQUE_ID)))
     {
+	add_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT, 1);
         set_alarm(0.0, 0.0, remove_object);
         return "ghost " + singular_short(for_obj);
     }
@@ -400,8 +453,8 @@ enter_env(mixed env, object old)
             }
 
             leave_behind = 0;
-            add_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT, 1);
             catch(move(ob[i], 1));
+            add_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT, 1);
 	    set_alarm(0.0, 0.0, remove_object);
             return;
         }
@@ -445,6 +498,7 @@ force_heap_merge()
             !ob[i]->query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
         {
             ob[i]->set_heap_size(item_count + ob[i]->num_heap());
+	    add_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT, 1);
             set_alarm(0.0, 0.0, remove_object);
         }
     }
