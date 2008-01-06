@@ -8,6 +8,6 @@ Description: Describes an array of coins in columns using the short currency
 
 Arguments  : int * - the money array (smallest denomination first)
 
-Example    : MONEY_TEXT( ({ 4, 3, 2, 1 }) )   ->  " 1 pc  2 gc  3 sc  4 cc"
-             MONEY_TEXT( ({ 1, 0, 0, 4 }) )   ->  " 4 pc              1 cc"
+Example    : MONEY_COL_TEXT( ({ 4, 3, 2, 1 }) )  ->  " 1 pc  2 gc  3 sc  4 cc"
+             MONEY_COL_TEXT( ({ 1, 0, 0, 4 }) )  ->  " 4 pc              1 cc"
 
