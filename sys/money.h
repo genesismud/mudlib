@@ -88,6 +88,7 @@
 
 /*
  * MONEY_TEXT will return a string describing the money in the array.
+ * MONEY_TEXT_NUM will return the same, but using numerical values.
  *
  * MONEY_COL_TEXT will return a string in columns using the short code
  * for each coin and two digits per number.
@@ -95,14 +96,17 @@
  * The array must be ({ cc, sc, gc, pc })
  */
 #define MONEY_TEXT(arr)     ((string)MONEY_FN->money_text(arr))
+#define MONEY_TEXT_NUM(arr) ((string)MONEY_FN->money_text((arr), 1))
 #define MONEY_COL_TEXT(arr) ((string)MONEY_FN->money_col_text(arr, 2))
 #define MONEY_WCOL_TEXT(arr, width) ((string)MONEY_FN->money_col_text(arr, width))
 
 /*
  * MONEY_TEXT_SPLIT returns a string describing the value of the coins
  * in the smallest denomination.
+ * MONEY_TEXT_NUM_SPLIT returns the same, but using numerical values.
  */
-#define MONEY_TEXT_SPLIT(cc) (MONEY_TEXT(MONEY_SPLIT(cc)))
+#define MONEY_TEXT_SPLIT(cc)     MONEY_TEXT(MONEY_SPLIT(cc))
+#define MONEY_TEXT_NUM_SPLIT(cc) MONEY_TEXT_NUM(MONEY_SPLIT(cc))
 
 /* 
  * MONEY_UNIQUE_NAME(ct) returns the value for the HEAP_S_UNIQUE_ID property

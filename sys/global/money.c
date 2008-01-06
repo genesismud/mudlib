@@ -6,13 +6,14 @@
 
 #pragma save_binary
 
-#include <stdproperties.h>
+#include <composite.h>
 #include <language.h>
-#include <money.h>
 #include <macros.h>
+#include <money.h>
+#include <stdproperties.h>
 
+/* Prototypes. */
 int *what_coins(mixed ob);
-
 
 /*
  * Function name: split_values 
@@ -405,10 +406,11 @@ add_money(object who, int amount)
  *                int the array that is passed as argument.
  * Arguments    : int *coins - the array with the coins, smallest denomination
  *                             first.
+ *                int numerical - if true, use numerical values.
  * Returns      : string - a string describing the coins.
  */
-public string
-money_text(int *coins)
+public varargs string
+money_text(int *coins, int numerical = 0)
 {
     string *text = ({ });
     int    total = 0;
@@ -421,19 +423,17 @@ money_text(int *coins)
 
     while(--index >= 0)
     {
+        if (!coins[index]) continue;
+
         total += coins[index];
-
-        switch(coins[index])
+        if (numerical)
         {
-        case 0:
-            break;
-
-        case 1:
-            text += ({ "a " + MONEY_TYPES[index] });
-            break;
-
-        default:
-            text += ({ LANG_WNUM(coins[index]) + " " + MONEY_TYPES[index] });
+            text += ({ coins[index] + " " + MONEY_TYPES[index] });
+        }
+        else
+        {
+            text += ({ ((coins[index] == 1) ? "a" : LANG_WNUM(coins[index]) ) +
+                " " + MONEY_TYPES[index] });
         }
     }
 
@@ -454,8 +454,7 @@ money_text(int *coins)
         break;
 
     default:
-        return implode(text[0..(index - 2)], ", ") + " and " +
-            text[index - 1] + " coins";
+        return COMPOSITE_WORDS(text) + " coins";
     }
 }
 
