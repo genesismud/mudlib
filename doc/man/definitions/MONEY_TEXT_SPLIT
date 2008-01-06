@@ -10,3 +10,4 @@ Arguments  : int - the value in copper coins
 Example    : MONEY_TEXT_SPLIT( 2056 )   ->  
                  "a platinum, two gold, three silver and four copper coins"
 
+See also   : MONEY_TEXT_NUM_SPLIT
