@@ -268,6 +268,8 @@ parse_unstring(string args)
 	return 1;
     }
 
+    /* Must have an EUID to clone. */
+    setuid(); seteuid(getuid());
     if (bowstring)
     {
 	clone_object(bowstring)->move(archer, 1);
