@@ -46,6 +46,9 @@
 #include <language.h>
 #include <stdproperties.h>
 
+/* Prototype */
+public int query_unsellable();
+
 /* 
  * Function name: query_keepable
  * Description  : This function will always return true to signal that the
@@ -88,8 +91,6 @@ keep_obj_m_no_sell()
 public void
 set_keep(int keep = 1)
 {
-    mixed pvalue;
-
     if (keep)
     {
         if (!this_object()->query_prop_setting(OBJ_M_NO_SELL))
@@ -97,15 +98,9 @@ set_keep(int keep = 1)
             this_object()->add_prop(OBJ_M_NO_SELL, keep_obj_m_no_sell);
         }
     }
-    else
+    else if (!query_unsellable())
     {
-        pvalue = this_object()->query_prop_setting(OBJ_M_NO_SELL);
-
-        if (functionp(pvalue) &&
-	    wildmatch("*->keep_obj_m_no_sell", function_name(pvalue)))
-        {
-            this_object()->remove_prop(OBJ_M_NO_SELL);
-        }
+        this_object()->remove_prop(OBJ_M_NO_SELL);
     }
 }
 
@@ -130,6 +125,21 @@ public int
 query_keep()
 {
     return (this_object()->query_prop_setting(OBJ_M_NO_SELL) != 0);
+}
+
+/*
+ * Function name: query_unsellable
+ * Description  : Find out whether this object is unsellable by definition.
+ *                That is, if OBJ_M_NO_SELL is set, it wasn't set by us.
+ * Returns      : int 1/0 - if true, it cannot be sold.
+ */
+public int
+query_unsellable()
+{
+    mixed pvalue = this_object()->query_prop_setting(OBJ_M_NO_SELL);
+
+    return (!functionp(pvalue) ||
+        !wildmatch("*->keep_obj_m_no_sell", function_name(pvalue)));
 }
 
 /*

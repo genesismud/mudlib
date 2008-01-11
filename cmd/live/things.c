@@ -1388,14 +1388,13 @@ keep(string str)
     }
 
     /* Player wants to list; remove the flag. */
-    if (list = wildmatch("-l*", str))
+    if (list = wildmatch("-l *", str))
     {
         str = extract(str, 3);
     }
 
     /* Playes wants to list, but didn't give any argument. Get all items
-     * in his/her inventory.
-     */
+     * in his/her inventory. */
     if (list &&
         !strlen(str))
     {
@@ -1429,6 +1428,15 @@ keep(string str)
             objs -= keep_objs;
         }
 
+        /* Filter all unsellables. */
+        keep_objs = filter(objs, &->query_unsellable());
+        if (sizeof(keep_objs))
+        {
+            write("Unsellable ----------------\n" +
+                break_string(COMPOSITE_DEAD(keep_objs), 70, 5) + "\n");
+            objs -= keep_objs;
+        }
+
         /* Filter all kept objects. */
         keep_objs = filter(objs, &->query_keep());
         if (sizeof(keep_objs))
@@ -1455,10 +1463,20 @@ keep(string str)
         return 0;
     }
 
-    /* Now select the objects to (un)keep. First remove the non-keepable
-     * objects.
-     */
     objs -= keep_objs;
+    /* Remove any unsellable items from the list. */
+    keep_objs = filter(objs, &->query_unsellable());
+    if (sizeof(keep_objs))
+    {
+        write("Unsellable: " + COMPOSITE_DEAD(keep_objs) + ".\n");
+        objs -= keep_objs;
+        if (!sizeof(objs))
+        {
+            return 1;
+        }
+    }
+    
+    /* Now select the objects to (un)keep. */
     if (keep)
     {
         keep_objs = filter(objs, &not() @ &->query_keep());
@@ -1471,9 +1489,9 @@ keep(string str)
     /* No objects to process. */
     if (!sizeof(keep_objs))
     {
-        notify_fail((keep ? "Already kept: " : "Not kept: ") +
+        write((keep ? "Already kept: " : "Not kept: ") +
             COMPOSITE_DEAD(objs) + ".\n");
-        return 0;
+        return 1;
     }
 
     keep_objs->set_keep(keep);
@@ -1489,9 +1507,8 @@ keep(string str)
     }
     if (sizeof(objs))
     {
-        write((keep ? "Failed to set keep protection on " :
-            "Failed to remove keep protection from ") +
-	    COMPOSITE_DEAD(keep_objs) + ".\n");
+        write("Failed to " + (keep ? "" : "un") + "keep: " +
+            COMPOSITE_DEAD(keep_objs) + ".\n");
         keep_objs -= objs;
 	if (!sizeof(keep_objs))
 	{
