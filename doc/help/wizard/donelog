@@ -15,4 +15,4 @@ OPTIONS
         <name>  - Display the donelog of <name>, a wizard.
 
 SEE ALSO
-	buglog, errlog, idealog, runlog, typolog
+	buglog, errlog, idealog, praiselog, runlog, typolog

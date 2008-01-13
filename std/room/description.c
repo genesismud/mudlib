@@ -333,19 +333,23 @@ search_for_herbs(object herbalist, string herb_file = 0)
 {
     object herb;
     int difficulty;
+    int specific;
 
     seteuid(getuid(this_object()));
 
     if (!herbs || !sizeof(herbs))
         return no_find();
 
-    if (!stringp(herb_file))
+    /* If we don't want a specific herb, select a random one. */
+    if (!(specific = strlen(herb_file)))
         herb_file = one_of_list(herbs);
 
+    /* Before accessing the herb file, make sure it loads ... */
     if (!herb_file || LOAD_ERR(herb_file))
         return no_find();
 
-    if (!herb_file->do_id_check(herbalist))
+    /* If we look for a specific herb, we must be able to identify it. */
+    if (specific && !herb_file->do_id_check(herbalist))
         return no_find();
 
     difficulty = herb_file->query_find_diff();

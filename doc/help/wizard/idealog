@@ -15,6 +15,4 @@ OPTIONS
         <name>  - Display the idealog of <name>, a wizard or domain name.
 
 SEE ALSO
-	buglog, donelog, errlog, runlog, typolog
-
-
+	buglog, donelog, errlog, praiselog, runlog, typolog
