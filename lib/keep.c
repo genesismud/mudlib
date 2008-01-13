@@ -138,7 +138,7 @@ query_unsellable()
 {
     mixed pvalue = this_object()->query_prop_setting(OBJ_M_NO_SELL);
 
-    return (!functionp(pvalue) ||
+    return (functionp(pvalue) &&
         !wildmatch("*->keep_obj_m_no_sell", function_name(pvalue)));
 }
 
