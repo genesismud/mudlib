@@ -278,6 +278,8 @@
 
 #define F_RELAX_TIME_AFTER_COMBAT(tme)  ((tme) + 60 + (6 * ((tme) % 10)))
 
+#define F_SPEED_MOD(quickness)          ((5.0 - (itof(quickness) / 50.0)) / 5.0)
+
 /*
  * Healing alco
  */

@@ -1448,9 +1448,10 @@ public void
 cb_calc_speed()
 {
     int i;
-    if (me) i = me->query_prop(LIVE_I_QUICKNESS);
-    speed = 5.0 - (itof(i) / 50.0);
-    speed = MAX(2.0, speed);
+    if (me)
+        i = me->query_prop(LIVE_I_QUICKNESS);
+
+    speed = MAX(2.0, 5.0 * F_SPEED_MOD(i));
 }
 
 /*

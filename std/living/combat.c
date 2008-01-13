@@ -770,18 +770,7 @@ combat_init()
     }
 }
 
-/*
- * Function name:   heal_living
- * Description:     Heals the living object
- * Arguments:       num: Should be 0, otherwise >0 for lost heart_beats
- */
-static nomask void
-heal_living(int num)
-{
-    time_to_heal += (num + 1);
-    CEX;
-    time_to_heal = (int)combat_extern->cb_heal(time_to_heal);
-}
+
 
 /*
  * Function name: run_away
@@ -1237,3 +1226,19 @@ hook_stop_fighting_offer(object attacker)
      */
 }
 #endif
+
+/*
+ * Function Name: query_speed
+ * Description  : Returns the given speed modified by the quickness
+ *                of the living. 
+ * Arguments    : int / float - the base time to modify.
+ * Returns      : float       - the modified speed
+ */
+public float
+query_speed(mixed speed)
+{
+    if (intp(speed))
+        speed = itof(speed);
+
+    return max(speed * F_SPEED_MOD(this_object()->query_prop(LIVE_I_QUICKNESS)), 0.1);
+}
