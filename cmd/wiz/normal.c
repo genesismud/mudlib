@@ -2123,41 +2123,46 @@ vis()
 static int
 somelog(string str, string logname, string log)
 {
-    string file, rem;
+    string file;
+    int remove;
 
-    if (!stringp(str))
-        str = (string)this_interactive()->query_real_name();
-    else if (sscanf(str, "-r %s", rem) == 1)
-    {
-        str = rem;
-    }
-    else if (str == "-r")
+    if (!strlen(str))
     {
         str = (string)this_interactive()->query_real_name();
-        rem = str;
     }
-    else
-        rem = 0;
+    if (remove = wildmatch("-r*", str))
+    {
+        str = extract(str, 3);
+    }
     
     file = (string)SECURITY->query_wiz_path(str) + "/log";
-
     if (!strlen(file))
-        return (notify_fail("No " + logname + " for: " + str + ".\n"),0);
+    {
+        return (notify_fail("No " + logname + " for: " + str + ".\n"), 0);
+    }
 
     file += log;
-
     if (file_size(file) < 0)
-        return (notify_fail("Can't find: " + file + ".\n"),0);
+    {
+        return (notify_fail("Can't find: " + file + ".\n"), 0);
+    }
 
-    if (!rem)
+    if (remove)
+    {
+        write("Removing " + capitalize(logname) + ": " + file + "\n");
+        this_interactive()->command("rm " + file);
+    }
+    else
     {
         write(capitalize(logname) + ": " + file + "\n");
         this_interactive()->command("tail " + file);
     }
-    else
+
+    /* For the runtime log, tell wizards where to find trace info. */
+    if (log == "/runtime")
     {
-        write("Removing " + capitalize(logname) + ": " + file + "\n");
-        this_interactive()->command("rm " + file);
+        write("For trace information, see /" +
+            lower_case(SECURITY->get_mud_name()) + ".debug.log\n");
     }
     return 1;
 }

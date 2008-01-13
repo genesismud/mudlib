@@ -3,7 +3,7 @@ NAME
 
 SYNOPSIS
 	idealog [-r]
-	idealog wizname
+	idealog <name>
 
 DESCRIPTION
 	Look at an idea log. If anyone writes an idea note in one of your
@@ -11,12 +11,10 @@ DESCRIPTION
 
 OPTIONS
 	[none]	- Display your own idealog.
-
 	-r	- Remove your own idealog.
-
-	wizname	- Display the idealog of 'wizname'.
+        <name>  - Display the idealog of <name>, a wizard or domain name.
 
 SEE ALSO
-	buglog, donelog, errlog, typolog
+	buglog, donelog, errlog, runlog, typolog
 
 

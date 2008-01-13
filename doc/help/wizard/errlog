@@ -3,7 +3,7 @@ NAME
 
 SYNOPSIS
 	errlog [-r]
-	errlog wizname
+	errlog <name>
 
 DESCRIPTION
 	Look at an error log. The error log is the place where all
@@ -11,12 +11,8 @@ DESCRIPTION
 
 OPTIONS
 	[none]	- Display your own errlog.
-
 	-r	- Remove your own errlog.
-
-	wizname	- Display the errlog of 'wizname'.
+        <name>  - Display the errlog of <name>, a wizard or domain name.
 
 SEE ALSO
-	buglog, donelog, idealog, typolog
-
-
+	buglog, donelog, idealog, runlog, typolog

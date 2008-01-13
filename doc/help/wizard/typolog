@@ -3,7 +3,7 @@ NAME
 
 SYNOPSIS
 	typolog [-r]
-	typolog wizname
+	typolog <name>
 
 DESCRIPTION
 	Look at a typo log. If anyone reports a typo in one of your rooms,
@@ -11,12 +11,8 @@ DESCRIPTION
 
 OPTIONS
 	[none]	- Display your own typolog.
-
 	-r	- Remove your own typolog.
-
-	wizname	- Display the typolog of 'wizname'.
+        <name>  - Display the typolog of <name>, a wizard or domain name.
 
 SEE ALSO
-	buglog, donelog, idealog, errlog
-
-
+	buglog, donelog, idealog, runlog, errlog

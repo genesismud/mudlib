@@ -3,7 +3,7 @@ NAME
 
 SYNOPSIS
 	donelog [-r]
-	donelog wizname
+	donelog <name.
 
 DESCRIPTION
 	Look at the done log. The done log is the place where the
@@ -11,12 +11,8 @@ DESCRIPTION
 
 OPTIONS
 	[none]	- Display your own donelog.
-
 	-r	- Remove your own donelog.
-
-	wizname	- Display the donelog of 'wizname'.
+        <name>  - Display the donelog of <name>, a wizard.
 
 SEE ALSO
-	buglog, errlog, idealog, typolog
-
-
+	buglog, errlog, idealog, runlog, typolog
