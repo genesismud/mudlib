@@ -201,7 +201,7 @@ logon()
     cat(LOGIN_FILE_WELCOME);
 
     write_socket("Gamedriver version:  " + SECURITY->do_debug("version") +
-        "\t\tMudlib version:  " + MUDLIB_VERSION +
+        "\nMudlib version    :  " + MUDLIB_VERSION +
         "\n\nPlease enter your name: ");
 
     time_out_alarm = set_alarm(TIMEOUT_TIME, 0.0, time_out);
@@ -1224,11 +1224,11 @@ check_password(string p)
 	    SECURITY->log_syslog(LOG_STRANGE_LOGIN,
 	        sprintf("    %-11s: %s (login)\n",
 	        capitalize(name), query_ip_name(this_object())));
-	    for (index = 0; index < sizeof(names); index++)
+	    foreach(pname string: names)
 	    {
-	        player = find_player(names[index]);
+	        player = find_player(pname);
 	        SECURITY->log_syslog(LOG_STRANGE_LOGIN,
-	            sprintf("    %-11s: %s (%s)\n", capitalize(names[index]),
+	            sprintf("    %-11s: %s (%s)\n", capitalize(pname),
 	            player->query_login_from(),
 	            (interactive(player) ? "active" : "link-dead")));
 	    }
@@ -1250,11 +1250,11 @@ check_password(string p)
 	    SECURITY->log_syslog(LOG_SECOND_LOGIN,
 	        sprintf("    %-11s: %s (login)\n",
 	        capitalize(name), query_ip_name(this_object())));
-	    for (index = 0; index < sizeof(names); index++)
+	    foreach(string pname: names)
 	    {
-	        player = find_player(names[index]);
+	        player = find_player(pname);
 	        SECURITY->log_syslog(LOG_SECOND_LOGIN,
-	            sprintf("    %-11s: %s (%s)\n", capitalize(names[index]),
+	            sprintf("    %-11s: %s (%s)\n", capitalize(pname),
 	            player->query_login_from(),
 	            (interactive(player) ? "active" : "link-dead")));
 	    }

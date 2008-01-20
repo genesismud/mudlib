@@ -16,7 +16,7 @@
  *
  * This is the name of the version of the mudlib.
  */
-#define MUDLIB_VERSION ("CD.01.00")
+#define MUDLIB_VERSION ("CD.01.01")
 
 /*
  * PLAYER_FILE(player)

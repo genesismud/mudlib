@@ -2818,24 +2818,22 @@ query_restrict(string wiz)
 void
 update_teams(void)
 {
-    string *tms, *rlist;
-    int i, j, sz1, sz2;
-    
-    tms = m_indices(m_teams);
-
-    /* Remove non-wizards. */
-    for (i = 0, sz1 = sizeof(tms) ; i < sz1 ; i++)
+    foreach(string team: m_indices(m_teams))
     {
-        rlist = ({}) + m_teams[tms[i]];
-        for (j = 0, sz2 = sizeof(rlist) ; j < sz2 ; j++)
-            if (m_wizards[rlist[j]][FOB_WIZ_RANK] < WIZ_NORMAL)
-                m_teams[tms[i]] -= ({ rlist[j] });
+        /* Remove non-wizards. */
+        foreach(string wname: m_teams[team])
+        {
+            if (m_wizards[wname][FOB_WIZ_RANK] < WIZ_NORMAL)
+            {
+                m_teams[team] -= ({ wname });
+            }
+        }
+        /* Remove empty teams. */
+        if (m_sizeof(m_teams[team]) == 0)
+        {
+            m_delkey(m_teams, team);
+        }
     }
-
-    /* Remove empty teams. */
-    for (i = 0, sz1 = sizeof(tms) ; i < sz1 ; i++)
-        if (sizeof(m_teams[tms[i]]) == 0)
-            m_delkey(m_teams, tms[i]);
 
     save_master();
 }
@@ -2946,22 +2944,23 @@ query_teams(void)
 }
 
 /* Function name: query_team_membership
- * Description:   Return a list of teams the player is a member of
- * Arguments:     member - the member to query about
- * Returns:       string * - the list of teams
+ * Description  : Return a list of teams the player is a member of
+ * Arguments    : string wname - the member to query about
+ * Returns      : string * - the list of teams
  */
 string *
-query_team_membership(string member)
+query_team_membership(string wname)
 {
-    string *teams, *rlist;
-    int i, sz;
+    string *rlist = ({ });
 
-    rlist = ({});
-    member = lower_case(member);
-    teams = m_indices(m_teams);
-    for (i = 0, sz = sizeof(teams) ; i < sz ; i++)
-	if (member_array(member, m_teams[teams[i]]) >= 0)
-	    rlist += ({ teams[i] });
+    wname = lower_case(wname);
+    foreach(string team: m_indices(m_teams))
+    {
+        if (IN_ARRAY(wname, m_teams[team]))
+        {
+            rlist += ({ team });
+        }
+    }
 
     return rlist;
 }

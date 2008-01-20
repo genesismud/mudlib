@@ -1,9 +1,8 @@
- /*
-    spells.c
-
-    Routines for handling the list of spells.
-
-*/
+/*
+ * /secure/master/spells.c
+ *
+ * Routines for handling the list of spells.
+ */
 
 static string	*spell_verb,	/* The activating word */
 		*spell_func,	/* The function to call */
@@ -65,22 +64,11 @@ add_spell(string verb, string func, mixed cobj, string name)
 void 
 list_spells()
 {
-    int i;
-    string space;
+    int index;
 
-    space = "                                                 ";
-
-    for (i = 0 ; i < sizeof(spell_verb) ; i++)
-	write(spell_verb[i] + extract(space, 0, 17 - strlen(spell_verb[i])) +
-	      spell_name[i] + extract(space, 0, 31 - strlen(spell_name[i])) +
-	      spell_func[i] + extract(space, 0, 17 - strlen(spell_func[i])) +
-	      spell_cobj[i] + "\n");
-
+    for (index = 0; index < sizeof(spell_verb); index++)
+    {
+        write(sprintf("%-16s %-30s %-16s %s\n", spell_verb[index],
+            spell_name[index], spell_func[index], spell_cobj[index]));
+    }
 }
-
-/*
- * Function name: 
- * Description:   
- * Arguments:	  
- * Returns:       
- */
