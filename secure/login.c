@@ -1224,7 +1224,7 @@ check_password(string p)
 	    SECURITY->log_syslog(LOG_STRANGE_LOGIN,
 	        sprintf("    %-11s: %s (login)\n",
 	        capitalize(name), query_ip_name(this_object())));
-	    foreach(pname string: names)
+	    foreach(string pname: names)
 	    {
 	        player = find_player(pname);
 	        SECURITY->log_syslog(LOG_STRANGE_LOGIN,

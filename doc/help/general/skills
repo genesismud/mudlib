@@ -19,8 +19,8 @@ OPTIONS
 
         player  - see the skills of an active player (Only for wizards)
 
- 	group   - will show only the 'fighting', 'magic', 'thief' or 'general'
-		  group skills. 'all' produces the same result as 'skills'.
+ 	group   - will show only the skills in a particular group.
+		  Valid groups: fighting, magic, thief, guild, general or all.
 
 SEE ALSO
         stats, vitals, skillist, skillevels, improve, learn

@@ -397,9 +397,9 @@ hanging_indent(string to_print, int length, int width)
     switch(width)
     {
     case 0:
-        scrw = this_player()->query_opt(OPT_SCREEN_WIDTH);
+        scrw = this_player()->query_option(OPT_SCREEN_WIDTH);
 	/* No screen width set. The person won't get any indentation. */
-	if (!scrw)
+	if (scrw <= 0)
 	{
 	    return to_print + "\n";
 	}

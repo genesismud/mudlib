@@ -1473,7 +1473,14 @@ show_stats(string str)
     string start_be, start_have, *stats;
     string orig_brute, actual_brute;
 
-    if (!str)
+    if (str == "reset")
+    {
+        this_player()->add_prop(PLAYER_I_LASTXP, this_player()->query_exp());
+        write("Resetting your progress counter.\n");
+        return show_stats(0);
+    }
+
+    if (!strlen(str))
     {
         ob = this_player();
         start_be = "You are ";
@@ -1624,20 +1631,19 @@ show_skills(string str)
             return 0;
     }
 
-    for (index = 0; index < sizeof(skills); index++)
+    foreach(int skill: skills)
     {
-        skill = skills[index];
         if (skill < iLow || skill > iHigh)
             continue;
 
-        if (!(num = player->query_skill(skills[index])))
+        if (!(num = player->query_skill(skill)))
         {
-            player->remove_skill(skills[index]);
+            player->remove_skill(skill);
             continue;
         }
-        if (pointerp(skdesc[skills[index]]))
-            str = skdesc[skills[index]][0];
-        else if (!strlen(str = player->query_skill_name(skills[index])))
+        if (pointerp(skdesc[skill]))
+            str = skdesc[skill][0];
+        else if (!strlen(str = player->query_skill_name(skill)))
             continue;
 
         /* Print the text in two columns. */

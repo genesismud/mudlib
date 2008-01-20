@@ -33,7 +33,7 @@
  * messages. Added "from new" and "from name". Gedit removed and adapted the
  * reader for the new editor. Enabled mail-store for domain wizards++.
  * Players cannot send mail when they have too many read messages. Added mail
- * generation from code. Added mail archiving.
+ * generation from code. Added mail archiving. Mark important mails with "*".
  */
 
 
@@ -74,6 +74,7 @@
  */
 
 #pragma no_inherit
+#pragma no_shadow
 #pragma save_binary
 #pragma strict_types
 
@@ -141,12 +142,6 @@ inherit "/std/object";
 #define STRING(arr)   (map(arr, &operator(+)("")))
 #define WRITE(text)   (tell_object(environment(), (text)))
 
-#define SPACES        ("                    ") /* just 20 spaces. */
-
-#define IS_REPLY      1  /* Flag to indicate we are replying        */
-#define IS_RESEND     2  /* Flag to indicate we are resending mail  */
-#define IS_FORWARD    4  /* Flag to indicate we are fowarding mail  */
-
 #define SAVE_MAIL                               \
     save_mail( ([ MAIL_MAIL     : pMessages,    \
                   MAIL_ALIASES  : pAliases,     \
@@ -154,6 +149,13 @@ inherit "/std/object";
                   MAIL_AUTO_CC  : pAutocc       \
                ]), environment()->query_real_name() )
 
+#define FORWARD_FLAG(i)  ((i) & MSG_IS_FORWARD)
+#define RESEND_FLAG(i)   ((i) & MSG_IS_RESEND)
+#define REPLY_FLAG(i)    ((i) & MSG_IS_REPLY)
+#define DO_EDIT_FLAG(i)  ((i) & MSG_DO_EDIT)
+#define READ_FLAG(i)     ((i) & MSG_READ)
+#define STARRED_FLAG(i)  ((i) & MSG_STARRED)
+#define ANSWERED_FLAG(i) ((i) & MSG_ANSWERED)
 
 /*
  * Global variables. They are private to ensure privacy of the mail and
@@ -178,7 +180,7 @@ static private string *gTo;         /* First mail receivers        */
 static private string *gCc;         /* CC: mail receivers          */
 static private string  gSubject;    /* Subject of the new mail     */
 static private string  gMessage;    /* The new mail message        */
-static private int     gIs_reply;   /* Indicate reply to mail      */
+static private int     gIs_reply;   /* Reply/forward/resend/edit   */
 static private mapping gTo_send;    /* The mail message to send    */
 static private mapping gTo_delete;  /* The messages to delete      */
 #ifdef MAX_IN_MORTAL_BOX
@@ -246,6 +248,8 @@ create_object()
     set_name("mailreader");
     add_name("reader");
     add_name("mailread");
+    add_name("folder");
+    add_name("correspondence");
     add_name(READER_ID);
 
     set_pname("mailreaders");
@@ -253,14 +257,16 @@ create_object()
     add_pname(READER_ID);
 
     set_adj("mail");
+    add_adj("folder");
+    add_adj("with");
 
-    set_short("mailreader");
-    set_pshort("mailreaders");
+    set_short("folder with correspondence");
+    set_pshort("folders with correspondence");
 
     set_long(long_description);
 
-    add_prop(OBJ_M_NO_DROP,     "There is no reason to drop the reader.\n");
-    add_prop(OBJ_M_NO_GIVE,     "You may not give away your mailreader.\n");
+    add_prop(OBJ_M_NO_DROP,     "Please hold on to your correspondence.\n");
+    add_prop(OBJ_M_NO_GIVE,     "All correspondence is treated confidentially.\n");
     add_prop(OBJ_M_NO_TELEPORT, 1);
     add_prop(OBJ_M_NO_STEAL,    1);
     add_prop(OBJ_M_NO_SELL,     1);
@@ -283,7 +289,7 @@ create_object()
 public string
 long_description()
 {
-    return "This is the mail reader. The commands you can use are:\n\n" +
+    return "This is your correspondence. The commands you can use are:\n\n" +
 "from [new]               list all [unread] headers in your mailbox.\n" +
 "     [<name[s]>]         optional: only messages received from <names>.\n" +
 "     [*<filter>]         optional: only with <filter> in the subject.\n" +
@@ -295,8 +301,8 @@ long_description()
 "malias                   list your mailreader aliases. You have " +
         ((m_sizeof(pAliases) == 0) ? "none" :
             (m_sizeof(pAliases) + " alias(es)")) + ".\n" +
-"malias <alias> <names>   add mailreader alias <alias> with <names>.\n" +
-"malias remove <alias>    remove mailreader alias <alias>.\n" +
+"malias <alias> <names>   add mail alias <alias> with <names>.\n" +
+"malias remove <alias>    remove mail alias <alias>.\n" +
 "autocc [on / off]        set/unset automatic cc to yourself.\n" +
 "                         Current setting: Automatic cc: " +
         (pAutocc ? "on" : "off") + ".\n";
@@ -387,7 +393,6 @@ static void
 load_player()
 {
     mapping mail;
-    int     size;
     int     index;
 
     /* Only the environment of the reader can initiate a read since the
@@ -416,17 +421,15 @@ load_player()
     }
 
 #ifdef MAX_IN_MORTAL_BOX
-
     /* Count the number of messages in the mailbox of the player. Messages
      * that are answered, count as read as well.
      */
     gRead_count = 0;
-    size = sizeof(pMessages);
-    index = -1;
-    while(++index < size)
-        if (pMessages[index][MAIL_READ])
-            gRead_count++;
-
+    index = sizeof(pMessages);
+    while(--index >= 0)
+    {
+        gRead_count += (pMessages[index][MAIL_READ] != 0);
+    }
 #endif MAX_IN_MORTAL_BOX
 }
 
@@ -545,8 +548,6 @@ static int
 alias(string str)
 {
     string *list;
-    int     index;
-    int     size;
 
     LOAD_PLAYER;
 
@@ -563,19 +564,15 @@ alias(string str)
         }
 
         WRITE("Current mailreader aliases:\n");
-        list = m_indices(pAliases);
-
-        index = -1;
-        size  = sizeof(list);
-        while(++index < size)
-            WRITE(HANGING_INDENT(sprintf("%-12s %s", list[index],
-                COMPOSITE_WORDS(pAliases[list[index]])), 13, 0));
-
+        foreach(string aname: m_indices(pAliases))
+        {
+            WRITE(HANGING_INDENT(sprintf("%-12s %s", aname,
+                COMPOSITE_WORDS(pAliases[aname])), 13, 0));
+        }
         return 1;
     }
 
     list = explode(lower_case(str), " ");
-
     if (sizeof(list) <= 1)
     {
         notify_fail("Illegal argument to malias.\n");
@@ -591,14 +588,13 @@ alias(string str)
             return 0;
         }
 
-        if (member_array(list[1], m_indices(pAliases)) == -1)
+        if (!IN_ARRAY(list[1], m_indices(pAliases)))
         {
             notify_fail("No such mailreader alias: \"" + list[1] + "\".\n");
             return 0;
         }
 
         m_delkey(pAliases, list[1]);
-
         SAVE_MAIL;
 
         WRITE("Mailreader alias \"" + list[1] + "\" removed.\n");
@@ -611,8 +607,7 @@ alias(string str)
     m_delkey(pAliases, list[0]);
 
     if (SECURITY->exist_player(list[0]) ||
-        (member_array(capitalize(list[0]),
-                      SECURITY->query_domain_list()) != -1))
+        IN_ARRAY(capitalize(list[0]), SECURITY->query_domain_list()))
     {
         WRITE("Name \"" + list[0] + "\" is a player or domain name.\n");
         return 1;
@@ -627,7 +622,6 @@ alias(string str)
     }
 
     pAliases += ([ list[0] : list[1..(sizeof(list) - 1)] ]);
-
     SAVE_MAIL;
 
     WRITE("Mailreader alias \"" + list[0] + "\" added.\n");
@@ -682,6 +676,8 @@ loop()
         WRITE("[1-" + sizeof(pMessages) + " adefFhHmnpqrRsux.!?] " + tmp);
     }
 
+    environment()->add_prop(LIVE_S_EXTRA_SHORT, " is reading mail");
+
     input_to(get_cmd);
 }
 
@@ -713,9 +709,6 @@ convert_to_names(string *list)
     string *return_arr = ({ });
     string *tmp_arr;
     string name;
-    int    index;
-    int    index2;
-    int    size;
     int    force_check;
     int    type;
     int    is_wizard = environment()->query_wiz_level();
@@ -723,18 +716,13 @@ convert_to_names(string *list)
     if (!sizeof(list))
         return ({ });
 
-    index = -1;
-    size  = sizeof(list);
-    while(++index < size)
+    foreach(string name: list)
     {
-        name = lower_case(list[index]);
-
         /* The name may be a normal player. */
+        name = lower_case(name);
         if (SECURITY->exist_player(name))
         {
-            if (member_array(name, return_arr) == -1)
-                return_arr += ({ name });
-
+            return_arr |= ({ name });
             continue;
         }
 
@@ -751,12 +739,12 @@ convert_to_names(string *list)
                 }
  
                 if (sizeof(tmp_arr = SECURITY->query_wiz_list(type)))
-                    return_arr += (tmp_arr - return_arr);
+                    return_arr |= tmp_arr;
 
                 /* When you mail the arches, keepers get it too. */
                 if ((type == WIZ_ARCH) &&
                     (sizeof(tmp_arr = SECURITY->query_wiz_list(WIZ_KEEPER))))
-                    return_arr += (tmp_arr - return_arr);
+                    return_arr |= tmp_arr;
                 
                 continue;
             }
@@ -765,10 +753,9 @@ convert_to_names(string *list)
         /* It may be a domain. We check this first since we do not
          * want people to use domain-names as aliases.
          */
-        if (sizeof(tmp_arr =
-            SECURITY->query_domain_members(capitalize(name))))
+        if (sizeof(tmp_arr = SECURITY->query_domain_members(name)))
         {
-            return_arr += (tmp_arr - return_arr);
+            return_arr |= tmp_arr;
             continue;
         }
 
@@ -783,18 +770,17 @@ convert_to_names(string *list)
              (name == "globals")))
         {
             if (sizeof(tmp_arr = m_indices(SECURITY->query_global_read())))
-                return_arr += (tmp_arr - return_arr);
+                return_arr |= tmp_arr;
             continue;
         }
 
         /* It may be a helper group. Treat "playerarch" as "aop". */
-        tmp_arr = SECURITY->query_teams();
         if (name == "playerarch")
             name = "aop";
 
         if (sizeof(tmp_arr = SECURITY->query_team_list(name)))
         {
-            return_arr += (tmp_arr - return_arr);
+            return_arr |= tmp_arr;
             continue;
         }
 
@@ -804,26 +790,21 @@ convert_to_names(string *list)
          */
         if (file_size(ALIAS_DIR + name) > 0)
         {
-            return_arr += (explode(read_file((ALIAS_DIR + name)), "\n") -
-                return_arr);
+            return_arr |= explode(read_file((ALIAS_DIR + name)), "\n");
             continue;
         }
 
         /* It may be an area-related alias. */
-        if (member_array(name, m_indices(gAliases)) != -1)
+        if (IN_ARRAY(name, m_indices(gAliases)))
         {
-            /* tmp_arr needs to be used due to #pragma strict_types */
-            tmp_arr = ({ }) + gAliases[name];
-            return_arr += (tmp_arr - return_arr);
+            return_arr |= tmp_arr;
             continue;
         }
 
         /* It may be a personal alias. */
-        if (member_array(name, m_indices(pAliases)) != -1)
+        if (IN_ARRAY(name, m_indices(pAliases)))
         {
-            /* tmp_arr needs to be used due to #pragma strict_types */
-            tmp_arr = ({ }) + pAliases[name];
-            return_arr += (tmp_arr - return_arr);
+            return_arr |= tmp_arr;
             continue;
         }
 
@@ -840,31 +821,26 @@ convert_to_names(string *list)
      */
     if (force_check)
     {
-        index = -1;
-        size = sizeof(return_arr);
         tmp_arr = ({ });
-
-        while(++index < size)
-            if (!SECURITY->exist_player(return_arr[index]))
-                tmp_arr += ({ return_arr[index] });
+        foreach(string pname: return_arr)
+        {
+            if (!SECURITY->exist_player(pname))
+            {
+                tmp_arr |= ({ pname });
+            }
+        }
 
         if (sizeof(tmp_arr))
         {
+            return_arr -= tmp_arr;
             WRITE("Alias resolving yielded some invalid names. Those names " +
                 "are discarded: " + COMPOSITE_WORDS(sort_array(tmp_arr)) +
                  ".\n");
-
-            return_arr -= tmp_arr;
         }
     }
 
     /* We capitalize the names of the players to send the mail to. */
-    index = -1;
-    size  = sizeof(return_arr);
-    while(++index < size)
-        return_arr[index] = capitalize(return_arr[index]);
-
-    return return_arr;
+    return map(return_arr, capitalize);
 }
 
 
@@ -881,39 +857,31 @@ convert_to_names(string *list)
 public string
 check_mailing_list(string *list)
 {
-    int    index;
-    int    size;
-    string name;
-
     if (!sizeof(list))
         return 0;
 
-    index = -1;
-    size  = sizeof(list);
-    while(++index < size)
+    foreach(string name: list)
     {
-        name = lower_case(list[index]);
-
+        name = lower_case(name);
         if (!strlen(name))
             return "''";
 
         /* Some domains are not allowed. */
-        if (member_array(name, NON_DOMAINS) != -1)
+        if (IN_ARRAY(name, NON_DOMAINS))
             return ("'" + name + "'");
 
         /* If it is a player or domain-name, it is oke. */
-        if ((SECURITY->exist_player(name)) ||
-            (member_array(capitalize(name),
-                SECURITY->query_domain_list()) != -1))
+        if (SECURITY->exist_player(name) ||
+            IN_ARRAY(capitalize(name), SECURITY->query_domain_list()))
             continue;
 
-        /* Check if it is no alias. */
-        if (((environment()->query_wiz_level()) &&
-             (member_array(LANG_SWORD(name), WIZ_N) > -1)) ||
-            (member_array(name, m_indices(pAliases)) != -1) ||
-            (member_array(name, m_indices(gAliases)) != -1) ||
-            (member_array(name, SPECIAL_TYPES) != -1) ||
-            (member_array(name, SECURITY->query_teams()) != -1) ||
+        /* If it is any sort of alias, allow it. */
+        if ((environment()->query_wiz_level() &&
+                IN_ARRAY(LANG_SWORD(name), WIZ_N)) ||
+            IN_ARRAY(name, m_indices(pAliases)) ||
+            IN_ARRAY(name, m_indices(gAliases)) ||
+            IN_ARRAY(name, SPECIAL_TYPES) ||
+            IN_ARRAY(name, SECURITY->query_teams()) ||
             (name == "playerarch") ||
             (file_size(ALIAS_DIR + name) > 0))
             continue;
@@ -1027,8 +995,10 @@ from(string str)
     int    size;
     int    filter_new  = 0;
     int    filter_name = 0;
+    int    filter_star = 0;
     int    found       = 0;
     string tmp;
+    string flag = "";
     string *list;
     string *words;
     string filter_text;
@@ -1046,8 +1016,13 @@ from(string str)
     if (strlen(str))
     {
         words = explode(str, " ");
-        if (filter_new = (member_array("new", words) >= 0))
+
+        if (filter_new = IN_ARRAY("new", words))
             words -= ({ "new" });
+        if (filter_star = IN_ARRAY("*", words))
+            words -= ({ "*" });
+        else if (filter_star = IN_ARRAY("star", words))
+            words -= ({ "star" });
 
         /* List will be all names, i.e. words not starting with an asterisk. */
         list = filter(words, &not() @ &wildmatch("\\**", ));
@@ -1088,11 +1063,15 @@ from(string str)
          * the mail that was already read.
          */
         if (filter_new &&
-            pMessages[index][MAIL_READ])
+            READ_FLAG(pMessages[index][MAIL_READ]))
             continue;
 
+        if (filter_star &&
+            !STARRED_FLAG(pMessages[index][MAIL_READ]))
+            continue;
+        
         if (filter_name &&
-            (member_array(pMessages[index][MAIL_FROM], list) == -1))
+            !IN_ARRAY(pMessages[index][MAIL_FROM], list))
             continue;
 
         if (strlen(filter_text) &&
@@ -1100,17 +1079,26 @@ from(string str)
             continue;
 
         /* We do not want too long subjects. */
-        if (strlen(tmp = pMessages[index][MAIL_SUBJ]) > 37)
-            tmp = tmp[0..33] + "...";
+        if (strlen(tmp = pMessages[index][MAIL_SUBJ]) > 38)
+            tmp = tmp[0..34] + "...";
+
+        if (gTo_delete[(index + 1)])
+            flag = "D";
+        else if (ANSWERED_FLAG(pMessages[index][MAIL_READ]))
+            flag = "A";
+        else if (READ_FLAG(pMessages[index][MAIL_READ]))
+            flag = "R";
+        else
+            flag = " ";
 
         found = 1;
-        WRITE(sprintf("%2d: %-11s %-4s: %-37s %3s %2s %6s %4s\n",
+        WRITE(sprintf("%2d: %-11s %-4s: %-38s %1s%1s %2s %6s %4s\n",
             (index + 1),
             pMessages[index][MAIL_FROM],
-            (pMessages[index][MAIL_REPLY] ? "Re  " : "Subj"),
+            SUBJECT_SHORT[pMessages[index][MAIL_REPLY]],
             tmp,
-            (gTo_delete[(index + 1)] ? TEXT_DELETED :
-                TEXT_ARRAY[pMessages[index][MAIL_READ]]),
+            flag,
+            (pMessages[index][MAIL_READ] & MSG_STARRED ? "*" : " "),
             pMessages[index][MAIL_LENGTH],
             MAKE_DATE(pMessages[index][MAIL_DATE]),
             DATE_YEAR(pMessages[index][MAIL_DATE])));
@@ -1134,6 +1122,31 @@ from(string str)
 
     LOOP;
     return 1;
+}
+
+
+/*
+ * Function name: update_new_mail_flag
+ * Description  : Sets the new mail flag of the mailbox. By default it is
+ *                "read", but if we have unread messages, mark it so.
+ */
+static void
+update_new_mail_flag()
+{
+    int index;
+
+    pNew_mail = FLAG_READ;
+    /* We have set the flag to FLAG_READ, but if there is one message unread,
+     * set it to FLAG_UNREAD. */
+    index = sizeof(pMessages);
+    while(--index >= 0)
+    {
+        if (!pMessages[index][MAIL_READ])
+        {
+            pNew_mail = FLAG_UNREAD;
+            break;
+        }
+    }
 }
 
 
@@ -1180,10 +1193,11 @@ construct_message(int to_print)
     message = restore_message(pMessages[to_print][MAIL_DATE]);
 
     /* Construct the message. */
-    tmp = "Message: " + (to_print + 1) + "\nFrom   : " +
-        pMessages[to_print][MAIL_FROM] + "\n" +
-        (pMessages[to_print][MAIL_REPLY] ? "Reply  : " : "Subject: ") +
-        pMessages[to_print][MAIL_SUBJ] + "\n";
+    tmp = sprintf("Message: %d\nFrom   : %s\n%-7s: %s\n",
+        (to_print + 1),
+        pMessages[to_print][MAIL_FROM],
+        SUBJECT_LONG[pMessages[to_print][MAIL_REPLY]],
+        pMessages[to_print][MAIL_SUBJ]);
 
     /* Only print the 'to' if there are more recipients. */
     if (message[MSG_TO] != capitalize(environment()->query_real_name()))
@@ -1225,10 +1239,10 @@ print_message(string filename)
         return;
     }
 
-    /* Mark the message as read, unless it was read or answered before. */
-    if (!pMessages[to_print][MAIL_READ])
+    /* Mark the message as read, unless it was read before. */
+    if (!READ_FLAG(pMessages[to_print][MAIL_READ]))
     {
-        pMessages[to_print][MAIL_READ] = MSG_READ;
+        pMessages[to_print][MAIL_READ] |= MSG_READ;
 
 #ifdef MAX_IN_MORTAL_BOX
         gRead_count++;
@@ -1240,25 +1254,14 @@ print_message(string filename)
      */
     if (pNew_mail == FLAG_UNREAD)
     {
-        pNew_mail = FLAG_READ;
-        index     = -1;
-        size      = sizeof(pMessages);
-        while(++index < size)
-        {
-            if (!pMessages[index][MAIL_READ])
-            {
-                pNew_mail = FLAG_UNREAD;
-                break;
-            }
-        }
+        update_new_mail_flag();
     }
-
     SAVE_MAIL;
 
     /* Construct the message. */
     message = construct_message(to_print);
 
-    /* Wizard may want to WRITE the message to a file.  */
+    /* Wizard may want to write the message to a file.  */
     if (strlen(filename))
     {
         store_message(message, filename);
@@ -1334,6 +1337,7 @@ read(string str)
 
     gIs_reading = 1;
     gUse_more = (query_verb() == "mread");
+    environment()->add_prop(LIVE_S_EXTRA_SHORT, " is reading mail");
     print_message(); /* will eventually call loop(). */
     return 1;
 }
@@ -1361,8 +1365,6 @@ parse_range(string str)
     int     left;
     int     right;
     int     index;
-    int     index2;
-    int     size;
 
     /* If no string was entered, the gCurrent is returned if that is a
      * valid message number.
@@ -1375,12 +1377,10 @@ parse_range(string str)
             return 0;
     }
 
-    index = -1;
-    size = sizeof(parts);
-    while(++index < size)
+    foreach(string part: parts)
     {
         /* The parts can either consist of a single number of a range. */
-        if (sscanf(parts[index], "%d-%d", left, right) == 2)
+        if (sscanf(part, "%d-%d", left, right) == 2)
         {
             /* Too large or too small numbers. */
             if ((!check_valid_msg_num(left)) ||
@@ -1390,42 +1390,32 @@ parse_range(string str)
             /* A descending range is a range too. */
             if (right < left)
             {
-                index2 = left;
-                left   = right;
-                right  = index2;
+                index = left;
+                left  = right;
+                right = index;
             }
 
-            /* Add all elements from the range to a subrange range. */
-            subrange = ({ });
-            index2 = left - 1;
-            while(++index2 <= right)
+            /* Add all elements from the selected subrange to the range. */
+            index = left - 1;
+            while(++index <= right)
             {
-                subrange += ({ index2 });
+                range |= ({ index });
             }
-
-            /* Then add the subrange to the big range, making sure that
-             * each element is only once in the big range.
-             */
-            range -= subrange;
-            range += subrange;
         }
         else
         {
-            index2 = atoi(parts[index]);
-
+            index = atoi(part);
             /* Too large to too small number. If parts[index] is a string
-             * value, index2 will be zero and therewith eliminated.
+             * value, index will be zero and therewith eliminated.
              */
-            if (!check_valid_msg_num(index2))
+            if (!check_valid_msg_num(index))
             {
                 return 0;
             }
-
             /* Add the element to the range, making sure that it is in the
              * range only once.
              */
-            range -= ({ index2 });
-            range += ({ index2 });
+            range |= ({ index });
         }
     }
 
@@ -1447,8 +1437,6 @@ parse_range(string str)
 static void
 archive(int *archive_arr, int mark_del)
 {
-    int    index;
-    int    size;
     int   *marked = ({ });
     int    seq;
     string dir;
@@ -1470,12 +1458,9 @@ archive(int *archive_arr, int mark_del)
         return;
     }
 
-    index = -1;
-    size = sizeof(archive_arr);
-    if (size > 100)
+    if (sizeof(archive_arr) > 100)
     {
         archive_arr = archive_arr[..99];
-        size = sizeof(archive_arr);
         write("Archiving restricted to at most 100 messages at a time.\n");
     }
 
@@ -1494,10 +1479,10 @@ archive(int *archive_arr, int mark_del)
         return;
     }
 
-    while(++index < size)
+    foreach(int archive: archive_arr)
     {
-        filename = dir + "/" + pMessages[archive_arr[index] - 1][MAIL_FROM] + "-" +
-            TIME2FORMAT(pMessages[archive_arr[index] - 1][MAIL_DATE], "yyyymmdd");
+        filename = dir + "/" + pMessages[archive - 1][MAIL_FROM] + "-" +
+            TIME2FORMAT(pMessages[archive - 1][MAIL_DATE], "yyyymmdd");
         if (file_size(filename) > 0)
         {
             seq = 0;
@@ -1507,18 +1492,17 @@ archive(int *archive_arr, int mark_del)
             filename = filename + ALPHABET[seq..seq];
         }
 
-        write_file(filename, construct_message(archive_arr[index] - 1));
+        write_file(filename, construct_message(archive - 1));
+        marked += ({ archive });
 
         if (mark_del)
-            gTo_delete[archive_arr[index]] = 1;
-
-        marked += ({ archive_arr[index] });
+            gTo_delete[archive] = 1;
     }
 
     if (sizeof(marked))
         WRITE(HANGING_INDENT("Archived" +
             (mark_del ? " (and marked for deletion)" : "") + ": " +
-            COMPOSITE_WORDS(STRING(sort_array(marked))) + ".", 10, 0));
+            COMPOSITE_WORDS(STRING(sort_array(marked))) + ".", 4, 0));
     else
         WRITE("No messages archived.\n");
 
@@ -1535,8 +1519,6 @@ archive(int *archive_arr, int mark_del)
 static void
 delete(int *del_arr)
 {
-    int  index;
-    int  size;
     int *marked = ({ });
     int *double = ({ });
 
@@ -1547,26 +1529,24 @@ delete(int *del_arr)
         return;
     }
 
-    index = -1;
-    size = sizeof(del_arr);
-    while(++index < size)
+    foreach(int to_del: del_arr)
     {
-        if (gTo_delete[del_arr[index]])
-            double += ({ del_arr[index] });
+        if (gTo_delete[to_del])
+            double += ({ to_del });
         else
         {
-            gTo_delete[del_arr[index]] = 1;
-            marked += ({ del_arr[index] });
+            gTo_delete[to_del] = 1;
+            marked += ({ to_del });
         }
     }
 
     if (sizeof(double))
         WRITE(HANGING_INDENT("Already marked for deletion: " +
-            COMPOSITE_WORDS(STRING(sort_array(double))) + ".", 28, 0));
+            COMPOSITE_WORDS(STRING(sort_array(double))) + ".", 4, 0));
 
     if (sizeof(marked))
         WRITE(HANGING_INDENT("Marked for deletion: " +
-            COMPOSITE_WORDS(STRING(sort_array(marked))) + ".", 23, 0));
+            COMPOSITE_WORDS(STRING(sort_array(marked))) + ".", 4, 0));
     else
         WRITE("No messages marked for deletion.\n");
 
@@ -1575,15 +1555,13 @@ delete(int *del_arr)
 
 
 /*
- * Function name: unmark
+ * Function name: undelete
  * Description  : Unmarks one or more messages for deletion.
  * Arguments    : int * mark_arr - the numbers of the messages to unmark.
  */
 static void
-unmark(int *mark_arr)
+undelete(int *mark_arr)
 {
-    int  index;
-    int  size;
     int *marked = ({ });
     int *double = ({ });
 
@@ -1594,28 +1572,118 @@ unmark(int *mark_arr)
         return;
     }
 
-    index = -1;
-    size  = sizeof(mark_arr);
-    while(++index < size)
+    foreach(int to_unmark: mark_arr)
     {
-        if (gTo_delete[mark_arr[index]])
+        if (gTo_delete[to_unmark])
         {
-            m_delkey(gTo_delete, mark_arr[index]);
-            marked += ({ mark_arr[index] });
+            m_delkey(gTo_delete, to_unmark);
+            marked += ({ to_unmark });
         }
         else
-            double += ({ mark_arr[index] });
+            double += ({ to_unmark });
     }
 
     if (sizeof(double))
         WRITE(HANGING_INDENT("Not marked for deletion: " +
-            COMPOSITE_WORDS(STRING(sort_array(double))) + ".", 25, 0));
+            COMPOSITE_WORDS(STRING(sort_array(double))) + ".", 4, 0));
 
     if (sizeof(marked))
-        WRITE(HANGING_INDENT("Unmarked: " +
-            COMPOSITE_WORDS(STRING(sort_array(marked))) + ".", 10, 0));
+        WRITE(HANGING_INDENT("Unmarked from deletion: " +
+            COMPOSITE_WORDS(STRING(sort_array(marked))) + ".", 4, 0));
     else
         WRITE("No messages unmarked from deletion.\n");
+
+    loop();
+}
+
+
+/*
+ * Function name: star
+ * Description  : Marks one or more message as special.
+ * Arguments    : int * mark_arr - the numbers of the messages to mark.
+ */
+static void
+star(int *mark_arr)
+{
+    int *marked = ({ });
+    int *double = ({ });
+
+    if ((!pointerp(mark_arr)) || (!sizeof(mark_arr)))
+    {
+        WRITE("No messages specified to star or syntax error.\n");
+        loop();
+        return;
+    }
+
+    foreach(int to_star: mark_arr)
+    {
+        if (pMessages[to_star - 1][MAIL_READ] & MSG_STARRED)
+        {
+            double += ({ to_star });
+        }
+        else
+        {
+            pMessages[to_star - 1][MAIL_READ] |= MSG_STARRED;
+            marked += ({ to_star });
+        }
+    }
+    SAVE_MAIL;
+
+    if (sizeof(double))
+        WRITE(HANGING_INDENT("Already starred as special: " +
+            COMPOSITE_WORDS(STRING(sort_array(double))) + ".", 4, 0));
+
+    if (sizeof(marked))
+        WRITE(HANGING_INDENT("Starred as special: " +
+            COMPOSITE_WORDS(STRING(sort_array(marked))) + ".", 4, 0));
+    else
+        WRITE("No messages starred as special.\n");
+
+    loop();
+}
+
+
+/*
+ * Function name: unstar
+ * Description  : Unmarks one or more messages as special.
+ * Arguments    : int * mark_arr - the numbers of the messages to unmark.
+ */
+static void
+unstar(int *mark_arr)
+{
+    int *marked = ({ });
+    int *double = ({ });
+
+    if ((!pointerp(mark_arr)) || (!sizeof(mark_arr)))
+    {
+        WRITE("No messages specified to unmark or syntax error.\n");
+        loop();
+        return;
+    }
+
+    foreach(int to_unmark: mark_arr)
+    {
+        if (pMessages[to_unmark - 1][MAIL_READ] & MSG_STARRED)
+        {
+            pMessages[to_unmark - 1][MAIL_READ] &= ~MSG_STARRED;
+            marked += ({ to_unmark });
+        }
+        else
+        {
+            double += ({ to_unmark });
+        }
+    }
+    SAVE_MAIL;
+
+    if (sizeof(double))
+        WRITE(HANGING_INDENT("Not unmarked as special: " +
+            COMPOSITE_WORDS(STRING(sort_array(double))) + ".", 4, 0));
+
+    if (sizeof(marked))
+        WRITE(HANGING_INDENT("Unmarked as sepcial: " +
+            COMPOSITE_WORDS(STRING(sort_array(marked))) + ".", 4, 0));
+    else
+        WRITE("No messages unmarked as special.\n");
 
     loop();
 }
@@ -1678,7 +1746,7 @@ send_mail_safely(string *dest_array, string name)
                     "\nPostmaster tells you that you have new mail (# " +
                     sizeof(player_mail[MAIL_MAIL]) + ") from " + name +
                     ",\nconcerning " +
-                    ((gIs_reply & IS_REPLY) ? "Re: " : "Subj: ") +
+                    SUBJECT_SHORT[gTo_send[MAIL_REPLY]] + ": " +
                     gSubject + " (" + gTo_send[MAIL_LENGTH] + ")\n\n");
             else
                 tell_object(obj,
@@ -1694,7 +1762,7 @@ send_mail_safely(string *dest_array, string name)
     }
 
     WRITE(HANGING_INDENT("Batch sent to: " +
-        COMPOSITE_WORDS(dest_array[0..(max - 1)]) + ".", 15, 0));
+        COMPOSITE_WORDS(dest_array[0..(max - 1)]) + ".", 4, 0));
 
     dest_array = dest_array[max..];
 
@@ -1741,10 +1809,10 @@ send_mail(string name)
     addressees = ((gTo - gCc) + gCc);
 
     /* If you mail yourself, you will rather CC yourself. */
-    if (member_array(name, gTo) >= 0)
+    if (IN_ARRAY(name, gTo))
     {
         gTo -= ({ name });
-        gCc += ({ name });
+        gCc |= ({ name });
     }
 
     /* We take the current time and check if that time already exists as
@@ -1775,9 +1843,8 @@ send_mail(string name)
         return;
     }
 
-    /* If the mail is a reply, update the information in the players box.
-     */
-    if (gIs_reply & IS_REPLY)
+    /* If the mail is a reply, update the information in the players box. */
+    if (REPLY_FLAG(gIs_reply))
     {
         /* gCurrent will be 0 if this is a resend */
         if (gCurrent > 0)
@@ -1790,7 +1857,7 @@ send_mail(string name)
                 gRead_count++;
 #endif MAX_IN_MORTAL_BOX
     
-            pMessages[gCurrent - 1][MAIL_READ] = MSG_ANSWERED;
+            pMessages[gCurrent - 1][MAIL_READ] |= MSG_ANSWERED;
             SAVE_MAIL;
         }
     }
@@ -1801,7 +1868,7 @@ send_mail(string name)
     gTo_send = ([ MAIL_FROM   : name,
                   MAIL_SUBJ   : gSubject,
                   MAIL_DATE   : send_time,
-                  MAIL_REPLY  : (gIs_reply & IS_REPLY),
+                  MAIL_REPLY  : REPLY_FLAG(gIs_reply) | FORWARD_FLAG(gIs_reply),
                   MAIL_LENGTH : ((length >= 100) ? MAX_NO_MREAD :
                                     sprintf("%2d", length)),
                   MAIL_READ   : MSG_UNREAD ]);
@@ -1853,7 +1920,6 @@ static void
 get_cc(string str)
 {
     string error;
-    int    forward;
     object editor;
 
     if (str == "~q")
@@ -1887,20 +1953,18 @@ get_cc(string str)
     /* Do not send a CC to people that already get the message. */
     gCc -= gTo;
 
-    forward = !!(gIs_reply & IS_FORWARD);
-
     /* If the player has set auto-cc on, we add him/her to the gCc list,
      * but do not autocc forwards.
      */
-    if (pAutocc && !forward)
+    if (pAutocc && !FORWARD_FLAG(gIs_reply))
     {
         str = capitalize(environment()->query_real_name());
-
-        gCc -= ({ str });
-        gCc += ({ str });
+        gCc |= ({ str });
     }
 
-    if ((gIs_reply & IS_RESEND) && !forward)
+    /* Forward or resend without editing required. */
+    if ((RESEND_FLAG(gIs_reply) || FORWARD_FLAG(gIs_reply)) &&
+        !DO_EDIT_FLAG(gIs_reply))
     {
         send_mail(capitalize(environment()->query_real_name()));
         return;
@@ -1910,7 +1974,7 @@ get_cc(string str)
 
     editor = clone_object(EDITOR_OBJECT);
     editor->set_activity("a mail message.");
-    editor->edit("done_editing", gMessage, forward);
+    editor->edit("done_editing", gMessage, !!FORWARD_FLAG(gIs_reply));
 }
 
 
@@ -1929,7 +1993,7 @@ editor_add_to_cc_list(string *names)
         return;
     }
 
-    gCc += (names - gCc - gTo);
+    gCc |= (names - gTo);
 }
 
 
@@ -1963,10 +2027,9 @@ get_subject(string str)
     /* If the player didn't specify a subject, he may be replying to an
      * old message, or else it aborts.
      */
-    if (!strlen(str) ||
-        (str == "-"))
+    if (!strlen(str) || (str == "-"))
     {
-        if (!(gIs_reply & IS_REPLY))
+        if (!REPLY_FLAG(gIs_reply))
         {
             WRITE("No subject, aborting.\n");
             LOOP;
@@ -1975,7 +2038,8 @@ get_subject(string str)
     }
     else
     {
-        gIs_reply &= ~IS_REPLY;
+        /* If we edit the subject, it's not a reply anymore. */
+        gIs_reply &= ~MSG_IS_REPLY;
         gSubject  = str;
     }
 
@@ -2090,7 +2154,7 @@ resend(string str)
     CHECK_SO_BUSY;
 
     gTo = list;
-    gIs_reply |= IS_RESEND;
+    gIs_reply |= MSG_IS_RESEND;
 
     WRITE("CC: ");
 
@@ -2144,8 +2208,8 @@ forward(string str, int alter)
      * however, we restore the message itself.
      */
     message   = restore_message(pMessages[to_forward][MAIL_DATE]);
-    gSubject  = pMessages[to_forward][MAIL_SUBJ] + " (forwarded)";
-    gIs_reply = (pMessages[to_forward][MAIL_REPLY] & IS_REPLY);
+    gSubject  = pMessages[to_forward][MAIL_SUBJ];
+    gIs_reply = MSG_IS_FORWARD;
     gMessage  = "Author : " + pMessages[to_forward][MAIL_FROM] + "\n";
 
     /* Only print the 'to' if there are more recipients. */
@@ -2166,7 +2230,7 @@ forward(string str, int alter)
 
     if (alter)
     {
-        gIs_reply |= IS_FORWARD;
+        gIs_reply |= MSG_DO_EDIT;
         gMessage = "\n> " + implode(explode(gMessage, "\n"), "\n> ") + "\n";
     }
 
@@ -2212,8 +2276,6 @@ static void
 reply(int include)
 {
     mapping message;
-    int     index;
-    int     size;
     int     reply_to = gCurrent - 1;
 
     /* Check if the current message number is valid. */
@@ -2250,7 +2312,7 @@ reply(int include)
     message = restore_message(pMessages[reply_to][MAIL_DATE]);
 
     gSubject  = pMessages[reply_to][MAIL_SUBJ];
-    gIs_reply = IS_REPLY; /* Signal that we are replying. */
+    gIs_reply = MSG_IS_REPLY;
 
     if (include)
     {
@@ -2270,13 +2332,11 @@ reply(int include)
         gTo -= ({ capitalize(environment()->query_real_name()) });
         gTo -= ({ pMessages[reply_to][MAIL_FROM] });
 
-        index = -1;
-        size  = sizeof(gTo);
-        while(++index < size)
+        foreach(string pname: gTo)
         {
-            if (!SECURITY->exist_player(lower_case(gTo[index])))
+            if (!SECURITY->exist_player(lower_case(pname)))
             {
-                WRITE("At least on of the CC-ed people, " + gTo[index] +
+                WRITE("At least on of the CC-ed people, " + pname +
                     " is no longer valid as addressee. You cannot include " +
                     "the original CC-list, but you can naturally include " +
                     "individual players to CC to.\n");
@@ -2324,7 +2384,7 @@ erase()
 
     gTo_delete = ([ ]);
     WRITE(HANGING_INDENT("Deleting: " +
-        COMPOSITE_WORDS(STRING(sort_array(del_arr))) + ".", 10, 0));
+        COMPOSITE_WORDS(STRING(sort_array(del_arr))) + ".", 4, 0));
 
     index = sizeof(del_arr);
     while(--index >= 0)
@@ -2391,23 +2451,7 @@ erase()
         if (!sizeof(pMessages))
             pNew_mail = FLAG_NO;
         else
-        {
-            pNew_mail = FLAG_READ;
-
-            /* We have set the flag to FLAG_READ, but if there is
-             * one message unread, set it to FLAG_UNREAD.
-             */
-            index = -1;
-            size  = sizeof(pMessages);
-            while(++index < size)
-            {
-                if (!pMessages[index][MAIL_READ])
-                {
-                    pNew_mail = FLAG_UNREAD;
-                    break;
-                }
-            }
-        }
+            update_new_mail_flag();
 
         SAVE_MAIL;
     }
@@ -2415,7 +2459,7 @@ erase()
         rm(FILE_NAME_MAIL(name) + ".o");
 
     /* If the current message is being deleted, reset gCurrent. */
-    if (member_array(gCurrent, del_arr) != -1)
+    if (IN_ARRAY(gCurrent, del_arr))
         gCurrent = 0;
 
     LOOP;
@@ -2454,6 +2498,8 @@ quit()
     gTo        = ({ });
     gCc        = ({ });
     gUse_more  = 0;
+
+    environment()->remove_prop(LIVE_S_EXTRA_SHORT);
 }
 
 
@@ -2661,6 +2707,11 @@ get_cmd(string str)
         store(str);
         return;
 
+    /* Mark messages as special. */
+    case "*":
+        star(parse_range(cleanup_string(str)));
+        return;
+
     /* Resend a message to (other) people. */
     case "rs":
         resend(str);
@@ -2668,7 +2719,12 @@ get_cmd(string str)
 
     /* Unmark messages from deletion. */
     case "u":
-        unmark(parse_range(cleanup_string(str)));
+        undelete(parse_range(cleanup_string(str)));
+        return;
+
+    /* Unmark messages as special. */
+    case "u*":
+        unstar(parse_range(cleanup_string(str)));
         return;
 
     /* Illegal command. */
@@ -2702,8 +2758,6 @@ invalidate()
 public void
 set_alias(string alias, string *names)
 {
-    int    index;
-    int    size;
     string *indices;
 
     if (!mappingp(gAliases))
@@ -2723,11 +2777,10 @@ set_alias(string alias, string *names)
 
     /* Check whether the alias name is not already in use. */
     alias = lower_case(alias);
-    if ((SECURITY->exist_player(alias)) ||
-        (member_array(capitalize(alias),
-         SECURITY->query_domain_list()) != -1) ||
-        (member_array(LANG_SWORD(alias), WIZ_N) > -1) ||
-        (member_array(alias, SECURITY->query_teams()) != -1) ||
+    if (SECURITY->exist_player(alias) ||
+        IN_ARRAY(capitalize(alias), SECURITY->query_domain_list()) ||
+        IN_ARRAY(LANG_SWORD(alias), WIZ_N) ||
+        IN_ARRAY(alias, SECURITY->query_teams()) ||
         (alias == "playerarch") ||
         (file_size(ALIAS_DIR + alias) >= 0))
     {
@@ -2743,21 +2796,16 @@ set_alias(string alias, string *names)
     /* make sure we don't get double aliases. */
     m_delkey(gAliases, alias);
 
-    /* Check if the alias only uses player names.
-     */
-    index = -1;
-    size  = sizeof(names);
-    while(++index < size)
+    /* Check if the alias only uses player names. */
+    foreach(string pname: names)
     {
-        names[index] = lower_case(names[index]);
-
-        if (!(SECURITY->exist_player(names[index])))
+        if (!(SECURITY->exist_player(pname)))
         {
             if (objectp(this_interactive()))
             {
                 tell_object(this_interactive(),
                     "\nPOSTMASTER -> Non-player name in alias \"" +
-                    alias + "\" : \"" + names[index] + "\"!\n" +
+                    alias + "\" : \"" + pname + "\"!\n" +
                     "POSTMASTER -> Please make a bugreport about this!\n");
             }
             return;

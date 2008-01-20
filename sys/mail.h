@@ -116,15 +116,25 @@
 #define MAIL_LENGTH   "length"   /* Index for the length of the message     */
 #define MAIL_REPLY    "reply"    /* Index for subj/reply in message_array   */
 
+/* Binary encoding. */
 #define MSG_UNREAD    0          /* Flag to indicate message was not read   */
 #define MSG_READ      1          /* Flag to indicate message was read       */
 #define MSG_ANSWERED  2          /* Flag to indicate message was answered   */
+#define MSG_STARRED   4          /* Flag to indicate message was starred    */
 
 #define TEXT_READ     "*R*"      /* Header list text for read messages      */
+#define TEXT_STARRED  "-*-"      /* Header list text for starred messages   */
 #define TEXT_UNREAD   "   "      /* Header list text for unread messages    */
 #define TEXT_ANSWERED "*A*"      /* Header list text for answered messages  */
 #define TEXT_DELETED  "*D*"      /* Header list text for deleted messages   */
-#define TEXT_ARRAY    ({ TEXT_UNREAD, TEXT_READ, TEXT_ANSWERED })
+
+#define MSG_IS_REPLY    1        /* Flag to indicate we are replying        */
+#define MSG_IS_FORWARD  2        /* Flag to indicate we are fowarding mail  */
+#define MSG_IS_RESEND   4        /* Flag to indicate we are resending mail  */
+#define MSG_DO_EDIT     8        /* Flag to indicate we edit before sending */
+
+#define SUBJECT_SHORT ({ "Subj", "Re", "Fwd", "Fwd" })
+#define SUBJECT_LONG  ({ "Subject", "Reply", "Forward", "Forward" })
 
 #define MAIL_MAIL     "mail"     /* Index for messages in mail-save-file    */
 #define MAIL_ALIASES  "aliases"  /* Index for aliases in mail-save-file     */

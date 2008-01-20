@@ -9,6 +9,8 @@
   F [<num>] <name>  Forward (see f) and edit outgoing message first.
   d [<range>]       Mark current message or <range> for deletion.
   u [<range>]       Unmark current message or <range> for deletion.
+  * [<range>]       Mark/star current message or <range> as special message.
+  u* [<range>]      Unstar current message or <range> as special message.
   e                 Erase all messages marked for deletion.
   ad [<range>]      Archive current message or <range> and mark for deletion.
   ak [<range>]      Archive current message or <range> but keep from deletion.

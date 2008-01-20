@@ -4,6 +4,7 @@ NAME
 SYNOPSIS
         stats
 	stats <player>
+	stats reset
  
 DESCRIPTION
         With this command you can see your vital statistics. If you are a
@@ -12,9 +13,9 @@ DESCRIPTION
 	For a summary of the possible descriptions, use the "levels" command.
 
 OPTIONS
-        [none]  - see your own stats
-
-        player  - see the stats of an active player [Only for wizards]
+        [none]   - see your own stats
+        <player> - see the stats of <player> when logged in (wizards only).
+	reset    - reset your progress counter (as if you just logged in).
 
 SEE ALSO
 	compare, levels, meditate, vitals
