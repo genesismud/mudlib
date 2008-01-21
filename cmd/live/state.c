@@ -34,6 +34,7 @@ inherit "/cmd/std/command_driver";
 #include <formulas.h>
 #include <language.h>
 #include <login.h>
+#include <mail.h>
 #include <macros.h>
 #include <options.h>
 #include <ss_types.h>
@@ -1417,6 +1418,11 @@ vitals(string str, object target = this_player())
         }
         return 1;
 
+    case "mail":
+        value1 = MAIL_CHECKER->query_mail(target);
+        write((self ? "You have " : (name + " has ")) + MAIL_FLAGS[value1] + ".\n");
+        return 1;
+
     case "panic":
     case "fatigue":
         /* Current fatigue really is an "energy left" value that counts down. */
@@ -1563,7 +1569,7 @@ show_skills(string str)
     int *skills;
     string *words;
     mapping skdesc;
-    string group = "";;
+    string group = "";
 
     wrap = 1;
     skdesc = SS_SKILL_DESC;
@@ -1605,7 +1611,7 @@ show_skills(string str)
     switch (group)
     {
         case "general":
-            iLow = 100;
+            iLow = 70;
             iHigh = 200;
             break;
         case "fighting":
@@ -1620,14 +1626,18 @@ show_skills(string str)
             iLow = 50;
             iHigh = 69;
             break;
+        case "guild":
+            iLow = 100000;
+            iHigh = MAXINT;
+            break;
         case "all":
         case "":
             iLow = 0;
-            iHigh = 9999999;
+            iHigh = MAXINT;
             break;
         default:
             notify_fail("Unknown group '" + group + "'.\n" +
-                "Valid groups are: 'general', 'fighting', 'magic', 'thief' or 'all'.\n");
+                "Valid groups are: general, fighting, magic, thief, guild or all.\n");
             return 0;
     }
 
@@ -1656,12 +1666,13 @@ show_skills(string str)
             write(sprintf("%-18s %-20s ", str + ":", SKILL_LIBRARY->sk_rank(num)));
         }
     }
-    if (wrap)
+    if (wrap > 1)
         write("\n");
     else
     {
-        str = (player == this_player()) ? "You have " : (player->query_name() + " has ");
-        write(str + "no skills.\n");
+        write(((player == this_player()) ? "You have " :
+            (player->query_name() + " has ")) + "no skills" +
+            (strlen(group) ? " in the " + group + " group" : "") + ".\n");
     }
 
     return 1;
