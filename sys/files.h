@@ -82,8 +82,10 @@
 /* The section /std */
 
 #define ARMOUR_OBJECT      ("/std/armour")
+#define ARROW_OBJECT       ("/std/arrow")
 #define BOARD_OBJECT       ("/std/board")
 #define BOOK_OBJECT        ("/std/book")
+#define BOW_OBJECT         ("/std/bow")
 #define CHUMLOCK_OBJECT    ("/std/combat/chumlock")
 #define COINS_OBJECT       ("/std/coins")
 #define CONTAINER_OBJECT   ("/std/container")
@@ -96,6 +98,7 @@
 #define HEAP_OBJECT        ("/std/heap")
 #define HERB_OBJECT        ("/std/herb")
 #define KEY_OBJECT         ("/std/key")
+#define LAUNCH_OBJECT      ("/std/launch_weapon")
 #define LEFTOVER_OBJECT    ("/std/leftover")
 #define LIVING_OBJECT      ("/std/living")
 #define MOBILE_OBJECT      ("/std/mobile")
@@ -106,6 +109,7 @@
 #define PLAYER_SEC_OBJECT  ("/std/player_sec")
 #define POISON_OBJECT      ("/std/poison_effect")
 #define POTION_OBJECT      ("/std/potion")
+#define PROJECTILE_OBJECT  ("/std/projectile")
 #define RECEPTACLE_OBJECT  ("/std/receptacle")
 #define RESISTANCE_OBJECT  ("/std/resistance")
 #define ROOM_OBJECT        ("/std/room")
@@ -121,102 +125,89 @@
 #define MANCTRL            ("/sys/global/manpath")
 
 
-/* Some macros for determining the type of an object based on its constructors 
- */
-#define IS_ARMOUR_OBJECT(ob) \
-    (function_exists("create_object", ob) == ARMOUR_OBJECT)
+/* Determine the type of an object based on its constructors. */
+#define IS_CREATE_SOME(ob, func, file) (function_exists((func), (ob)) == (file))
+#define IS_CREATE_CONTAINER(ob, file) IS_CREATE_SOME((ob), "create_container", (file))
+#define IS_CREATE_OBJECT(ob, file)    IS_CREATE_SOME((ob), "create_object", (file))
+#define IS_CREATE_HEAP(ob, file)      IS_CREATE_SOME((ob), "create_heap", (file))
 
-#define IS_BOARD_OBJECT(ob) \
-    (function_exists("create_object", ob) == BOARD_OBJECT)
+#define IS_ARMOUR_OBJECT(ob)     IS_CREATE_OBJECT((ob), ARMOUR_OBJECT)
+#define IS_ARROW_OBJECT(ob)      IS_CREATE_SOME((ob), "create_projectile", ARROW_OBJECT)
+#define IS_BOARD_OBJECT(ob)      IS_CREATE_OBJECT((ob), BOARD_OBJECT)
+#define IS_BOOK_OBJECT(ob)       IS_CREATE_OBJECT((ob), BOOK_OBJECT)
+#define IS_BOW_OBJECT(ob)        IS_CREATE_SOME((ob), "create_launch_weapon", BOW_OBJECT)
+#define IS_COINS_OBJECT(ob)      IS_CREATE_HEAP((ob), COINS_OBJECT)
+#define IS_CONTAINER_OBJECT(ob)  IS_CREATE_OBJECT((ob), CONTAINER_OBJECT)
+#define IS_CORPSE_OBJECT(ob)     IS_CREATE_CONTAINER((ob), CORPSE_OBJECT)
+#define IS_CREATURE_OBJECT(ob)   IS_CREATE_SOME((ob), "create_mobile", CREATURE_OBJECT)
+#define IS_DOOR_OBJECT(ob)       IS_CREATE_OBJECT((ob), DOOR_OBJECT)
+#define IS_DRINK_OBJECT(ob)      IS_CREATE_HEAP((ob), DRINK_OBJECT)
+#define IS_FOOD_OBJECT(ob)       IS_CREATE_HEAP((ob), FOOD_OBJECT)
+#define IS_HEAP_OBJECT(ob)       IS_CREATE_OBJECT((ob), HEAP_OBJECT)
+#define IS_HERB_OBJECT(ob)       IS_CREATE_OBJECT((ob), HERB_OBJECT)
+#define IS_KEY_OBJECT(ob)        IS_CREATE_OBJECT((ob), KEY_OBJECT)
+#define IS_LAUNCH_OBJECT(ob)     IS_CREATE_SOME((ob), "create_weapon", LAUNCH_OBJECT)
+#define IS_LEFTOVER_OBJECT(ob)   IS_CREATE_SOME((ob), "create_food", LEFTOVER_OBJECT)
+#define IS_LIVING_OBJECT(ob)     IS_CREATE_CONTAINER((ob), LIVING_OBJECT)
+#define IS_MOBILE_OBJECT(ob)     IS_CREATE_SOME((ob), "create_living", MOBILE_OBJECT)
+#define IS_MONSTER_OBJECT(ob)    IS_CREATE_SOME((ob), "create_npc", MONSTER_OBJECT)
+#define IS_OBJECT_OBJECT(ob)     IS_CREATE_SOME((ob), "create", OBJECT_OBJECT)
+#define IS_PARALYZE_OBJECT(ob)   IS_CREATE_OBJECT((ob), PARALYZE_OBJECT)
+#define IS_PLAYER_OBJECT(ob)     IS_CREATE_SOME((ob), "create_living", PLAYER_SEC_OBJECT)
+#define IS_POISON_OBJECT(ob)     IS_CREATE_OBJECT((ob), POISON_OBJECT)
+#define IS_POTION_OBJECT(ob)     IS_CREATE_OBJECT((ob), POTION_OBJECT)
+#define IS_PROJECTILE_OBJECT(ob) IS_CREATE_HEAP((ob), PROJECTILE_OBJECT)
+#define IS_RECEPTACLE_OBJECT(ob) IS_CREATE_CONTAINER((ob), RECEPTACLE_OBJECT)
+#define IS_RESISTANCE_OBJECT(ob) IS_CREATE_OBJECT((ob), RESISTANCE_OBJECT)
+#define IS_ROOM_OBJECT(ob)       IS_CREATE_CONTAINER((ob), ROOM_OBJECT)
+#define IS_ROPE_OBJECT(ob)       IS_CREATE_OBJECT((ob), ROPE_OBJECT)
+#define IS_SCROLL_OBJECT(ob)     IS_CREATE_OBJECT((ob), SCROLL_OBJECT)
+#define IS_SPELLS_OBJECT(ob)     IS_CREATE_OBJECT((ob), SPELLS_OBJECT)
+#define IS_TORCH_OBJECT(ob)      IS_CREATE_OBJECT((ob), TORCH_OBJECT)
+#define IS_WEAPON_OBJECT(ob)     IS_CREATE_OBJECT((ob), WEAPON_OBJECT)
+#define IS_WORKROOM_OBJECT(ob)   IS_CREATE_SOME((ob), "create_room", WORKROOM_OBJECT)
 
-#define IS_BOOK_OBJECT(ob) \
-    (function_exists("create_object", ob) == BOOK_OBJECT)
+/* Filter objects to be based on a certain constructor. */
+#define FILTER_CREATE_SOME(obs, func, file) filter((obs), &operator(==)((file), ) @ &function_exists((func), ))
+#define FILTER_CREATE_CONTAINER(ob, file) FILTER_CREATE_SOME((ob), "create_container", (file))
+#define FILTER_CREATE_OBJECT(ob, file)    FILTER_CREATE_SOME((ob), "create_object", (file))
+#define FILTER_CREATE_HEAP(ob, file)      FILTER_CREATE_SOME((ob), "create_heap", (file))
 
-#define IS_COINS_OBJECT(ob) \
-    (function_exists("create_heap", ob) == COINS_OBJECT)
-
-#define IS_CONTAINER_OBJECT(ob) \
-    (function_exists("create_object", ob) == CONTAINER_OBJECT)
-
-#define IS_CORPSE_OBJECT(ob) \
-    (function_exists("create_container", ob) == CORPSE_OBJECT)
-
-#define IS_CREATURE_OBJECT(ob) \
-    (function_exists("create_mobile", ob) == CREATURE_OBJECT)
-
-#define IS_DOOR_OBJECT(ob) \
-    (function_exists("create_object", ob) == DOOR_OBJECT)
-
-#define IS_DRINK_OBJECT(ob) \
-    (function_exists("create_heap", ob) == DRINK_OBJECT)
-
-#define IS_FOOD_OBJECT(ob) \
-    (function_exists("create_heap", ob) == FOOD_OBJECT)
-
-#define IS_HEAP_OBJECT(ob) \
-    (function_exists("create_object", ob) == HEAP_OBJECT)
-
-#define IS_HERB_OBJECT(ob) \
-    (function_exists("create_object", ob) == HERB_OBJECT)
-
-#define IS_KEY_OBJECT(ob) \
-    (function_exists("create_object", ob) == KEY_OBJECT)
-
-#define IS_LEFTOVER_OBJECT(ob) \
-    (function_exists("create_food", ob) == LEFTOVER_OBJECT)
-
-#define IS_LIVING_OBJECT(ob) \
-    (function_exists("create_container", ob) == LIVING_OBJECT)
-
-#define IS_MOBILE_OBJECT(ob) \
-    (function_exists("create_living", ob) == MOBILE_OBJECT)
-
-#define IS_MONSTER_OBJECT(ob) \
-    (function_exists("create_npc", ob) == MONSTER_OBJECT)
-
-#define IS_OBJECT_OBJECT(ob) \
-    (function_exists("create", ob) == OBJECT_OBJECT)
-
-#define IS_PARALYZE_OBJECT(ob) \
-    (function_exists("create_object", ob) == PARALYZE_OBJECT)
-
-#define IS_PLAYER_OBJECT(ob) \
-    (function_exists("create_living", ob) == PLAYER_SEC_OBJECT)
-
-#define IS_POISON_OBJECT(ob) \
-    (function_exists("create_object", ob) == POISON_OBJECT)
-
-#define IS_POTION_OBJECT(ob) \
-    (function_exists("create_object", ob) == POTION_OBJECT)
-
-#define IS_RECEPTACLE_OBJECT(ob) \
-    (function_exists("create_container", ob) == RECEPTACLE_OBJECT)
-
-#define IS_RESISTANCE_OBJECT(ob) \
-    (function_exists("create_object", ob) == RESISTANCE_OBJECT)
-
-#define IS_ROOM_OBJECT(ob) \
-    (function_exists("create_container", ob) == ROOM_OBJECT)
-
-#define IS_ROPE_OBJECT(ob) \
-    (function_exists("create_object", ob) == ROPE_OBJECT)
-
-#define IS_SCROLL_OBJECT(ob) \
-    (function_exists("create_object", ob) == SCROLL_OBJECT)
-
-#define IS_SPELLS_OBJECT(ob) \
-    (function_exists("create_object", ob) == SPELLS_OBJECT)
-
-#define IS_TORCH_OBJECT(ob) \
-    (function_exists("create_object", ob) == TORCH_OBJECT)
-
-#define IS_WEAPON_OBJECT(ob) \
-    (function_exists("create_object", ob) == WEAPON_OBJECT)
-
-#define IS_WORKROOM_OBJECT(ob) \
-    (function_exists("create_room", ob) == WORKROOM_OBJECT)
-
-
+#define FILTER_ARMOUR_OBJECTS(ob)     FILTER_CREATE_OBJECT((ob), ARMOUR_OBJECT)
+#define FILTER_ARROW_OBJECTS(ob)      FILTER_CREATE_SOME((ob), "create_projectile", ARROW_OBJECT)
+#define FILTER_BOARD_OBJECTS(ob)      FILTER_CREATE_OBJECT((ob), BOARD_OBJECT)
+#define FILTER_BOOK_OBJECTS(ob)       FILTER_CREATE_OBJECT((ob), BOOK_OBJECT)
+#define FILTER_BOW_OBJECTS(ob)        FILTER_CREATE_SOME((ob), "create_launch_weapon", BOW_OBJECT)
+#define FILTER_COINS_OBJECTS(ob)      FILTER_CREATE_HEAP((ob), COINS_OBJECT)
+#define FILTER_CONTAINER_OBJECTS(ob)  FILTER_CREATE_OBJECT((ob), CONTAINER_OBJECT)
+#define FILTER_CORPSE_OBJECTS(ob)     FILTER_CREATE_CONTAINER((ob), CORPSE_OBJECT)
+#define FILTER_CREATURE_OBJECTS(ob)   FILTER_CREATE_SOME((ob), "create_mobile", CREATURE_OBJECT)
+#define FILTER_DOOR_OBJECTS(ob)       FILTER_CREATE_OBJECT((ob), DOOR_OBJECT)
+#define FILTER_DRINK_OBJECTS(ob)      FILTER_CREATE_HEAP((ob), DRINK_OBJECT)
+#define FILTER_FOOD_OBJECTS(ob)       FILTER_CREATE_HEAP((ob), FOOD_OBJECT)
+#define FILTER_HEAP_OBJECTS(ob)       FILTER_CREATE_OBJECT((ob), HEAP_OBJECT)
+#define FILTER_HERB_OBJECTS(ob)       FILTER_CREATE_OBJECT((ob), HERB_OBJECT)
+#define FILTER_KEY_OBJECTS(ob)        FILTER_CREATE_OBJECT((ob), KEY_OBJECT)
+#define FILTER_LAUNCH_OBJECTS(ob)     FILTER_CREATE_SOME((ob), "create_weapon", LAUNCH_OBJECT)
+#define FILTER_LEFTOVER_OBJECTS(ob)   FILTER_CREATE_SOME((ob), "create_food", LEFTOVER_OBJECT)
+#define FILTER_LIVING_OBJECTS(ob)     FILTER_CREATE_CONTAINER((ob), LIVING_OBJECT)
+#define FILTER_MOBILE_OBJECTS(ob)     FILTER_CREATE_SOME((ob), "create_living", MOBILE_OBJECT)
+#define FILTER_MONSTER_OBJECTS(ob)    FILTER_CREATE_SOME((ob), "create_npc", MONSTER_OBJECT)
+#define FILTER_OBJECT_OBJECTS(ob)     FILTER_CREATE_SOME((ob), "create", OBJECT_OBJECT)
+#define FILTER_PARALYZE_OBJECTS(ob)   FILTER_CREATE_OBJECT((ob), PARALYZE_OBJECT)
+#define FILTER_PLAYER_OBJECTS(ob)     FILTER_CREATE_SOME((ob), "create_living", PLAYER_SEC_OBJECT)
+#define FILTER_POISON_OBJECTS(ob)     FILTER_CREATE_OBJECT((ob), POISON_OBJECT)
+#define FILTER_POTION_OBJECTS(ob)     FILTER_CREATE_OBJECT((ob), POTION_OBJECT)
+#define FILTER_PROJECTILE_OBJECTS(ob) FILTER_CREATE_HEAP((ob), PROJECTILE_OBJECT)
+#define FILTER_RECEPTACLE_OBJECTS(ob) FILTER_CREATE_CONTAINER((ob), RECEPTACLE_OBJECT)
+#define FILTER_RESISTANCE_OBJECTS(ob) FILTER_CREATE_OBJECT((ob), RESISTANCE_OBJECT)
+#define FILTER_ROOM_OBJECTS(ob)       FILTER_CREATE_CONTAINER((ob), ROOM_OBJECT)
+#define FILTER_ROPE_OBJECTS(ob)       FILTER_CREATE_OBJECT((ob), ROPE_OBJECT)
+#define FILTER_SCROLL_OBJECTS(ob)     FILTER_CREATE_OBJECT((ob), SCROLL_OBJECT)
+#define FILTER_SPELLS_OBJECTS(ob)     FILTER_CREATE_OBJECT((ob), SPELLS_OBJECT)
+#define FILTER_TORCH_OBJECTS(ob)      FILTER_CREATE_OBJECT((ob), TORCH_OBJECT)
+#define FILTER_WEAPON_OBJECTS(ob)     FILTER_CREATE_OBJECT((ob), WEAPON_OBJECT)
+#define FILTER_WORKROOM_OBJECTS(ob)   FILTER_CREATE_SOME((ob), "create_room", WORKROOM_OBJECT)
 
 /* No definitions beyond this line. */
 #endif FILES_DEFINED
