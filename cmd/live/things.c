@@ -37,6 +37,7 @@ inherit "/cmd/std/command_driver";
 
 #include <composite.h>
 #include <cmdparse.h>
+#include <files.h>
 #include <filter_funs.h>
 #include <formulas.h>
 #include <language.h>
@@ -867,8 +868,7 @@ appraise_light()
 int
 appraise(string str)
 {
-    object *ob;
-    int i;
+    object *obs;
 
     if (str == "light")
     {
@@ -882,21 +882,18 @@ appraise(string str)
     if (!stringp(str))
         return 0;
 
-    ob = FIND_STR_IN_OBJECT(str, this_player());
-    if (sizeof(ob) == 0)
-        ob = FIND_STR_IN_OBJECT(str, environment(this_player()));
+    obs = FIND_STR_IN_OBJECT(str, this_player());
+    if (sizeof(obs) == 0)
+        obs = FIND_STR_IN_OBJECT(str, environment(this_player()));
 
-    if (sizeof(ob) == 0)
+    if (sizeof(obs) == 0)
         return 0;
 
-    for (i = 0; i < sizeof(ob); i++)
+    foreach(object ob: obs)
     {
-        if (living(ob[i]))
-            write("You study " + ob[i]->query_the_name(this_player()) +
-                " carefully.\n");
-        else
-            write("You study " + LANG_THESHORT(ob[i]) + " carefully.\n");
-        ob[i]->appraise_object();
+        write("You study " + (living(ob) ? ob->query_the_name(this_player()) :
+            LANG_THESHORT(ob)) + " carefully.\n");
+        ob->appraise_object();
     }
 
     return 1;
@@ -1296,14 +1293,34 @@ hide(string str)
 /*
  * inventory - List things in my inventory
  */
+
+/*
+ * Function name: display_category
+ * Description  : Displays one group of items within the inventory of a player.
+ * Arguments    : object *oblist - the items in the display group, if any.
+ *                string category - the title of the category (max 8 letters).
+ * Returns      : object * - the oblist passed through the header.
+ */
+static object *
+display_category(object *oblist, string category)
+{
+    if (sizeof(oblist))
+    {
+        write(HANGING_INDENT(sprintf("%-8s: %s", extract(category, 0, 7),
+            COMPOSITE_DEAD(oblist)), 10, 0));
+    }
+
+    return oblist;
+}
+
 int
 inventory(string str)
 {
     object player;
     object *objs;
-    object *coins;
+    object *selection;
     int alarm_id;
-    int width;
+    int display, size;
     string comp;
 
     if (stringp(str))
@@ -1338,15 +1355,6 @@ inventory(string str)
     objs = (object*)player->subinventory(0);
     objs = FILTER_SHOWN(objs);
 
-    coins = filter(objs, &->id("coin"));
-    coins += filter((objs - coins), &->id("gem"));
-    objs -= coins;
-    if (sizeof(coins))
-    {
-        write(HANGING_INDENT(str + "carrying " + COMPOSITE_DEAD(coins) +
-            ".", 2, 0));
-    }
-
     /* Show all sublocs that describe things. */
     player->add_prop(TEMP_SUBLOC_SHOW_ONLY_THINGS, 1);
     alarm_id = set_alarm(0.5, 0.0,
@@ -1355,16 +1363,31 @@ inventory(string str)
     player->remove_prop(TEMP_SUBLOC_SHOW_ONLY_THINGS);
     remove_alarm(alarm_id);
 
+    size = sizeof(objs);
+    selection = filter(objs, &->id("coin")) | filter(objs, &->id("gem"));
+    objs -= display_category(selection, "Value");
+//  objs -= display_category(FILTER_ARMOUR_OBJECTS(objs), "Armours");
+    objs -= display_category(FILTER_WEARABLE_OBJECTS(objs), "Clothes");
+    objs -= display_category(FILTER_WEAPON_OBJECTS(objs), "Weapons");
+    objs -= display_category(FILTER_HERB_OBJECTS(objs), "Herbs");
+    objs -= display_category(FILTER_POTION_OBJECTS(objs), "Potions");
+    objs -= display_category(FILTER_FOOD_OBJECTS(objs), "Food");
+    objs -= display_category(FILTER_DRINK_OBJECTS(objs), "Drinks");
+    objs -= display_category(FILTER_KEY_OBJECTS(objs), "Keys");
+    objs -= display_category(FILTER_TORCH_OBJECTS(objs), "Torches");
+    display = (sizeof(objs) != size);
+
     /* Nothing else (visible). */
     if (!sizeof(objs) || !(comp = SILENT_COMPOSITE_DEAD(objs)))
     {
-        write(str + "not carrying anything" +
-            (sizeof(coins) ? " else" : "") + ".\n");
+        if (!display)
+        {
+            write(str + "not carrying anything.\n");
+        }
     }
     else
     {
-        write(HANGING_INDENT(str + (sizeof(coins) ? "also ": "") +
-            "carrying " + comp + ".", 2, 0));
+        write(HANGING_INDENT("Misc.   : " + comp, 10, 0));
     }
     return 1;
 }
@@ -1603,7 +1626,6 @@ look(string str, int brief)
                     prplc,
                     *tmp,
                     name;
-    int             i;
     object          *obarr,
                     *obd,
                     *obl,
@@ -1731,14 +1753,13 @@ look(string str, int brief)
         obarr = filter(obarr, inside_visible);
         if (sizeof(obarr) > 0)
         {
-            for (i = 0; i < sizeof(obarr); i++)
+            foreach(object ob: obarr)
             {
                 if (!brief)
 		{
-                    show_exec(obarr[i]);
+                    show_exec(ob);
 		}
-
-                obarr[i]->show_visible_contents(this_player());
+                ob->show_visible_contents(this_player());
             }
             return 1;
         }

@@ -176,6 +176,17 @@ config_wearable_item(int slot, int la, int lo, object wf)
 }
 
 /*
+ * Function name: query_wearable_item
+ * Description  : Function to identify this object as being wearable.
+ * Returns      : int 1 - always.
+ */
+public nomask int
+query_wearable_item()
+{
+    return 1;
+}
+
+/*
  * Function name: wear_how
  * Description:   Generate the string that is shown when the armour is worn
  * Arguments:     location: the location(s) covered by the armour
