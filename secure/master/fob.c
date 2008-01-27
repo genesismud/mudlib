@@ -2381,7 +2381,7 @@ query_domain_links()
     links = sort_array(m_indices(m_domains));
     index = sizeof(links);
     while(--index >= 0)
-        links[index] = "/w/" + links[index] + "/" + WIZARD_LINK;
+        links[index] = "/d/" + links[index] + "/" + DOMAIN_LINK;
 
     return links;
 }
