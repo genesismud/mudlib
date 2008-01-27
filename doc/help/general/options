@@ -64,6 +64,9 @@ ARGUMENTS
 			       wrap notes / mails with lines exceeding 80
 			       characters per line.
 
+	invenotry <on/off>   - Indicate whether you want to view your inventory
+			       in a modern tabulated display, or not.
+
 	morelen <len>        - The amount of lines "more" displays at a time,
                                in a range from 1 to 100. The default is 20.
 

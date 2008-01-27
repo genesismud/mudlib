@@ -982,8 +982,8 @@ levels(string str)
 nomask int
 options(string arg)
 {
-    string        *args, rest;
-    int                wi;
+    string *args, rest;
+    int     wi;
 
     if (!stringp(arg))
     {
@@ -998,6 +998,7 @@ options(string arg)
         options("web");
 //        options("merciful");
         options("autowrap");
+        options("inventory");
 	if (this_player()->query_wiz_level())
 	{
 	    options("autopwd");
@@ -1083,6 +1084,13 @@ options(string arg)
                 "No" : "Yes") + "\n");
             break;
 
+        case "inventory":
+        case "table":
+            write("Table inventory: " +
+                (this_player()->query_option(OPT_TABLE_INVENTORY) ?
+                "On" : "Off") + "\n");
+            break;
+
         case "autopwd":
 	case "pwd":
 	    if (this_player()->query_wiz_level())
@@ -1099,8 +1107,8 @@ options(string arg)
 	    if (this_player()->query_wiz_level())
 	    {
 		write("Auto line cmds:  " +
-		      (this_player()->query_option(OPT_AUTOLINECMD) ?
-		       "On" : "Off") + "\n");
+		    (this_player()->query_option(OPT_AUTOLINECMD) ?
+		    "On" : "Off") + "\n");
 		break;
 	    }
 	    /* Intentional fallthrough to default if not a wizard. */
@@ -1109,8 +1117,8 @@ options(string arg)
 	    if (this_player()->query_wiz_level())
 	    {
 		write("Timestamp lines: " +
-		      (this_player()->query_option(OPT_TIMESTAMP) ?
-		       "On" : "Off") + "\n");
+		    (this_player()->query_option(OPT_TIMESTAMP) ?
+		    "On" : "Off") + "\n");
 		break;
 	    }
 	    /* Intentional fallthrough to default if not a wizard. */
@@ -1123,7 +1131,7 @@ options(string arg)
     }
 
     rest = implode(args[1..], " ");
-    
+
     switch(args[0])
     {
     case "morelen":
@@ -1177,7 +1185,6 @@ options(string arg)
         else
         {
             wi = member_array(rest, health_state);
-        
             if (wi < 0)
             {
                 notify_fail("No such health descriptions (" + rest +
@@ -1233,14 +1240,17 @@ options(string arg)
         options("web");
         break;
 
+    case "inventory":
+    case "table":
+        this_player()->set_option(OPT_TABLE_INVENTORY, (args[1] == "on"));
+        options("inventory");
+        break;
+
     case "autopwd":
     case "pwd":
         if (this_player()->query_wiz_level())
 	{
-	    if (args[1] == "on")
-                this_player()->set_option(OPT_AUTO_PWD, 1);
-            else
-	        this_player()->set_option(OPT_AUTO_PWD, 0);
+            this_player()->set_option(OPT_AUTO_PWD, (args[1] == "on"));
             options("autopwd");
 	    break;
 	}
@@ -1250,12 +1260,7 @@ options(string arg)
     case "cmd":
         if (this_player()->query_wiz_level())
 	{
-	    // NB! Inverse states on this option!
-	    if (args[1] == "off")
-                this_player()->set_option(OPT_AUTOLINECMD, 1);
-            else
-	        this_player()->set_option(OPT_AUTOLINECMD, 0);
-
+            this_player()->set_option(OPT_AUTOLINECMD,(args[1] == "on"));
 	    // Make sure the line command set gets updated.
 	    "/cmd/wiz/apprentice"->update_commands();
             options("autolinecmd");
@@ -1266,10 +1271,7 @@ options(string arg)
     case "timestamp":
         if (this_player()->query_wiz_level())
 	{
-	    if (args[1] == "on")
-                this_player()->set_option(OPT_TIMESTAMP, 1);
-            else
-	        this_player()->set_option(OPT_TIMESTAMP, 0);
+            this_player()->set_option(OPT_TIMESTAMP, (args[1] == "on"));
             options("timestamp");
 	    break;
 	}

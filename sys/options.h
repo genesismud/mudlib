@@ -19,40 +19,26 @@
  */
 #define OPT_BASE		48
 
-// Begin with general/mortal options
+/* These options are not directly linked to a bit in the array. */
+#define OPT_MORE_LEN		-1 /* Number of lines with more. */
+#define OPT_SCREEN_WIDTH	-2 /* Screen width in columns. */
+#define OPT_WHIMPY		-3 /* Wimpy percentage. */
 
-// More length
-#define OPT_MORE_LEN		0
-// Screen width
-#define OPT_SCREEN_WIDTH	1
-// Brief display mode
-#define OPT_BRIEF		2
-// Echo display mode
-#define OPT_ECHO		3
-// Whimpy level
-#define OPT_WHIMPY		4
-// See fights of others
-#define OPT_NO_FIGHTS		5
-// Backward compatibility.
-#define OPT_BLOOD		5
-// Disable unarmed combat
-#define OPT_UNARMED_OFF         7
-// Gag all messages of misses
-#define OPT_GAG_MISSES          8
-// Be merciful in combat
-#define OPT_MERCIFUL_COMBAT     9
-// Auto-wrap long notes
-#define OPT_AUTOWRAP		10
-// Web participation
-#define OPT_WEBPERM		12
+/* General (Mortal) bits */
+#define OPT_BRIEF		 0 /* Brief description of rooms. */
+#define OPT_ECHO		 1 /* Echo of commands. */
+#define OPT_NO_FIGHTS		 2 /* Do not see combat of others. */
+#define OPT_BLOOD		 2 /* Backward compatibility for NO_FIGHTS. */
+#define OPT_UNARMED_OFF          3 /* Do not use unarmed combat. */
+#define OPT_GAG_MISSES           4 /* Gag messages of combat misses. */
+#define OPT_MERCIFUL_COMBAT      5 /* Be merciful in combat. */
+#define OPT_WEBPERM		 6 /* Web participation. */
+#define OPT_TABLE_INVENTORY	 7 /* Modern tabulated inventory. */
+#define OPT_AUTOWRAP		19 /* Auto-wrap long notes. */
 
-// Wizard options
-
-// Automatic display of current directory on cwd changes
-#define OPT_AUTO_PWD		6
-// Automatically alias line commands
-#define OPT_AUTOLINECMD		11
-// Get a time stamp on wiz lines.
-#define OPT_TIMESTAMP		13
+/* Wizard bits */
+#define OPT_AUTO_PWD		18  /* Display of current dir on changes. */
+#define OPT_AUTOLINECMD		20  /* Automatically alias line commands. */
+#define OPT_TIMESTAMP		21  /* Get a time stamp on wiz lines. */
 
 #endif /* _options_h */

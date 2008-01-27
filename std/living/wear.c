@@ -39,10 +39,18 @@ show_worn(object for_obj)
     if (!sizeof(worn))
         return "";
 
-    str = ((for_obj == this_object()) ? "You are" : 
-        capitalize(query_pronoun()) + " is") + " wearing " +  
-        FO_COMPOSITE_ALL_DEAD(worn, for_obj) + ".";
-    return HANGING_INDENT(str, 2, 0);
+    if (for_obj->query_option(OPT_TABLE_INVENTORY))
+    {
+        return HANGING_INDENT("Worn    : " +
+            FO_COMPOSITE_ALL_DEAD(worn, for_obj), 10, 0);
+    }
+    else
+    {
+        str = ((for_obj == this_object()) ? "You are" : 
+            capitalize(query_pronoun()) + " is") + " wearing " +  
+            FO_COMPOSITE_ALL_DEAD(worn, for_obj) + ".";
+        return HANGING_INDENT(str, 2, 0);
+    }
 }
 
 /*

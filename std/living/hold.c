@@ -60,7 +60,7 @@ release(object tool)
  * Returns:       The (string) description
  */
 public string
-show_held(object ob)
+show_held(object for_obj)
 {
     mixed *a;
     int il, size;
@@ -75,7 +75,7 @@ show_held(object ob)
         return "";
     }
     
-    if (ob != this_object())
+    if (for_obj != this_object())
     {
         p = query_possessive();
         pr = capitalize(query_pronoun()) + " is";
@@ -86,8 +86,14 @@ show_held(object ob)
         pr = "You are";
     }
 
-    a = filter(map(a, &->query_hold_desc(ob)), stringp);
-    str = pr + " holding " + COMPOSITE_WORDS(a) + ".";
-
-    return HANGING_INDENT(str, 2, 0);
+    a = filter(map(a, &->query_hold_desc(for_obj)), stringp);
+    if (for_obj->query_option(OPT_TABLE_INVENTORY))
+    {
+        return HANGING_INDENT("Held    : " + COMPOSITE_WORDS(a), 10, 0);
+    }
+    else
+    {
+        str = pr + " holding " + COMPOSITE_WORDS(a) + ".";
+        return HANGING_INDENT(str, 2, 0);
+    }
 }

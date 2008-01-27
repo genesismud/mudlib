@@ -49,10 +49,17 @@ show_wielded(object for_obj)
         pr = "You are";
     }
 
-    a = filter(map(a, &->query_wield_desc(p)), stringp);
-    str = pr + " wielding " + COMPOSITE_WORDS(a) + ".";
-
-    return HANGING_INDENT(str, 2, 0);
+    a = map(a, &->query_wield_desc(p)) - ({ 0 });
+    
+    if (for_obj->query_option(OPT_TABLE_INVENTORY))
+    {
+        return HANGING_INDENT("Wielded : " + COMPOSITE_WORDS(a), 10, 0);
+    }
+    else
+    {
+        str = pr + " wielding " + COMPOSITE_WORDS(a) + ".";
+        return HANGING_INDENT(str, 2, 0);
+    }
 }
 
 /*

@@ -43,6 +43,7 @@ inherit "/cmd/std/command_driver";
 #include <language.h>
 #include <macros.h>
 #include <money.h>
+#include <options.h>
 #include <ss_types.h>
 #include <std.h>
 #include <stdproperties.h>
@@ -1320,7 +1321,7 @@ inventory(string str)
     object *objs;
     object *selection;
     int alarm_id;
-    int display, size;
+    int display, size, table;
     string comp;
 
     if (stringp(str))
@@ -1355,6 +1356,19 @@ inventory(string str)
     objs = (object*)player->subinventory(0);
     objs = FILTER_SHOWN(objs);
 
+    table = this_player()->query_option(OPT_TABLE_INVENTORY);
+
+    /* Filter all coins and gems. */
+    size = sizeof(objs);
+    selection = filter(objs, &->id("coin")) | filter(objs, &->id("gem"));
+
+    if (!table && sizeof(selection))
+    {
+        write(HANGING_INDENT(str + "in possession of " +
+            COMPOSITE_DEAD(selection) + ".", 2, 0));
+        objs -= selection;
+    }
+
     /* Show all sublocs that describe things. */
     player->add_prop(TEMP_SUBLOC_SHOW_ONLY_THINGS, 1);
     alarm_id = set_alarm(0.5, 0.0,
@@ -1363,21 +1377,27 @@ inventory(string str)
     player->remove_prop(TEMP_SUBLOC_SHOW_ONLY_THINGS);
     remove_alarm(alarm_id);
 
-    size = sizeof(objs);
-    selection = filter(objs, &->id("coin")) | filter(objs, &->id("gem"));
-    objs -= display_category(selection, "Value");
-//  objs -= display_category(FILTER_ARMOUR_OBJECTS(objs), "Armours");
-    objs -= display_category(FILTER_WEARABLE_OBJECTS(objs), "Clothes");
-    objs -= display_category(FILTER_WEAPON_OBJECTS(objs), "Weapons");
-    objs -= display_category(FILTER_HERB_OBJECTS(objs), "Herbs");
-    objs -= display_category(FILTER_POTION_OBJECTS(objs), "Potions");
-    objs -= display_category(FILTER_FOOD_OBJECTS(objs), "Food");
-    objs -= display_category(FILTER_DRINK_OBJECTS(objs), "Drinks");
-    objs -= display_category(FILTER_KEY_OBJECTS(objs), "Keys");
-    objs -= display_category(FILTER_TORCH_OBJECTS(objs), "Torches");
-    display = (sizeof(objs) != size);
+    if (table)
+    {
+        objs -= display_category(selection, "Value");
+//      objs -= display_category(FILTER_ARMOUR_OBJECTS(objs), "Armours");
+        objs -= display_category(FILTER_WEARABLE_OBJECTS(objs), "Clothes");
+        objs -= display_category(FILTER_WEAPON_OBJECTS(objs), "Weapons");
+        objs -= display_category(FILTER_HERB_OBJECTS(objs), "Herbs");
+        objs -= display_category(FILTER_POTION_OBJECTS(objs), "Potions");
+        objs -= display_category(FILTER_FOOD_OBJECTS(objs), "Food");
+        objs -= display_category(FILTER_DRINK_OBJECTS(objs), "Drinks");
+        objs -= display_category(FILTER_KEY_OBJECTS(objs), "Keys");
+        objs -= display_category(FILTER_TORCH_OBJECTS(objs), "Torches");
+    }
+    else
+    {
+        write(HANGING_INDENT(str + "carrying " + COMPOSITE_DEAD(objs) +
+            ".", 2, 0));
+    }
 
     /* Nothing else (visible). */
+    display = (sizeof(objs) != size);
     if (!sizeof(objs) || !(comp = SILENT_COMPOSITE_DEAD(objs)))
     {
         if (!display)
@@ -1385,9 +1405,9 @@ inventory(string str)
             write(str + "not carrying anything.\n");
         }
     }
-    else
+    else if (table)
     {
-        write(HANGING_INDENT("Misc.   : " + comp, 10, 0));
+        write(HANGING_INDENT("Other   : " + comp, 10, 0));
     }
     return 1;
 }
