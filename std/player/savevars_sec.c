@@ -1024,16 +1024,15 @@ set_option(int opt, int val)
             return 0;
 
         options = sprintf("%3d", val) + options[3..];
-        break;
+        return 1;
 
     case OPT_SCREEN_WIDTH:
-        if ((val != -1) &&
-            ((val > 200) || (val < 40)))
+        if ((val != -1) && ((val > 200) || (val < 40)))
             return 0;
 
         options = options[..2] + sprintf("%3d", val) + options[6..];
         fixup_screen();
-        break;
+        return 1;
 
     case OPT_WHIMPY:
         if ((val > 99) || (val < 0))
@@ -1042,91 +1041,32 @@ set_option(int opt, int val)
         options = options[..5] + sprintf("%2d", val) + options[8..];
         /* Update the cache of the whimpy value, too. */
         ::set_whimpy(val);
-        break;
+        return 1;
 
     case OPT_BRIEF:
-        if (val)
-            options = efun::set_bit(options, OPT_BASE + 0);
-        else
-            options = efun::clear_bit(options, OPT_BASE + 0);
-        break;
-
     case OPT_ECHO:
-        if (val)
-            options = efun::set_bit(options, OPT_BASE + 1);
-        else
-            options = efun::clear_bit(options, OPT_BASE + 1);
-        break;
-
     case OPT_NO_FIGHTS:
     case OPT_BLOOD: /* Backward compatibility */
-        if (val)
-            options = efun::set_bit(options, OPT_BASE + 2);
-        else
-            options = efun::clear_bit(options, OPT_BASE + 2);
-        break;
-
     case OPT_UNARMED_OFF:
-        if (val)
-            options = efun::set_bit(options, OPT_BASE + 3);
-        else
-            options = efun::clear_bit(options, OPT_BASE + 3);
-        break;
-        
     case OPT_GAG_MISSES:
-        if (val)
-            options = efun::set_bit(options, OPT_BASE + 4);
-        else
-            options = efun::clear_bit(options, OPT_BASE + 4);
-        break;
-
     case OPT_MERCIFUL_COMBAT:
-        if (val)
-            options = efun::set_bit(options, OPT_BASE + 5);
-        else
-            options = efun::clear_bit(options, OPT_BASE + 5);
-        break;
-        
     case OPT_WEBPERM:
-        if (val)
-            options = efun::set_bit(options, OPT_BASE + 6);
-        else
-            options = efun::clear_bit(options, OPT_BASE + 6);
-        break;
-
     case OPT_AUTO_PWD:
-        if (val)
-            options = efun::set_bit(options, OPT_BASE + 18);
-        else
-            options = efun::clear_bit(options, OPT_BASE + 18);
-        break;
-
     case OPT_AUTOWRAP:
-        if (val)
-            options = efun::set_bit(options, OPT_BASE + 19);
-        else
-            options = efun::clear_bit(options, OPT_BASE + 19);
-        break;
-
     case OPT_AUTOLINECMD:
-        if (val)
-            options = efun::set_bit(options, OPT_BASE + 20);
-        else
-            options = efun::clear_bit(options, OPT_BASE + 20);
-        break;
-
     case OPT_TIMESTAMP:
+    case OPT_TABLE_INVENTORY:
         if (val)
-            options = efun::set_bit(options, OPT_BASE + 21);
+            options = efun::set_bit(options, OPT_BASE + opt);
         else
-            options = efun::clear_bit(options, OPT_BASE + 21);
-        break;
+            options = efun::clear_bit(options, OPT_BASE + opt);
+        return 1;
 
     default:
         return 0;
-        break;
     }
-    
+
+    /* Not reached. */
     return 1;
 }
 
@@ -1147,7 +1087,6 @@ query_option(int opt)
     {
     case OPT_MORE_LEN:
         return atoi(options[..2]);
-        break;
 
     case OPT_SCREEN_WIDTH:
         return atoi(options[3..5]);
@@ -1156,39 +1095,19 @@ query_option(int opt)
         return atoi(options[6..7]);
 
     case OPT_BRIEF:
-        return efun::test_bit(options, OPT_BASE + 0);
-
     case OPT_ECHO:
-        return efun::test_bit(options, OPT_BASE + 1);
-
     case OPT_NO_FIGHTS:
     case OPT_BLOOD: /* Backward compatibility. */
-        return efun::test_bit(options, OPT_BASE + 2);
-
     case OPT_UNARMED_OFF:
-        return efun::test_bit(options, OPT_BASE + 3);
-
     case OPT_GAG_MISSES:
-        return efun::test_bit(options, OPT_BASE + 4);
-
     case OPT_MERCIFUL_COMBAT:
-        return efun::test_bit(options, OPT_BASE + 5);
-
     case OPT_WEBPERM:
-        return efun::test_bit(options, OPT_BASE + 6);
-
     case OPT_AUTO_PWD:
-        return efun::test_bit(options, OPT_BASE + 18);
-
     case OPT_AUTOWRAP:
-        return efun::test_bit(options, OPT_BASE + 19);
-
     case OPT_AUTOLINECMD:
-	// NB! This option is inversed to look on when it's off... duh.. well.
-        return !(efun::test_bit(options, OPT_BASE + 20));
-
     case OPT_TIMESTAMP:
-        return efun::test_bit(options, OPT_BASE + 21);
+    case OPT_TABLE_INVENTORY:
+        return efun::test_bit(options, OPT_BASE + opt);
 
     default:
         return 0;
