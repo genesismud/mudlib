@@ -157,16 +157,10 @@ getwho()
 string
 query_domain_name(int number)
 {
-    string *domains;
-    int index;
-
-    domains = m_indices(m_domains);
-    index = sizeof(domains);
-
-    while(--index >= 0)
+    foreach(string dname: m_indices(m_domains))
     {
-        if (m_domains[domains[index]][FOB_DOM_NUM] == number)
-            return domains[index];
+        if (m_domains[dname][FOB_DOM_NUM] == number)
+            return dname;
     }
 
     return 0;
@@ -451,7 +445,6 @@ remove_domain(string dname)
     int    index;
     int    size;
     string cmder;
-    string *members;
 
     /* May only be called from the arch soul. */
     if (!CALL_BY(WIZ_CMD_ARCH))
@@ -478,13 +471,10 @@ remove_domain(string dname)
         return 0;
     }
 
-    members = m_domains[dname][FOB_DOM_MEMBERS];
-    index = -1;
-    size = sizeof(members);
-    while(++index < size)
+    foreach(string wname: m_domains[dname][FOB_DOM_MEMBERS])
     {
         /* Don't demote mages, arches and keepers. */
-        switch(m_wizards[members[index]][FOB_WIZ_RANK])
+        switch(m_wizards[wname][FOB_WIZ_RANK])
         {
         case WIZ_MAGE:
         case WIZ_ARCH:
@@ -492,14 +482,14 @@ remove_domain(string dname)
             break;
 
         default:
-            do_change_rank(members[index], WIZ_APPRENTICE, cmder);
-            write("Demoted " + capitalize(members[index]) +
+            do_change_rank(wname, WIZ_APPRENTICE, cmder);
+            write("Demoted " + capitalize(wname) +
                 " to apprentice.\n");
         }
 
         /* Though expel everyone. */
-        add_wizard_to_domain("", members[index], cmder);
-        write("Expelled " + capitalize(members[index]) + ".\n");
+        add_wizard_to_domain("", wname, cmder);
+        write("Expelled " + capitalize(wname) + ".\n");
     }
 
     /* Remove all sanctions given out to or received by the domain. */
@@ -536,16 +526,14 @@ tell_domain(string dname, string wname, string wmess, string dmess)
 {
     object wiz;
     string *wlist;
-    int    size;
+    object *wizards;
 
     if (objectp(wiz = find_player(wname)))
         tell_object(wiz, wmess);
 
     wlist = (string *)m_domains[dname][FOB_DOM_MEMBERS] - ({ wname });
-    size = sizeof(wlist);
-    while(--size >= 0)
-        if (objectp(wiz = find_player(wlist[size])))
-            tell_object(wiz, dmess);
+    wizards = filter(map(wlist, find_player), objectp);
+    wizards->catch_tell(dmess);
 }
 
 /*
@@ -1230,26 +1218,18 @@ regret_application(string dname)
 static void
 remove_all_applications(string wname)
 {
-    string *domains;
-    int    index;
-    int    size;
-
-    domains = m_indices(m_applications);
-
-    index = -1;
-    size  = sizeof(domains);
-    while(++index < size)
+    foreach(string dname: m_indices(m_applications))
     {
         /* Remove the application from the wizard if it exists. */
-        if (pointerp(m_applications[domains[index]]))
+        if (pointerp(m_applications[dname]))
         {
             write("Removing application from " + capitalize(wname) + " to " +
-                domains[index] + ".\n");
-            m_applications[domains[index]] -= ({ wname });
+                dname + ".\n");
+            m_applications[dname] -= ({ wname });
 
             /* If this was the last wizard, remove the domain from the list. */
-            if (!sizeof(m_applications[domains[index]]))
-                m_delkey(m_applications, domains[index]);
+            if (!sizeof(m_applications[dname]))
+                m_delkey(m_applications, dname);
         }
     }
 
@@ -1339,15 +1319,12 @@ list_applications(string str)
                 return 1;
             }
 
-            words = m_indices(m_applications);
-            index = -1;
-            size = sizeof(words);
             write("Domain      Applications\n----------- ------------\n");
 
-            while(++index < size)
+            foreach(string word: m_indices(m_applications))
             {
-                write(FORMAT_NAME(words[index]) + " " +
-                    COMPOSITE_WORDS(sort_array(map(m_applications[words[index]],
+                write(FORMAT_NAME(word) + " " +
+                    COMPOSITE_WORDS(sort_array(map(m_applications[word],
                     capitalize))) + "\n");
             }
             return 1;
@@ -2381,12 +2358,10 @@ query_mage_links()
 {
     string *links;
     int index;
-    int size;
 
-    index = -1;
     links = sort_array( ({ }) + m_domains[WIZARD_DOMAIN][FOB_DOM_MEMBERS]);
-    size  = sizeof(links);
-    while(++index < size)
+    index = sizeof(links);
+    while(--index >= 0)
         links[index] = "/w/" + links[index] + "/" + WIZARD_LINK;
 
     return links;
@@ -2400,15 +2375,13 @@ query_mage_links()
 public string *
 query_domain_links()
 {
-    int index;
-    int size;
     string *links;
+    int index;
 
-    index = -1;
     links = sort_array(m_indices(m_domains));
-    size = sizeof(links);
-    while(++index < size)
-        links[index] = "/d/" + links[index] + "/" + DOMAIN_LINK;
+    index = sizeof(links);
+    while(--index >= 0)
+        links[index] = "/w/" + links[index] + "/" + WIZARD_LINK;
 
     return links;
 }
@@ -2829,7 +2802,7 @@ update_teams(void)
             }
         }
         /* Remove empty teams. */
-        if (m_sizeof(m_teams[team]) == 0)
+        if (!sizeof(m_teams[team]))
         {
             m_delkey(m_teams, team);
         }
@@ -2864,8 +2837,7 @@ add_team_member(string team, string member)
         m_teams[team] = ({ member });
     else
     {
-        m_teams[team] -= ({ member });
-        m_teams[team] += ({ member });
+        m_teams[team] |= ({ member });
     }
 
     save_master();
