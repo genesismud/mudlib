@@ -87,7 +87,9 @@ show_held(object for_obj)
     }
 
     a = filter(map(a, &->query_hold_desc(for_obj)), stringp);
-    if (for_obj->query_option(OPT_TABLE_INVENTORY))
+    /* Only use table form when displaying inventory. */
+    if (for_obj->query_option(OPT_TABLE_INVENTORY) &&
+        for_obj->query_prop(TEMP_SUBLOC_SHOW_ONLY_THINGS))
     {
         return HANGING_INDENT("Held    : " + COMPOSITE_WORDS(a), 10, 0);
     }

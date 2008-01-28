@@ -50,8 +50,10 @@ show_wielded(object for_obj)
     }
 
     a = map(a, &->query_wield_desc(p)) - ({ 0 });
-    
-    if (for_obj->query_option(OPT_TABLE_INVENTORY))
+
+    /* Only use table form when displaying inventory. */
+    if (for_obj->query_option(OPT_TABLE_INVENTORY) &&
+        for_obj->query_prop(TEMP_SUBLOC_SHOW_ONLY_THINGS))
     {
         return HANGING_INDENT("Wielded : " + COMPOSITE_WORDS(a), 10, 0);
     }

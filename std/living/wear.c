@@ -39,7 +39,9 @@ show_worn(object for_obj)
     if (!sizeof(worn))
         return "";
 
-    if (for_obj->query_option(OPT_TABLE_INVENTORY))
+    /* Only use table form when displaying inventory. */
+    if (for_obj->query_option(OPT_TABLE_INVENTORY) &&
+        for_obj->query_prop(TEMP_SUBLOC_SHOW_ONLY_THINGS))
     {
         return HANGING_INDENT("Worn    : " +
             FO_COMPOSITE_ALL_DEAD(worn, for_obj), 10, 0);
