@@ -1239,6 +1239,6 @@ query_speed(mixed speed)
 {
     if (intp(speed))
         speed = itof(speed);
-
-    return max(speed * F_SPEED_MOD(this_object()->query_prop(LIVE_I_QUICKNESS)), 0.1);
+    
+    return speed * max(F_SPEED_MOD(this_object()->query_prop(LIVE_I_QUICKNESS)), 0.4);
 }
