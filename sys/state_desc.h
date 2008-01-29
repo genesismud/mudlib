@@ -59,9 +59,9 @@
 #define SD_STATLEVEL_IMM  185 
 #define SD_STATLEVEL_SUP  210 
 
-#define SD_NUM_GUILDS       3
-#define SD_GUILD_EXTENSIONS ({ "race", "occ", "lay" })
-#define SD_GUILD_FULL_NAMES ({ "racial", "occupational", "layman" })
+#define SD_NUM_GUILDS       4
+#define SD_GUILD_EXTENSIONS ({ "race", "occ", "lay", "craft" })
+#define SD_GUILD_FULL_NAMES ({ "racial", "occupational", "layman", "craftsman" })
 #define SD_ADVANCE_DESCS    ({ "very far from", "far from", "halfway to", \
     "close to", "very close to" })
 #define SD_SIZEOF_ADVANCE_DESCS   5
