@@ -797,14 +797,14 @@ convert_to_names(string *list)
         /* It may be an area-related alias. */
         if (IN_ARRAY(name, m_indices(gAliases)))
         {
-            return_arr |= tmp_arr;
+            return_arr |= gAliases[name];
             continue;
         }
 
         /* It may be a personal alias. */
         if (IN_ARRAY(name, m_indices(pAliases)))
         {
-            return_arr |= tmp_arr;
+            return_arr |= pAliases[name];
             continue;
         }
 
@@ -1063,7 +1063,7 @@ from(string str)
          * the mail that was already read.
          */
         if (filter_new &&
-            READ_FLAG(pMessages[index][MAIL_READ]))
+            (READ_FLAG(pMessages[index][MAIL_READ]) || ANSWERED_FLAG(pMessages[index][MAIL_READ])))
             continue;
 
         if (filter_star &&
