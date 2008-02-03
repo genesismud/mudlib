@@ -257,8 +257,8 @@ gs_list(string str)
         break;
 
     default:
-        write("You are not a member of any " + implode(not_found, " or ") +
-            " guild.\n");
+        write("You are not a member of any " +
+	    COMPOSITE_WORDS_WITH(not_found, "or") + " guild.\n");
         break;
     }
 

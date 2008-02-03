@@ -1307,7 +1307,7 @@ display_category(object *oblist, string category)
 {
     if (sizeof(oblist))
     {
-        write(HANGING_INDENT(sprintf("%-8s: %s", extract(category, 0, 7),
+        write(HANGING_INDENT(sprintf("%-8s: %s.", extract(category, 0, 7),
             COMPOSITE_DEAD(oblist)), 10, 0));
     }
 

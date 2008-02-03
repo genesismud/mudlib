@@ -108,6 +108,44 @@
     ((object *)CMDPARSE_STD->do_verb_with(c, chfun, dofun, afun1, afun2, this_object()))
 
 /*
+ * PARSE_COMMAND
+ *
+ * Performs the gamedriver parse_command() and follows it up with a standard
+ * call to NORMAL_ACCESS() on the result.
+ *
+ * Arguments:
+ *            string str - the (command-line) text to parse.
+ *            mixed  env - if a singular object, it will take env + the deep
+ *                         inventory of env. If an array of objects, it will
+ *                         match only against those objects.
+ *            string pattern - the pattern to parse against. For more info,
+ *                         see "man parse_command".
+ * Returns:
+ *            object * - an array with matching objects, ({ }) or 0.
+ */
+#define PARSE_COMMAND(str, env, pattern) \
+    ((object *)CMDPARSE_STD->parse_command_access((str), (env), (pattern)))
+
+/*
+ * PARSE_COMMAND_ONE
+ *
+ * Same as PARSE_COMMAND, but then returns the object if the player selected
+ * exactly one object. Note that this returns 0 if the player selected more
+ * than one item. If this fails, use PARSE_COMMAND_SIZE to find out how many
+ * items were found (if you care whether it was 0 or > 1).
+ */
+#define PARSE_COMMAND_ONE(str, env, pattern) \
+    ((object)CMDPARSE_STD->parse_command_one((str), (env), (pattern)))
+
+/*
+ * PARSE_COMMAND_SIZE
+ *
+ * When PARSE_COMMAND_ONE is used and fails, use this macro to find out how
+ * many items were found. It could be 0, but could also be > 1.
+ */
+#define PARSE_COMMAND_SIZE ((int)CMDPARSE_STD->parse_command_size())
+
+/*
  * NORMAL_ACCESS
  *
  * test for access to object

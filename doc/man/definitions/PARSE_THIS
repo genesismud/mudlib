@@ -3,8 +3,11 @@
 /*
  * PARSE_THIS(s, p)
  *
- * This define gives access to the function parse_this in the basic soul
- * COMMAND_DRIVER so that you do not have to copy it everywhere.
+ * This define gives access to the function parse_this() that was originally
+ * in the basic soul COMMAND_DRIVER so that people would not have to copy it
+ * everywhere. Now parse_this() resides in COMMANDS_LIBRARY which can be
+ * inherited into code. Still this definition may provide quick access to the
+ * same.
  *
  * s - the string to parse
  * p - the pattern to parse with
@@ -14,6 +17,6 @@
  *
  * An alternative would be to include <files.h> and then do:
  *
- *     oblist = (object *)COMMAND_DRIVER->parse_this(s, p [, ...]);
+ *     oblist = (object *)COMMANDS_LIBRARY>parse_this(s, p [, ...]);
  */
 
