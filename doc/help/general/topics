@@ -1,26 +1,23 @@
 You can request help on the following topics with the "help" command.
 /-----------------------------------------------------------------------------\
-|Seeing            | look, examine, search, show                              |
-|Inventories       | inventory, get, drop, put, give, count, appraise         |
-|Doors, Locks, Lids| open, close, lock, unlock, pick, knock, pound            |
-|Communication     | say, shout, whisper, rsay, reply, ask, commune,          |
-|                  | converse, emotions, adverbs, mail, editor                |
-|Introductions     | introduce, remember, forget, remembered, introduced      |
-|Items             | wear, remove, wield, unwield, hold, release, light,      |
-|                  | extinguish, read, drink, eat, buy, sell                  |
-|Combat            | kill, assist, stop                                       |
-|Status            | vitals, stats, skills, compare, health                   |
-|Teams             | invite, join, leave, team                                |
-|Game              | who, help, date, save, quit, escape, password, email     |
-|                  | options, last, restrict                                  |
-|Magic             | spells, cast, abort                                      |
-|Information       | levels, skillevels, skillist, help                       |
-|Bug reports       | (sys)praise, (sys)idea, (sys)typo, (sys)bug              |
-|Thief skills      | backstab, hide, peek, sneak, steal, track                |
-|Burning           | light, extinguish                                        |
-|Guilds            | improve, learn, meditate				      |
+|Seeing        | look, examine, search, show                                  |
+|Inventories   | inventory, get, drop, put, give, count, appraise             |
+|Items         | wear, remove, wield, unwield, hold, release, read, buy, sell |
+|              | light, extinguish, read, drink, eat, money                   |
+|Doors, Lids   | open, close, lock, unlock, pick, knock, pound                |
+|Communication | say, shout, whisper, rsay, reply, ask, commune, converse,    |
+|              | emotions, adverbs, target, mail, editor                      |
+|Introductions | introduce, remember, forget, remembered, introduced          |
+|Combat        | kill, assist, stop                                           |
+|Teams         | invite, join, leave, team, teams                             |
+|Thief         | backstab, hide, peek, sneak, steal, track                    |
+|Magic         | spells, cast, abort                                          |
+|Game          | who, help, date, save, quit, escape, password, email         |
+|              | options, last, restrict                                      |
+|Guilds        | improve, learn, meditate		  		      |
+|Status        | vitals, stats, skills, compare, health                       |
+|Information   | help, levels, skillevels, skillist                           |
+|Game concepts | armageddon, events, experience, general, history, idle,      |
+|              | races, recover, rules, target, wizapp, wizards, wizhood      |
+|Bug reports   | (sys)praise, (sys)idea, (sys)typo, (sys)bug                  |
 \-----------------------------------------------------------------------------/
-Additionally, some information is available on the following topics:
-
-adverbs, armageddon, emotions, events, experience, general, history, idle,
-races, recover, rules, quicktyper, target, teams, wizapp, wizards, wizhood.
