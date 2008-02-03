@@ -75,13 +75,16 @@
  * Takes a time() value 't' and returns it as string formatted by the format
  * specifier 'f'. The format may be custom built from the following elements:
  *
- *     yyyy - year in four digits (Example: 2001)
- *     mmm  - month in string (Example: Sep)
- *     mm   - month in number with prefix 0 (Example: 09)
- *     m    - month in number without prefix 0 (Example: 9)
- *     ddd  - day of the week in string (Example: Mon)
- *     dd   - day of the month in number with prefix 0 (Example: 03)
- *     d    - day of the month in number without prefix 0 (Example: 3)
+ *     yyyy - year in four digits (Example: "2001")
+ *     yy   - year in two digis (Example: "01", please try to avoid this)
+ *     mmm  - month in string (Example: "Sep")
+ *     mm   - month in number with prefix 0 (Example: "09")
+ *     -m   - month in number in 2 characters (Example: " 9")
+ *     m    - month in number without prefix 0 (Example: "9")
+ *     ddd  - day of the week in string (Example: "Mon")
+ *     dd   - day of the month in number with prefix 0 (Example: "03")
+ *     -d   - day of the month in number in 2 characters (Example: " 3")
+ *     d    - day of the month in number without prefix 0 (Example: "3")
  *     All other characters are literally copied to the target string.
  *
  * Examples: "d mmm yyyy" yields "3 Sep 2001"

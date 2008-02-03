@@ -300,47 +300,19 @@ time2str(int time, int sig)
 }
 
 /*
- * Function name: makeswedate
- * Description  : This function returns a string with a swedish formatted
- *                numerical date, given a time stamp. I guess some Swede found
- *                this a handy routine to hide here.
- * Arguments    : int tstamp - the timestamp.
- * Returns      : string   - the resulting string.
- */
-nomask public string
-makeswedate(int tstamp)
-{
-    string rval, tm = ctime(tstamp);
-
-    rval = tm[20..23] + " ";
-    rval += ([ "Jan" : "01 ",
-	      "Feb" : "02 ",
-	      "Mar" : "03 ",
-	      "Apr" : "04 ",
-	      "May" : "05 ",
-	      "Jun" : "06 ",
-	      "Jul" : "07 ",
-	      "Aug" : "08 ",
-	      "Sep" : "09 ",
-	      "Oct" : "10 ",
-	      "Nov" : "11 ",
-	      "Dec" : "12 " ])[tm[4..6]];
-    rval += tm[8..9];
-
-    return rval;
-}
-
-/*
  * Function name: time2format
  * Description  : Converts a time stamp into a formatted time. The format
  *                string accepts the following formats:
- *                yyyy - year in four digits (Example: 2001)
- *                mmm  - month in string (Example: Sep)
- *                mm   - month in number with prefix 0 (Example: 09)
- *                m    - month in number without prefix 0 (Example: 9)
- *                ddd  - day of the week in string (Example: Mon)
- *                dd   - day of the month in number with prefix 0 (Example: 03)
- *                d    - day of the month in number without prefix 0 (Example: 3)
+ *                yyyy - year in four digits (Example: "2001")
+ *                yy   - year in two digis (Example: "01", try to avoid this!)
+ *                mmm  - month in string (Example: "Sep")
+ *                mm   - month in number with prefix 0 (Example: "09")
+ *                -m   - month in number in 2 characters (Example: " 9")
+ *                m    - month in number without prefix 0 (Example: "9")
+ *                ddd  - day of the week in string (Example: "Mon")
+ *                dd   - day of the month in number with prefix 0 (Example: "03")
+ *                -d   - day of the month in number in 2 characters (Example: " 3")
+ *                d    - day of the month in number without prefix 0 (Example: "3")
  *                All other characters are literally copied to the target string.
  * Examples     : "d mmm yyyy" yields "3 Sep 2001"
  *                "yyyymmdd" yields "20010903"
@@ -362,6 +334,12 @@ time2format(int timestamp, string format)
             format = format[4..];
             continue;
         }
+        if (format[0..1] == "yy")
+        {
+            result += timestring[22..23];
+            format = format[2..];
+            continue;
+        }
         if (format[0..2] == "mmm")
         {
             result += timestring[4..6];
@@ -371,6 +349,12 @@ time2format(int timestamp, string format)
         if (format[0..1] == "mm")
         {
             result += sprintf("%02d", MonthToNumMap[timestring[4..6]]);
+            format = format[2..];
+            continue;
+        }
+        if (format[0..1] == "-m")
+        {
+            result += sprintf("%2d", MonthToNumMap[timestring[4..6]]);
             format = format[2..];
             continue;
         }
@@ -389,6 +373,12 @@ time2format(int timestamp, string format)
         if (format[0..1] == "dd")
         {
             result += sprintf("%02d", atoi(timestring[8..9]));
+            format = format[2..];
+            continue;
+        }
+        if (format[0..1] == "-d")
+        {
+            result += sprintf("%2d", atoi(timestring[8..9]));
             format = format[2..];
             continue;
         }

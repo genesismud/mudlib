@@ -51,8 +51,10 @@
  * subject (41)  0..40
  * length  ( 3) 42..44 ( 3 characters)
  * author  (11) 46..56 (11 characters in lower case)
- * rank    (10) 58..67 (10 characters, this field is optional) 
- * date    ( 6) 69..74 ( 3 characters month, 2 characters day, i.e. "Jun 30")
+ * rank    (10) 58..67 (10 characters, this field is optional)
+ * date    ( 6) 69..74 ( 3 characters month, 2 characters day, i.e. "30 Jun")
+ *
+ * During display, the rank length is abbreviated to 7 characters.
  */
 
 #pragma save_binary
@@ -64,6 +66,7 @@ inherit "/std/object";
 #include <macros.h>
 #include <std.h>
 #include <stdproperties.h>
+#include <time.h>
 
 /* It is not allowed to read notes larger than 100 lines without more. This
  * is done to prevent errors when trying to write too much text to the screen
@@ -527,6 +530,7 @@ long(int start = 1, int end = msg_num)
 {
     string name;
     string str;
+    int allowed;
 
     str = check_call(query_long(), this_player()) +
 	"Usage: note <headline>, remove [note] <number>, " +
@@ -543,8 +547,7 @@ long(int start = 1, int end = msg_num)
     str += "The " + short() + " contains " + msg_num +
 	(msg_num == 1 ? " note" : " notes") + " :\n\n";
 
-    if (!silent &&
-        present(this_player(), environment()) &&
+    if (!silent && present(this_player(), environment()) &&
         !this_player()->query_prop(OBJ_I_INVIS))
         say(QCTNAME(this_player()) + " studies the " + short() + ".\n");
 
@@ -563,15 +566,15 @@ long(int start = 1, int end = msg_num)
     /* If the player is not allowed to read the board, only display the
      * notes the player wrote him/herself.
      */
-    if (!check_reader())
-	while (++start < end)
-	    str += sprintf("%2d: %s\n", (start + 1), headers[start][0]);
-    else
+    allowed = !check_reader();
+    name = this_player()->query_real_name();
+    while (++start < end)
     {
-	name = this_player()->query_real_name();
-	while (++start < end)
-	    if (name == query_author(start + 1))
-		str += sprintf("%2d: %s\n", (start + 1), headers[start][0]);
+	if (allowed || (name == query_author(start + 1)))
+	{
+	    str += sprintf("%2d: %s\n", (start + 1), headers[start][0] + " " +
+	        TIME2FORMAT(atoi(headers[start][1][1..]), "yy"));
+	}
     }
 
     return str;
@@ -600,6 +603,25 @@ init()
 }
 
 /*
+ * Function name: abbreviate_rank
+ * Description  : Small support function to abbreviate the rank to 7 chars.
+ * Arguments    : string - the title.
+ * Returns      : string - the abbreviated title.
+ */
+string
+abbreviate_rank(string title)
+{
+    if (title[65..65] != " ")
+    {
+        return title[..63] + "." + title[68..];
+    }
+    else
+    {
+        return title[..64] + title[68..];
+    }
+}
+
+/*
  * Function name: extract_headers
  * Description  : This is a map function that reads the note-file and
  *                extracts the headers of the note.
@@ -618,11 +640,13 @@ extract_headers(int number)
     seteuid(getuid());
 
     file = "b" + number;
-
     if (!stringp(title = read_file(board_name + "/" + file, 1, 1)))
         return 0;
 
-    return ({ extract(title, 0, strlen(title) - 2), file });
+    /* Remove the newline from the title and shorten the rank. */
+    title = abbreviate_rank(title[..-2]);
+
+    return ({ title, file });
 }
 
 /*
@@ -772,11 +796,10 @@ new_msg(string msg_head)
      */
     rank = SECURITY->query_wiz_rank(this_player()->query_real_name());
     date = (show_lvl ? sprintf("%-10s ",
-			       capitalize(WIZ_RANK_NAME(rank))) : " ") +
-	    ctime(time())[4..9];
+	capitalize(WIZ_RANK_NAME(rank))) : " ") +
+	TIME2FORMAT(time(), "-d mmm");
     writing[this_player()] = sprintf("%-*s     %-11s %s", MAX_HEADER_LENGTH,
-	msg_head, capitalize(this_player()->query_real_name()),
-	date);
+	msg_head, capitalize(this_player()->query_real_name()), date);
 
     seteuid(getuid());
 
@@ -872,7 +895,7 @@ post_note(string head, string message)
 
     /* Write the message to disk and update the headers. */
     write_file(board_name + "/" + fname, head + "\n" + message);
-    headers += ({ ({ head, fname }) });
+    headers += ({ ({ abbreviate_rank(head), fname }) });
     msg_num++;
 
     /* Update the master board central unless that has been prohibited. */
@@ -995,7 +1018,7 @@ create_note(string header, string author, string body)
 
     head = sprintf("%-*s %3d %-11s ", MAX_HEADER_LENGTH, header,
 	sizeof(explode(body, "\n")), capitalize(author)) +
-	(show_lvl ? "           " : " ") + ctime(time())[4..9];
+	(show_lvl ? "           " : " ") + TIME2FORMAT(time(), "-d mmm");
 
     post_note(head, body);
 
@@ -1015,6 +1038,7 @@ public nomask varargs int
 read_msg(string what_msg, int mr)
 {
     int note;
+    string text;
 
     if (!stringp(what_msg))
     {
@@ -1080,12 +1104,13 @@ read_msg(string what_msg, int mr)
 	mr = 1;
     }
 
+    text = headers[note][0] + " " +
+        TIME2FORMAT(atoi(headers[note][1][1..]), "yyyy") + "\n\n";
     if (mr == 1)
-	this_player()->more(headers[note][0] + "\n\n" +
-			    read_file(board_name + "/" + headers[note][1], 2));
+	this_player()->more(text + read_file(board_name + "/" + headers[note][1], 2));
     else
     {
-	write(headers[note][0] + "\n\n");
+	write(text);
 	cat(board_name + "/" + headers[note][1], 2);
     }
 

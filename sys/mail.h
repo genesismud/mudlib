@@ -163,7 +163,6 @@
 #define GUEST_NAME    "guest"    /* The name of Guest                       */
 
 #define MAKE_DATE(d)  (extract(ctime(d), 4, 9))
-#define MAKE_SWE_DATE(d) ("/sys/global/time"->makeswedate(d))
 #define DATE_YEAR(d)  (extract(ctime(d), -4))
 #define MAKE_LONG_DATE(d) \
     (extract(ctime(d), 4, 9) + extract(ctime(d), 19, 23))
