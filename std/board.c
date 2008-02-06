@@ -573,7 +573,8 @@ long(int start = 1, int end = msg_num)
 	if (allowed || (name == query_author(start + 1)))
 	{
 	    str += sprintf("%2d: %s\n", (start + 1), headers[start][0] + " " +
-	        TIME2FORMAT(atoi(headers[start][1][1..]), "yy"));
+	        TIME2FORMAT(atoi(headers[start][1][1..]),
+	            (show_lvl ? "yy" : "yyyy")));
 	}
     }
 
@@ -611,6 +612,10 @@ init()
 string
 abbreviate_rank(string title)
 {
+    if (!show_lvl)
+    {
+        return title;
+    }
     if (title[65..65] != " ")
     {
         return title[..63] + "." + title[68..];
@@ -643,7 +648,7 @@ extract_headers(int number)
     if (!stringp(title = read_file(board_name + "/" + file, 1, 1)))
         return 0;
 
-    /* Remove the newline from the title and shorten the rank. */
+    /* Remove the newline from the title and abbreviate the rank. */
     title = abbreviate_rank(title[..-2]);
 
     return ({ title, file });
