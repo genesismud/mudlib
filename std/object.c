@@ -949,7 +949,7 @@ recursive_rm(object ob)
 public int
 remove_object()
 {
-    map(all_inventor(this_object()), recursive_rm);
+    map(all_inventory(this_object()), recursive_rm);
     if (environment(this_object()))
         environment(this_object())->leave_inv(this_object(),0);
     this_object()->leave_env(environment(this_object()),0);
