@@ -99,7 +99,7 @@ cleanup_loot()
     object *inv;
 
     /* Only do it if there are no interactives in the room. */
-    inv = all_inventory();
+    inv = all_inventory(this_object());
     if (sizeof(FILTER_PLAYERS(inv)))
     {
         return;

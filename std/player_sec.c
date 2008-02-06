@@ -995,7 +995,7 @@ actual_linkdeath()
     /* Allow items in the top level inventory of the player to take notice
      * of the linkdeath.
      */
-    all_inventory()->linkdeath_hook(this_object(), 1);
+    all_inventory(this_object())->linkdeath_hook(this_object(), 1);
 }
 
 /*
@@ -1088,7 +1088,7 @@ revive()
         /* Allow items in the top level inventory of the player to take notice
          * of the revival.
          */
-        all_inventory()->linkdeath_hook(this_object(), 0);
+        all_inventory(this_object())->linkdeath_hook(this_object(), 0);
     }
     else
     {
