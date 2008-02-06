@@ -57,10 +57,10 @@ visible_access(mixed *arr, string acsfunc, object acsobj, int normflag,
     object *items;
     
     /* Access failure. */
-    if (!pointerp(arr) && !this_player())
+    if (!pointerp(arr) || !sizeof(arr) || !this_player())
 	return  ({ });
 
-    /* The number designation*/
+    /* The number designation. */
     num = arr[0];
 
     /* Sort items by short description. */
