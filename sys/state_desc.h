@@ -143,12 +143,13 @@
 #define SD_HEADACHE	({ "mild", "uncomfortable", "bad", "serious",     \
 			   "intense", "pounding", "burning", "extreme" })
 
-#define SD_IMPROVE_MIN  ( 50000)
-#define SD_IMPROVE_MAX  (500000)
-#define SD_IMPROVE	({ "insignificant", "slight", "a little", "some", \
-			   "nice", "good", "very good", "extremely good", \
-		      	   "immense", "fantastic" })
-	    
+#define SD_IMPROVE_MIN  ( 75000)
+#define SD_IMPROVE_MAX  (750000)
+#define SD_IMPROVE	({ "insignificant", "minimal", "slight", "low",     \
+			   "a little", "some", "modest", "average", "nice", \
+   			   "good", "very good", "great", "extremely good",  \
+   			   "immense", "fantastic" })
+
 #define SD_GOOD_ALIGN	({ "neutral", "agreeable", "trustworthy",	  \
 			   "sympathetic", "nice", "sweet", "good",	  \
 			   "devout", "blessed", "saintly", "holy" })
