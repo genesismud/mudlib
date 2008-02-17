@@ -1366,7 +1366,7 @@ print_headers(int select, string spath, int lnote, string order, string oitem)
 	write((select ? "Headers" : "Unread headers") + " of the board '" +
 	    blist[BBP_BOARD] + "' in the "  + order + " '" + oitem + "'.\n");
 
-	year = (bd->query_show_level() ? "yy" : "yyyy");
+	year = (bd->query_show_lvl() ? "yy" : "yyyy");
 	for (i = 0 ; i < sz ; i++)
 	{
 	    tme = atoi(hds[i][1][1..]);
