@@ -16,7 +16,8 @@
  * the function itself.
  *
  * An alternative would be to include <files.h> and then do:
- *
- *     oblist = (object *)COMMANDS_LIBRARY>parse_this(s, p [, ...]);
+ *     oblist = (object *)COMMANDS_LIBRARY->parse_this(s, p [, ...]);
+ * or inherit "/lib/commands" and then do:
+ *     oblist = parse_this(s, p [, ...]);
  */
 

@@ -13,10 +13,11 @@ inherit "/lib/cache";
 
 #include <files.h>
 #include <macros.h>
-#include <stdproperties.h>
-#include <std.h>
 #include <mail.h>
 #include <mbs.h>
+#include <std.h>
+#include <stdproperties.h>
+#include <time.h>
 
 /* Some nifty defines I tend to use */
 #define NF(message)     notify_fail(message)
@@ -30,15 +31,14 @@ inherit "/lib/cache";
 /*
  * Globals, saved
  */
-string		*AdminList;		// The list of trusted admins
-mapping		CategoryMap,		// The mapping of categories
-		BbpMap,			// Board by path map
-    		BrokenMap,		// The mapping of broken boards
-		UnusedMap;		// The mapping of unused boards
-int		ReportTime,		// Last time a report was made
-	        GcTime;			// Last time a global change was made
-mapping		HelpMap;		// Contains indices in the help
-					// map file.
+string		*AdminList;	// The list of trusted admins
+mapping		CategoryMap,	// The mapping of categories
+		BbpMap,		// Board by path map
+    		BrokenMap,	// The mapping of broken boards
+		UnusedMap;	// The mapping of unused boards
+int		ReportTime,	// Last time a report was made
+	        GcTime;		// Last time a global change was made
+mapping		HelpMap;	// Contains indices in the help map file.
 
 /*
  * Globals, static
@@ -85,31 +85,30 @@ static mapping  BobMap;		// Board object mapping
 /*
  * Prototypes
  */
-static nomask object		find_board(string bspath);
-static nomask void		update_bbmaps();
-public nomask int		sort_dom_boards(string *item1, string *item2);
-public nomask int		sort_cath_boards(string *item1, string *item2);
-public nomask int		sort_usage_read(mixed item1, mixed item2);
-public nomask int		sort_usage_posted(mixed item1, mixed item2);
-public nomask int		sort_tusage_read(mixed item1, mixed item2);
-public nomask int		sort_tusage_posted(mixed item1, mixed item2);
-static nomask mixed		filt_bbp_data(string what, mapping mapp,
-					      int index);
-static nomask void		print_board_info(string *data);
-static nomask void		print_usage_info(mixed data);
-static nomask void		reset_usage_info(mixed data);
-static nomask void		print_tusage_info(mixed data);
-static nomask int		tmfunc(string tm);
-static nomask int		try_load_board(string board);
-static nomask void		mail_notify(int what, mixed list);
-static nomask string		*mk_discard_list(string spath);
-static nomask void		load_all_boards(string *list);
-static nomask void		logit(string mess);
-static nomask void		autosave_mbs();
-static nomask void		dosave();
-static nomask void		index_help(int cmd);
-static nomask void		check_integrity();
-nomask static void		debug_out(string str);
+static nomask object	find_board(string bspath);
+static nomask void	update_bbmaps();
+public nomask int	sort_dom_boards(string *item1, string *item2);
+public nomask int	sort_cath_boards(string *item1, string *item2);
+public nomask int	sort_usage_read(mixed item1, mixed item2);
+public nomask int	sort_usage_posted(mixed item1, mixed item2);
+public nomask int	sort_tusage_read(mixed item1, mixed item2);
+public nomask int	sort_tusage_posted(mixed item1, mixed item2);
+static nomask mixed	filt_bbp_data(string what, mapping mapp, int index);
+static nomask void	print_board_info(string *data);
+static nomask void	print_usage_info(mixed data);
+static nomask void	reset_usage_info(mixed data);
+static nomask void	print_tusage_info(mixed data);
+static nomask int	tmfunc(string tm);
+static nomask int	try_load_board(string board);
+static nomask void	mail_notify(int what, mixed list);
+static nomask string	*mk_discard_list(string spath);
+static nomask void	load_all_boards(string *list);
+static nomask void	logit(string mess);
+static nomask void	autosave_mbs();
+static nomask void	dosave();
+static nomask void	index_help(int cmd);
+static nomask void	check_integrity();
+nomask static void	debug_out(string str);
 
 /*
  * Function name: create
@@ -1331,7 +1330,8 @@ public nomask int
 print_headers(int select, string spath, int lnote, string order, string oitem)
 {
     mixed	blist, hds;
-    int		i, sz;
+    int		i, sz, tme;
+    string	year;
     object	bd;
 
     if (CALL_CHECK)
@@ -1363,24 +1363,18 @@ print_headers(int select, string spath, int lnote, string order, string oitem)
     hds = bd->query_headers();
     if ((sz = sizeof(hds)))
     {
-	if (!select)
-	    write("Unread headers of the board '" + blist[BBP_BOARD] +
-		  "' in the "  + order + " '" + oitem + "'.\n");
-	else
-	    write("Headers of the board '" + blist[BBP_BOARD] +
-		  "' in the " + order + " '" + oitem + "'.\n");
+	write((select ? "Headers" : "Unread headers") + " of the board '" +
+	    blist[BBP_BOARD] + "' in the "  + order + " '" + oitem + "'.\n");
 
+	year = (bd->query_show_level() ? "yy" : "yyyy");
 	for (i = 0 ; i < sz ; i++)
 	{
-	    if (!select)
+	    tme = atoi(hds[i][1][1..]);
+	    if (select || (tme > lnote))
 	    {
-		if (atoi(hds[i][1][1..]) > lnote)
-		    write(sprintf("%-4s%s\n", ("" + (i + 1) + ":"),
-				  hds[i][0]));
+		write(sprintf("%2d: %s %s\n", (i + 1), hds[i][0],
+		    TIME2FORMAT(tme, year)));
 	    }
-	    else
-		write(sprintf("%-4s%s\n", ("" + (i + 1) + ":"),
-			      hds[i][0]));
 	}
     }
     else

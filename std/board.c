@@ -217,6 +217,17 @@ set_show_lvl(int n)
     show_lvl = (fuse ? show_lvl : (n ? 1 : 0));
 }
 
+/* 
+ * Function name: query_show_lvl
+ * Description  : Find out whether the rank of authors is shown.
+ * Returns      : int - if true, the rank is show.
+ */
+public int
+query_show_lvl()
+{
+    return show_lvl;
+}
+
 /*
  * Function name: set_keep_discarded
  * Description  : Set this if you want old notes to be kept. They will be
