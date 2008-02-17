@@ -51,7 +51,7 @@ long_description()
     }
     else
     {
-	return "There are the torn and bloody remains of " + short() + ".\n";
+	return "They are the torn and bloody remains of " + short() + ".\n";
     }
 }
 
@@ -69,6 +69,7 @@ leftover_init(string organ, string race)
     {
 	set_adj(race);
 	set_name(organ);
+	add_name("_leftover_" + organ);
 	set_pname(LANG_PWORD(organ));
         set_short(race + " " + organ);
 	set_long(long_description);
