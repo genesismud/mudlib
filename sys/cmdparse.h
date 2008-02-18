@@ -302,15 +302,37 @@
  */
 #define ACTION_BLIND 4096
 
+/*
+ * CMDPARSE_PARALYZE_CMD_IS_ALLOWED(cmd)
+ *
+ * Find out whether a certain command 'cmd' is allowed to be executed while
+ * the player is paralyzed. Returns true if allowed.
+ */
+#define CMDPARSE_PARALYZE_CMD_IS_ALLOWED(cmd) \
+    (int)CMDPARSE_STD->paralyze_cmd_is_allowed(cmd)
+
+/*
+ * CMDPARSE_PARALYZE_ALLOW_CMDS(cmds)
+ *
+ * Register one or more commands 'cmds' as being allowed to be executed while
+ * the player is paralyzed. This must be information commands only, and may
+ * not consititute any action, activity or communication. The 'cmds' can be
+ * a single string or array of string with commands to allow.
+ */
+#define CMDPARSE_PARALYZE_ALLOW_CMDS(cmds) \
+    (void)CMDPARSE_STD->paralyze_allow_cmds(cmds)
+
 /* CMDPARSE_PARALYZE_ALLOWED
  *
  * These commands should always be allowed, even if the person is paralyzed
  * or otherwise incapacitated.
  */
 #define CMDPARSE_PARALYZE_ALLOWED \
-    ({ "commune", "reply", "help", "quit", "email", "adverbs", \
-    "bug", "sysbug", "typo", "systypo", "praise", "syspraise", "idea", "sysidea", \
-    "date", "vitals", "look", "levels", "options", "skills", "stats", \
-    "forget", "remembered", "remember", "who", "mwho", "last", "team" })
+    ({ "adverbs", "bug", "commune", "date", "email", "forget", "help", \
+       "idea", "last", "levels", "look", "mwho", "options", "praise", \
+       "quit", "remember", "remembered", "reply", "save", "skills", \
+       "stats", "sysbug", "sysidea", "syspraise", "systypo", "team", \
+       "typo", "vitals", "who" })
 
+/* No definitions beyond this line. */
 #endif CMDPARSE_DEF

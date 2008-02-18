@@ -15,11 +15,11 @@
 */
 #pragma save_binary
 
+#include <cmdparse.h>
+#include <composite.h>
 #include <macros.h>
 #include <std.h>
 #include <stdproperties.h>
-#include <cmdparse.h>
-#include <composite.h>
 
 #define PARSE_ENV (objectp(environment(this_player()))	\
 		   ? environment(this_player()) : this_player())
@@ -31,9 +31,10 @@ static mixed *order_num(mixed *arr, int num);
 nomask int filter_first(object ob);
 
 /* Global variables. */
-int gNum;
-int gParseCommandSize = 0;
+static int gNum;
+static int gParseCommandSize = 0;
 static mixed *gContainers;
+static string *gParalyzeCommands = CMDPARSE_PARALYZE_ALLOWED;
 
 /*
  * Function name: visible_access
@@ -531,4 +532,42 @@ parse_itemlist(string str)
 	}
     }
     return ({ preps, itemlists, last_sub, only_sub });
+}
+
+/*
+ * Function name: paralyze_allow_cmds
+ * Description  : Called to register commands that should be allowed even
+ *                while the player is paralyzed. This may only be information
+ *                commands and must not be any sort of action, activity or
+ *                communication.
+ * Arguments    : mixed - a single (string) command, or an array of commands.
+ */
+void
+paralyze_allow_cmds(mixed cmds)
+{
+    /* Allow a single string command. */
+    if (stringp(cmds))
+    {
+        cmds = ({ cmds });
+    }
+    /* Otherwise it must be an array. */
+    if (!pointerp(cmds))
+    {
+        return;
+    }
+
+    gParalyzeCommands |= cmds;
+}
+
+/*
+ * Function name: paralyze_cmd_is_allowed
+ * Description  : Find out whether a certain command is allowed while the
+ *                player is paralyzed.
+ * Arguments    : string cmd - the command to check.
+ * Returns      : int - if true, it is allowed.
+ */
+int
+paralyze_cmd_is_allowed(string cmd)
+{
+    return IN_ARRAY(cmd, gParalyzeCommands);
 }
