@@ -309,7 +309,7 @@
  * the player is paralyzed. Returns true if allowed.
  */
 #define CMDPARSE_PARALYZE_CMD_IS_ALLOWED(cmd) \
-    (int)CMDPARSE_STD->paralyze_cmd_is_allowed(cmd)
+    ((int)CMDPARSE_STD->paralyze_cmd_is_allowed(cmd))
 
 /*
  * CMDPARSE_PARALYZE_ALLOW_CMDS(cmds)
