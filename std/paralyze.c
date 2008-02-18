@@ -85,7 +85,7 @@ stop(string str)
     }
 
     /* Some commands may always be issued. */
-    if (member_array(query_verb(), CMDPARSE_PARALYZE_ALLOWED) != -1)
+    if (CMDPARSE_PARALYZE_CMD_IS_ALLOWED(query_verb()))
     {
         return 0;
     }

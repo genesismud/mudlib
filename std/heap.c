@@ -616,7 +616,7 @@ stop(string str)
 
     /* Allow wizards and allow commands that are allowed. */
     if (this_player()->query_wiz_level() ||
-    	(member_array(query_verb(), CMDPARSE_PARALYZE_ALLOWED) != -1))
+    	CMDPARSE_PARALYZE_CMD_IS_ALLOWED(query_verb()))
     {
         /* When quitting, update the actions, so people can drop stuff. */
         if (query_verb() == "quit")
