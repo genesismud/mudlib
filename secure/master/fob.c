@@ -557,7 +557,7 @@ transform_mortal_into_wizard(string wname, string cmder)
      * player. He isn't apprentice yet.
      */
     m_wizards[wname] = ({ WIZ_MORTAL, WIZ_RANK_START_LEVEL(WIZ_MORTAL),
-                          cmder, "", cmder, RESTRICT_ALL, "", ({}) });
+                          cmder, "", cmder, RESTRICT_NEW_WIZ, "", ({}) });
     save_master();
 
     if (objectp(wizard = find_player(wname)))

@@ -200,7 +200,9 @@
 #define RESTRICT_LOG_COMMANDS	0x008
 #define RESTRICT_STAT		0x010
 #define RESTRICT_NO_W_DOMAIN	0x020
-#define RESTRICT_ALL		(0x040 - 1)
+/* New wizards don't have the RW_HOMEDIR restriction by default. */
+#define RESTRICT_NEW_WIZ	0x03B
+#define RESTRICT_ALL		0x03F
 
 /* Siteban flags */
 #define SITEBAN_NOLOGIN 1
