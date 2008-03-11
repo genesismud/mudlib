@@ -1105,6 +1105,10 @@ ed_file(string file)
 	return 1;
     }
     file = FTPATH((string)this_interactive()->query_path(), file);
+#ifdef LOG_ED_EDIT
+    SECURITY->log_syslog(LOG_ED_EDIT, sprintf("%s %-11s %s\n", ctime(time()),
+        capitalize(this_player()->query_real_name()), file));
+#endif LOG_ED_EDIT
     ed(file);
     return 1;
 }

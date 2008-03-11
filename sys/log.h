@@ -117,6 +117,14 @@
 #define LOG_FTP
 
 /*
+ * Define this flag if you want to have all ed actions logged. Note that it
+ * will not log when there is no file argument to ed.
+ *
+ * Used in : /secure/master.c
+ */
+#define LOG_ED_EDIT "ED_EDIT"
+
+/*
  * Define this if you want to have a log of so-called lost UDP messages, i.e
  * those that cannot be handled by the UDP manager.
  *
