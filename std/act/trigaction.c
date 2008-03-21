@@ -10,57 +10,6 @@
 
   NOTICE: Triggers are obsolete. Use hooks as much as possible! For emotes,
           use emote_hook() and emote_hook_onlooker().
-
-  Typical usage:
-
-  trig_new("pattern","function");
-
-  "pattern"
-  		A 'parse_command()' pattern. Can be VBFC.
-
-  "function"
-  		Function in this object to call when pattern matched the
-		catched text. Can be VBFC.
-
-  Example:
-                trig_new("%s 'says:' %s", "say_something");
-   	          -- Will on trig call: say_something(str1, str2);
-
-  	        trig_new("%l 'drops' %i", "drop_something");
-   	          -- Will on trig call: drop_something(live1, item1);
-
-  NOTE1:
-  	There is a maximum limit of 10 '%' in a pattern.
-
-  NOTE2:
-        There can be any number of patterns (max 1000). When a match
-	is made the search terminates. A match is considered made if:
-
-	     - The pattern matches
-	     - The function called returns 1         <= NOTE
-
-         A pattern can also be considered matched if the "function" value
-	 is 1 and not a string as it would normally be. This means that 
-	 if the "function" is VBFC and returns 1 then it is considered a
-	 match. 
-   
-	 Note the difference between the returned value from the
-	 function called and the value of (a possible) VBFC call. The 
-	 VBFC value is used as the name of the function to call. BUT if
-	 it does not return such a name and returns 1 instead, then it
-	 is a match. (Jemand Comprende ?!?)
-
-  NOTE3:
-         If the function is VBFC then the argument returned from the
-	 matched parse_command can be reached through the function:
-
-	 	- trig_query_args()
-    			- Which returns an array of the right number
-			  of arguments.
-
-	 The actual text catched can be got through the function:
-
-		- trig_query_text()
 */
 
 #pragma save_binary
@@ -279,17 +228,21 @@ trig_setobjects(object *obs)
     trig_oblist = obs;
 }
 
+/* This #if 0 makes that the routine isn't actually defined in the living, but
+ * it is documented in sman. The reaosn for this is that it's faster to handle
+ * at runtime if the routine doesn't exist than if it's empty.
+ */
 #if 0
 /*
  * Function name: emote_hook
  * Description  : Whenever an emotion is performed on this living, or when it
- *                is performed on in the room in general, this function is
- *                called to let the living know about the emotion. This way we
- *                can avoid the usage of all those costly triggers.
+ *                is performed in the room in general, this function is called
+ *                to let the living know about the emotion. This way we can
+ *                avoid the usage of all those costly triggers.
  * Arguments    : string emote - the name of the emotion performed. This
  *                    always is the command the player typed, query_verb().
  *                object actor - the actor of the emotion.
- *                string adverbs - the adverb used with the emotion, if there
+ *                string adverb - the adverb used with the emotion, if there
  *                    was one. When an adverb is possible with the emotion,
  *                    this argument is either "" or it will contain the used
  *                    emotion, preceded by a " " (space). This way you can
@@ -328,7 +281,7 @@ emote_hook_actor(string emote, object *oblist)
  * Arguments    : string emote - the name of the emotion performed. This
  *                    always is the command the player typed, query_verb().
  *                object actor - the actor of the emotion.
- *                string adverbs - the adverb used with the emotion, if there
+ *                string adverb - the adverb used with the emotion, if there
  *                    was one. When an adverb is possible with the emotion,
  *                    this argument is either "" or it will contain the used
  *                    emotion, preceded by a " " (space). This way you can
@@ -340,6 +293,33 @@ emote_hook_actor(string emote, object *oblist)
 public void
 emote_hook_onlooker(string emote, object actor, string adverb, object *oblist,
     int cmd_attr)
+{
+}
+
+/*
+ * Function name: speech_hook
+ * Description  : Whenever someone speaks, this function is called to let the
+ *                livings in the room know about the speech. This way we can
+ *                avoid the usage of all those costly triggers.
+ * Arguments    : string verb - the name of the speech command used. This is
+ *                    the command the player typed, query_verb(). For regular
+ *                    speech "say" is used even for'.
+ *                object actor - the actor of the speech.
+ *                string adverb - the adverb used with the speech. If there is
+ *                    one, it's prefixed with a space so you can use the
+ *                    adverb in your reaction if you please without having
+ *                    to parse it further.
+ *                object *oblist - the targets of the emotion, if any.
+ *                string text - the text that was uttered. Whispering is only
+ *                    understood if you are the recipient.
+ *                int target - can have three states:
+ *                   -1 - speech was directed at someone else
+ *                    0 - speech was directed at nobody in particular
+ *                    1 - speech was directed at me.
+ */
+public void
+speech_hook(string verb, object actor, string adverb, object *oblist,
+    string text, int target)
 {
 }
 #endif

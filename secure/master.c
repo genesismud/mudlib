@@ -3182,9 +3182,9 @@ exist_player(string pl_name)
  * Function name: finger_player
  * Description:   Returns a player object restored with the values from
  *                the players save file.
- * Arguments:     pl_name: Name of player
- *                file: (optional) Name of player_file
- * Returns:       The restored player object or 0 if it doesn't exist.
+ * Arguments:     string pl_name: the (lower case) name of player.
+ *                string file: (optional) name of player_file.
+ * Returns:       object - the restored player object or 0.
  */
 varargs object
 finger_player(string pl_name, string file)
@@ -3193,7 +3193,8 @@ finger_player(string pl_name, string file)
     int ret, lev;
     string f;
 
-    if (!exist_player(pl_name))
+    /* Must be lower case for further processing. */
+    if (!exist_player(pl_name = lower_case(pl_name)))
     {
         return 0;
     }

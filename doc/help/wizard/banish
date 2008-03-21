@@ -14,8 +14,8 @@ DESCRIPTION
 	already has this name, the command will fail.
 
 	You will have to stand in the administrator's workroom to add 
-	banishments, but you can be anywhere if you want to remove or
-	find information about a banishment.
+	banishments (home admin), but you can be anywhere if you want
+	to remove or find information about a banishment.
 	
 OPTIONS
 	name		- same as -i(nfo) name.
@@ -35,4 +35,3 @@ NOTA BENE
 
 SEE ALSO
 	home
-

@@ -14,8 +14,8 @@
    set_chat_time(int)	       Set the mean value for chat intervall
 
    set_cchat_time(int)	       Set the mean value for combat chat intervall
-
 */
+
 #pragma save_binary
 #pragma strict_types
 
@@ -176,3 +176,17 @@ query_seq_chat_name()
 {
     return SEQ_CHAT;
 }
+
+#if 0
+/*
+ * Function name: catch_whisper
+ * Description  : Called whenever someone whisper to this living. It does
+ *                not indicate when this living is an onlooker. Use
+ *                speech_hook for that.
+ * Arguments    : string str - the text being whispered.
+ */
+public void
+catch_whisper(string str)
+{
+}
+#endif 0
