@@ -78,6 +78,7 @@ private static mapping command_substitute;
 private static mapping move_opposites;
 private static string  udp_manager;
 private static int     irregular_uptime;
+private static string  mudlib_version;
 
 /*
  * Function name: create
@@ -264,6 +265,49 @@ get_mud_name()
     }
 #endif MUD_NAME
     return "LPmud(" + debug("version") + ":" + MUDLIB_VERSION + ")";
+}
+
+/*
+ * Function name: get_mudlib_version
+ * Description  : Obtain the mudlib version of the current mudlib. If the
+ *                version is not set yet, it will find out.
+ * Returns      : string - the version string.
+ */
+public string
+get_mudlib_version()
+{
+    string *files;
+    string filename;
+    int ftime, fdate, release;
+
+    /* If we have a caches version, use that. */
+    if (strlen(mudlib_version))
+    {
+        return mudlib_version;
+    }
+
+    /* We take the last file in the /svn directory that starts with "mudlib".
+     * This assumes that get_dir() returns a sorted list of file names. */
+    mudlib_version = MUDLIB_VERSION;
+    set_auth(this_object(), "root:root");
+    files = get_dir("/svn/mudlib*");
+    if (!sizeof(files))
+    {
+        return mudlib_version;
+    }
+
+    /* Parse the file name to get the release number and use the file date
+     * as the moment the mudlib was last updated. The date as reported in
+     * the file name is ignored. */
+    filename = files[-1..][0];
+    ftime = file_time("/svn/" + filename);
+    sscanf(filename, "mudlib_%i-R%i.txt", fdate, release);
+    if ((ftime > 0) && (release > 0))
+    {
+        mudlib_version += TIME2FORMAT(ftime, " mmm -d yyyy ") +
+            ctime(ftime)[11..18] + " - Update " + release; 
+    }
+    return mudlib_version;
 }
 
 /*
@@ -501,9 +545,9 @@ valid_write(string file, mixed writer, string func)
 	     * or if the ateam code is writing in its own dir. Otherwise we
 	     * disallow it.
 	     */
-	    return IN_ARRAY(dir, query_team_membership(writer) ||
+	    return IN_ARRAY(dir, query_team_membership(writer)) ||
 		((dname == writer) && (sizeof(wpath) > 3) && (wpath[2] == "ateam") &&
-		 (wpath[3] == dirs[3])));
+		 (wpath[3] == dirs[3]));
 	}
 
         /* The domain can write itself, unless it's the lonely wizard domain. */

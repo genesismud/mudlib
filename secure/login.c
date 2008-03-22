@@ -201,7 +201,7 @@ logon()
     cat(LOGIN_FILE_WELCOME);
 
     write_socket("Gamedriver version:  " + SECURITY->do_debug("version") +
-        "\nMudlib version    :  " + MUDLIB_VERSION +
+        "\nMudlib version    :  " + SECURITY->get_mudlib_version() +
         "\n\nPlease enter your name: ");
 
     time_out_alarm = set_alarm(TIMEOUT_TIME, 0.0, time_out);
