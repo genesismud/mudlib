@@ -718,10 +718,10 @@ print_rsay_to(object *oblist, string str)
         this_player()->query_race_name() + "|" + str + "@@";
     
     say(QCTNAME(this_player()) + " says to " + COMPOSITE_ALL_LIVE(oblist) + " in " +
-        this_player()->query_possesive() + " own tongue: " + output + "\n",
+        this_player()->query_possessive() + " own tongue: " + output + "\n",
         (oblist + ({ this_player() }) ));
     oblist->catch_msg(QCTNAME(this_player()) + " says to you in " +
-        this_player()->query_possesive() + " own tongue: " + output + "\n");
+        this_player()->query_possessive() + " own tongue: " + output + "\n");
 
     notify_speech("rsay", "", oblist, str);
 }
@@ -772,7 +772,7 @@ rsay(string str)
         write("Ok.\n");
 
     say(QCTNAME(this_player()) + " says in " +
-        this_player()->query_possesive() +
+        this_player()->query_possessive() +
         " own tongue: @@race_text:" + file_name(this_object()) + "|" +
         this_player()->query_race_name() + "|" + str + "@@\n");
     notify_speech("rsay", "", ({ }), str);
