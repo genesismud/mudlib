@@ -710,6 +710,13 @@ steal(string str)
         return 1;
     }
 
+    if (tmp = environment(this_player())->query_prop(ROOM_M_NO_STEAL))
+    {
+        write(strlen(tmp) ? tmp : "You may not " + query_verb() +
+            " in this place.\n");
+        return 1;
+    }
+
     if (member_array(str2, ({ "here", "ground", "floor" })) != -1)
     {
         /* Stealing from the room */
