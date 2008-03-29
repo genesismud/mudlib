@@ -117,12 +117,6 @@ slice_array(mixed a, int f, int t)
     return (pointerp(a)) ? a[f..t] : 0;
 }
 
-static string 
-slice_cmds(mixed *ar)
-{
-    return ar[0];
-}
-
 /*
  * Function name: get_localcmd
  * Description:   Returns an array of commands (excluding soul commands)
@@ -136,13 +130,7 @@ get_localcmd(mixed ob = previous_object())
     if (!objectp(ob))
         return ({});
 
-    return map(commands(ob), slice_cmds);
-}
-
-void 
-localcmd()
-{
-    this_player()->catch_tell(implode(get_localcmd(previous_object()), " ") + "\n");
+    return map(commands(ob), &operator([])(,0));
 }
 
 #ifdef CFUN
@@ -770,8 +758,7 @@ public varargs void
 tell_room(mixed room, mixed str, mixed oblist = 0,
 	  object from_player = this_player())
 {
-    int             i;
-    mixed         *plist;
+    object *objs;
 
     if (!room)
 	return;
@@ -782,12 +769,16 @@ tell_room(mixed room, mixed str, mixed oblist = 0,
 
     if (objectp(oblist))
 	oblist = ({ oblist });
+    else if (!pointerp(oblist))
+        oblist = ({ });
 
-    plist = all_inventory(room) + ({ room });
+    objs = all_inventory(room) + ({ room }) - oblist;
 
-    for (i = 0; i < sizeof(plist); i++)
-	if (living(plist[i]) && (member_array(plist[i], oblist) < 0))
-	    plist[i]->catch_msg(str, from_player);
+    foreach(object ob: objs)
+    {
+	if (living(item))
+	    item->catch_msg(str, from_player);
+    }
 }
 #endif CFUN
 
@@ -801,7 +792,7 @@ tell_room(mixed room, mixed str, mixed oblist = 0,
  *		       If str is an array then this_player() will be used 
  *		       in each recieving object to decide on met/nonmet.
  *		  oblist: Nothing, an object or an array of objects not
- *			  to send str to.
+ *		      to send str to. By default this_player() is added.
  */
 #ifdef CFUN
 public varargs void
@@ -810,17 +801,15 @@ say(mixed str, mixed oblist) = "say";
 public varargs void
 say(mixed str, mixed oblist)
 {
-    int             plist,
-                    i;
     object	    tp;
-
-    tp = (this_player() ? this_player() : previous_object());
 
     if (objectp(oblist))
 	oblist = ({ oblist });
-    else
-	if (!pointerp(oblist))
-	    oblist = ({ tp });
+    else if (!pointerp(oblist))
+	oblist = ({ });
+
+    tp = (this_player() ? this_player() : previous_object());
+    oblist |= ({ tp });
 
     tell_room(environment(tp), str, oblist);
     tell_room(tp, str, oblist);
