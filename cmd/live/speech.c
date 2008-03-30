@@ -758,7 +758,7 @@ rsay(string str)
         return 1;
     }
 
-    if (wildmatch("to *", str))
+    if (wildmatch("to *", lower_case(str)))
     {
         if (say_to(extract(str, 3), &print_rsay_to()))
         {
@@ -912,7 +912,7 @@ say_text(string str, string adverb = "")
     /* This is a test for the command 'say to'. If it fails, we just default
      * to the normal say.
      */
-    if (wildmatch("to *", str))
+    if (wildmatch("to *", lower_case(str)))
     {
         if (say_to(extract(str, 3), &print_say_to(adverb)))
         {
@@ -1253,7 +1253,7 @@ whisper(string str)
 
     if (strlen(str))
     {
-        if (wildmatch("to *", str))
+        if (wildmatch("to *", lower_case(str)))
             str = extract(str, 3);
         
         if (say_to(str, &print_whisper_to(how[1])))

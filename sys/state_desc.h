@@ -17,9 +17,30 @@
 #define SD_LANG_FILE "/sys/global/language"
 
 #ifndef SD_AV_TITLES
+/*
+ * SD_AV_TITLES - the mortal titles.
+ * SD_AV_LEVELS - the stat level from which you get a title.
+ */
 #define SD_AV_TITLES    ({ "novice", "beginner", "apprentice", "master" })
 #define SD_AV_LIMITS    ({ 10, 25, 50, 100 })
+/*
+ * SD_NEWBIE_INDEX - Index to the highest title in SD_AV_TITLES at which you
+ *                   may be considered a newbie for game purposes.
+ * SD_NEBWIE_TITLE - The highest title at which you may be considered a newbie
+ *                   for game purposes. Hardcoded for speed reasons.
+ *                   By definition: SD_AV_TITLES[SD_NEWBIE_INDEX]
+ * SD_NEWBIE_LEVEL - The stat average below which you may be considered a
+ *                   newbie for game purposes. AVSTAT < SD_NEWBIE_LEVEL.
+ *                   Hardcoded for speed reasons.
+ *                   By definition: SD_AV_LEVELS[SD_NEWBIE_INDEX + 1]
+ */
+#define SD_NEWBIE_INDEX 2
+#define SD_NEBWIE_TITLE "beginner"
+#define SD_NEWBIE_LEVEL 50
 #endif SD_AV_TITLES
+
+/* May this player be considered a newbie? */
+#define SD_IS_NEWBIE(player) ((player)->query_average_stat() < SD_NEWBIE_LEVEL)
 
 #define SD_STAT_NAMES 	({ "STR", "DEX", "CON", "INT", "WIS", "DIS" })
 #define SD_STAT_DESC ({ "str", "dex", "con", "int", "wis", "dis", "race", \
@@ -62,9 +83,10 @@
 #define SD_NUM_GUILDS       4
 #define SD_GUILD_EXTENSIONS ({ "race", "occ", "lay", "craft" })
 #define SD_GUILD_FULL_NAMES ({ "racial", "occupational", "layman", "craftsman" })
+
+#define SD_SIZEOF_ADVANCE_DESCS   5
 #define SD_ADVANCE_DESCS    ({ "very far from", "far from", "halfway to", \
     "close to", "very close to" })
-#define SD_SIZEOF_ADVANCE_DESCS   5
 
 #define GET_STAT_LEVEL_DESC(stat, level) ((string)SD_LANG_FILE->get_stat_level_desc((stat), (level)))
 #define GET_STAT_INDEX_DESC(stat, index) ((string)SD_LANG_FILE->get_stat_index_desc((stat), (index)))
@@ -147,9 +169,9 @@
 #define SD_IMPROVE_MAX  (750000)
 #define SD_IMPROVE	({ "insignificant", "minimal", "slight", "low",     \
 			   "a little", "some", "modest", "average", "nice", \
-   			   "good", "very good", "great", "extremely good",  \
-   			   "immense", "fantastic" })
-
+			   "good", "very good", "great", "extremely good",  \
+			   "immense", "fantastic" })
+	    
 #define SD_GOOD_ALIGN	({ "neutral", "agreeable", "trustworthy",	  \
 			   "sympathetic", "nice", "sweet", "good",	  \
 			   "devout", "blessed", "saintly", "holy" })
