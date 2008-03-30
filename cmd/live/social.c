@@ -43,11 +43,11 @@ inherit "/cmd/std/command_driver";
 #include <macros.h>
 #include <mail.h>
 #include <options.h>
+#include <state_desc.h>
 #include <std.h>
 #include <stdproperties.h>
 #include <time.h>
 
-nomask int sort_name(object a, object b);
 varargs int team(string str);
 
 /*
@@ -159,7 +159,6 @@ assist(string str)
     object *obs;
     object friend;
     object victim;
-    int    index;
     mixed  tmp;
 
     if (!CAN_SEE_IN_ROOM(this_player()))
@@ -174,7 +173,7 @@ assist(string str)
         return 0;
     }
 
-    if (!stringp(str))
+    if (!strlen(str))
     {
         if (!sizeof(obs = this_player()->query_team_others()))
         {
@@ -183,13 +182,12 @@ assist(string str)
         }
 
         obs = ({ this_player()->query_leader() }) - ({ 0 }) + obs;
-
-        for (index = 0; index < sizeof(obs); index++)
+        foreach(object ob: obs)
         {
-            if ((environment(this_player()) == environment(obs[index])) &&
-                (objectp(victim = obs[index]->query_attack())))
+            if ((environment(this_player()) == environment(ob)) &&
+                (objectp(victim = ob->query_attack())))
             {
-                friend = obs[index];
+                friend = ob;
                 break;
             }
         }
@@ -203,7 +201,6 @@ assist(string str)
     else
     {
         obs = parse_this(str, "[the] %l");
-
         if (sizeof(obs) > 1)
         {
             notify_fail(break_string("Be specific, you can't assist " +
@@ -408,8 +405,6 @@ intro_live(string str)
     object *livings;
     object *all_targets, *vis_targets;
     int     intro_self = 0;
-    int     index;
-    int     size;
 
     notify_fail(capitalize(query_verb()) + " who [to whom]?\n");
     if (!stringp(str))
@@ -502,31 +497,22 @@ intro_live(string str)
     }
 
     str = introducee->query_presentation();
-    size = sizeof(all_targets);
-    index = -1;
-    while(++index < size)
+    foreach(object target: all_targets)
     {
-        tell_object(all_targets[index],
-            this_player()->query_The_name(all_targets[index]) + " introduces " +
-            (intro_self ? (this_player()->query_objective() + "self") :
-                introducee->query_the_name(all_targets[index])) + " as:\n" +
-            str + ".\n");
+        tell_object(target, this_player()->query_The_name(target) +
+            " introduces " + (intro_self ? (this_player()->query_objective() + "self") :
+            introducee->query_the_name(target)) + " as:\n" + str + ".\n");
     }
 
     if (strlen(intro_to))
     {
         livings -= all_targets;
-
-        size = sizeof(livings);
-        index = -1;
-        while(++index < size)
+        foreach(object target: livings)
         {
-            livings[index]->catch_msg(
-                this_player()->query_The_name(livings[index]) +
-                " introduces " +
-                (intro_self ? (this_player()->query_objective() + "self") :
-                    introducee->query_the_name(livings[index])) + " to " +
-                FO_COMPOSITE_ALL_LIVE(vis_targets, livings[index]) + ".\n");
+            target->catch_msg(this_player()->query_The_name(target) +
+                " introduces " + (intro_self ? (this_player()->query_objective() + "self") :
+                introducee->query_the_name(target)) + " to " +
+                FO_COMPOSITE_ALL_LIVE(vis_targets, target) + ".\n");
         }
     }
 
@@ -944,52 +930,45 @@ int
 spar(string str)
 {
     object *oblist;
-    int index;
-    int size;
 
     oblist = parse_this(str, "[with] [the] %l");
-    if (!(size = sizeof(oblist)))
+    if (sizeof(oblist))
     {
         notify_fail("Spar with whom?\n");
         return 0;
     }
 
-    index = -1;
-    while(++index < size)
+    foreach(object person: oblist)
     {
-        if (this_player()->query_sparring_partner(oblist[index]))
+        if (this_player()->query_sparring_partner(person))
         {
             write("You are already sparring with " +
-                oblist[index]->query_the_name(this_player()) + ".\n");
+                person->query_the_name(this_player()) + ".\n");
             continue;
         }
 
-        if (oblist[index]->query_sparring_partner(this_player()))
+        if (person->query_sparring_partner(this_player()))
         {
             write("You accept the challenge to spar with " +
-                oblist[index]->query_the_name(this_player()) + ".\n");
-            tell_object(oblist[index],
-                this_player()->query_The_name(oblist[index]) +
+                person->query_the_name(this_player()) + ".\n");
+            tell_object(person, this_player()->query_The_name(person) +
                 " accepts your challenge to spar with " +
                 this_player()->query_objective() + ".\n");
             tell_room(QCTNAME(this_player()) +
                 " accepts the challenge to spar with " +
-                QTNAME(oblist[index]) + ".\n", ({ this_player(), oblist }) );
+                QTNAME(person) + ".\n", ({ this_player(), oblist }) );
         }
         else
         {
-            write("You challenge " +
-                oblist[index]->query_the_name(this_player()) +
+            write("You challenge " + person->query_the_name(this_player()) +
                 " to spar with you.\n");
-            tell_object(oblist[index],
-                this_player()->query_The_name(oblist[index]) +
+            tell_object(person, this_player()->query_The_name(person) +
                 " challenges you to spar with " +
                 this_player()->query_objective() + ".\n");
-            tell_room(QCTNAME(this_player()) +
-                " challenges to spar with " +
-                QTNAME(oblist[index]) + ".\n", ({ this_player(), oblist }) );
+            tell_room(QCTNAME(this_player()) + " challenges to spar with " +
+                QTNAME(person) + ".\n", ({ this_player(), oblist }) );
         }
-        this_player()->add_sparring_partner(oblist[index]);
+        this_player()->add_sparring_partner(person);
     }
     return 1;
 }
@@ -1557,123 +1536,148 @@ team(string str)
  * who - Tell what players are logged in and who we know
  */
 
-/*
- * Function name: index_arg
- * Description  : This function returns whether a particular letter is
- *                used in the argument the player passed to the function.
- * Arguments    : string str    - the arguments.
- *                string letter - the letter to search for.
- * Returns      : int 1/0 - true if the letter is used.
- */
-nomask int
-index_arg(string str, string letter)
-{
-    return (member_array(letter, explode(str, "")) != -1);
-}
+#define OPTION_USED(letter, arg) wildmatch(("*" + (letter) + "*"), (arg))
 
 /*
- * Function name: get_name
+ * Function name: format_who_name
  * Description  : This map function will return the name of the player for
- *                the 'who n' command. If the living is linkdead, an
- *                asterisk (*) is added.
+ *                the 'who' command with all relevant flags attached.
  * Arguments    : object player - the player to return the name for.
+ *                int showwiz - if true, mark wizards.
  * Returns      : string - the name to print.
  */
-nomask string
-get_name(object player)
+nomask varargs string
+format_who_name(object player, int showwiz = 1)
 {
     string name = capitalize(player->query_real_name());
 
-    /* If the player is linkdead, we add an asterisk (*) to the name. */
+    /* Wizards get a hash (#) to their name. */
+    if (showwiz && player->query_wiz_level())
+    {
+        name += "#";
+    }
+    /* Linkdead players get an asterisk (*) to their name. */
     if (!interactive(player) &&
         !player->query_npc())
     {
         name += "*";
+    }
+    /* Newbie helpers get a plus (+) to their name. */
+    if (player->query_prop(PLAYER_I_NEWBIE_HELPER))
+    {
+        name += "+";
     }
 
     return name;
 }
 
 /*
+ * Function name: sort_name
+ * Description  : This sort function sorts on the name of the player.
+ * Arguments    : object a - the playerobject to player a.
+ *                object b - the playerobject to player b.
+ * Returns      : int -1 - name of player a comes before that of player b.
+ *                     1 - name of player b comes before that of player a. 
+ */
+nomask int
+sort_name(object a, object b)
+{
+    string aname = a->query_real_name();
+    string bname = b->query_real_name();
+
+    return ((aname == bname) ? 0 : ((aname < bname) ? -1 : 1));
+}
+
+/*
  * Function name: print_who
  * Description  : This function actually prints the list of people known.
- * Arguments    : string opts  - the command line arguments.
- *                object *list - the list of livings to display.
- *                int    size  - the number of people logged in.
+ * Arguments    : string opts - the command line arguments.
+ *                object *list - the list of livings to display (met).
+ *                object *nonmet - the list of livings we have not met.
+ *                int    size - the number of people logged in.
  * Returns      : int 1 - always.
  */
 nomask int
-print_who(string opts, object *list, int size)
+print_who(string opts, object *list, object *nonmet, int size)
 {
-    int i, j;
-    int scrw = this_player()->query_option(OPT_SCREEN_WIDTH);
-    string to_write = "";
-    string *title;
-    string tmp;
-    int mwho = (query_verb() == "mwho");
-
-    scrw = (scrw ? scrw : 80);
-    list = sort_array(list, sort_name);
-
-    if (!sizeof(list))
-    {
-        to_write += ("There are no players of the requested type present " +
-            "that you know.\n");
-        /* No need to check for mwho here. */
-        write(to_write);
-        return 1;
-    }
+    int     scrw = this_player()->query_option(OPT_SCREEN_WIDTH);
+    string  to_write = "";
+    string *nonnames, *metnames;
+    string *words;
+    int     mwho = (query_verb() == "mwho");
+    int     maxlen;
 
     if (size == 1)
     {
-        to_write += ("Only one player present.\n");
+        write("You are the only player present.\n");
     }
     else
     {
-        to_write += ("There are " + size +
-            " players in the game. Within the requested type you know:\n");
+        write("There are " + size + " players in the game");
+        if (!sizeof(list))
+        {
+            write(", none of which are known to you");
+            if (!sizeof(nonmet))
+            {
+                write(".\n");
+                return 1;
+            }
+        }
+        else if (sizeof(list) < size)
+        {
+            write(", of which " + sizeof(list) + " fit your selection");
+        }        
+        write(".\n");
     }
 
-    /* By default we display only the names, unless the argument 'f' for
-     * full was given.
+    list = sort_array(list, sort_name);
+    nonmet = sort_array(nonmet, sort_name);
+    nonnames = map(nonmet, format_who_name);
+    scrw = ((scrw >= 40) ? (scrw - 3) : 77);
+
+    /* If the "f" argument is used, we use the full names of people we have
+     * met. Otherwise only the names are used.
      */
-    if (!index_arg(opts, "f"))
+    if (OPTION_USED("f", opts))
     {
-        scrw = ((scrw >= 40) ? (scrw - 3) : 77);
-        to_write += (sprintf("%-*#s\n", scrw,
-            implode(map(list, get_name), "\n")));
-        /* No need to check for mwho here. */
-        write(to_write);
-        return 1;
+        foreach(object person: list)
+        {
+            words = explode(person->query_presentation(), " ");
+            /* Don't mark wizards in full mode. It shows with the pretitle. */
+            words[(person->query_wiz_level() ? 1 : 0)] = format_who_name(person, 0);
+            to_write += HANGING_INDENT(implode(words, " "), 6, 0);
+        }
+    }
+    else
+    {
+        if (sizeof(list))
+        {
+            metnames = map(list, format_who_name);
+            /* In case there are elements in both arrays, make sure that the
+             * strings in each table are of equal length to make them align
+             * nicely. */
+            maxlen = applyv(max, map(metnames + nonnames, strlen));
+            metnames[0] = sprintf("%-*s", maxlen, metnames[0]);
+
+            to_write += sprintf("%-*#s\n", scrw, implode(metnames, "\n"));
+        }
+    }
+    
+    if (sizeof(nonmet))
+    {
+        /* Apply the max length of the met names here for nice tabulation. */
+        if (maxlen)
+        {
+            nonnames[0] = sprintf("%-*s", maxlen, nonnames[0]);
+        }
+        to_write += (sizeof(list) ? "\n" : "") +
+            "Players in the realms who are not known to you:\n" +
+            sprintf("%-*#s\n", scrw, implode(nonnames, "\n"));
     }
 
-    for(i = 0; i < sizeof(list); i++)
+    if (SD_IS_NEWBIE(this_player()))
     {
-        tmp = list[i]->query_presentation();
-        if (!interactive(list[i]) &&
-            !list[i]->query_npc())
-        {
-            title = explode(tmp, " ");
-            title[(list[i]->query_wiz_level() ? 1 : 0)] += "*";
-            tmp = implode(title, " ");
-        }
-        if ((scrw == -1) || (strlen(tmp) < scrw))
-        {
-            to_write += (tmp + "\n");
-        }
-        else /* Split a too long title in a nice way. */
-        {
-            title = explode(break_string(tmp, (scrw - 2)), "\n");
-            tmp = sprintf("%-*s\n", scrw, title[0]);
-
-            title = explode(break_string(
-                implode(title[1..], " "), (scrw - 8)), "\n");
-
-            for(j = 0; j < sizeof(title); j++)
-                tmp += (sprintf("      %-*s\n", (scrw - 6), title[j]));
-
-            to_write += (tmp);
-        }
+        to_write += "\n  * linkdead, # wizard, + newbie helper available for help/questions\n";
     }
 
     /* Too long message is not what we want. */
@@ -1696,49 +1700,18 @@ print_who(string opts, object *list, int size)
     return 1;
 }
 
-/*
- * Function name: sort_name
- * Description  : This sort function sorts on the name of the player. Since
- *                no two players can have the same name, we do not have to
- *                check for that.
- * Arguments    : object a - the playerobject to player a.
- *                object b - the playerobject to player b.
- * Returns      : int -1 - name of player a comes before that of player b.
- *                     1 - name of player b comes before that of player a. 
- */
-nomask int
-sort_name(object a, object b)
-{
-    string aname = a->query_real_name();
-    string bname = b->query_real_name();
-
-    return ((aname == bname) ? 0 : ((aname < bname) ? -1 : 1));
-}
-
-/*
- * Function name: filter_who_no_invis_wizard
- * Description  : Filters out all invisible wizards.
- * Arguments    : object player - the player to test.
- * Returns      : int 1/0 - TRUE when not an invis wizard.
- */
-int
-filter_who_no_invis_wizard(object player)
-{
-    return (!player->query_wiz_level() ||
-        (player->query_prop(OBJ_I_INVIS) < 100));
-}
-
 int
 who(string opts)
 {
-    object  *list = users();
-    object  npc;
+    object *list = users();
+    object *wizards;
+    object *nonmet = ({ });
+    object  npc, room;
     mapping rem;
     mapping memory = ([ ]);
-    string  *names = ({ });
+    string *names = ({ });
     int     index;
     int     size;
-    int     size_list;
 
     if (!stringp(opts))
     {
@@ -1751,27 +1724,27 @@ who(string opts)
      * we add that to the list, but only if the player did not ask to only
      * see the interactive players.
      */
-    if (!index_arg(opts, "i") &&
-        objectp(find_object(OWN_STATUE)))
+    if (!OPTION_USED("i", opts) &&
+        objectp(room = find_object(OWN_STATUE)))
     {
-        list += ((object *)find_object(OWN_STATUE)->query_linkdead_players() - list);
+        list |= (object *)room->query_linkdead_players();
     }
 #endif OWN_STATUE
 #endif STATUE_WHEN_LINKDEAD
 
     /* This filters out players logging in and such. */
-    list = filter(list, &operator(==)(LIVING_OBJECT) @
-        &function_exists("create_container"));
+    list = FILTER_LIVING_OBJECTS(list);
     size = sizeof(list);
 
     /* Player may indicate to see only wizards or mortals. */
-    if (index_arg(opts, "w"))
+    wizards = filter(list, &->query_wiz_level());
+    if (OPTION_USED("w", opts))
     {
-        list = filter(list, &->query_wiz_level());
+        list = wizards;
     }
-    else if (index_arg(opts, "m"))
+    else if (OPTION_USED("m", opts))
     {
-        list = filter(list, &not() @ &->query_wiz_level());
+        list -= wizards;
     }
 
     /* Wizards won't see the NPC's and wizards are not subject to the
@@ -1779,7 +1752,7 @@ who(string opts)
      */
     if (this_player()->query_wiz_level())
     {
-        return print_who(opts, list, size);
+        return print_who(opts, list, ({ }), size);
     }
 
     if (mappingp(rem = this_player()->query_remembered()))
@@ -1792,75 +1765,52 @@ who(string opts)
     }
 
     /* Player wants to see who is in the queue. */
-    if (index_arg(opts, "q"))
+    if (OPTION_USED("q", opts))
     {
         names = QUEUE->queue_list(1);
-        if (!(size = sizeof(names)))
+        if (!(index = sizeof(names)))
         {
             write("There are no players in the queue right now.\n");
             return 1;
         }
 
-        index = -1;
-        while(++index < size)
+        while(--index >= 0)
         {
             names[index] = sprintf("%2d: %-11s", (index + 1),
-                (memory[names[index]] ? capitalize(names[index]) :
-                 "<unknown>"));
+                (memory[names[index]] ? capitalize(names[index]) : "<unknown>"));
         }
         write("The following people are in the queue:\n" +
-              sprintf("%-70#s\n", implode(names, "\n")));
+            sprintf("%-70#s\n", implode(names, "\n")));
         return 1;
     }
 
-#ifdef MET_ACTIVE
-    index = -1;
-    size_list = sizeof(list);
-    while(++index < size_list)
+    /* Only add NPC's if the player didn't use the wizard filter. */
+    if (!OPTION_USED("w", opts))
     {
-        if ((!(memory[list[index]->query_real_name()])) &&
-            (!(list[index]->query_prop(LIVE_I_ALWAYSKNOWN))))
-        {
-            list[index] = 0;
-        }
-    }
-
-    list = list - ({ 0, this_player() });
-#endif MET_ACTIVE
-
-    /* Don't add NPC's if the player wanted wizards. Here we also add the
-     * player himself again, because that is lost during the met-check (when
-     * enabled).
-     */
-    if (!index_arg(opts, "w"))
-    {
-#ifdef MET_ACTIVE
-        list += ({ this_player() });
-        size++;
-#endif MET_ACTIVE
-        names = m_indices(memory) - list->query_real_name();
-
 #ifdef NPC_IN_WHO_LIST
-        index = -1;
-        size_list = sizeof(names);
-        while(++index < size_list)
-        {
-            /* We check that the people found this way are NPC's since
-             * we do not want linkdead people to show up this way They
-             * are already in the list.
-             */
-            if (objectp(npc = find_living(names[index])) &&
-                npc->query_npc())
-            {
-                list += ({ npc });
-                size++;
-            }
-        }
+        names = m_indices(memory) - list->query_real_name();
+        list |= map(names, find_living);
+        list = filter(list, objectp);
 #endif NPC_IN_WHO_LIST
     }
 
-    /* To mortals 'who' will not show invisible wizards. */
-    list = filter(list, filter_who_no_invis_wizard);
+    /* Mortals do not see invisible wizards. */
+    list -= filter(wizards, &operator(>=)(, 100) @ &->query_prop(OBJ_I_INVIS));
 
-    return print_who(opts, list, size);
+    /* Mortals do not see juniors. */
+    list = filter(list, not @ &wildmatch("*jr", ) @ &->query_real_name());
+
+#ifdef MET_ACTIVE
+    /* Find out who on the list is not known to us. */
+    nonmet = filter(list, not @ &operator([])(memory, ) @ &->query_real_name());
+    /* Except of course those who are always known. */
+    nonmet = filter(nonmet, not @ &->query_prop(LIVE_I_ALWAYSKNOWN));
+    /* We always know ourselves. */
+    nonmet -= ({ this_player() });
+    list -= nonmet;
+    /* Mortals don't see nonmet wizards on the who-list. */
+    nonmet -= wizards;
+#endif MET_ACTIVE
+
+    return print_who(opts, list, nonmet, size);
 }
