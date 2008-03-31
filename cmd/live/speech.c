@@ -127,7 +127,12 @@ notify_speech(string verb, string adverb, object *oblist, string text)
 {
     int target = !!sizeof(oblist);
     int is_target;
-    object *livings = FILTER_OTHER_LIVE(all_inventory(environment(this_player())));
+    object *livings;
+
+    if (!environment(this_player()))
+        return;
+    
+    livings = FILTER_OTHER_LIVE(all_inventory(environment(this_player())));
 
     foreach(object npc: livings)
     {
