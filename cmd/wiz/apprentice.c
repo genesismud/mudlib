@@ -41,7 +41,6 @@
  * - setmout
  * - start
  * - title
- * - unmetflag
  * - wizopt
  * - whereis
  * - whichsoul
@@ -209,8 +208,6 @@ query_cmdlist()
         "tell":"tell",
         "title":"title",
         "tree":"tree",
-
-        "unmetflag":"unmetflag",
 
         "wizopt":"wizopt",
         "whereis":"whereis",
@@ -1497,19 +1494,35 @@ localcmd(string arg)
 /* **************************************************************************
  * metflag - Set the metflag, a wizard can decide if met or unmet with everyone
  */
+
+#define METFLAG_CMDS  ([ "all": 0, "none": 1, "players": 2 ])
+#define METFLAG_TEXTS ({ "\"all\" = all livings are met", "\"none\" = nobody is met", "\"players\" = players are met, but npc's are not" })
+
 nomask int
 metflag(string str)
 {
     CHECK_SO_WIZ;
 
-    if (stringp(str))
+    if (!strlen(str))
     {
-        notify_fail("Metflag what?\n");
+        write("Current metflag: " + METFLAG_TEXTS[this_player()->query_wiz_unmet()] + ".\n");
+        return 1;
+    }
+
+    switch(str)
+    {
+    case "all":
+    case "none":
+    case "players":
+        this_interactive()->set_wiz_unmet(METFLAG_CMDS[str]);
+        return metflag("");
+
+    default:
+        notify_fail("Syntax: metflag [all/none/players]");
         return 0;
     }
 
-    this_interactive()->set_wiz_unmet(0);
-    write("Ok.\n");
+    write("Illegal end of metflag.\n");
     return 1;
 }
 
@@ -2065,26 +2078,6 @@ title(string t)
 }
 
 /* **************************************************************************
- * unmetflag - Set the unmetflag, a wizard can decide: met/unmet with everyone
- */
-nomask int
-unmetflag(string str)
-{
-    CHECK_SO_WIZ;
-
-    if (stringp(str) &&
-        (str != "npc"))
-    {
-        notify_fail("Syntax: unmetflag [\"npc\"].\n");
-        return 0;
-    }
-
-    this_interactive()->set_wiz_unmet(((str == "npc") ? 2 : 1));
-    write("Ok.\n");
-    return 1;
-}
-
-/* **************************************************************************
  * wizopt - Change/view the wizard options
  */
 nomask int
@@ -2092,11 +2085,15 @@ wizopt(string arg)
 {
     if (!stringp(arg))
     {
-        return CMD_LIVE_STATE->options(OPT_AUTO_PWD);
-        return CMD_LIVE_STATE->options(OPT_AUTOLINECMD);
-        return CMD_LIVE_STATE->options(OPT_TIMESTAMP);
+        /* These names directly link to the options arguments. */
+        return CMD_LIVE_STATE->options("autolinecmd");
+        return CMD_LIVE_STATE->options("autopwd");
+        return CMD_LIVE_STATE->options("timestamp");
     }
-    return CMD_LIVE_STATE->options(arg);
+    else
+    {
+        return CMD_LIVE_STATE->options(arg);
+    }
 }
 
 /* **************************************************************************
