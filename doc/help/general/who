@@ -10,7 +10,6 @@ DESCRIPTION
         a sorted list of the names of the players you know. The following
 	markers are displayed with the names:
 	* - the player is currently linkdead.
-	# - the person is a wizard.
 	+ - the person is a registered newbie helper. Newbies can ask or
 	    mail this person for assistance, questions or general help.
 
@@ -24,4 +23,4 @@ OPTIONS
 	    other options. For wizards, this option is void. (use finger)
 
 SEE ALSO
-        mwho
+        mwho, options

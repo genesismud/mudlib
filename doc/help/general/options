@@ -11,73 +11,73 @@ DESCRIPTION
 	you type quit the realms.
 
 OPTIONS:
-	<none>            - Display the current settings
-	<option>          - Display this option setting
-	<option> <value>  - Set the option to the given value
+	<none>              - Display the current settings
+	<option>            - Display this option setting
+	<option> <value>    - Set the option to the given value
 
 ARGUMENTS
-	brief <on/off>       - With this option on, you only get a very short
-			       description of locations you visit. Do not use
-			       this option while exploring new areas, as you
-                               will need all the information you can get there.
+	autowrap <on/off>   - Indicate whether you want to automatically
+			      wrap notes / mails with lines exceeding 80
+			      characters per line.
 
-	echo <on/off>        - This option controls whether you see your
-			       commands echoed on the screen or not.
+	brief <on/off>      - With this option on, you only get a very short
+			      description of locations you visit. Do not use
+			      this option while exploring new areas, as you
+                              will need all the information you can get there.
 
-        unarmed <on/off>     - When this is switched on, you will use unarmed
-                               combat while you are wielding a weapon. When it
-                               is switched off, then you will fully concentrate
-                               on the weapon.
+	echo <on/off>       - This option controls whether you see your
+			      commands echoed on the screen or not.
 
-	gagmisses <on/off>   - When this is switched on, the game will not
-			       show any misses you make in combat.
+	gagmisses <on/off>  - When this is switched on, the game will not
+			      show any misses you make in combat.
 
-	merciful <on/off>    - When this is switched on, you will not kill an
-			       opponent during combat, but you will stop just
-			       before the victim would die. More information
-			       can be found in "help mercy".
-			       THIS OPTION IS NOT FUNCTIONAL YET!
+	inventory <on/off>  - Indicate whether you want to view your inventory
+			      in a modern tabulated display, or not.
 
-	wimpy <level>        - With this option you can become a wimp and wimpy
-			       out of a fight if it does not go well for you.
-			       You may find this option very useful and it is
-                               especially recomended for beginners. However,
-			       when running away from the fight, you will have
-			       no time to decide where to run so you might end
-			       up in the next room with a dozen more of those
-			       horrible orcs.  Most times it will probably save
-			       your life though.
+	merciful <on/off>   - When this is switched on, you will not kill an
+			      opponent during combat, but you will stop just
+			      before the victim would die. More information
+			      can be found in "help mercy".
+			      THIS OPTION IS NOT FUNCTIONAL YET!
 
-		    For <level> you can substitute:
+	morelen <len>       - The amount of lines "more" displays at a time,
+                              in a range from 1 to 100. The default is 20.
 
-		    brave    - Never run, be brave!
-	            <damage> - The health description of the unacceptable
-			       damage level.
-		    ?        - Give a list of available <damage> strings.
-
-        see <on/off> or      - This options controls whether you see ongoing
-	fights <on/off>        fights or not. This is particularly useful if
-  			       you are running on a slow line and do not want
-     			       to wait for all the scrolling of messages.
-
-	autowrap <on/off>    - Indicate whether you want to automatically
-			       wrap notes / mails with lines exceeding 80
-			       characters per line.
-
-	inventory <on/off>   - Indicate whether you want to view your inventory
-			       in a modern tabulated display, or not.
-
-	morelen <len>        - The amount of lines "more" displays at a time,
-                               in a range from 1 to 100. The default is 20.
-
-	screenwidth <width>  - Your screen width, which may range from 40 to
-                               200 columns. The default is 80.
-                               Use "off" to disable screen wrapping on the
-                               side of the game.
+	screenwidth <width> - Your screen width, which may range from 40 to
+                              200 columns. The default is 80.
+                              Use "off" to disable screen wrapping on the
+                              side of the game.
  
-        web <yes/no>         - Give permission to publish certain information 
-                               linked to your character on the web.
+        see <on/off> or     - This options controls whether you see ongoing
+	fights <on/off>       fights or not. This is particularly useful if
+  			      you are running on a slow line and do not want
+     			      to wait for all the scrolling of messages.
 
+        showunmet <on/off>  - Show the names of players you have not yet met
+			      when displaying the "who" list.
+
+        unarmed <on/off>    - When this is switched on, you will use unarmed
+                              combat while you are wielding a weapon. When it
+                              is switched off, then you will fully concentrate
+                              on the weapon.
+
+        web <yes/no>        - Give permission to publish certain information 
+                              linked to your character on the web.
+
+	wimpy <level>       - With this option you can become a wimp and wimpy
+			      out of a fight if it does not go well for you.
+			      You may find this option very useful and it is
+                              especially recomended for beginners. However,
+			      when running away from the fight, you will have
+			      no time to decide where to run so you might end
+			      up in the next room with a dozen more of those
+			      horrible orcs. Most times it will probably save
+			      your life though. The <level> can be:
+
+		   brave    - Never run, be brave!
+	           <damage> - The health description of the unacceptable
+			      damage level.
+		   ?        - Give a list of available <damage> strings.
 
 SEE ALSO
 	wizopt (wizards only)

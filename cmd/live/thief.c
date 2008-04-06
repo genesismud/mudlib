@@ -806,29 +806,29 @@ steal(string str)
 
         /* Suspect found matching the description... */
         place = tmp[0];
-
-        /* Umm.. hello?  Try picking a container sometime... */
-        if (!IS_CONTAINER_OBJECT(place))
-        {
-            write("You cannot " + query_verb() + " from " +
-                place->short() + ".\n");
-            return 1;
-        }
-
-        /* Okay.. better.. try one that is open next time. */
-        if (place->query_prop(CONT_I_CLOSED))
-        {
-            write("The " + place->short() + " appears to be closed, " +
-                "better look for something else to " + query_verb() +
-                " from.\n");
-            return 1;
-        }
     }
 
     /* Not sure how this could happen, probably a bug someplace. */
     if (!objectp(place))
     {
         write("Where are you trying to " + query_verb() + " from?\n");
+        return 1;
+    }
+
+    /* Umm.. hello?  Try picking a container sometime... */
+    if (!IS_CONTAINER_OBJECT(place))
+    {
+        write("You cannot " + query_verb() + " from " +
+            place->short() + ".\n");
+        return 1;
+    }
+
+    /* Okay.. better.. try one that is open next time. */
+    if (place->query_prop(CONT_I_CLOSED))
+    {
+        write("The " + place->short() + " appears to be closed, " +
+            "better look for something else to " + query_verb() +
+            " from.\n");
         return 1;
     }
 

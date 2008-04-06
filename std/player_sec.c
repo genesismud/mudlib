@@ -737,18 +737,22 @@ change_player_object(object old_plob)
  * Function name: try_start_location
  * Description  : Attempt to make the player start in a start location.
  * Arguments    : string path - the path to try.
- * Returns      : int 1/0 - if true, the player moved to the room.
  */
-static nomask int
+static nomask void
 try_start_location(string path)
 {
     object room;
 
     /* Sanity check. */
-    if (!strlen(path) ||
-        file_size(path + ".c") <= 0)
+    if (!strlen(path))
     {
-        return 0;
+        return;
+    }
+    /* Strip any .c if present. */
+    sscanf(path, "%s.c", path);
+    if (file_size(path + ".c") <= 0)
+    {
+        return;
     }
 
     /* Try to load the room, and then try to move the player. */
@@ -757,9 +761,6 @@ try_start_location(string path)
     {
         catch(move_living(0, room));
     }
-
-    /* Return true if we moved into a room. */
-    return objectp(environment());
 }
 
 /*
@@ -798,6 +799,12 @@ enter_game(string pl_name, string pwd)
     {
         try_start_location(query_temp_start_location());
         set_temp_start_location(0);
+    }
+
+    /* For juniors, try the wizard workroom. */
+    if (!environment() && wildmatch("*jr", pl_name))
+    {
+        try_start_location(SECURITY->wiz_home(extract(pl_name, 0, -3)));
     }
 
     /* Try the default start location if necessary. */

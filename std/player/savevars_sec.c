@@ -1046,11 +1046,11 @@ set_option(int opt, int val)
     case OPT_BRIEF:
     case OPT_ECHO:
     case OPT_NO_FIGHTS:
-    case OPT_BLOOD: /* Backward compatibility */
     case OPT_UNARMED_OFF:
     case OPT_GAG_MISSES:
     case OPT_MERCIFUL_COMBAT:
     case OPT_WEBPERM:
+    case OPT_SHOW_UNMET:
     case OPT_AUTO_PWD:
     case OPT_AUTOWRAP:
     case OPT_AUTOLINECMD:
@@ -1097,11 +1097,11 @@ query_option(int opt)
     case OPT_BRIEF:
     case OPT_ECHO:
     case OPT_NO_FIGHTS:
-    case OPT_BLOOD: /* Backward compatibility. */
     case OPT_UNARMED_OFF:
     case OPT_GAG_MISSES:
     case OPT_MERCIFUL_COMBAT:
     case OPT_WEBPERM:
+    case OPT_SHOW_UNMET:
     case OPT_AUTO_PWD:
     case OPT_AUTOWRAP:
     case OPT_AUTOLINECMD:

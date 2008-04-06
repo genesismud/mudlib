@@ -1543,19 +1543,13 @@ team(string str)
  * Description  : This map function will return the name of the player for
  *                the 'who' command with all relevant flags attached.
  * Arguments    : object player - the player to return the name for.
- *                int showwiz - if true, mark wizards.
  * Returns      : string - the name to print.
  */
 nomask varargs string
-format_who_name(object player, int showwiz = 1)
+format_who_name(object player)
 {
     string name = capitalize(player->query_real_name());
 
-    /* Wizards get a hash (#) to their name. */
-    if (showwiz && player->query_wiz_level())
-    {
-        name += "#";
-    }
     /* Linkdead players get an asterisk (*) to their name. */
     if (!interactive(player) &&
         !player->query_npc())
@@ -1601,9 +1595,11 @@ nomask int
 print_who(string opts, object *list, object *nonmet, int size)
 {
     int     scrw = this_player()->query_option(OPT_SCREEN_WIDTH);
+    int     show_unmet = this_player()->query_option(OPT_SHOW_UNMET);
     string  to_write = "";
     string *nonnames, *metnames;
     string *words;
+    object *wizards;
     int     mwho = (query_verb() == "mwho");
     int     maxlen;
 
@@ -1630,9 +1626,11 @@ print_who(string opts, object *list, object *nonmet, int size)
         write(".\n");
     }
 
-    list = sort_array(list, sort_name);
-    nonmet = sort_array(nonmet, sort_name);
-    nonnames = map(nonmet, format_who_name);
+    if (show_unmet)
+    {
+        nonmet = sort_array(nonmet, sort_name);
+        nonnames = map(nonmet, format_who_name);
+    }
     scrw = ((scrw >= 40) ? (scrw - 3) : 77);
 
     /* If the "f" argument is used, we use the full names of people we have
@@ -1640,30 +1638,43 @@ print_who(string opts, object *list, object *nonmet, int size)
      */
     if (OPTION_USED("f", opts))
     {
+        list = sort_array(list, sort_name);
         foreach(object person: list)
         {
             words = explode(person->query_presentation(), " ");
-            /* Don't mark wizards in full mode. It shows with the pretitle. */
-            words[(person->query_wiz_level() ? 1 : 0)] = format_who_name(person, 0);
+            words[(person->query_wiz_level() ? 1 : 0)] = format_who_name(person);
             to_write += HANGING_INDENT(implode(words, " "), 6, 0);
         }
     }
-    else
+    else if (sizeof(list))
     {
-        if (sizeof(list))
+        list = sort_array(list, sort_name);
+        /* This preserves the sorted list. */
+        wizards = filter(list, &->query_wiz_level());
+        list -= wizards;
+        metnames = map(list, format_who_name);
+        if (sizeof(wizards))
         {
-            metnames = map(list, format_who_name);
-            /* In case there are elements in both arrays, make sure that the
-             * strings in each table are of equal length to make them align
-             * nicely. */
+            if (sizeof(list))
+            {
+                metnames += ({ "\\/\\/\\/\\/" });
+            }
+            metnames += map(wizards, format_who_name);
+        }
+
+        /* In case there are elements in both arrays, make sure that the
+         * strings in each table are of equal length to make them align
+         * nicely. */
+        if (show_unmet)
+        {
             maxlen = applyv(max, map(metnames + nonnames, strlen));
             metnames[0] = sprintf("%-*s", maxlen, metnames[0]);
-
-            to_write += sprintf("%-*#s\n", scrw, implode(metnames, "\n"));
         }
+
+        to_write += sprintf("%-*#s\n", scrw, implode(metnames, "\n"));
     }
     
-    if (sizeof(nonmet))
+    if (sizeof(nonmet) && show_unmet)
     {
         /* Apply the max length of the met names here for nice tabulation. */
         if (maxlen)
@@ -1677,7 +1688,7 @@ print_who(string opts, object *list, object *nonmet, int size)
 
     if (SD_IS_NEWBIE(this_player()))
     {
-        to_write += "\n  * linkdead, # wizard, + newbie helper available for help/questions\n";
+        to_write += "\n  * linkdead, + newbie helper available for help/questions\n";
     }
 
     /* Too long message is not what we want. */

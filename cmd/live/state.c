@@ -997,6 +997,7 @@ options(string arg)
         options("gagmisses");
         options("web");
 //        options("merciful");
+        options("showunmet");
         options("autowrap");
         options("inventory");
 	if (this_player()->query_wiz_level())
@@ -1050,45 +1051,43 @@ options(string arg)
         case "see":
         case "fights":
             write("See fights:      " +
-                (this_player()->query_option(OPT_NO_FIGHTS) ?
-		"Off" : "On") + "\n");
+                (this_player()->query_option(OPT_NO_FIGHTS) ? "Off" : "On") + "\n");
             break;
 
         case "unarmed":
             write("Unarmed combat:  " + 
-                (this_player()->query_option(OPT_UNARMED_OFF) ? 
-                "Off" : "On") + "\n");
+                (this_player()->query_option(OPT_UNARMED_OFF) ? "Off" : "On") + "\n");
             break;
 
         case "gagmisses":
             write("Gag misses:      " + 
-                (this_player()->query_option(OPT_GAG_MISSES) ?
-                "On" : "Off") + "\n");
+                (this_player()->query_option(OPT_GAG_MISSES) ? "On" : "Off") + "\n");
             break;
 
         case "merciful":
             write("Merciful combat: " + 
-                (this_player()->query_option(OPT_MERCIFUL_COMBAT) ?
-                "On" : "Off") + "\n");
+                (this_player()->query_option(OPT_MERCIFUL_COMBAT) ? "On" : "Off") + "\n");
+            break;
+
+        case "showunmet":
+            write("Show unmet:      "+ 
+                (this_player()->query_option(OPT_SHOW_UNMET) ? "On" : "Off") + "\n");
             break;
 
         case "autowrap":
             write("Auto-wrapping:   " + 
-                (this_player()->query_option(OPT_AUTOWRAP) ?
-                "On" : "Off") + "\n");
+                (this_player()->query_option(OPT_AUTOWRAP) ? "On" : "Off") + "\n");
             break;
 
         case "web":
             write("Web publication: " +
-                (this_player()->query_option(OPT_WEBPERM) ?
-                "No" : "Yes") + "\n");
+                (this_player()->query_option(OPT_WEBPERM) ? "No" : "Yes") + "\n");
             break;
 
         case "inventory":
         case "table":
             write("Table inventory: " +
-                (this_player()->query_option(OPT_TABLE_INVENTORY) ?
-                "On" : "Off") + "\n");
+                (this_player()->query_option(OPT_TABLE_INVENTORY) ? "On" : "Off") + "\n");
             break;
 
         case "autopwd":
@@ -1096,8 +1095,7 @@ options(string arg)
 	    if (this_player()->query_wiz_level())
 	    {
 	        write("Auto pwd on cd:  " +
-		    (this_player()->query_option(OPT_AUTO_PWD) ?
-		    "On" : "Off") + "\n");
+		    (this_player()->query_option(OPT_AUTO_PWD) ? "On" : "Off") + "\n");
 		break;
 	    }
 	    /* Intentional fallthrough to default if not a wizard. */
@@ -1107,8 +1105,7 @@ options(string arg)
 	    if (this_player()->query_wiz_level())
 	    {
 		write("Auto line cmds:  " +
-		    (this_player()->query_option(OPT_AUTOLINECMD) ?
-		    "On" : "Off") + "\n");
+		    (this_player()->query_option(OPT_AUTOLINECMD) ? "On" : "Off") + "\n");
 		break;
 	    }
 	    /* Intentional fallthrough to default if not a wizard. */
@@ -1117,8 +1114,7 @@ options(string arg)
 	    if (this_player()->query_wiz_level())
 	    {
 		write("Timestamp lines: " +
-		    (this_player()->query_option(OPT_TIMESTAMP) ?
-		    "On" : "Off") + "\n");
+		    (this_player()->query_option(OPT_TIMESTAMP) ? "On" : "Off") + "\n");
 		break;
 	    }
 	    /* Intentional fallthrough to default if not a wizard. */
@@ -1205,7 +1201,12 @@ options(string arg)
 
     case "see":
     case "fights":
-        this_player()->set_option(OPT_NO_FIGHTS, (args[sizeof(args) - 1] != "on"));
+        /* This to accomodate people typing "options see fights" */
+        args -= ({ "fights" });
+        if (sizeof(args) == 2)
+        {
+            this_player()->set_option(OPT_NO_FIGHTS, (args[1] != "on"));
+        }
         options("see");
         break;
 
@@ -1228,6 +1229,11 @@ options(string arg)
     case "merciful":
         this_player()->set_option(OPT_MERCIFUL_COMBAT, (args[1] == "on"));
         options("merciful");
+        break;
+
+    case "showunmet":
+        this_player()->set_option(OPT_SHOW_UNMET, (args[1] == "on"));
+        options("showunmet");
         break;
 
     case "autowrap":

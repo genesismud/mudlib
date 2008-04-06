@@ -9,9 +9,9 @@
 
 /* The default string of options for new players. It contains the following
  * information: more=20, screenwidth=80, whimpy=36 (very bad shape), echo on,
- * autopwd.
+ * who_unmet, autopwd.
  */
-#define OPT_DEFAULT_STRING " 20 8036\"  !"
+#define OPT_DEFAULT_STRING " 20 8036\"$ !"
 
 /* Bit strings use only six bits per character in order to keep it printable.
  * The base of 48 means that 8 characters are used before the first bit.
@@ -34,6 +34,7 @@
 #define OPT_MERCIFUL_COMBAT      5 /* Be merciful in combat. */
 #define OPT_WEBPERM		 6 /* Web participation. */
 #define OPT_TABLE_INVENTORY	 7 /* Modern tabulated inventory. */
+#define OPT_SHOW_UNMET		 8 /* Show unmet people in who. */
 #define OPT_AUTOWRAP		19 /* Auto-wrap long notes. */
 
 /* Wizard bits */
