@@ -307,6 +307,12 @@ register_second(string second, string password)
         return 0;
     }
 
+    /* In principle the wizard is the first, unless he's a second. */
+    if (query_wiz_level(second) && !m_firsts[second])
+    {
+        tmp = first; first = second; second = tmp;
+    }
+
     /* Second is already a first. */
     if (m_seconds[second])
     {
