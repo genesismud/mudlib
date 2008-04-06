@@ -115,5 +115,17 @@
 #define HANGING_INDENT(text, indent, width) \
     ((string)COMPOSITE_FILE->hanging_indent((text), (indent), (width)))
 
+/*
+ * EXPAND_LINE
+ *
+ * Returns a string of <length> long, padded with repetitions of <text>. The
+ * <text> must be at least 1 character long. The last <text> may be trunctated
+ * if it does not fit. Example: EXPAND_LINE("-+", 5) -> "-+-+-"
+ * Note: To include "'" in the <text>, you must use "\\'" (as the backslash
+ *       has to be escaped past the interpreter). Similarly, to include "\"
+ *       requires "\\\\".
+ */
+#define EXPAND_LINE(text, length) sprintf("%'" + (text) + "'*s", (length), "")
+
 /* No definitions beyond this point. */
 #endif COMPOSITE_DEF

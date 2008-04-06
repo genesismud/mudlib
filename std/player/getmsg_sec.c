@@ -7,13 +7,9 @@
  * All non combat interaction with other players are also here.
  */
 
-#include <config.h>
-#include <flags.h>
-#include <language.h>
-#include <ss_types.h>
 #include <stdproperties.h>
 
-static mapping introduced_name;   /* People who introduced themselves */
+static mapping introduced_name = ([ ]); /* People who introduced themselves */
 
 /************************************************************************
  *
@@ -21,50 +17,63 @@ static mapping introduced_name;   /* People who introduced themselves */
  */
 
 /*
- * Function name:   query_met
- * Description:     Tells if we know a certain living's name.
- * Arguments:       name: Name of living or objectp of living
- * Returns:         True if we know this name otherwise false.
+ * Function name: query_met
+ * Description  : Tells if we know a certain living's name.
+ * Arguments    : mixed who: name or object of living.
+ * Returns      : int 1/0 - if true, we know the person.
  */
 public int
-query_met(mixed name)
+query_met(mixed who)
 {
-    string str;
-    mapping rem;
+    string name;
 
 #ifndef MET_ACTIVE
     return 1;
 #else
-    if (objectp(name))
-	str = (string) name->query_real_name();
-    else if (stringp(name))
+    if (objectp(who))
     {
-       	str = name;
-	name = find_living(name);
+	name = (string)who->query_real_name();
+    }
+    else if (stringp(who))
+    {
+       	name = who;
+	who = find_living(who);
     }
     else
 	return 0;
 
-    if (name && name->query_prop(LIVE_I_NEVERKNOWN))
+    if (who->query_prop(LIVE_I_NEVERKNOWN))
 	return 0;
 
-    if (name && name->query_prop(LIVE_I_ALWAYSKNOWN))
+    if (who->query_prop(LIVE_I_ALWAYSKNOWN))
 	return 1;
 
-    /* Wizards know everyone */
-    if (query_wiz_level() > 0)
+    /* Wizards know everyone, unless they don't want to. */
+    if (query_wiz_level())
     {
-	if (query_wiz_unmet() == 0 ||
-            (query_wiz_unmet() == 2 && name && !(name->query_npc())))
-    	    return 1;
-	else
-	    return 0; /* Unless they have said they don't want to. */
+        switch(query_wiz_unmet())
+        {
+        case 0:
+            /* Wizard wants to know everybody. */
+            return 1;
+        case 1:
+            /* Wizard doesn't want to know anyone, but let's check for recent
+             * introductions.
+             */
+            return query_introduced(name);
+        case 2:
+            /* Wizard wants to know players and not NPC's. Let's be nice and
+             * check for recent introductions on NPC's.
+             */
+            return who->query_npc() ? query_introduced(name) : 1;
+        }
     }
-    
-    if (str == query_real_name()) /* I always know myself */
+
+    /* Know thyself!*/
+    if (name == query_real_name())
 	return 1;
 
-    if (query_introduced(str) || query_remembered(str))
+    if (query_remembered(name) || query_introduced(name))
 	return 1;
     
     return 0;
@@ -81,10 +90,7 @@ add_introduced(string str)
 {
     if (query_met(str))
         return;  /* Don't add if already present */
-    
-    if (!mappingp(introduced_name))
-	introduced_name = ([ ]);
-    
+
     introduced_name[str] = 1;
 }
 
@@ -96,28 +102,26 @@ add_introduced(string str)
 public int
 remove_introduced(string str)
 {
-    if (!mappingp(introduced_name))
-        introduced_name = ([ ]);
-    
     if (!introduced_name[str])
         return 0;
-    
+
     m_delkey(introduced_name, str);
     return 1;
 }
 
 /*
- * Function name:   query_introduced
- * Description:     Return a mapping with all people we have been introduced
- *                  to during this session.
- * Returns:         The mapping with introduced people.
+ * Function name: query_introduced
+ * Description  : This routine has a double function. It will return a mapping
+ *                with all people we have been introduced to during this
+ *                session, or return whether a person introduced himself to us.
+ * Arguments    : string name - the name of the person to verify. If omitted,
+ *                    it will return the mapping of introductions.
+ * Returns      : int 1/0 - whether this person introduced to us or not.
+ *                mapping - the mapping with all introduced people.
  */
 public varargs mixed
-query_introduced(mixed name)
+query_introduced(string name)
 {
-    if (!mappingp(introduced_name))
-        introduced_name = ([ ]);
-
     if (name)
         return introduced_name[name];
     
