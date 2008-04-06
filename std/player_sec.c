@@ -801,8 +801,8 @@ enter_game(string pl_name, string pwd)
         set_temp_start_location(0);
     }
 
-    /* For juniors, try the wizard workroom. */
-    if (!environment() && wildmatch("*jr", pl_name))
+    /* For juniors, try the wizard workroom, but not if they are dead. */
+    if (!environment() && wildmatch("*jr", pl_name) && !query_ghost())
     {
         try_start_location(SECURITY->wiz_home(extract(pl_name, 0, -3)));
     }

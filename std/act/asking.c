@@ -242,9 +242,11 @@ unseen_hook()
 
 /*
  * Function name: answer_question
- * Description:   This function is called after a short delay when this mobile
+ * Description  : This function is called after a short delay when this mobile
  * 		  wants to react to a question
- * Arguments:  	  An array ({ mixed msg, int cmd })
+ * Arguments    : mixed msg - The message, may contain VBFC. It should NOT be
+ *                    an array at this point.
+ *                int cmd - if true, it's a command and not text to display.
  */
 void
 answer_question(mixed msg, int cmd)
