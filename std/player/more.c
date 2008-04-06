@@ -19,12 +19,16 @@
  *               will be printed to the player.
  *
  * Reading text from a variable:
+ *     player->more(string *lines);
+ *
+ *     lines   : An array with the lines of text to print. The lines should
+ *               NOT contain newlines, example: ({ line1, line2, line3 })
+ * Or:
  *     player->more(string text);
  *
  *     text    : the text to read, separated by \n (newlines)
- *               NOTE that text is a single string with all the lines
- *               to read concatenated, separated by \n, example:
- *               line1\nline2\nline3
+ *               NOTE that text is a single string with all the lines to read
+ *               concatenated, separated by \n, example: line1\nline2\nline3
  *
  * It is possible to let the more function generate a call to the object
  * that initially created us. Therefore, you have to add a THIRD argument
@@ -215,27 +219,35 @@ input_to_more(string answer, string *lines, string filename,
 
 /*
  * Function name: more
- * Description  : Call this function in a player like explained in the
- *                header of this file in order to let him/her read a text
- *                with more.
- * Arguments    : string arg    - either the filename of the text to read or
- *                                the text to read itself, concatenated with
- *                                newlines (\n).
- *                int start     - the first line to read, if equal to 0 zero
- *                                it means that <arg> contains the text to
- *                                print.
+ * Description  : Call this function in a player like explained in the header
+ *                of this file in order to let him/her read a text with more.
+ *                There are three options:
+ *                  player->more(string filename, int start)
+ *                  player->more(string *lines)
+ *                  player->more(string text)
+ *
+ * Arguments    : mixed arg - the filename of the file to read or the text to
+ *                    read itself. If it's the text, it may be an array of
+ *                    lines or a single string concatenated with newlines (\n).
+ *                int start - for files this must be the index to the first
+ *                    line to read (first line == 1). When <arg> contains the
+ *                    text itself, this variable should be 0 or omitted.
  *                function func - the function to call when the player is
- *                                done reading the text.
- * Returns      : int 1         - always, not really necessary, but nice for
- *                                confirmation of the function call.
+ *                    done reading the text.
+ * Returns      : int 1 - always.
  */
 public nomask varargs int
-more(string arg, int start, function func)
+more(mixed arg, int start, function func)
 {
     string *lines;
-    string filename;
+    string filename = 0;
 
-    if (start)
+    if (pointerp(arg))
+    {
+        lines = arg;
+        start = 0;
+    }
+    else if (start)
     {
     	filename = arg;
 	lines = 0;
@@ -243,7 +255,6 @@ more(string arg, int start, function func)
     }
     else
     {
-    	filename = 0;
 	lines = explode(arg, "\n");
     }
 

@@ -25,7 +25,7 @@
  *                 will be printed to the player.
  *
  * Reading text from a variable:
- *     clone_object(MORE_OBJECT)->move(string text);
+ *     clone_object(MORE_OBJECT)->more(string text);
  *
  *     text      : the text to read, separated by \n
  *                 NOTE that text is a single string with all the lines
@@ -231,6 +231,10 @@ qmore(string answer)
  * Description  : Call this function in a clone like explained in the
  *                header of this file in order to let someone read
  *                something with more.
+ *
+ *                THIS ROUTINE IS OBSOLETE. Use more in the player object.
+ *                For details: sman /std/player_sec more
+ *
  * Arguments    : arg   - either the filename of the text to read or
  *                        the text to read itself, concatenated with \n
  *                start - the first line to read, if equal to 0 zero it
