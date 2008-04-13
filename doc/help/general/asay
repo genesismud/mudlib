@@ -12,6 +12,7 @@ SYNOPSIS
 DESCRIPTION
         Works just as "say", but allows you to supply an adverb
         for your speech. For details, see "help say".
+	The "ooc" adverb allows you to indicate speech out of character.
 
 EXAMPLE
         asay happ Greetings.   -->  You happily say: Greetings.
