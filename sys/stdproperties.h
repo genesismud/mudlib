@@ -282,6 +282,7 @@
 #define ROOM_S_DARK_MSG         "_room_s_dark_msg"
 #define ROOM_S_DIR		"_room_s_dir"
 #define ROOM_S_EXIT_FROM_DESC   "_room_s_exit_from_desc"
+#define ROOM_S_MAP_FILE         "_room_s_map_file"
 
 #define ROOM_I_NO_MAGIC		"_room_m_no_magic"
 #define ROOM_M_NO_MAGIC		"_room_m_no_magic"
