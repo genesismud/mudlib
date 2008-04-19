@@ -504,7 +504,7 @@ quaff_access(object ob)
     string vb = query_verb();
 
     if ((environment(ob) == this_player()) &&
-        (function_exists("create_object", ob) == POTION_OBJECT) &&
+        IS_POTION_OBJECT(ob) &&
         (vb == ob->query_quaff_verb() || vb == "quaff") &&
         !ob->query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
         return 1;
@@ -632,8 +632,7 @@ smell_access(object ob)
 { 
     string vb = query_verb();
 
-    if ((environment(ob) == this_player()) &&
-        (function_exists("create_object", ob) == POTION_OBJECT) &&
+    if ((environment(ob) == this_player()) && IS_POTION_OBJECT(ob) &&
         (vb == "taste" || vb == "smell"))
         return 1;
     else
@@ -691,8 +690,8 @@ smell_it(string str)
 
     vb = query_verb();
 
-/* It's impossible to smell all potions at once.
- */
+    /* It's impossible to smell all potions at once. */
+    
     if (str == "all")
     {
         notify_fail("You must specify which potion to " + vb + ".\n");
