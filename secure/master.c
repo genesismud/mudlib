@@ -2400,7 +2400,13 @@ incoming_udp(string from_host, string message)
 #endif LOG_LOST_UDP
 #endif UDP_ENABLED
 }
- 
+
+/*
+ * Function name: mark_quit
+ * Description  : Called when a player is about to quit. It's used to log
+ *                destructions of players.
+ * Arguments    : object player - the player who quits.
+ */
 static void
 mark_quit(object player)
 {
@@ -2408,13 +2414,12 @@ mark_quit(object player)
     int index = 0;
     object prev;
 
-    if ((player->query_linkdead()) ||
+    /* Don't trigger on people quitting or people forced to quit on idle. */
+    if (player->query_linkdead() ||
         (!player->query_wiz_level() &&
-         (interactive(player)) &&
+         interactive(player) &&
          (query_idle(player) > MAX_IDLE_TIME)) ||
-        ((player == this_interactive()) &&
-         ((query_verb() == "quit") ||
-          !strlen(query_verb()))))
+        (query_verb() == "quit"))
     {
         return;
     }
@@ -2450,7 +2455,7 @@ mark_quit(object player)
     }
     
     set_auth(this_object(), "root:root");
-    write_file("/syslog/log/DESTRUCTED", text + "\n");
+    log_file("DESTRUCTED", text + "\n", 1000000);
 }
  
 /*

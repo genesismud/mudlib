@@ -818,58 +818,54 @@ say(mixed str, mixed oblist)
 
 /*
  * Function name: log_file
- * Description:   Logs a message in the creators ~/log/ subdir in a given
- *		  file.
- * 		  
- * 		  The optional argument 'csize' controls the cycling size
- * 		  of the log. If the argument is == 0 the default cycle
- * 		  size is used, if the argument is == -1 the maximum cycle
- * 		  size is used, if a positive integer is given, that cycle
- * 		  size is used provided that it is less or equal to the
- * 		  maximum cycle size.
- * 		  
- * Arguments:     file: The filename.
- *		  text: The text to add to the file
- * 		  csize: The cycle size, if any (optional)
+ * Description:   Logs a message in the creators ~/log subdir in a given file.
+ * Arguments:     string file: The filename.
+ *		  string text: The text to add to the file.
+ * 		  int cyclesize: The cycle size to apply to the log. The limit
+ *                    may be maximized in the local.h settings of the mud.
+ *                 -1 : maximum/unlimited cycle size is used.
+ *                  0 : default cycle size is used.
+ *                 >0 : specified cycle size is used.
  */
 public varargs void
-log_file(string file, string text, int csize)
+log_file(string file, string text, int cyclesize)
 {
-    mixed           path,
-                    oldeuid,
-                    cr;
-    string 	    *split, fnam;
-    int 	    il, fsize, msize, dsize;
+    string  path;
+    string  oldeuid;
+    string  crname;
+    string *split;
+    int     index;
+    int     maxsize;
 
-    cr = SECURITY->creator_object(previous_object());
-
+    /* Find out the owner of the log. */
+    crname = SECURITY->creator_object(previous_object());
     /* Let backbone objects log things in /log */
-    if (cr == SECURITY->get_bb_uid())
+    if (crname == SECURITY->get_bb_uid())
     {
 	path = "/log";
-	cr = SECURITY->get_root_uid();
+	crname = SECURITY->get_root_uid();
     }
     else
     {
-	path = SECURITY->query_wiz_path(cr) + "/log";
+	path = SECURITY->query_wiz_path(crname) + "/log";
     }
+    file = path + "/" + file;
     
     /* We swap to the userid of the user trying to do log_file */
     oldeuid = geteuid(this_object());
-    this_object()->seteuid(cr);
+    this_object()->seteuid(crname);
 
+    /* If the path doesn't exist, we need to make it. */
     if (file_size(path) != -2)
     {
-	/* We must create the path
-        */
 	split = explode(path + "/", "/");
-    
-	for (fnam = "", il = 0; il < sizeof(split); il++)
+	path = "";
+	for (index = 0; index < sizeof(split); index++)
 	{
-	    fnam += "/" + split[il];
-	    if (file_size(fnam) == -1)
-		mkdir(fnam);
-	    else if (file_size(fnam) > 0)
+	    path += "/" + split[index];
+	    if (file_size(path) == -1)
+		mkdir(path);
+	    else if (file_size(path) > 0)
 	    {
 		this_object()->seteuid(oldeuid);
 		return;
@@ -877,31 +873,39 @@ log_file(string file, string text, int csize)
 	}
     }
 
-    file = path + "/" + file;
-
 #ifdef CYCLIC_LOG_SIZE
 
-    fsize = file_size(file);
-    msize = CYCLIC_LOG_SIZE[cr];
-    dsize = CYCLIC_LOG_SIZE[0];
+    /* Find out the maximum for this owner. */
+    maxsize = CYCLIC_LOG_SIZE[crname];
+    /* If no size is found, use the default maximum. */
+    if (!maxsize) maxsize = CYCLIC_LOG_SIZE[0];
 
-    if (csize > 0)
-	msize = ((csize > msize) ? (msize ? msize : csize) : csize);
+    switch(cyclesize)
+    {
+    case -1:
+    case 0:
+        /* Basically default == maximum. */
+        cyclesize = maxsize;
+        break;
 
-    if (csize == 0)
-	msize = (msize ? msize : dsize);
+    default:
+        /* If we have a limit, then ensure it's enforced. */
+        if (maxsize > 0)
+        {
+            cyclesize = ((cyclesize > maxsize) ? maxsize : cyclesize);
+        }
+    }
 
-    if (csize < 0)
-	msize = (msize == 0 ? dsize : msize);
-
-    if (msize > 0 && fsize > msize)
+    /* If we have a positive cycle size, enforce it. */
+    if ((cyclesize > 0) && (file_size(file) > cyclesize))
+    {
 	rename(file, file + ".old");
+    }
 
 #endif /* CYCLIC_LOG_SIZE */
 
     write_file(file, text);
     this_object()->seteuid(oldeuid);
-
 }
 
 /************************************************************************
