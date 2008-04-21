@@ -543,7 +543,8 @@ perform_backstab(string str, object whom)
             weapon->query_pen(), stat );
         tmp = ob->hit_me(tmp, W_IMPALE, this_player(), -1, A_BACK);
         this_player()->add_fatigue(-F_BACKSTAB_FATIGUE);
-
+        this_player()->attack_object(ob);
+        
         switch(tmp[0])
         {
         case 70..98:
