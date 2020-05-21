@@ -20,6 +20,7 @@
 
 #include "/sys/composite.h"
 #include "/sys/mail.h"
+#include "/sys/math.h"
 #include "/sys/std.h"
 
 #define DIR_NAME_MESSAGE(dir)  (MSG_DIR + "d" + (dir))
@@ -28,7 +29,7 @@
 #define STATISTICS_FILE   ("/syslog/log/MAILBOX_STATS")
 #define MAX_MAILBOX_STATS (100)
 #define MAX_MAILBOX_PURGE (100)
-#define MAX_MESSAGE_PURGE ( 25)
+#define MAX_MESSAGE_PURGE (100)
 #define LINE_LENGTH       ( 77)
 #define SPACES ("                                 ")
 
@@ -93,7 +94,7 @@ restore_message(int number)
 
     message = restore_map(FILE_NAME_MESSAGE(number, HASH_SIZE));
 
-    if ((!mappingp(message)) ||
+    if (!mappingp(message) ||
 	(m_sizeof(message) != M_SIZEOF_MSG))
     {
 	return 0;
@@ -217,7 +218,15 @@ export_mail(string name, string path)
 	      messages[index][MAIL_FROM] + "\n" +
 	      (messages[index][MAIL_REPLY] ? "Reply  : " : "Subject: ") +
 	      messages[index][MAIL_SUBJ] + "\n";
-	
+
+	if (!mappingp(mail))
+	{
+	    write_file(path, text + "Date   : " +
+                MAKE_DATE(messages[index][MAIL_DATE]) + " " +
+                DATE_YEAR(messages[index][MAIL_DATE]) + "\n\nERROR NO BODY\n\n");
+	    continue;
+	}
+
 	if (mail[MSG_TO] != capitalize(name))
 	{
 	    text += HANGING_INDENT("To     : " +
@@ -230,14 +239,11 @@ export_mail(string name, string path)
 		COMPOSITE_WORDS(explode(mail["cc"], ",")), 9, 1);
 	}
 
-	/* Write the message to file and print a sequence number to the
-	 * wizard. Notice that the index of the loop is also increased in
-	 * this write-statement.
-	 */	
+	/* Write the message to file. */	
 	write_file(path, text + "Date   : " +
             MAKE_DATE(messages[index][MAIL_DATE]) + " " +
-            DATE_YEAR(messages[index][MAIL_DATE]) +
-	    "\n\n" + wrap_text(mail[MSG_BODY]) + "\n\n");
+            DATE_YEAR(messages[index][MAIL_DATE]) + "\n\n" +
+	    wrap_text(mail[MSG_BODY]) + "\n\n");
     }
 
     write("Mail folder written for " + capitalize(name) + ".\nFilename: " +
@@ -260,8 +266,6 @@ purge_one_message(int dir, string file)
     mapping message;
     int     date;
     string *names;
-    int    size;
-    int    index = -1;
     int    touched;
 
     /* Extract the date from the filename. */
@@ -284,28 +288,25 @@ purge_one_message(int dir, string file)
      * referenced from that mailbox.
      */
     names = explode(lower_case(message[MSG_ADDRESS]), ",");
-    size = sizeof(names);
-    while(++index < size)
+    foreach(string name: names)
     {
         /* Recipient does not have a mailbox anymore. */
-        if (!pointerp(mail_system[names[index]]))
+        if (!pointerp(mail_system[name]))
         {
-            names[index] = "";
+            names -= ({ name });
             touched = 1;
             continue;
         }
-
         /* Recipient does not have this message referenced. */
-        if (member_array(date, mail_system[names[index]]) == -1)
+        if (!IN_ARRAY(date, mail_system[name]))
         {
-            names[index] = "";
+            names -= ({ name });
             touched = 1;
             continue;
         }
     }
 
     /* No names are left, purge the message. */
-    names -= ({ "" });
     if (!sizeof(names))
     {
         rm(MESSAGE_FILENAME(dir, file));
@@ -335,13 +336,12 @@ purge_one_message(int dir, string file)
 static void
 purge_check_messages(int dir, int messages, int purged, string *files)
 {
-    int     index = -1;
-    int     size = (MIN(sizeof(files), MAX_MESSAGE_PURGE));
+    int size = min(sizeof(files), MAX_MESSAGE_PURGE);
 
     /* Loop over this batch. */
-    while(++index < size)
+    foreach(string file: files)
     {
-        if (purge_one_message(dir, files[index]))
+        if (purge_one_message(dir, file))
         {
             purged++;
         }
@@ -351,7 +351,7 @@ purge_check_messages(int dir, int messages, int purged, string *files)
     if (sizeof(files) > size)
     {
         files = files[size..];
-        mail_alarm = set_alarm(5.0, 0.0,
+        mail_alarm = set_alarm(3.0, 0.0,
             &purge_check_messages(dir, messages, purged, files));
         return;
     }
@@ -360,17 +360,17 @@ purge_check_messages(int dir, int messages, int purged, string *files)
     dir++;
     if (dir < HASH_SIZE)
     {
-        mail_tell_wizard("MAIL ADMINISTRATOR ->> Purged message directory d" +
+        mail_tell_wizard("MAIL ADMIN ->> Purged message directory d" +
             dir + ".\n");
         files = get_dir(DIR_NAME_MESSAGE(dir) + "/m*.o");
         messages += sizeof(files);
-        mail_alarm = set_alarm(5.0, 0.0,
+        mail_alarm = set_alarm(3.0, 0.0,
             &purge_check_messages(dir, messages, purged, files));
         return;
     }
 
-    mail_tell_wizard("MAIL ADMINISTRATOR ->> Message purging completed.\nPurged " +
-        purged + " out of " + messages+ " message files.\n");
+    mail_tell_wizard("MAIL ADMIN ->> Message purging completed.\nPurged " +
+        purged + " out of " + messages + " message files.\n");
 
     mail_system = 0;
     mail_wizard = 0;
@@ -381,53 +381,52 @@ purge_check_messages(int dir, int messages, int purged, string *files)
  * Function name: purge_collect_mailboxes
  * Description  : This function will slowly loop over all mailboxes to collect
  *                the message times of all messages in the game.
- * Arguments    : string *files - the names of all players with a mailbox.
+ * Arguments    : string *names - the names of all players with a mailbox.
  */
 static void
-purge_collect_mailboxes(string *files)
+purge_collect_mailboxes(string *names)
 {
-    int     index = -1;
-    int     size = (MIN(sizeof(files), MAX_MAILBOX_PURGE));
-    int     index2;
+    int     index;
+    int     size = min(sizeof(names), MAX_MAILBOX_PURGE);
     mapping mail;
+    string *files;
 
     /* Fetch the message dates from the mailfolders. */
-    while(++index < size)
+    foreach(string name: names[..(size-1)])
     {
-	catch(mail = restore_mail(files[index]));
+	catch(mail = restore_mail(name));
 	if (!mappingp(mail))
 	{
 	    continue;
 	}
 
         /* Initialise the array for this person. */
-        mail_system[files[index]] = ({ });
+        mail_system[name] = ({ });
 
         /* Add the message dates to the array. */
-        index2 = sizeof(mail[MAIL_MAIL]);
-        while(--index2 >= 0)
+        index = sizeof(mail[MAIL_MAIL]);
+        while(--index >= 0)
         {
-            mail_system[files[index]] +=
-                ({ mail[MAIL_MAIL][index2][MAIL_DATE] });
+            mail_system[name] +=
+                ({ mail[MAIL_MAIL][index][MAIL_DATE] });
         }
     }
 
     /* Continue with the next batch. */
-    if (sizeof(files) > size)
+    if (sizeof(names) > size)
     {
-        mail_tell_wizard("MAIL ADMINISTRATOR ->> Last mailbox: " +
-            capitalize(files[size - 1]) + ".\n");
-        files = files[size..];
-        mail_alarm = set_alarm(10.0, 0.0, &purge_collect_mailboxes(files));
+        mail_tell_wizard("MAIL ADMIN ->> " + capitalize(names[size - 1]) + " collected.\n");
+        names = names[size..];
+        mail_alarm = set_alarm(5.0, 0.0, &purge_collect_mailboxes(names));
         return;
     }
 
-    mail_tell_wizard("MAIL ADMINISTRATOR ->> Collected all mailboxes.\n");
+    mail_tell_wizard("MAIL ADMIN ->> Collected all mailboxes.\n");
 
     /* Fetch the first directory of messages. */
     files = get_dir(DIR_NAME_MESSAGE(0) + "/m*.o");
 
-    mail_alarm = set_alarm(10.0, 0.0,
+    mail_alarm = set_alarm(5.0, 0.0,
         &purge_check_messages(0, sizeof(files), 0, files));
 }
 
@@ -435,51 +434,56 @@ purge_collect_mailboxes(string *files)
  * Function name: purge_check_mailboxes
  * Description  : This function will check all mailboxes against the names of
  *                the players and deletes mailboxes that do not have an owner.
+ * Arguments    : int full - if true, also purge messages.
  */
 static void
-purge_check_mailboxes()
+purge_check_mailboxes(int full)
 {
-    int    index = -1;
-    int    index2;
-    int    size;
-    int    purged;
-    string *files = ({ });
+    string *letters = explode(ALPHABET, "");
+    string *names = ({ });
     string *players;
     string *purge_files;
+    int    purged;
 
     /* Loop over the alphabet. */
-    while(++index < 26)
+    foreach(string letter: letters)
     {
         /* Get all files from the mailbox directory and subtract all filenames
          * of playerfiles starting with the same letter.
          */
-        players = get_dir(PLAYER_FILE(ALPHABET[index..index] + "*.o"));
-        purge_files = get_dir(FILE_NAME_MAIL(ALPHABET[index..index] + "*.o"));
-        files += purge_files;
+        players = get_dir(PLAYER_FILE(letter + "*.o"));
+        purge_files = get_dir(FILE_NAME_MAIL(letter + "*.o"));
+        names += purge_files;
         purge_files -= players;
 
         /* If there are any mailboxes without player, delete the mailboxes. */
-        size = sizeof(purge_files);
-        if (size > 0)
+        purged += sizeof(purge_files);
+        foreach(string file: purge_files)
         {
-            purged += size;
-            index2 = -1;
-            while(++index2 < size)
-            {
-                rm(FILE_NAME_MAIL(purge_files[index2]));
-            }
+            rm(FILE_NAME_MAIL(file));
         }
     }
 
-    /* Strip the .o suffix. */
-    files = map(files, &extract(, 0, -3));
+    mail_tell_wizard("MAIL ADMIN ->> Checked " + sizeof(names) +
+        " and purged " + purged + " mailboxes.\n");
 
-    mail_tell_wizard("MAIL ADMINISTRATOR ->> Checked " + sizeof(files) +
-        " and purged " + purged +
-        " mailboxes.\n");
-//        " mailboxes.\nNext phase: collecting mailboxes.\n");
+    /* Also purge messages. */
+    if (full)
+    {
+	mail_tell_wizard("MAIL ADMIN ->> Next phase: Collecting mailboxes.\n");
 
-//    mail_alarm = set_alarm(10.0, 0.0, &purge_collect_mailboxes(files));
+        /* Strip the .o suffix. */
+        names = map(names, &extract(, 0, -3));
+
+        mail_alarm = set_alarm(5.0, 0.0, &purge_collect_mailboxes(names));
+    }
+    else
+    {
+	mail_wizard = 0;
+	mail_system = 0;
+	remove_alarm(mail_alarm);
+	mail_alarm = 0;
+    }
 }
 
 /*
@@ -492,10 +496,11 @@ purge_check_mailboxes()
  *                - cross check all message files with all mailboxes and
  *                  remove those message files that are no longer connected
  *                  to any mailbox.
+ * Arguments    : int full - if true, also purge messages.
  * Returns      : int 1/0 - success/failure.
  */
 static int
-purge_mail()
+purge_mail(int full)
 {
     write("Purge started.\n");
     write("Starting with removing mailboxes of non-existant players.\n");
@@ -506,7 +511,7 @@ purge_mail()
     mail_system = ([ ]);
 
     mail_wizard = this_player()->query_real_name();
-    mail_alarm = set_alarm(5.0, 0.0, purge_check_mailboxes);
+    mail_alarm = set_alarm(5.0, 0.0, &purge_check_mailboxes(full));
 
     return 1;
 }
@@ -522,7 +527,7 @@ purge_mail()
 static void
 report_statistics(int boxes, int messages, int files)
 {
-    mail_tell_wizard("MAIL ADMINISTRATOR ->> Done gathering statistics.\n" +
+    mail_tell_wizard("MAIL ADMIN ->> Done gathering statistics.\n" +
 	"A total of " + boxes + " mailboxes was found, containing a total " +
 	"of " + messages + " mail messages. These messages are stored in " +
 	files + " individual message files. On average, " +
@@ -547,7 +552,7 @@ count_messages(int boxes, int messages)
     int index = -1;
     int message_files = 0;
 
-    mail_tell_wizard("MAIL ADMINISTRATOR ->> Counting message files.\n");
+    mail_tell_wizard("MAIL ADMIN ->> Counting message files.\n");
 
     while (++index < HASH_SIZE)
     {
@@ -593,7 +598,7 @@ count_mailboxes(int boxes, int messages, string *files)
     /* Continue with the next batch. */
     if (sizeof(files) > size)
     {
-        mail_tell_wizard("MAIL ADMINISTRATOR ->> Last mailbox: " +
+        mail_tell_wizard("MAIL ADMIN ->> Last mailbox: " +
             capitalize(files[size - 1]) + ".\n");
         files = files[size..];
         mail_alarm = set_alarm(10.0, 0.0,
@@ -684,13 +689,17 @@ mailadmin(string str)
 	/* notreached */
 
     case "purge":
-	if (sizeof(args) != 1)
+	if (sizeof(args) == 1)
 	{
-	    notify_fail("Syntax: mailadmin purge\n");
-	    return 0;
+	    return purge_mail(0);
+	}
+	if (args[1] == "messages")
+	{
+	    return purge_mail(1);
 	}
 
-	return purge_mail();
+        notify_fail("Syntax: mailadmin purge [messages]\n");
+	return 0;
 	/* notreached */
 
     case "reset":
@@ -721,4 +730,59 @@ mailadmin(string str)
 
     write("Impossible end of \"mailadmin\". Please report this.\n");
     return 1;
+}
+
+/*
+ * Function name: web_mail_archive_clean
+ * Description  : Remove all orphan web mail archive files. Mail files should
+ *                have only a limited life span.
+ */
+static void
+web_mail_archive_clean()
+{
+    string *files;
+
+    setuid();
+    seteuid(getuid());
+
+    files = get_dir(WEB_MAIL_DIR + WEB_MAIL_PRE + "*" + WEB_MAIL_POST);
+    foreach(string file: files)
+    {
+        rm(WEB_MAIL_DIR + file);
+    }
+}
+
+/*
+ * Function name: web_mail_archive_expire
+ * Description  : Called from the alarm to delete an expired mail file.
+ * Arguments    : string filename - the filename of the expired mail.
+ */
+public void
+web_mail_archive_expire(string filename)
+{
+    /* Just a little sanity check so we don't delete just any file */
+    if (!wildmatch(WEB_MAIL_PRE + "*" + WEB_MAIL_POST, filename) ||
+        strlen(filename) != (strlen(WEB_MAIL_PRE) + strlen(WEB_MAIL_POST) + WEB_MAIL_LEN))
+    {
+        return;
+    }
+
+    setuid();
+    seteuid(getuid());
+
+    rm(WEB_MAIL_DIR + filename);
+}
+
+/*
+ * Function name: web_mail_archived
+ * Description  : Called from the mail reader to indicate that mail has
+ *                been archived to the web. Since the mail reader itself can
+ *                be short lived, we call it here to ensure that the mail file
+ *                is expired after some time.
+ * Arguments    : string filename - the filename of the archived mail.
+ */
+public string
+web_mail_archived(string filename)
+{
+    set_alarm(itof(WEB_MAIL_TIME * 60), 0.0, &web_mail_archive_expire(filename));
 }

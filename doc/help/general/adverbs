@@ -42,7 +42,7 @@ OPTIONS
         all list *  - list all adverbs.
         <letter>    - list all adverbs starting with letter <letter>.
         <wildcards> - list all adverbs matching pattern <wildcards>.
-        replace     - list all adverbs that are automaticall replaced with a
+        replace     - list all adverbs that are automatically replaced with a
                       more suitable phrase based on that adverb.
 
 EXAMPLE

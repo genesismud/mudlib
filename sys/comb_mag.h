@@ -17,8 +17,9 @@
 #define RNATTACK(ob)	ob->query_prop(ROOM_I_NO_ATTACK)
 
 /* Object No Magic ATTACK, and Room No Magic ATTACK */
-#define ONMATTACK(ob)	ob->query_prop(OBJ_I_NO_MAGIC_ATTACK)
-#define RNMATTACK(ob)	ob->query_prop(ROOM_I_NO_MAGIC_ATTACK)
+/* Obsolete - no more distinction between magic and regular attacks. */
+#define ONMATTACK(ob)	ONATTACK(ob)
+#define RNMATTACK(ob)	RNATTACK(ob)
 
 /* Object No MAGIC, and Room No MAGIC */
 #define ONMAGIC(ob)	ob->query_prop(OBJ_I_NO_MAGIC)
@@ -38,8 +39,8 @@
 
 /* Not Possible Magic ATTACK, is it possible to attack with magic, this object
  * in this room? */
-#define NPMATTACK(ob)   (NPATTACK(ob) || NPMAGIC(ob) || ONMATTACK(ob) || \
-			    (environment(ob) && RNMATTACK(environment(ob))))
+/* Obsolete - no more distinction between magic and regular attacks. */
+#define NPMATTACK(ob)	NPATTACK(ob)
 
 /* Not Possible TELEPORT, is it possible to teleport this object in this room? */
 #define NPTELEPORT(ob)  (ONTELEPORT(ob) || (environment(this_player()) && \
@@ -47,4 +48,3 @@
 
 /* No definitions beyond this line. */
 #endif COMB_MAG_DEF
-

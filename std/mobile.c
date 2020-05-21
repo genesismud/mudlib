@@ -12,11 +12,12 @@ inherit "/std/living";
 inherit "/std/act/seqaction" ;
 inherit "/std/act/trigaction";
 
-#include <ss_types.h>
-#include <stdproperties.h>
+#include <files.h>
 #include <macros.h>
-#include <std.h>
 #include <options.h>
+#include <ss_types.h>
+#include <std.h>
+#include <stdproperties.h>
 
 /* Private static global reactions.
  */
@@ -48,7 +49,14 @@ create_living()
 {
     set_skill(SS_BLIND_COMBAT, 40); /* Default skill for NPC's. */
     add_prop(CONT_I_HEIGHT, 160); /* Default height for monsters, 160 cm */
-    add_prop(LIVE_M_NO_ACCEPT_GIVE, mobile_deny_objects);
+    if (IS_NPC_OBJECT(this_object()))
+    {
+        add_prop(LIVE_M_NO_ACCEPT_GIVE, mobile_deny_objects);
+    }
+    else
+    {
+        add_prop(LIVE_M_NO_ACCEPT_GIVE, " doesn't accept any gifts from you.\n");
+    }
     mobile_exp_factor = 100;
     this_object()->seq_reset();
     default_config_mobile();
@@ -291,6 +299,7 @@ set_stats(int *stats, int deviation = 0)
  *                instance, an NPC with special (magical) abilities might be
  *                more difficult to kill than one would guess based on the
  *                stats alone. Works only on NPC's. Range: 50% to 200%
+ * Note         : This value may ONLY be set by members of the AoB team
  * Arguments    : int proc_xp - the percentage of the base experience that is
  *                    awarded. I.e. to give out 40% extra exp, set to 140.
  */
@@ -360,13 +369,12 @@ special_attack(object victim)
 mixed
 mobile_deny_objects()
 {
-    string str;
-
+    /* Note to self: is it intentional that this random is evaluated every
+     * time? Eventually random(100) < INT will become true for INT = 1 ... */
     if (no_accept || random(100) < query_stat(SS_INT))
     {
-	str = " doesn't accept any gifts from you.\n";
 	no_accept = 1;
-	return str;
+	return " doesn't accept any gifts from you.\n";
     }
     return 0;
 }
@@ -386,10 +394,11 @@ refresh_mobile()
  * Function name: query_option
  * Description:   Returns default option settings for mobiles
  * Arguments:     int opt - the option to check
+ *                int setting - if true, return the unmodified setting.
  * Returns:       the setting for the specified option
  */
-public int
-query_option(int opt)
+public varargs int
+query_option(int opt, int setting)
 {
     switch(opt)
     {

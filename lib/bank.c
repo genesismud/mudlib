@@ -337,7 +337,8 @@ change(string str)
  * Arguments:     str: predicate
  * Returns:       success
  */
-int minimize(string str)
+int
+minimize(string str)
 {
     int *money_arr, *money_arr2, value, i, new_sum, total_sum;
     string change;
@@ -378,8 +379,10 @@ int minimize(string str)
 	return 1;
     }
 
-    MONEY_ADD(this_player(), new_sum);
+    /* First remove the coins and then add the new ones in case people are
+     * fully encumbered. */
     MONEY_ADD(this_player(), -total_sum);
+    MONEY_ADD(this_player(), new_sum);
 
     money_arr2 = what_coins(this_player());
 

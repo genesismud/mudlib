@@ -1106,7 +1106,7 @@ library_borrow(string str)
     /* Check for borrow permission */
     if (!library_borrow_access())
     {
-        return 1;
+        return 0;
     }
 
     if (!strlen(str))
@@ -1180,7 +1180,7 @@ library_read(string str)
     /* Check for borrow permission */
     if (!library_borrow_access())
     {
-        return 1;
+        return 0;
     }
 
     if (!strlen(str))
@@ -1303,7 +1303,7 @@ library_list(string str)
 
     if (!library_list_access())
     {
-        return 1;
+        return 0;
     }
 
     /* short listing of all books */

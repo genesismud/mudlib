@@ -1,26 +1,29 @@
 NAME
-        learn - learn your skills
+        learn - learn a new skill, or improve a skill you have
 
 SYNOPSIS
-        learn
-	learn <num>
-	learn <name>
-	learn <name> <num>
+	learn
+	learn [<num>] / max
+	learn <name> [<num>]
+	learn <name> max
 
 DESCRIPTION
-	With this command you can learn new skills at different guilds
+	With this command you can learn a new skills at different guilds
 	around the world. At some places you might need to study too. 
 
 OPTIONS
-	without argument list what skills can be learned and the cost to
-	raise them one step.
+        Without arguments, it lists the skills you can learn here and the
+	cost for learning the first step.
 
-	<num> - List the skills you can learn <num> steps and the cost
-		to do so.
+	<num> / max - List the skills you can learn here and then up to <num>
+		      steps, or up to the maximum level taught here, and the
+		      associated costs.
 
-	<name> - Learn that skill one step
+	<name>	    - Learn that skill (to the first step) or learn it and
+		      then improve to <num> steps.
 
-	<name> <num> - Learn skill named <name>, <num> steps.
+	<name> max  - Learn that skill and improve to the maximum level you
+                      can afford with the money you carry.
 
 SEE ALSO
         stats, vitals, skillist, skillevels, improve

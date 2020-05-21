@@ -30,8 +30,8 @@ DESCRIPTION
 	people, idle wizards and possible other non-playerfiles found.
 
 OPTIONS
-	<name>	- the name of the player to purge.
+	<name>	- the name of the player to purge. (same as delchar)
 	players - purge all players who have been overly idle.
 
 SEE ALSO
-	nopurge
+	delchar

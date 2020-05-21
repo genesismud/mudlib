@@ -1,12 +1,12 @@
 EMOTIONS
 
-ack            agree          applaud
-admire         apologize      avert
+ack            admire         apologize      avert
+acknowledge    agree          applaud
 
-back           beg            blink          bounce         burp
-bat            bite           blow           bow
-beam           blanch         blush          brighten
-beckon         blank          boggle         brood
+back           beg            blink          bounce         brood
+bat            bite           blow           bow            burp
+beam           blanch         blush          breathe
+beckon         blank          boggle         brighten
 
 cackle         chuckle        compliment     congratulate   cry
 caress         clap           conf           cough          cuddle
@@ -18,46 +18,47 @@ dance          despair        disagree       drool          duh
 
 eeks           excuse         explode        eyebrow
 
-fart           fidget         flip           forgive        frown
-fawn           finger         flirt          french         fume
-feign          flex           fondle         fret           
+fart           ffinger        flex           fondle         fret
+fawn           fidget         flip           forgive        frown
+feign          finger         flirt          french         fume
 
-gag            giggle         grimace        grope          grumble
-gasp           glare          grin           grovel         
-gesture        greet          groan          growl          
+gag            giggle         grimace        groan          grumble
+gasp           glare          grin           grovel
+gesture        greet          grit           growl
 
-hang           hmm            hug
-hiccup         hold           hum
+hang           hmm            howl           hum
+hiccup         hold           hug
 
-ignore      
+ignore
 
-jump        
+jump
 
 kick           kiss           knee           kneel
 
-laugh          leer           lick           listen         love
+laugh          leer           listen
+lean           lick           love
 
 melt           moan           mourn          mumble
 
-nibble         nod            nudge          nuzzle      
+narrow         nibble         nod            nudge          nuzzle
 
 oops           ouch
 
-pace           pat            pinch          ponder         puke
-panic          peer           point          pounce         purr
-pant           pet            poke           pout           
+pace           pat            pinch          ponder         protest
+panic          peer           point          pounce         puke
+pant           pet            poke           pout           purr
 
-roar           rolleyes       ruffle
+raise          roar           rolleyes       ruffle
 
-scold          sigh           sneeze         squirm         stumble
-scowl          sing           snicker        stare          sulk
-scratch        slap           sniff          startle        swallow
-scream         smell          snore          steam          swear
-shake          smile          snuggle        stick          sweat
-shiver         smirk          sob            stomp          swoon
-show           snap           spank          strangle
-shrug          snarl          spit           stretch
-shudder        sneer          squeeze        strut
+scold          sigh           sneeze         squeeze        stretch
+scowl          sing           snicker        squirm         strut
+scratch        slap           sniff          stagger        stumble
+scream         smell          snore          stare          sulk
+shake          smile          snort          startle        swallow
+shiver         smirk          snuggle        steam          swear
+show           snap           sob            stick          sweat
+shrug          snarl          spank          stomp          swoon
+shudder        sneer          spit           strangle
 
 tackle         thank          thumb          touch          twiddle
 tap            think          tickle         tremble        twinkle
@@ -65,9 +66,9 @@ tease          threaten       tingle         trust          twitch
 
 wail           weep           whistle        wink           worship
 wait           whimper        wiggle         wonder         wring
-wave           whine          wince          worry          
+wave           whine          wince          worry
 
-yawn           yodel       
+yawn           yell           yodel
 
 
 SYNOPSIS
@@ -117,8 +118,8 @@ EXAMPLES
         tremble        -> tremble (tremble is used without an adverb)
 
         smile          -> smile happily (the default adverb for smile)
-        smile sad      -> smile sadistically
-        smile sadly    -> smile sadly
+	smile help     -> smile helpfully
+        smile sad      -> smile sadly (a special case)
 
         smile at Mercade     -> smile happily at Mercade (default adverb)
         smile hope the dwarf -> smile hopefully at the dwarf

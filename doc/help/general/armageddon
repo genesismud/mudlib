@@ -3,12 +3,12 @@ NAME
 
 DESCRIPTION
 	From time to time, Armageddon will show up to shut the game down.
-	The reason for this is usually that the host computer runs out
-	of memory, but there can be other reasons too.
+	This can be for a technical reason (e.g. the host computer runs out
+	of memory) or because the game has been up for a long time.
 
 	What basically happens is that the game is closed down and that
 	everyone is forced to quit, though you can naturally connect again
-	if the game has been rebooted. This usually takes a few minutes,
+	once the game has been rebooted. This usually takes a few minutes,
 	though it is better to wait five minutes and give Armageddon a
 	chance to clean out some things before he boots the game again.
 

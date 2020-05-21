@@ -12,6 +12,7 @@
 
 #include <comb_mag.h>
 #include <files.h>
+#include <hooks.h>
 #include <log.h>
 #include <login.h>
 #include <macros.h>
@@ -21,7 +22,8 @@
 #include <wa_types.h>
 
 static int      time_to_heal;   /* Healing counter */
-static int      quickness;      /* how quick are we? */
+static mapping  quickness;      /* Objects responsible for quickness */
+static float    speed;          /* The current speed modifier */
 static int      run_alarm;      /* Alarm used for panic code */
 static int      is_whimpy;      /* Automatically flee when low on HP */
 
@@ -37,7 +39,6 @@ static mixed    leftover_list;  /* The list of leftovers */
 varargs public mixed query_leftover(string organ);
 public int remove_leftover(string organ);
 public void run_away();
-public mixed query_enemy(int arg);
 
 /*
  * Function name:   query_combat_file
@@ -236,7 +237,7 @@ notify_pseudo_death(object killer)
 
 /*
  * Function name: log_player_death
- * Description  : This function is called when 
+ * Description  : This function is called when a player is killed.
  * Arguments    : object killer - the object responsible for our death.
  */
 static void
@@ -244,17 +245,20 @@ log_player_death(object killer)
 {
     string log_msg;
     string extra;
+    int pkill = interactive(killer) || IS_PLAYER_OBJECT(killer);
 
     log_msg = sprintf("%s %-11s (%3d) by ", ctime(time()),
         capitalize(this_object()->query_real_name()),
         this_object()->query_average_stat());
 
-    if (interactive(killer) ||
-        IS_PLAYER_OBJECT(killer))
+    if (pkill)
     {
-        log_msg += sprintf("%-11s (%3d)",
-            capitalize(killer->query_real_name()),
+        log_msg += sprintf("%-11s (%3d)", capitalize(killer->query_real_name()),
             killer->query_average_stat());
+        if (objectp(environment()))
+        {
+	    log_msg += (" " + file_name(environment()));
+        }
     }
     else
     {
@@ -269,16 +273,15 @@ log_player_death(object killer)
     }
 
 #ifdef LOG_PLAYERKILLS
-    if (interactive(killer) ||
-        IS_PLAYER_OBJECT(killer))
+    if (pkill)
     {
-        log_file(LOG_PLAYERKILLS, log_msg, -1);
+        SECURITY->log_syslog(LOG_PLAYERKILLS, log_msg, -1);
     }
     else
 #endif LOG_PLAYERKILLS
     {
 #ifdef LOG_KILLS
-        log_file(LOG_KILLS, log_msg, -1);
+        SECURITY->log_syslog(LOG_KILLS, log_msg, -1);
 #endif LOG_KILLS
     }
 }
@@ -286,7 +289,7 @@ log_player_death(object killer)
 /*
  * Function name:   do_die
  * Description:     Called from enemy combat object when it thinks we died.
- * Arguments:       killer: The enemy that caused our death.
+ * Arguments:       object killer: The enemy that caused our death.
  */
 public void
 do_die(object killer)
@@ -337,12 +340,18 @@ do_die(object killer)
         combat_reward(killer, 0, 1);
     }
 
-    killer->notify_you_killed_me(this_object());
-
-    if (interactive() ||
-        IS_PLAYER_OBJECT(this_object()))
+    if (interactive() || IS_PLAYER_OBJECT(this_object()))
     {
         log_player_death(killer);
+    }
+
+    /* Spread the news. */
+    killer->call_hook(HOOK_LIVING_KILLED, this_object());
+    killer->notify_you_killed_me(this_object());
+
+    if (IS_PLAYER_OBJECT(killer))
+    {
+        ACHIEVEMENTS->trigger_event_enemy_kill(killer, this_object());
     }
 
     /* If there is a coin property, make them into real coins. */
@@ -359,15 +368,16 @@ do_die(object killer)
         {
             corpse = clone_object("/std/corpse");
             corpse->set_name(query_name());
+	    corpse->add_adj(query_adjs());
+	    corpse->add_adj(query_race()); /* Allow syntax like "wolf corpse" */
             corpse->change_prop(CONT_I_WEIGHT, query_prop(CONT_I_WEIGHT));
             corpse->change_prop(CONT_I_VOLUME, query_prop(CONT_I_VOLUME));
             corpse->add_prop(CORPSE_S_RACE, query_race_name());
             corpse->add_prop(CONT_I_TRANSP, 1);
-            corpse->change_prop(CONT_I_MAX_WEIGHT,
-                                query_prop(CONT_I_MAX_WEIGHT));
-            corpse->change_prop(CONT_I_MAX_VOLUME,
-                                query_prop(CONT_I_MAX_VOLUME));
-            corpse->add_leftover(query_leftover());
+            corpse->change_prop(CONT_I_MAX_WEIGHT, query_prop(CONT_I_MAX_WEIGHT));
+            corpse->change_prop(CONT_I_MAX_VOLUME, query_prop(CONT_I_MAX_VOLUME));
+            corpse->set_leftover_list(query_leftover());
+	    corpse->set_damage(combat_extern->cb_damage_by_type());
         }
 
         corpse->add_prop(CORPSE_AS_KILLER,
@@ -395,8 +405,6 @@ move_all_to(object dest)
 {
     object *oblist;
     object room;
-    int index;
-    int size;
     int ret;
 
     /* Find the room we are in. */
@@ -407,30 +415,24 @@ move_all_to(object dest)
     }
 
     oblist = all_inventory(this_object());
-    if (oblist && sizeof(oblist) > 0)
+    foreach(object obj: oblist)
     {
-        index = -1;
-        size = sizeof(oblist);
-        while(++index < size)
+        /* Remove poisons. They should not bother you in your new body. */
+        if (IS_POISON_OBJECT(obj))
         {
-            /* Remove poisons. They should not bother you in your new body. */
-            if (function_exists("create_object", oblist[index]) ==
-                POISON_OBJECT)
-            {
-                oblist[index]->remove_object();
-                continue;
-            }
-
-            /* Mark in which room we were killed. */
-            oblist[index]->add_prop(OBJ_O_LOOTED_IN_ROOM, room);
-
-            if (catch(ret = oblist[index]->move(dest)))
-                log_file("DIE_ERR", ctime(time()) + " " +
-                    this_object()->query_name() + " (" +
-                    file_name(oblist[index]) + ")\n");
-            else if (ret)
-                oblist[index]->move(environment(this_object()));
+            obj->remove_object();
+            continue;
         }
+
+        /* Mark in which room we were killed. */
+        obj->add_prop(OBJ_O_LOOTED_IN_ROOM, room);
+
+	if (catch(ret = obj->move(dest)))
+            log_file("DIE_ERR", ctime(time()) + " " +
+                this_object()->query_name() + " (" +
+                file_name(obj) + ")\n");
+        else if (ret)
+            obj->move(environment(this_object()));
     }
 }
 
@@ -614,7 +616,8 @@ team_leave(object member)
  * Function name: query_team_others
  * Description  : Gives all members/leader that we are joined up with,
  *                regardless of whether we are the leader or a member.
- * Returns      : object * - the array with all other members.
+ * Returns      : object * - the array with all other members, including
+ *                    the leader.
  */
 public mixed
 query_team_others()
@@ -658,7 +661,8 @@ query_team_others()
  *                                  to damage.  If not specified or an
  *                                  invalid hitloc is given, a random
  *                                  one will be used.
- * Returns:         The hitresult as given by the external combat object
+ * Returns:         The hitresult as given by the external combat object.
+ *                  For details, see 'sman cb_hit_me'.
  */
 varargs public mixed
 hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc = -1)
@@ -711,22 +715,23 @@ attack_object(object ob)
 }
 
 /*
- * Function name:   attacked_by
- * Description:     This routine is called when we are attacked.
- * Arguments:       ob: The attacker
+ * Function name: attacked_by
+ * Description  : This routine is called when we are attacked.
+ * Arguments    : object attacker - the attacker.
  */
 public void
-attacked_by(object ob)
+attacked_by(object attacker)
 {
     /* Get the combat started in the combact object. */
-    CEX; combat_extern->cb_attacked_by(ob);
+    CEX; combat_extern->cb_attacked_by(attacker);
 
-    /* Check for sparring, and give the appropriate message if necessary. */
-    if (IN_ARRAY(ob, query_prop(LIVE_AO_SPARRING)))
-    {
-        tell_object(this_object(), "You are sparring with " +
-            ob->query_the_name(this_object()) + ".\n");
-    }
+    /* Advise team mates that we are being attacked. */
+    map(query_team_others(), &->notify_attack_on_team(this_object(), attacker));
+
+    /* If we are attacked, certain types of "busy" paralysis should stop.
+     * Assume we're paralyzed only once at any given time ...
+     */
+    present("_std_paralyze_")->try_combat_stop();
 }
 
 /*
@@ -742,34 +747,6 @@ query_not_attack_me(object who, int aid)
 {
     return 0;
 }
-
-/*
- * Function name:   combat_init
- * Description:     Notes when players are introduced into our environment
- *                  Used to attack known enemies on sight.
- */
-nomask void
-combat_init()
-{
-    /*
-     * Is this_player() in list of known enemies ?
-     * Use attacked_by() so that not forced to swap current enemy
-     */
-    CEX;
-
-    /* Can't attack people you can't see */
-    if (!CAN_SEE(this_object(), this_player()))
-        return;
-
-    if (IN_ARRAY(this_player(), query_enemy(-1)) &&
-        !NPATTACK(this_player()))
-    {
-        this_object()->reveal_me(1);
-        this_player()->reveal_me(1);
-        this_object()->attacked_by(this_player());
-    }
-}
-
 
 
 /*
@@ -826,6 +803,18 @@ update_combat_time()
 }
 
 /*
+ * Function name: query_is_enemy
+ * Description  : Find out if someone is an enemy of us.
+ * Arguments    : object enemy - the object to test.
+ * Returns      : int 1/0 - if true, we're hunting this enemy.
+ */
+public int
+query_is_enemy(object enemy)
+{
+    return IN_ARRAY(enemy, query_enemy(-1));
+}
+
+/*
  * Function name: query_combat_time
  * Description  : Find out when the last hit was made, either by us or on us.
  * Returns      : int - the time() value when the last hit was made.
@@ -846,17 +835,27 @@ public int
 query_relaxed_from_combat()
 {
     int tme = query_combat_time();
+    int relax;
 
     /* No combat, means relaxed. */
-    if (!tme || !query_enemy(0))
+    if (!tme)
     {
         return 1;
     }
 
-    /* Return TRUE if the time + the relax time after combat is lower than the
-     * current time.
-     */
-    return (F_RELAX_TIME_AFTER_COMBAT(tme) < time());
+    relax = F_RELAX_TIME_AFTER_COMBAT(tme);
+    /* Enough time passed since the combat. We are relaxed. */
+    if ((tme + relax) < time())
+    {
+	return 1;
+    }
+    /* If we are being hunted by a player ... no faster relax. */
+    if (sizeof(filter(users(), &->query_is_enemy(this_object()))))
+    {
+	return 0;
+    }
+    /* We may be hunted by NPC's only ... halve the relax time. */
+    return ((tme + (relax / 2)) < time());
 }
 
 /*
@@ -869,6 +868,30 @@ public object
 query_attack()
 {
     CEX; return (object)combat_extern->cb_query_attack();
+}
+
+/*
+ * Function name:   combat_init
+ * Description:     Notes when players are introduced into our environment
+ *                  Used to attack known enemies on sight.
+ */
+nomask void
+combat_init()
+{
+    /* Can't attack people you can't see */
+    if (!CAN_SEE(this_object(), this_player()))
+        return;
+
+    CEX;
+    /* Is this_player() in list of known enemies ? If so ... Charge! */
+    if (query_is_enemy(this_player()) &&
+        !NPATTACK(this_player()))
+    {
+        this_object()->reveal_me(1);
+        this_player()->reveal_me(1);
+	/* Use attacked_by() so that not forced to swap current enemy */
+        this_object()->attacked_by(this_player());
+    }
 }
 
 /*******************************************
@@ -914,18 +937,6 @@ public void
 adjust_combat_on_move(int leave)
 {
     CEX; combat_extern->cb_adjust_combat_on_move(leave);
-}
-
-/*
- * Function name:   adjust_combat_on_intox
- * Description:     Called to let intoxication affect combat. This
- *                  is used to do nasty drunk type things *laugh*
- * Arguments:       pintox: %intoxicated      
- */
-public void
-adjust_combat_on_intox(int pintox)
-{
-    CEX; combat_extern->cb_adjust_combat_on_intox(pintox);
 }
 
 /*
@@ -1007,23 +1018,25 @@ tell_watcher_miss(string str, object enemy, mixed arr)
 /*
  * Function name: add_leftover
  * Description:   Add leftovers to the body.
- * Arguments:     obj - The path to the object to leave behind.
- *                organ - The actual leftover name
- *                nitems - Number of leftovers of this kind. (-1 = infinite)
- *                vbfc - VBFC to check.
- *                hard - Hard remains (left after total decay).
- *                cut - If this has to be "cut" loose or if "tear" is enough.
+ * Arguments:     string file - The path to the object to leave behind.
+ *                string organ - The actual leftover name
+ *                int nitems - Number of leftovers of this kind. (-1 = infinite)
+ *                string vbfc - VBFC to check.
+ *                int hard - Hard remains (left after total decay).
+ *                int cut - If this has to be "cut" loose or if "tear" is enough.
+ *                int relweight - the weight of the leftover in 1/1000 of the
+ *                    weight of the corpse, so setting 50 = 5% corpse weight.
  */
 varargs public void
-add_leftover(string obj, string organ, int nitems, string vbfc,
-             int hard, int cut)
+add_leftover(string file, string organ, int nitems, string vbfc,
+             int hard, int cut, int relweight)
 {
     if (!sizeof(leftover_list))
         leftover_list = ({ });
 
     remove_leftover(organ);
 
-    leftover_list += ({ ({ obj, organ, nitems, vbfc, hard, cut }) });
+    leftover_list += ({ ({ file, organ, nitems, vbfc, hard, cut, relweight }) });
 }
 
 /*
@@ -1075,7 +1088,8 @@ remove_leftover(string organ)
 /*
  * Function name: add_attack_delay
  * Description:   Set the LIVE_I_ATTACK_DELAY prop properly.
- *                Use this function if possible instead of altering the prop.
+ *                Use this function if possible instead of altering the prop
+ *                directly. This function honours LIVE_M_NO_STUN.
  * Arguments:     secs - How many seconds
  *                type - How it should be added.
  *                       0 - Just add it.
@@ -1090,6 +1104,12 @@ add_attack_delay(int secs, int type)
     int old, new;
 
     if (!query_attack())
+    {
+        return;
+    }
+
+    /* Don't add more attack delay if we're stunned. */
+    if (query_prop(LIVE_M_NO_STUN))
     {
         return;
     }
@@ -1114,7 +1134,11 @@ add_attack_delay(int secs, int type)
 public void
 add_stun()
 {
-    add_prop(LIVE_I_STUNNED, query_prop(LIVE_I_STUNNED) + 1);
+    /* Don't add more attack delay if we cannot be stunned. */
+    if (!query_prop(LIVE_M_NO_STUN))
+    {
+        add_prop(LIVE_I_STUNNED, query_prop(LIVE_I_STUNNED) + 1);
+    }
 }
 
 /*
@@ -1126,6 +1150,7 @@ public void
 remove_stun()
 {
     int tmp = query_prop(LIVE_I_STUNNED) - 1;
+
     if (tmp <=  0)
         remove_prop(LIVE_I_STUNNED);
     else
@@ -1235,10 +1260,100 @@ hook_stop_fighting_offer(object attacker)
  * Returns      : float       - the modified speed
  */
 public float
-query_speed(mixed speed)
+query_speed(mixed round_time)
 {
-    if (intp(speed))
-        speed = itof(speed);
+    if (!floatp(speed))
+        speed = 1.0;
+
+    if (intp(round_time))
+        round_time = itof(round_time);
     
-    return speed * max(F_SPEED_MOD(this_object()->query_prop(LIVE_I_QUICKNESS)), 0.4);
+    return round_time * speed;
+}
+
+/*
+ * Function Name: query_speed_map
+ * Description  : Returns the entire mapping of quickness items and
+ *                their corresponding value.
+ * Returns      : mapping - string / value pairs
+ */
+public mapping
+query_speed_map()
+{
+    if (!mappingp(quickness))
+        quickness = ([ ]);
+    return quickness;
+}
+
+/*
+ * Function Name: update_speed
+ * Description  : Called automatically when the quickness prop has
+ *                been changed in the player. Updates the speed and
+ *                informs the combat system that there has been a change.
+ */
+void
+update_speed()
+{    
+    if (!mappingp(quickness))
+    {
+        speed = 1.0;
+        return;
+    }
+
+    speed = 0.0;
+    foreach (mixed obj, int value : quickness)
+    {
+        speed += (1.0 / (F_SPEED_MOD(value) + 0.0001)) - 1.0;
+    }
+
+    speed = 1.0 / (1.0 + speed);
+    CEX; combat_extern->cb_update_speed();
+}
+
+/*
+ * Function Name: add_prop_live_i_quickness
+ * Description  : Intercepts all modifications to LIVE_I_QUICKNESS
+ *                and tracks them based on source object.
+ *
+ * Returns      : 0 - All changes are allowed.
+ */
+int
+add_prop_live_i_quickness(mixed val)
+{
+    mixed prev;
+    int i, diff;
+    string *functions = ({ "add_prop", "remove_prop", "change_prop", 
+	  "remove_prop_live_i_quickness", "inc_prop", "dec_prop" });    
+
+    if (!intp(val))
+        return 0;
+    
+    if (!mappingp(quickness))
+        quickness = ([ ]);
+    
+    i = 0;
+    while (member_array(calling_function(i), functions) >= 0)
+        i--;    
+    prev = file_name(calling_object(i));
+
+    diff = val - query_prop(LIVE_I_QUICKNESS);
+    quickness[prev] += diff;
+
+    if (!quickness[prev])
+        m_delkey(quickness, prev);
+    
+    update_speed();
+    
+    return 0;
+}
+
+/*
+ * Function Name: remove_prop_live_i_quickness
+ * Description  : Catches removal of the LIVE_I_QUICKNESS
+ *                prop to keep track of quickness based on source.
+ */
+int
+remove_prop_live_i_quickness()
+{
+    add_prop_live_i_quickness(0);
 }

@@ -12,9 +12,10 @@
   * [<range>]       Mark/star current message or <range> as special message.
   u* [<range>]      Unstar current message or <range> as special message.
   e                 Erase all messages marked for deletion.
-  ad [<range>]      Archive current message or <range> and mark for deletion.
-  ak [<range>]      Archive current message or <range> but keep from deletion.
-                    Archiving is done into ~<your dir>/mail_archive/
+  ad / ak [<range>] Archive current message or <range> to individual files.
+  bd / bk [<range>] Archive current message or <range> to a single mbox file.
+                    Messages are either kept or marked for deletion.
+                    Destination: the website or ~<you>/private/mail_archive/
   s [<num>] <file>  Store current message or <num> in a file named <file>.
   rs <name>         Resend last sent message again to <name>.
   [m].              Show current message [using more].

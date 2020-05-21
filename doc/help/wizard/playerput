@@ -12,7 +12,7 @@ DESCRIPTION
 	from the directory ~/private/players in the wizards home directory
 	to the secured directory for the playerfiles. This can only be done
 	when the player is not logged in. A timed and numbered backup of
-	the playerfile is put in the /players/backup.
+	the playerfile is put in the backup directory.
 
 ARGUMENTS
 	<name> 	the name of the mortal player whose file to copy.

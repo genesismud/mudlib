@@ -168,6 +168,49 @@ domain_delete_player(string name)
 }
 
 /*
+ * Function name: rename_player
+ * Description  : This function is called every time a player is renamed. It can
+ *                be used for domain specific code that is called to ensure the
+ *                local registration is renamed, too.
+ * Notice       : Do NOT redefine this function if it is not used. For extra
+ *                stability this function is called using an alarm, so if it
+ *                is not used, let us not waste alarms on functions that do not
+ *                do anything anyways.
+ * Arguments    : string oldname - the old name of the player.
+ *                string newname - the new name of the player.
+ */
+public void
+rename_player(string oldname, string newname)
+{
+}
+
+/*
+ * Function name: domain_rename_player
+ * Description  : Called from SECURITY to inform the domain that a particular
+ *                player has been renamed. It will call the domain specific
+ *                function rename_player(). See there for more details.
+ * Arguments    : string oldname - the old name of the player.
+ *                string newname - the new name of the player.
+ */
+nomask public void
+domain_rename_player(string oldname, string newname)
+{
+    /* Don't accept calls other than from security. */
+    if (!CALLED_BY_SECURITY)
+    {
+        return;
+    }
+
+    /* If the function delete_player() has been redefined, use an alarm to
+     * call it. Otherwise, don't bother.
+     */
+    if (function_exists("rename_player", this_object()) != DOMAIN_LINK_OBJECT)
+    {
+        set_alarm(1.0, 0.0, &rename_player(oldname, newname));
+    }
+}
+
+/*
  * Function name: query_restore_items
  * Descritpion  : Called to find out which items might be restored into the
  *                player. This could be guild items and quest items alike.

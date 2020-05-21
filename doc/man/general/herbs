@@ -76,7 +76,8 @@ Herb-types:
 		  resistance of some sort.
 	Affect-types: 
 		Stats: str, dex, con, int, wis, dis.
-		Resistance: acid, cold, electr, fire, magic, poison.
+		Resistance: air, acid, cold, earth, electr, fire, illusion,
+			life, light, magic, poison, water.
 	Strength-values: 
 		Stats: decides how long the stat-change will last, but is
 			multiplied by 10 first - NB!

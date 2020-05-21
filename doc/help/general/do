@@ -13,7 +13,7 @@ DESCRIPTION
 	moves when you have to walk the same path many times.
 
 NOTICE
-	To stop the wasting of system resources by exuting many failing
+	To stop the wasting of system resources by executing many failing
 	combat-commands from a do-sequence, it is no longer possible to
 	use 'do' while in combat. If you engage into hostile activities
 	while in combat, your do-chain will be paused.

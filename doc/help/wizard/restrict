@@ -12,8 +12,6 @@ DESCRIPTION
 	With this command a Liege, Steward or Mentor for a specific
 	wizard can restrict a wizard to certain degrees.
 
-	finger command.
-
 	While a mentor might have several students, a student can only
 	have one mentor. Unless the mentor is an archwizard both the
 	student and the mentor must belong to the same domain.

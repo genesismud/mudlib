@@ -32,6 +32,7 @@
 #pragma save_binary
 #pragma strict_types
 
+#include <files.h>
 #include <filter_funs.h>
 #include <macros.h>
 
@@ -46,6 +47,7 @@
 
 static int     max_items      = MAX_ITEMS;
 static int     max_identical  = MAX_IDENTICAL;
+static int     stock_alarm_id = 0;
 static object *remove_list    = ({ });
 static mixed   default_stock  = ({ });
 
@@ -128,20 +130,13 @@ set_max_values(int items, int identical)
 void
 store_remove_items()
 {
-    int index = -1;
-    int size = sizeof(remove_list);
+    /* Only remove items that are actually in this store still. */
+    remove_list &= all_inventory(this_object());
 
-    while(++index < size)
-    {
-        if (objectp(remove_list[index]) &&
-            (environment(remove_list[index]) == this_object()))
-        {
-            remove_list[index]->remove_object();
-        }
-    }
+    remove_list->remove_object();
 
-    /* Reset te remove_list to indidate that the alarm has exired. */
     remove_list = ({ });
+    stock_alarm_id = 0;
 }
 
 /*
@@ -152,6 +147,7 @@ store_remove_items()
 void 
 store_update(object obj)
 {
+    int inv_size;
     object *inv;
     object *identical = ({ });
 
@@ -159,6 +155,12 @@ store_update(object obj)
     if (living(obj))
     {
 	return;
+    }
+
+    /* Extinguish torches that are sold while lit. */
+    if(IS_TORCH_OBJECT(obj) && obj->query_lit())
+    {
+        obj->extinguish_me();
     }
 
     inv = FILTER_DEAD(all_inventory(this_object()) - ({ obj }) - remove_list);
@@ -171,30 +173,30 @@ store_update(object obj)
         identical = filter(inv, &operator(==)(obj->long()) @ &->long());
         if (sizeof(identical) >= max_identical)
         {
-            /* The exitance of a remove_list indicates that the alarm has been
-             * set. Therefore, we must set it before adding to the array.
-             */
-            if (!sizeof(remove_list))
-            {
-                set_alarm(1.0, 0.0, store_remove_items);
-            }
-
             remove_list += identical[..(sizeof(identical) - max_identical)];
             inv -= remove_list;
         }
     }
 
-    if (sizeof(inv) >= max_items)
+    inv_size = sizeof(inv);
+    if (inv_size >= max_items)
     {
-        /* The exitance of a remove_list indicates that the alarm has been
-         * set. Therefore, we must set it before adding to the array.
-         */
-        if (!sizeof(remove_list))
+        /* Remove excess items, but don't remove items that belong to the
+         * default stock. */
+        foreach (object item : inv)
         {
-            set_alarm(1.0, 0.0, store_remove_items);
+            if ((inv_size-- >= max_items) &&
+                !IN_ARRAY(MASTER_OB(item), default_stock))
+            {
+                remove_list += ({ item });
+            }
         }
+    }
 
-        remove_list += inv[..(sizeof(inv) - max_items)];
+    /* Items targetted for removal? */
+    if (!stock_alarm_id && sizeof(remove_list))
+    {
+        stock_alarm_id = set_alarm(1.0, 0.0, store_remove_items);
     }
 }
 

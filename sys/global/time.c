@@ -24,6 +24,9 @@ private int time_sec  = 0;
 private mapping MonthToNumMap = ([ "Jan" : 1, "Feb" : 2, "Mar" : 3,
     "Apr" : 4, "May" : 5, "Jun" : 6, "Jul" : 7, "Aug" : 8, "Sep" : 9,
     "Oct" : 10, "Nov" : 11, "Dec" : 12 ]);
+private mapping MonthToDaysMap = ([ "Jan" : 0, "Feb" : 31, "Mar" : 59,
+    "Apr" : 90, "May" : 120, "Jun" : 151, "Jul" : 181, "Aug" : 212,
+    "Sep" : 243, "Oct" : 273, "Nov" : 304, "Dec" : 334 ]);
 
 /*
  * Function name: time_to_numbers
@@ -251,22 +254,6 @@ time2str3()
 }
 
 /*
- * Function name: time2str4
- * Description  : This function takes the number of days, hours, minutes
- *                and seconds in the time that was put in and returns a
- *                string with all those four elements, their names
- *                abbreviated to only one letter.
- * Returns      : string - the result.
- */
-nomask private string
-time2str4()
-{
-    /* Just return all types. */
-    return sprintf("%3d d %2d h %2d m %2d s", time_day, time_hour,
-	time_min, time_sec);
-}
-
-/*
  * Function name: time2str
  * Description  : This function returns a string representing a certain
  *                time in 'sig' significant time elements. See the manual
@@ -294,8 +281,13 @@ time2str(int time, int sig)
     case 3:
 	return time2str3();
 
+    case 5:
+	return sprintf("%d d %d h %d m %d s", time_day, time_hour, time_min,
+            time_sec);
+
     default:
-	return time2str4();
+	return sprintf("%3d d %2d h %2d m %2d s", time_day, time_hour,
+	    time_min, time_sec);
     }
 }
 
@@ -394,3 +386,47 @@ time2format(int timestamp, string format)
    
     return result;
 }
+
+/*
+ * Function name: stamp2time
+ * Description  : Converts a time string into its corresponding time() value.
+ *                It accepts three time formats with a capitalized month:
+ *                "mmm dd yyyy"          "Mar 01 2013"          -> 1362092400
+ *                "mmm dd yyyy hh:mm"    "Mar 01 2013 01:05"    -> 1362096300
+ *                "mmm dd yyyy hh:mm:ss" "Mar 01 2013 01:05:10" -> 1362096310
+ * Arguments    : string stamp
+ * Returns      : int - the time() value or 0.
+ */
+int
+stamp2time(string stamp)
+{
+    string month;
+    int year, day, hr, min, sec, value, leap;
+
+    if (strlen(stamp) == 20)
+        if (sscanf(stamp, "%s %d %d %d:%d:%d", month, day, year, hr, min, sec) != 6)
+            return 0;
+
+    if (strlen(stamp) == 17)
+        if (sscanf(stamp, "%s %d %d %d:%d", month, day, year, hr, min) != 5)
+            return 0;
+
+    if (strlen(stamp) == 11)
+        if (sscanf(stamp, "%s %d %d", month, day, year) != 3)
+            return 0;
+
+    /* Access failure .. failed to parse. */
+    if (!year) return 0;
+
+    /* Calculate the number of leap days. */
+    year -= 1968;
+    leap = year / 4;
+    year -= 2;
+    if (year >= 2000) leap--;
+
+    /* Count the number of seconds since unix time start in CET. */
+    return (year * 31536000) +
+        ((MonthToDaysMap[month] + leap + day - 1) * 86400) +
+        ((hr - 1) * 3600) + (min * 60) + sec;
+}
+

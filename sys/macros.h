@@ -40,6 +40,7 @@
  */
 #define MAXINT    (2147483647)
 #define ALPHABET  ("abcdefghijklmnopqrstuvwxyz")
+#define ALPHABET_LEN (26)
 
 /*
  * MASTER_OB(ob) - returns the filename of 'ob' without object number.
@@ -48,6 +49,7 @@
  * CLONE_COPY    - returns the objectpointer to a clone of this_object().
  * CALL_BY_CLONE - true if previous_object() is a clone of this_object().
  * CALL_BY(file) - true if previous_object() has filename 'file'.
+ * CALL_BY_SELF  - true if we externally called ourselves.
  * OB_NUM(ob)    - returns the object number of 'ob'.
  * OB_NAME(ob)   - returns a unique add_name() for 'ob' based on OB_NUM.
  */
@@ -57,6 +59,7 @@
 #define CLONE_COPY    clone_object(MASTER)
 #define CALL_BY_CLONE (MASTER == MASTER_OB(previous_object()))
 #define CALL_BY(file) (MASTER_OB(previous_object()) == (file))
+#define CALL_BY_SELF  (previous_object() == this_object())
 #define OB_NUM(ob)    (explode(file_name(ob) + "#0", "#")[1])
 #define OB_NAME(ob)   ("ob_" + OB_NUM(ob))
 
@@ -154,10 +157,31 @@
  * Can ob1 see anything in a specific room or is it too dark?
  * Can ob1 see anything in his/hers environment or is it too dark?
  */
+/*
 #define CAN_SEE_IN_A_ROOM(ob, room)	((room) && \
     ((room)->query_prop(OBJ_I_LIGHT) > -((ob)->query_prop(LIVE_I_SEE_DARK))))
+*/
+#define CAN_SEE_IN_A_ROOM(ob, room)	((room) && !(ob)->query_prop(LIVE_I_BLIND) \
+    && !((room)->query_prop(OBJ_I_LIGHT) <= ALWAYS_DARK_LIMIT) && \
+    (max((room)->query_prop(OBJ_I_LIGHT), ((ob)->query_prop(LIVE_I_SEE_DARK))) > 0))
 
 #define CAN_SEE_IN_ROOM(ob)	CAN_SEE_IN_A_ROOM((ob), environment(ob))
+
+/*
+ * STRING_HASH_LEN(str, len) - gives a hash of arbitrary length. Ensure not
+ *                    to ask for more text than crypt() returns.
+ * STRING_HASH(str) - gives an 6 character hash of any string, giving it 64G
+ *                    combinations with low risk of clashes. It uses capital
+ *                    letters, lower case letters, numbers, period "." and
+ *                    forward slash "/" as returned from crypt.
+ * OBJECT_HASH(obj) - gives an 6 character hash of the current object clone.
+ * MASTER_HASH(obj) - gives an 6 character hash of the object master of an
+ *                    object.
+ */
+#define STRING_HASH_LEN(str, len) (crypt((str), "$1$0$")[-(len)..])
+#define STRING_HASH(str) STRING_HASH_LEN((str), 6)
+#define OBJECT_HASH(obj) STRING_HASH(file_name(obj))
+#define MASTER_HASH(obj) STRING_HASH(MASTER_OB(obj))
 
 /* No definitions beyond this line. */
 #endif MACROS_DEF

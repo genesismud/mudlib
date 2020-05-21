@@ -17,6 +17,34 @@
 #include <stdproperties.h>
 
 /*
+ * Function name: query_height_desc
+ * Description  : Find out the height description of the living.
+ * Returns      : string - the height description.
+ */
+public string
+query_height_desc()
+{
+    string race = query_race();
+    int val, rval, *proc;
+
+    if (!IN_ARRAY(race, RACES))
+    {
+	return "";
+    }
+
+    val = this_object()->query_prop(CONT_I_HEIGHT);
+    rval = RACEATTR[race][0];
+    val = 100 * val / (rval ? rval : val);
+    proc = SPREAD_PROC;
+
+    for (rval = 0; rval < sizeof(proc); rval++)
+        if (val <= proc[rval])
+            break;
+    rval = (rval < sizeof(proc) ? rval : sizeof(proc) -1 );
+    return HEIGHTDESC[rval];
+}
+
+/*
  * Function name: set_height_desc
  * Description  : Set the height property of the living based on the desired
  *                height description. If you also want to set he width, then
@@ -51,6 +79,35 @@ set_height_desc(string str)
 
     add_prop(CONT_I_HEIGHT, height);
     return 1;
+}
+
+/*
+ * Function name: query_width_desc
+ * Description  : Find out the width description of the living.
+ * Returns      : string - the width description.
+ */
+public string
+query_width_desc()
+{
+    string race = query_race();
+    int val, rval, *proc;
+
+    if (!IN_ARRAY(race, RACES))
+    {
+	return "";
+    }
+
+    val = this_object()->query_prop(CONT_I_WEIGHT) / this_object()->query_prop(CONT_I_HEIGHT);
+    rval = RACEATTR[race][5];
+    val = 100 * val / (rval ? rval : val);
+    proc = SPREAD_PROC;
+
+    for (rval = 0; rval < sizeof(proc); rval++)
+        if (val <= proc[rval])
+            break;
+    rval = (rval < sizeof(proc) ? rval : sizeof(proc) -1 );
+
+    return WIDTHDESC[rval];
 }
 
 /*

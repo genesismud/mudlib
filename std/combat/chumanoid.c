@@ -232,8 +232,7 @@ cb_wield_weapon(object wep)
 public mixed
 cb_wear_arm(object arm)
 {
-    if (!me->query_wiz_level() &&
-        function_exists("create_object", arm) != ARMOUR_OBJECT)
+    if (!me->query_wiz_level() && !IS_ARMOUR_OBJECT(arm))
     {
 	return "The " + arm->short() + " is not a true armour!\n";
     }

@@ -6,13 +6,15 @@ ACCESS LEVEL
 
 SYNOPSIS
 	arch <message>
+	arch -
 
 DESCRIPTION
 	This will send a message to all arches and keepers in the game.
 	Internally it is an alias to the command 'line arch'.
 
 ARGUMENTS
-	<message> - the message to send all arches and keepers.
+        <message> - the message to send all arches and keepers.
+        -         - display the last 20 messages on the line.
 
 SEE ALSO
 	line, arche

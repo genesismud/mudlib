@@ -1,4 +1,9 @@
-*Defined in /sys/macros.h
+Definition : (string) MASTER
 
-MASTER		Returns the master object of this_object(), 'file name'
+Defined in : <macros.h>
 
+Description: Returns the file name (without .c) of this_object().
+
+Example    : "/d/Domain/area/obj/sword"
+
+See also   : MASTER_OB

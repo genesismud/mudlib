@@ -715,8 +715,6 @@ domainsanction(string str)
     string domain;
     string path;
     int    remove;
-    int    index;
-    int    size;
 
     /* May only be called from the apprentice soul. */
     if (!CALL_BY(WIZ_CMD_APPRENTICE))
@@ -733,7 +731,15 @@ domainsanction(string str)
 	    return 0;
 	}
 
-	display_sanctions(str);
+	if (!sizeof(parts = query_lord_domains(name)))
+	    parts = ({ str });
+
+	foreach(string dname: sort_array(parts))
+	{
+	    display_sanctions(dname);
+	    write("\n");
+	}
+
 	return 1;
     }
 
@@ -756,12 +762,11 @@ domainsanction(string str)
      * domain to continue.
      */
     if (!((query_wiz_rank(name) >= WIZ_ARCH) ||
-          ((query_wiz_rank(name) == WIZ_LORD) &&
-           (query_wiz_dom(name) == domain))))
+          (query_domain_lord(domain) == name)))
     {
 	notify_fail("You are neither a member of the administration, nor " +
-		    "the Lord of the domain " + domain + ".\n");
-	return 1;
+	    "the Lord of the domain " + domain + ".\n");
+	return 0;
     }
 
     parts[1] = lower_case(parts[1]);
@@ -798,12 +803,12 @@ domainsanction(string str)
 	if (file_size(SANCTION_DIR + domain + "/" + parts[1]) != -2)
 	{
 	    write("The domain " + domain + " has not given a sanction to \"" +
-		  parts[1] + "\".\n");
+		parts[1] + "\".\n");
 	    return 1;
 	}
 
 	write("Removing sanction(s) given to \"" + parts[1] + "\" in " +
-	     domain + ".\n");
+	    domain + ".\n");
 	recursive_rmdir(SANCTION_DIR + domain + "/" + parts[1]);
 	rmdir(SANCTION_DIR + domain);
 	return 1;
@@ -811,63 +816,65 @@ domainsanction(string str)
 
     str = parts[1];
     path = ((sizeof(parts) == 4) ? parts[3] : "");
-    parts = explode(parts[2], "");
-    index = -1;
-    size = sizeof(parts);
-    while(++index < size)
+    /* Allow for tilde notation and full domain path. Then strip those. */
+    if (wildmatch("~" + domain + "/*", path))
     {
-	if (member_array(parts[index],
-			 (strlen(path) ? PATH_SANCTIONS :
-			  DOMAIN_SANCTIONS)) == -1)
+	path = path[(strlen(domain)+2)..];
+    }
+    if (wildmatch("/d/" + domain + "/*", path))
+    {
+	path = path[(strlen(domain)+4)..];
+    }
+    parts = explode(parts[2], "");
+    foreach(string part: parts)
+    {
+	if (!IN_ARRAY(part, (strlen(path) ? PATH_SANCTIONS : DOMAIN_SANCTIONS)))
 	{
-	    write("Sanction \"" + parts[index] +
-		  "\" is not possible as domain " +
-		  (strlen(path) ? "path " : "") + "sanction.\n");
+	    write("Sanction \"" + part + "\" is not possible as domain " +
+		(strlen(path) ? "path " : "") + "sanction.\n");
 	    continue;
 	}
 
 	/* If the sanction is not there yet, if may only be set if the
 	 * argument is valid.
 	 */
-	if (!query_sanction(domain, str, SANCTION_TOKEN_TO_FILE[parts[index]],
-		 	    path))
+	if (!query_sanction(domain, str, SANCTION_TOKEN_TO_FILE[part], path))
 	{
 	    if (remove)
 	    {
 		write("Invalid receiver \"" + str + "\". Sanction \"" +
-		      parts[index] + "\" may only be removed from " +
-		      domain + ".\n");
+		    part + "\" may only be removed from " + domain + ".\n");
 		continue;
 	    }
 	    
 	    if (create_sanction(domain, str,
-				SANCTION_TOKEN_TO_FILE[parts[index]], path))
+		SANCTION_TOKEN_TO_FILE[part], path))
 	    {
-		write("Sanction \"" + parts[index] + "\" given to " +
-		      capitalize(str) + " for " + domain +
-		      (strlen(path) ? (" for " + path) : "") + ".\n");
+		write("Sanction \"" + part + "\" given to " +
+		    capitalize(str) + " for " + domain +
+		    (strlen(path) ? (" for " + path) : "") + ".\n");
 	    }
 	    else
 	    {
-		write("Error setting sanction \"" + parts[index] +
-		      "\" to " + capitalize(str) + " for " + domain +
-		      (strlen(path) ? (" for " + path) : "") + ".\n");
+		write("Error setting sanction \"" + part + "\" to " +
+		    capitalize(str) + " for " + domain +
+		    (strlen(path) ? (" for " + path) : "") + ".\n");
 	    }
 	}
 	else
 	{
 	    if (remove_sanction(domain, str,
-				SANCTION_TOKEN_TO_FILE[parts[index]], path))
+		SANCTION_TOKEN_TO_FILE[part], path))
 	    {
-		write("Sanction \"" + parts[index] + "\" to " + domain +
-		      " removed from " + capitalize(str) +
-		      (strlen(path) ? (" for " + path) : "") + ".\n");
+		write("Sanction \"" + part + "\" to " + domain +
+		    " removed from " + capitalize(str) +
+		    (strlen(path) ? (" for " + path) : "") + ".\n");
 	    }
 	    else
 	    {
-		write("Error removing sanction \"" + parts[index] +
-		      "\" to " + domain + " from " + capitalize(str) +
-		      (strlen(path) ? (" for " + path) : "") + ".\n");
+		write("Error removing sanction \"" + part +
+		    "\" to " + domain + " from " + capitalize(str) +
+		    (strlen(path) ? (" for " + path) : "") + ".\n");
 	    }
 	}
     }

@@ -7,7 +7,6 @@
  */
 
 #include <formulas.h>
-#include <drink_eat.h>
 
 /*
  * Function name: 	intoxicated_max
@@ -88,7 +87,7 @@ drink_alco(int strength, int ask)
     curtox = query_intoxicated();
 
     /* Not too much, and not too much at once */
-    if (!CAN_DRINK_ALCO(curtox, mintox, maxtox, strength)) return 0;
+    if (!F_CAN_DRINK_ALCO(curtox, mintox, maxtox, strength)) return 0;
 
     if (ask)
 	return 1;
@@ -118,9 +117,7 @@ drink_soft(int amount, int ask)
 
     if (amount >= 0)
     {
-
-	/* Not too much, and not too much at once
-	*/
+	/* Not too much, and not too much at once */
 	if (((curam + amount) > maxam) || (amount > maxam / 15))
 	    return 0;
     }
@@ -152,7 +149,7 @@ eat_food(int amount, int ask)
     curam = query_stuffed();
 
     /* Not too much, and not too much at once */
-    if (!CAN_EAT_FOOD(curam, query_prop(LIVE_I_MAX_EAT), amount))
+    if (!F_CAN_EAT_FOOD(curam, query_prop(LIVE_I_MAX_EAT), amount))
 	return 0;
 
     if (ask)

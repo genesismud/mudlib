@@ -20,18 +20,16 @@
  */
 #undef DOCMARK /* "/DOCDIR" */
 
-static 	mapping	docdirs;	/* Info on all docdirs currently known. 
-				   Each entry on the form:
-				     (["/dir/name/": 
-				       ({ sdir_sortedlist, ([ subdir:info ]) })
-				     ]) 
-    				   There can be many subdir:info for one main
-				   docdir. 'info' is on the form:
-				     "%%function1%%function2%%function3"
-
-				*/
-
-
+/*
+ * docdirs contains the indices to the manual.
+ * Each entry on the form:
+ * 
+ * ([ "/dir/name/" : ({ subdirs_sorted, ([ subdir : funcs ]) }) ])
+ *
+ * There can be many subdir:funcs for one main docdir.
+ * The funcs is a string of the form "function1%%function2%%function3"
+ */
+static 	mapping	docdirs;
 
 /*
  * Function name:   valid_docdir
@@ -58,20 +56,19 @@ valid_docdir(string ddir)
 static mapping 
 read_index(string mdir)
 {
-    string *files, *sfiles, sdname, info;
+    string *files, *sfiles, sdname, *funcs;
     mapping res, sdir;
     int i, j;
 
     seteuid(geteuid(this_player()));
 
     files = get_dir(mdir + "/*");
-
     if (!sizeof(files))
 	return ([]);
 
     files -= ({ ".", ".." });
 
-    info = "%%";
+    funcs = ({ });
     res = ([]);
 
     for (i = 0; i < sizeof(files); i++)
@@ -90,11 +87,15 @@ read_index(string mdir)
 		    (sfiles[j] == "/" ? "" : sfiles[j])] = sdir[sfiles[j]];
 	    }
 	}
-	else 
-	    info += files[i] + "%%";
+	else
+	{
+	    funcs += ({ files[i] });
+	}
     }
-    if (strlen(info) > 2)
-	res["/"] = info;
+    if (sizeof(funcs))
+    {
+	res["/"] = implode(funcs, "%%");
+    }
 
     return res;
 }
@@ -166,6 +167,28 @@ fix_subjlist(string *split, string keyw, int okbef, int okaft)
 }
 
 /*
+ * Function name:   filter_keyword
+ * Description:     Return all possible function names that match a
+ *                  given keyword in one or all subdirs.
+ * Arguments:       mdir    - The main documentation directory
+ *                  subdir  - The subdir to search in. (Optional)
+ *                  keyword - The keyword to search for.
+ * Returns:         An array with the matching keywords
+ */
+public string *
+filter_keyword(string mdir, string sdir, string keyword)
+{
+    mixed *fun = this_object()->get_index(mdir, sdir);
+
+    if (!sizeof(fun)) {
+       return ({ });
+    }
+    
+    return filter(fun[1], &wildmatch(keyword, ));
+}
+ 
+
+/*
  * Function name:   get_keywords
  * Description:     Return all possible function names that match a 
  *		    given keyword in one or all subdirs.
@@ -186,36 +209,19 @@ get_keywords(string mdir, string sdir, string keyword)
     if (!sizeof(sdlist = get_subdirs(mdir)))
 	return ({ });
 
-    okbef = 0; 
-    okaft = 0;
-
-    if (sscanf(keyword, "*%s", st) == 1)
-    {
-	keyword = st;
-	okbef = 1; 
-    }
-
-    if (sscanf(keyword, "%s*", st) == 1)
-    {
-	keyword = st;
-	okaft = 1; 
-    }
-
-    if (keyword == "")
+    if (keyword == "" || keyword == "*")
 	return this_object()->get_index(mdir, sdir);
 
-    if (stringp(sdir) && member_array(sdir, sdlist) >= 0)
-	return ({ sdir, fix_subjlist(explode(docdirs[mdir][1][sdir], keyword),
-				     keyword, okbef, okaft) });
-
+    if (stringp(sdir) && member_array(sdir, sdlist) >= 0) 
+	return ({ sdir, filter_keyword(mdir, sdir, keyword) });
     else if (stringp(sdir)) /* No such subdir */
 	return ({});
 
     found_arr = ({});
     for (i = 0; i < sizeof(sdlist); i++)
     {
-	tmp = fix_subjlist(explode(docdirs[mdir][1][sdlist[i]], keyword),
-			   keyword, okbef, okaft);
+	tmp = filter_keyword(mdir, sdir, keyword);
+
 	if (sizeof(tmp))
 	    found_arr += ({ ({ sdlist[i], tmp }) });
     }

@@ -20,7 +20,7 @@ DESCRIPTION
 	including items you wear and wield, coins and gems, food, drinks,
 	herbs, potions, keys, torches, et cetera.
 
-ARGUMENTS
+OPTIONS
 	<name> - wizards can view the inventory of other players by
 		 adding the name of that player as argument.
 

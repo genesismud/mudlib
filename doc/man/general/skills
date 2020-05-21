@@ -1,23 +1,20 @@
-This document describes how skills work in CDlib
-
+This document describes how skills work in CDlib.
 
 Background
 ==========
 
-Skills are all the pieces of knowledge of different things that a
-mortal may gather to manage a long journey through a dangerous life.
+Skills are all the pieces of knowledge of different things that a mortal may
+gather to manage a long journey through a dangerous life.
 
-Skills defer from stats in that they are not gained through experience,
-i.e.  indirectly. Skills are usually bought with money, as training
-courses, or gained as rewards after solving a quest. Some races may
-also be born with certain skills or have a special talent to learn
-them.
+Skills differ from stats in that they are not gained through experience, i.e.
+indirectly. Skills are usually bought with money, as training courses, or
+gained as rewards after solving a quest. Some races may also be born with
+certain skills or have a special talent to learn them.
 
-There is in theory no limit to the number of different skills in the
-game.  However, as all objects in the game should interpret skills in a
-similar way there must be a standard. Therefore most skills must be
-registred in a central place in the game.
-
+There is in theory no limit to the number of different skills in the game.
+However, as all objects in the game should interpret skills in a similar way
+there must be a standard. Therefore most skills must be registred in a central
+place in the game.
 
 
 Functionality and implementation
@@ -73,6 +70,7 @@ SS_DEFENCE                       20       Defence
 SS_BLIND_COMBAT                  20       Blind combat 
 SS_SPELLCRAFT                    20       General spellcraft
 SS_ELEMENT_*                     20       All spell element skills 
+SS_FORM_*                        20       All spell form skills 
 SS_ALCHEMY                       20       Mix potions etc.  
 SS_APPR_MON                      30       Appraise an opponent
 SS_APPR_OBJ                      30       Find out properties of an obj
@@ -95,3 +93,9 @@ SS_AWARENESS                     30       Be wary of backstab/sneak/hide
 SS_TRADING                       30       Trade with profit
 SS_RIDING                        30       Riding a steed
 
+Skill decay
+===========
+
+When a skill is trained, it is implicitly maintained as long as the player
+has access to places that train the skill to that level. Otherwise the skill
+will decay. For more information, see "man skill_decay".

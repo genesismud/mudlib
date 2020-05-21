@@ -38,6 +38,7 @@
 #include <macros.h>
 #include <stdproperties.h>
 #include <wa_types.h>
+#include <hooks.h>
 
 static int looseness, layers;
 
@@ -48,6 +49,7 @@ static object wearer, wear_func;
 static int worn, arm_at, worn_on_part;
 
 public void set_wf(object ob);
+static int invoke_wf(function func);
 
 /* 
  * Function name: set_slots
@@ -416,7 +418,7 @@ wear_me()
     /*
      * A wear function in another object.
      */
-    if (!wear_func || !(wfail = wear_func->wear(this_object())))
+    if (!(wfail = invoke_wf(&->wear(this_object()))))
     {
         how = wear_how(worn_on_part);
         write("You wear the " + what + how + ".\n");
@@ -428,6 +430,7 @@ wear_me()
      */
     if (intp(wfail) && wfail >= 0)
     {
+        this_object()->add_expiration_combat_hook(wearer);
         this_object()->set_adj("worn");
         this_object()->remove_adj("unworn");
         worn = 1;
@@ -481,7 +484,7 @@ remove_me()
     /*
      * A remove function in another object.
      */
-    if (!wear_func || !(wret = wear_func->remove(this_object())))
+    if (!(wret = invoke_wf(&->remove(this_object()))))
     {
         if (CAN_SEE(this_player(), this_object()))
         {
@@ -502,6 +505,7 @@ remove_me()
         do_remove_item();
         this_object()->remove_adj("worn");
         this_object()->add_adj("unworn");
+        this_object()->remove_expiration_combat_hook(wearer);
         wearer = 0;
         worn = 0;
 
@@ -553,6 +557,29 @@ public object
 query_wf()
 {
     return wear_func;
+}
+
+/* 
+ * Function name: invoke_wf
+ * Description  : This function is called internally to wrap calls to the
+ *                wear func if one has been set.
+ *                It ensures this_player() is set to the wearer allowing wizards
+ *                to use write / say etc.
+ * Arguments    : function - The function to invoke in the object set with set_wf
+ * Returns      : int - the function result
+ */
+static int
+invoke_wf(function func)
+{
+    if (!wearer || !objectp(wear_func))
+        return 0;
+
+    object otp = this_player();
+    set_this_player(wearer);
+    int ret = func(wear_func);
+    set_this_player(otp);
+
+    return ret;
 }
 
 #if 0
@@ -657,15 +684,16 @@ wearable_item_leave_env(object from, object to)
         return;
     }
 
-    if (!wear_func || !wear_func->remove(this_object()) && wearer)
+    if (!invoke_wf(&->remove(this_object())) && wearer)
     {
-        tell_object(wearer, 
-            "You remove the " + this_object()->short() + ".\n");
+        tell_object(wearer, "You remove the " + 
+            this_object()->short() + ".\n");
     }
 
     do_remove_item();
     this_object()->remove_adj("worn");
     this_object()->add_adj("unworn");
+    this_object()->remove_expiration_combat_hook(wearer);
     wearer = 0;
     worn = 0;
 }

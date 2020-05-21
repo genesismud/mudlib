@@ -26,7 +26,7 @@ split_values(int v)
 {
     int *ret;
     int index = SIZEOF_MONEY_TYPES;
-  
+
     ret = allocate(SIZEOF_MONEY_TYPES);
     if (v > 0)
     {
@@ -244,7 +244,7 @@ what_coins(mixed ob)
 
     while(++index < SIZEOF_MONEY_TYPES)
     {
-        cn = present(MONEY_TYPES[index] + " coin",pl);
+        cn = present(MONEY_TYPES[index] + " coin", pl);
         if (!cn)
         {
             nums[index] = 0;
@@ -464,11 +464,13 @@ money_text(int *coins, int numerical = 0)
  *                using the short codes, fit for use in columns.
  * Arguments    : int *coins - the array with the coins, smallest denomination
  *                             first.
- *                int width - the number of digits per column (default: 2)
+ *                int valuewidth - the number of digits per column (default: 2)
+ *                int coinwidth - the column width of the coin code (default: 2).
+ *                    in case of 0, the preceding space is omitted.
  * Returns      : string - a string describing the coins.
  */
 public varargs string
-money_col_text(int *coins, int width = 2)
+money_col_text(int *coins, int valuewidth = 2, int coinwidth = 2)
 {
     string text = "";
     int index = SIZEOF_MONEY_TYPES;
@@ -482,12 +484,12 @@ money_col_text(int *coins, int width = 2)
     {
         if (coins[index] > 0)
         {
-            text += sprintf(" %*d %s", width, coins[index], MONEY_SHORT[index]);
+            text += sprintf(" %*d%*s", valuewidth, coins[index], coinwidth,
+                (coinwidth ? " " : "") + MONEY_SHORT[index][..coinwidth-1]);
         }
         else
         {
-            /* This assumes a short code is 2 characters. */
-            text += sprintf(" %*s", width + 3, "");
+            text += sprintf(" %*s", valuewidth + coinwidth + (coinwidth ? 1 : 0), "");
         }
     }
     /* Skip the first space. */
@@ -505,9 +507,27 @@ void
 money_condense(object obj)
 {
     int index = -1;
+    int *coins = what_coins(obj);
+    mixed hascoins = obj->query_prop(OBJ_M_HAS_MONEY);
 
-    obj->add_prop(OBJ_M_HAS_MONEY, what_coins(obj));
+    /* Existing property gets amended with new money. */
+    if (intp(hascoins) && hascoins > 0)
+    {
+	hascoins = split_values(hascoins);
+    }
+    if (pointerp(hascoins))
+    {
+	hascoins += allocate(SIZEOF_MONEY_TYPES);
+        while(++index < SIZEOF_MONEY_TYPES)
+        {
+	    coins[index] += hascoins[index];
+	}
+    }
 
+    obj->add_prop(OBJ_M_HAS_MONEY, coins);
+
+    /* Destroy the actual coin objects. */
+    index = -1;
     while(++index < SIZEOF_MONEY_TYPES)
     {
         present((MONEY_TYPES[index] + " coin"), obj)->remove_object();

@@ -46,8 +46,14 @@
 		      ((numlines > 1) ? ("/" + numlines) : "") + \
                       " -- (<cr> t b r n a <num> q x !<cmd> h ?) -- ")
 #define MORE_DONE     if (functionp(ret_func)) { ret_func(); }
-#define MORE_INPUT    input_to(&input_to_more(, lines, filename, \
-					ret_func, first, lineno))
+#define MORE_INPUT    input_to(&input_to_more(, lines, filename, first, lineno, ret_func))
+
+#define TAIL_MAX_READ 48000
+#define TAIL_DONE     if (functionp(ret_func)) { ret_func(); }
+#define TAIL_PROMPT   write("-- Tail -- " + lastline +             \
+		      ((numlines > 1) ? ("/" + numlines) : "") + \
+                      " -- (<cr> e d r q x !<cmd> h ?) -- ")
+#define TAIL_INPUT    input_to(&input_to_tail(, lines, lastline, ret_func))
 
 /*
  * Observe that the variable lineno will contain the number to the last
@@ -70,8 +76,8 @@
  *                int lineno        - the last line printed.
  */
 static nomask void
-input_to_more(string answer, string *lines, string filename,
-	      function ret_func, int first, int lineno)
+input_to_more(string answer, string *lines, string filename, int first,
+    int lineno, function ret_func)
 {
     int    index;
     int    pagesize;
@@ -157,7 +163,7 @@ input_to_more(string answer, string *lines, string filename,
 	    	MORE_INPUT;
 	    	return;
 	    }
-	    write("EOF\n");
+	    write("END\n");
 	}
 	else
 	{
@@ -192,7 +198,7 @@ input_to_more(string answer, string *lines, string filename,
 	 */
 	if (cat(filename, (lineno - pagesize + 1), pagesize) < pagesize)
 	{
-	    write("EOF\n");
+	    write("END\n");
 	    MORE_DONE;
 	    return;
 	}
@@ -258,6 +264,142 @@ more(mixed arg, int start, function func)
 	lines = explode(arg, "\n");
     }
 
-    input_to_more("", lines, filename, func, start, start);
+    input_to_more("", lines, filename, start, start, func);
+    return 1;
+}
+
+/*
+ * Function name: input_to_tail
+ * Description  : After the some part of the text has been printed, the
+ *                next command of the player is fed into this function.
+ *                It controls what the player wants to read next.
+ * Arguments    : string answer     - the command by the player.
+ *                string *lines     - the lines of the text.
+ *                int lastline      - the last line printed.
+ *                function ret_func - the function to return to (if any).
+ */
+static nomask void
+input_to_tail(string answer, string *lines, int lastline, function ret_func)
+{
+    int pagesize;
+    int index, startline;
+    int numlines = sizeof(lines);
+
+    pagesize = (((pagesize = query_option(OPT_MORE_LEN)) < 5) ?
+    	MORE_PAGESIZE : pagesize);
+    answer = lower_case(answer);
+
+    /* Initialize. */
+    if (!lastline)
+    {
+	lastline = numlines + pagesize;
+    }
+
+    switch(answer)
+    {
+    case "":
+    case "n":
+	lastline = max(1, lastline - pagesize);
+	break;
+
+    case "q":
+    case "quit":
+    case "x":
+    case "exit":
+	TAIL_DONE;
+	return;
+
+    case "?":
+    case "h":
+    case "help":
+	write(
+"\nAvailable commands:\n\n" +
+"   <return>     press <return> to display next page (same as 'n')\n" +
+"   e(nd)        go to bottom of document\n" +
+"   d(own)       go back one page\n" +
+"   r(edisplay)  display the same page again\n" +
+"   h(elp) or ?  display this help message\n" +
+"   !<command>   escape and execute <command>, then continue reading\n" +
+"   q(uit) or x  quit reading document (also works with 'x')\n\n");
+	TAIL_PROMPT;
+	TAIL_INPUT;
+	return;
+
+    case "e":
+    case "end":
+	lastline = numlines;
+	break;
+
+    case "r":
+    case "redisplay":
+	break;
+
+    case "d":
+    case "down":
+    case "p":
+    case "previous":
+	lastline = min(numlines, lastline + pagesize);
+	break;
+
+    default:
+	TAIL_PROMPT;
+	TAIL_INPUT;
+	return;
+    }
+
+    startline = max(0, lastline - pagesize);
+    for (index = startline; index < lastline; index++)
+    {
+	write(lines[index] + "\n");
+    }
+
+    if (startline <= 1)
+    {
+	TAIL_DONE;
+	return;
+    }
+
+    TAIL_PROMPT;
+    TAIL_INPUT;
+}
+
+/*
+ * Function name: tail
+ * Description  : Call this function in a player like explained in the header
+ *                of this file in order to let him/her read a text with tail.
+ *                There are three options:
+ *                  player->tail(string filename)
+ *                  player->tail(string *lines)
+ *                  player->tail(string text)
+ *
+ * Arguments    : mixed arg - the filename of the file to read or the text to
+ *                    read itself. If it's the text, it may be an array of
+ *                    lines or a single string concatenated with newlines (\n).
+ *                function func - the function to call when the player is
+ *                    done reading the text.
+ * Returns      : int 1 - always.
+ */
+public nomask varargs int
+tail(mixed arg, function func)
+{
+    string *lines;
+    int start;
+
+    if (pointerp(arg))
+    {
+        lines = arg;
+    }
+    else if ((start = file_size(arg)) > 0)
+    {
+	start = max(0, start - TAIL_MAX_READ);
+    	arg = read_bytes(arg, start, TAIL_MAX_READ+1);
+	lines = explode(arg, "\n");
+    }
+    else
+    {
+	lines = explode(arg, "\n");
+    }
+
+    input_to_tail("n", lines, 0, func);
     return 1;
 }

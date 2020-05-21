@@ -3,7 +3,7 @@ NAME
 
 SYNOPSIS
 	steal <item> from <target>
-	steam <item> from <container> of <target>
+	steal <item> from <container> of <target>
 
 DESCRIPTION
         This command enables you to steal something from a monster or
@@ -13,6 +13,6 @@ DESCRIPTION
 
 OPTIONS
         ---
+
 SEE ALSO
         peek
-

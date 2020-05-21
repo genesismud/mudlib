@@ -7,7 +7,49 @@
 #pragma save_binary
 #pragma strict_types
 
+#include <config.h>
+#include <macros.h>
 #include <std.h>
+
+#define DEF_START_FILE  "/sys/data/DEFAULT_START"
+#define TEMP_START_FILE "/sys/data/TEMP_START"
+
+/*
+ * def_start_locations - array of default start locations (mostly guild starts)
+ * temp_start_locations - array of temporary start locations (inns etc)
+ */
+static string *def_start_locations;
+static string *temp_start_locations;
+
+/*
+ * Function name: create
+ * Description  : Called upon initialization to read the adverbs into
+ *                memory.
+ */
+nomask void
+create()
+{
+    setuid();
+    seteuid(getuid());
+
+    /* Read the adverbs-file if possible. */
+    if (file_size(DEF_START_FILE) > 0)
+    {
+	def_start_locations = sort_array(explode(read_file(DEF_START_FILE), "\n")  - ({ "" }) );
+    }
+    if (!sizeof(def_start_locations))
+    {
+	def_start_locations = DEF_STARTING_PLACES;
+    }
+    if (file_size(TEMP_START_FILE) > 0)
+    {
+	temp_start_locations = sort_array(explode(read_file(TEMP_START_FILE), "\n") - ({ "" }) );
+    }
+    if (!sizeof(temp_start_locations))
+    {
+	temp_start_locations = TEMP_STARTING_PLACES;
+    }
+}
 
 /*
  * Function name: fix_path
@@ -133,4 +175,30 @@ reduce_to_tilde_path(string path)
     }
 
     return path;
+}
+
+/*
+ * Function name: valid_def_start_location
+ * Description  : Find out if a startloc is validated as default starting
+ *                location.
+ * Arguments    : string startloc - the startloc to test (without .c)
+ * Returns      : int 1/0 - if true, it's validated.
+ */
+public int
+valid_def_start_location(string startloc)
+{
+    return IN_ARRAY(startloc, def_start_locations);
+}
+
+/*
+ * Function name: valid_temp_start_location
+ * Description  : Find out if a startloc is validated as temporary starting
+ *                location.
+ * Arguments    : string startloc - the startloc to test (without .c)
+ * Returns      : int 1/0 - if true, it's validated.
+ */
+public int
+valid_temp_start_location(string startloc)
+{
+    return IN_ARRAY(startloc, temp_start_locations);
 }

@@ -28,70 +28,29 @@ you have the same read and write rights as you have as a wizard in the game.
 EXAMPLE
 =======
 
-Note to use port 1821 for FTP; to connect to the LPmud host:
+Note to use port 1822 for FTP; to connect to the LPmud host:
 
-        ftp genesis.tekno.chalmers.se 1821
+        ftp mud.genesismud.org 1822
 
 Your wizard user name and password are to be used for ftp too. You should not
 use 'lpmud:' as was the case in the past. When you get access, you can use the
 commands described above to download or upload files.
 
-COMMANDS
-========
 
-It is not guaranteed that these commands are also supported by the FTP-
-client that you are using, but you are likely to find them on most FTP-
-programs.
+FILE TRANSFERS
+==============
 
-ftp <site> [<port>]	start the FTP-program and if added, try to connect
-			to the site <site> at port <port>. Note that some
-			clients require a colon between <site> and <port>.
+If you are using an operation system with a default line ending of 
+CRLF (such as Windows) you need to perform code file transfers using ASCII
+mode. This can often be toggled in your client if it does not do the correct
+thing automatically.
 
-open <site>		connect to a new site (don't add a port-number)
-			if you are already running the FTP-program
-user <wizname>		if you connected, but make a mistake with your
-			login name or password, you can retry to login
-			without having to re-connect
-help / ?		get help on how to use your FTP-program
-ls / dir		list the directory contents on the remote machine
-cd <directory>		change to another directory on the remote machine
-get <filename>		transfer a remote file to your local machine
-put <filename>		transfer a local file to the remote host
-!<command>		while you are connected, perform a local command
-lcd <directory>		change the directory on your local machine
-close			close the connection
-bye / quit		leave the FTP-program
+Attempting to load files with incorrect line endings will show the error:
+  'Illegal character (hex 0d) '' line 1'
+ 
 
-TROUBLESHOOTING / WARNING
-=========================
-
-It may happen that the remote host refuses to display the contents of a
-directory or refuses access to get or put a file. UNIX (the operating
-system the LPmud runs on) uses 9 property bits for read, write and
-execute for various users. If you get a refusal, those bits may not
-be set properly. To set those properties, you can use the following
-command:
-
-quote site chmod 666 <filespec>
-
-In this, <filespec> can be a path or filename. Generally, you can use the
-period "." to indicate that you want to modify the properties of the
-current directory and all files in it.
-
-ADDITIONAL COMMANDS / INFORMATION
+ADDITIONAL INFORMATION
 =================================
-
-The commands get and put usually do not allow you to use wildcards. To
-FTP several files might require many commands. Three commands may help
-you in this case:
-
-mget <filespec>		transfer one or more files from the remote host
-			to your local machine
-mput <filespec>		transfer one or more files from your local
-			machine to the remote host.
-prompt			if you are promted for each file individually,
-			you may disable/enable prompting with this
-			command
 
 If you want to get a copy of the complete mudlib, rather than FTPing the
 files from the LPmud host, you may FTP it in one archived file, a

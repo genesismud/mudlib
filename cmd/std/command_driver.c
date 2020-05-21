@@ -13,6 +13,7 @@
 inherit "/lib/commands";
 inherit "/std/callout";
 
+#include <files.h>
 #include <std.h>
 
 /*
@@ -138,3 +139,18 @@ query_alarms()
 {
     return get_all_alarms();    
 }
+
+void
+log_incorrect_inherit()
+{
+    if (IS_ROOM_OBJECT(this_object())) 
+    {
+        log_file("errors", file_name(this_object()) + ": inherits /cmd/std/command_driver, but isn't a soul. This will cause odd errors..\n");
+        if (this_player() && this_player()->query_wiz_level()) 
+        {
+            this_player()->catch_msg("WARNING: " + file_name(this_object()) + ": inherits /cmd/std/command_driver, but isn't a soul. This will cause errors\n");
+        }
+    }
+}
+
+static mixed bar = log_incorrect_inherit();

@@ -304,7 +304,7 @@ do_verb_inside(string cmd, string prep_func, string single_func,
     else
 	call_obj = cobj;
     
-    if (!parse_command(cmd, PARSE_ENV, "[the] %i %w [the] %i", itema1, str2, itema2))
+    if (!parse_command(lower_case(cmd), PARSE_ENV, "[the] %i %w [the] %i", itema1, str2, itema2))
 	return 0;
     
     if (!call_other(call_obj, prep_func, str2))
@@ -366,7 +366,7 @@ do_verb_with(string cmd, string check_func, string single_func,
     else
 	call_obj = cobj;
     
-    if (!parse_command(cmd, PARSE_ENV, "[the] %i %w [the] %i", itema1, str2, itema2))
+    if (!parse_command(lower_case(cmd), PARSE_ENV, "[the] %i %w [the] %i", itema1, str2, itema2))
 	return 0;
     
     itema2 = normal_access(itema2, acsfunc2, cobj);  
@@ -403,7 +403,7 @@ find_str_in_arr(string str, object *ob)
     if (!str)
 	return ({});
 
-    if (parse_command(str, ob, "[the] %i", arr))
+    if (parse_command(lower_case(str), ob, "[the] %i", arr))
     {
         /* Numeric designation */
 	num = arr[0];
@@ -444,7 +444,7 @@ find_str_in_object(string str, object ob)
 {
     object *arr, obj;
 
-    arr = find_str_in_arr(str, all_inventory(ob));
+    arr = find_str_in_arr(lower_case(str), all_inventory(ob));
 
     /* Fall back if we cannot find it the official way. */
     if (!sizeof(arr) && (obj = present(str, ob)) && CAN_SEE(this_player(), obj))
@@ -570,4 +570,96 @@ int
 paralyze_cmd_is_allowed(string cmd)
 {
     return IN_ARRAY(cmd, gParalyzeCommands);
+}
+
+/*
+ * Function name: recurse_neighbours
+ * Description  : This function will recursively search through the
+ *                neighbouring rooms to a particular room to find the
+ *                rooms a shout or scream will be heard in.
+ * Arguments    : object *found  - the rooms already found.
+ *                object *search - the rooms still to search.
+ *                int    depth   - the depth still to search.
+ * Returns      : object * - the neighbouring rooms (which will contain the
+ *                    original rooms for depth > 1).
+ */
+object *
+recurse_neighbours(object *found, object *search, int depth)
+{
+    int index;
+    int size;
+    int index2;
+    int size2;
+    mixed *exit_arr;
+    object *new_search, *rooms, troom, *doors;
+
+    if (!depth)
+    {
+        return found;
+    }
+
+    rooms = found;
+    new_search = ({ });
+
+    index = -1;
+    size = sizeof(search);
+    while(++index < size)
+    {
+        exit_arr = (mixed *)search[index]->query_exit();
+
+        index2 = -3;
+        size2 = sizeof(exit_arr);
+        while((index2 += 3) < size2)
+        {
+            if (functionp(exit_arr[index2]))
+                continue;
+            if (objectp(exit_arr[index2]))
+                troom = exit_arr[index2];
+            else
+                troom = find_object(exit_arr[index2]);
+            if (objectp(troom) &&
+                (member_array(troom, rooms) < 0))
+            {
+                rooms += ({ troom });
+                new_search += ({ troom });
+            }
+        }
+
+        doors = search[index]->query_prop(ROOM_AO_DOOROB);
+
+        index2 = -1;
+        size2 = sizeof(doors);
+        while (++index2 < size2)
+        {
+            if (objectp(troom = find_object(doors[index2]->query_other_room())) &&
+                member_array(troom, rooms) < 0)
+            {
+                rooms += ({ troom });
+            }
+        }
+    }
+
+    return recurse_neighbours(rooms, new_search, depth - 1);
+}
+
+/*
+ * Function name: find_neighbours
+ * Description  : This function will recursively search through the
+ *                neighbouring rooms to a particular room to find the
+ *                rooms a shout or scream will be heard in.
+ * Arguments    : object *search - the rooms still to search.
+ *                int    depth   - the depth still to search.
+ *                int with_seed  - if true, include the seed room(s).
+ * Returns      : object * - the neighbouring rooms.
+ */
+object *
+find_neighbours(object *search, int depth = 1, int with_seed = 0)
+{
+    object *results;
+
+    if (!pointerp(search)) { search = ({ search }); }
+
+    results = recurse_neighbours( ({ }), search, depth);
+
+    return with_seed ? results : (results - search);
 }

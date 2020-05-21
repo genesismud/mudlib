@@ -25,6 +25,8 @@ inherit "/std/combat/unarmed";
 
 #define QEXC (this_object()->query_combat_object())
 
+static mapping hitloc_propagation = HITLOC_PROPAGATION;
+
 /*
  * Function name: cr_configure
  * Description:   Configures basic values for this humanoid.
@@ -167,8 +169,23 @@ cr_attack_desc(int aid)
 public void
 cr_got_hit(int hid, int ph, object att, int aid, int dt, int dam)
 {
-    /* We do not tell if we get hit in any special way
-    */
+    int slots = hitloc_propagation[hid];
+    if (!slots)
+        return;
+
+    /*
+     * We loop through the armours and apply damage to armours which
+     * are not on a hitloc but are dependant.
+     */
+    foreach (object armour: this_object()->query_armour(-1)) {
+        if (sizeof(armour->query_protects()) || armour->query_auto_load() ||
+            armour->query_prop(OBJ_M_NO_DROP))
+            continue;
+
+        if (slots & reduce(&operator(|)(,) , armour->query_slots())) {
+            armour->got_hit(hid, ph, att, dt, dam);
+        }
+    }
 }
 
 /*

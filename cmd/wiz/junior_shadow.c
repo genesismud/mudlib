@@ -19,6 +19,42 @@ inherit "/std/shadow";
 #include <macros.h>
 #include <std.h>
 
+private static string wizard;
+
+/*
+ * Function name: check_for_wizard
+ * Description  : Checks if we are a valid junior
+ * Returns      : 0 - No, not a junior or a bad wizard
+ * 		  1 - Yes, our wizard is valid
+ */
+nomask public int
+check_for_wizard()
+{
+    string wname, name;
+    /*
+     * We don't need to parse everything everytime.
+     * Just make sure the jr's wizard is still valid.
+     */
+    if (strlen(wizard))
+	return (SECURITY->query_wiz_rank(wizard) > WIZ_RETIRED);
+
+    name = this_player()->query_real_name();
+
+    if (sscanf(name, "%sjr", wname) == 0)
+	return 0;
+
+    foreach (string who : ({ wname }) + SECURITY->query_player_seconds())
+    {
+	if (SECURITY->query_wiz_rank(who) <= WIZ_RETIRED)
+	    continue;
+
+	wizard = who;
+	return 1;
+    }
+
+    return 0;
+}
+
 /*
  * Function name: remove_death_protection
  * Description  : Remove this shadow from a player.
@@ -60,7 +96,6 @@ illegal_shadow_use()
 public void
 do_die(object killer)
 {
-    string  name;
     object *enemies;
 
     if ((query_shadow_who()->query_hp() > 0) ||
@@ -74,16 +109,7 @@ do_die(object killer)
 	killer = previous_object();
     }
 
-    if (sscanf((string)query_shadow_who()->query_real_name(),
-	"%sjr", name) != 1)
-    {
-	illegal_shadow_use();
-	set_alarm(0.1, 0.0, "remove_death_protection");
-	query_shadow_who()->do_die(killer);
-	return;
-    }
-
-    if (SECURITY->query_wiz_rank(name) <= WIZ_RETIRED)
+    if (!check_for_wizard())
     {
 	illegal_shadow_use();
 	set_alarm(0.1, 0.0, "remove_death_protection");
@@ -142,17 +168,7 @@ query_death_protection()
 nomask public int
 shadow_me(object player)
 {
-    string name;
-
-    if (sscanf((string)player->query_real_name(), "%sjr", name) != 1)
-    {
-	tell_object(player,
-	    "ACK! You should have never gotten this shadow!\n");
-	illegal_shadow_use();
-	return 0;
-    }
-
-    if (SECURITY->query_wiz_rank(name) <= WIZ_RETIRED)
+    if (!check_for_wizard())
     {
 	tell_object(player,
 	    "ACK! You should have never gotten this shadow!\n");

@@ -1,33 +1,33 @@
 /*
-   /std/drink.c
-   
-   This is the standard object used for any form of drinkable stuff.
-
- Usage:
-
-        inherit "/std/drink";
-
-        void
-        create_drink()
-        {
-            set_soft_amount(amount_in_millilitres);
-            set_alco_amount(amount_in_millilitres);
-            set_name("name of drink");
-            set_drink_msg("extra message to get when drinking");
-            set_short(...);
-            set_long(....);
-        }
-
-        An imperial pint is 540 millilitres.
-        
-    If you want any special effect in your drink you can define
-    special_effect() which is called when drinking it.
-    The number of drinks you drank is passed as argument to special_effect();
-
-    Drinks that are coded in a special file will recover. With a special
-    file I mean that they aren't created using a clone of /std/drink and
-    calling the necessary functions externally, like /lib/pub does.
-*/
+ * /std/drink.c
+ *
+ * This is the standard object used for any form of drinkable stuff.
+ *
+ * Usage:
+ *
+ *      inherit "/std/drink";
+ *
+ *      void
+ *      create_drink()
+ *      {
+ *          set_soft_amount(amount_in_millilitres);
+ *          set_alco_amount(amount_in_millilitres);
+ *          set_name("name of drink");
+ *          set_drink_msg("extra message to get when drinking");
+ *          set_short(...);
+ *          set_long(....);
+ *      }
+ *
+ * An imperial pint is 540 millilitres.
+ *
+ * If you want any special effect in your drink you can define
+ * special_effect() which is called when drinking it.
+ * The number of drinks you drank is passed as argument to special_effect();
+ *
+ * Drinks that are coded in a special file will recover. With a special
+ * file I mean that they aren't created using a clone of /std/drink and
+ * calling the necessary functions externally, like /lib/pub does.
+ */
 
 #pragma save_binary
 #pragma strict_types
@@ -38,6 +38,8 @@ inherit "/std/heap";
 #include <composite.h>
 #include <files.h>
 #include <macros.h>
+#include <ss_types.h>
+#include <state_desc.h>
 #include <stdproperties.h>
 
 static  int     soft_amount,
@@ -120,7 +122,8 @@ set_drink_msg(string str)
 
 /*
  * Function name: set_soft_amount
- * Description  : sets the amount of liquid in the drink.
+ * Description  : sets the amount of liquid in the drink. This includes also
+ *                the volume of the alcohol.
  * Arguments    : int a - the amount of liquid.
  */
 public void
@@ -171,11 +174,20 @@ query_alco_amount()
 public mixed
 command_drink()
 {
+    mixed err;
     int am1, am2, pstuff, num, i;
 
     am1 = query_soft_amount();
     am2 = query_alco_amount();
     num = num_heap();
+
+    if (err = this_player()->query_prop(LIVE_M_NO_DRINK))
+    {
+        if (strlen(err))
+            return err;
+        else
+            return "You are unable to " + query_verb() + " anything.\n";
+    }
 
     for (i = 0; i < num; i++)
     {
@@ -185,14 +197,12 @@ command_drink()
             /* We couldn't drink all of the drinks in this heap, so split
              * it and drink what we can.
              */
-
             if (i == 0)
             {
                 return "The " + singular_short() + " is too much for you.\n";
             }
 
             split_heap(i);
-
             this_object()->special_effect(i);
 
             return 1;
@@ -204,9 +214,7 @@ command_drink()
             /* We couldn't drink all of the drinks in this heap, so split
              * it and drink what we can.
              */
-
             this_player()->drink_soft(-am1);
-
             if (i == 0)
             {
                 return "The " + singular_short() + " is too strong for you.\n";
@@ -256,6 +264,34 @@ config_split(int new_num, object orig)
 }
 
 /*
+ * Function name: config_merge
+ * Description  : When merging two identical drinks with different volumes,
+ *                average them by the number.
+ * Arguments    : object child - the child merged into this drink.
+ */
+void
+config_merge(object child)
+{
+    int total, count;
+
+    ::config_merge(child);
+
+    /* If there is a difference, average it. */
+    if (query_soft_amount() != child->query_soft_amount())
+    {
+        total = (query_soft_amount() * num_heap()) + (child->query_soft_amount() * child->num_heap());
+        count = num_heap() + child->num_heap();
+        set_soft_amount(total / count);
+    }
+    if (query_alco_amount() != child->query_alco_amount())
+    {
+        total = (query_alco_amount() * num_heap()) + (child->query_alco_amount() * child->num_heap());
+        count = num_heap() + child->num_heap();
+        set_alco_amount(total / count);
+    }
+}
+
+/*
  * Function name: stat_object
  * Description  : This function is called when a wizard wants to get more
  *                information about an object.
@@ -267,6 +303,44 @@ stat_object()
     return ::stat_object() +
         "Soft: " + soft_amount + "\n" +
         "Alco: " + alco_amount + "\n";
+}
+
+/*
+ * Function name: appraise_object
+ * Description  : Called to appraise the object using the command thereto.
+ * Arguments    : int num - optional - if given, use this number. Otherwise
+ *                    use the appraise object skill of the player.
+ */
+void
+appraise_object(int num)
+{
+    int value, skill;
+    string liquid, alcohol;
+
+    ::appraise_object(num);
+
+    skill = (num ? num : this_player()->query_skill(SS_APPR_OBJ));
+    skill = random((1000 / (skill + 1)), atoi(OB_NUM(this_object())));
+    value = cut_sig_fig(soft_amount + (skill % 2 ? -skill % 70 : skill) * soft_amount / 100);
+
+    /* Display whole liters, fractions of liters or milliliters. */
+    if ((value > 10000) || (!(value % 1000)))
+        liquid = (value / 1000) + " liters";
+    else if (value > 1000)
+        liquid = sprintf("%3.1f", itof(value) / 1000.0) + " liters";
+    else
+        liquid = value + " milliliters";
+
+    if (!alco_amount)
+        alcohol = "no";
+    else
+    {
+        value = (alco_amount * 100) / soft_amount;
+        alcohol = GET_NUM_LEVEL_DESC(value, SD_DRINK_ALCO_LEVELS, SD_DRINK_ALCO_DESCS);
+   }
+
+    write("The liquid volume of each " + singular_short() + " is " +
+        liquid + ". It contains " + alcohol + " alcohol.\n");
 }
 
 /*

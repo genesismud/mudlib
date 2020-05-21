@@ -1,7 +1,8 @@
 CODING STANDARDS
 ================
 
-These standards are mandatory for all new code in the game.
+These standards are mandatory for all new code mudlib code and strongly
+encouraged for other code in the game.
 
 There are several reasons to ask everyone to use uniform code standards in
 their code:
@@ -102,6 +103,8 @@ STANDARDS
 - Avoid excessive use of preprocessor macros. Macros should always serve to
   increase the readability and portability of code, not just to save a few
   typing strokes.
+  Macros like e.g. E(x) or ENV(x) for environment() or CAP(x) for capitalize(x)
+  should be avoided in this context.
 
 COMMENT HEADER EXAMPLE
 ======================
@@ -145,6 +148,8 @@ EXAMPLE FOLLOWING THE STANDARDS
  *
  * It can be found lying about in the bank in /doc/examples/trade/bank.c
  */
+
+#pragma strict_types
 
 inherit "/std/drink";
 

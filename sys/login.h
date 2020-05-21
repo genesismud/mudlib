@@ -9,6 +9,6 @@
 #ifndef SYS_LOGIN_DEFINED
 #define SYS_LOGIN_DEFINED
 
-#include "/config/login/login.h"
+#include "/config/sys/login.h"
 
 #endif SYS_LOGIN_DEFINED

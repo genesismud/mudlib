@@ -18,7 +18,10 @@ public void check_memory(int dodecay);
 string creator_object(object obj);
 public int valid_player_info(mixed actor, string name, string func);
 varargs int valid_query_ip(mixed actor, object target);
+int valid_read(string file, mixed reader, string func);
+int valid_write(string file, mixed writer, string func);
 int exist_player(string pl_name);
+public int query_start_time();
 
 /*
  * /secure/master/fob.c

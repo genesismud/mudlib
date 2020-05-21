@@ -19,10 +19,9 @@ inherit "/std/container";
 #include <subloc.h>
 
 #include "/std/room/exits.c"
-#include "/std/room/description.c"
-#include "/std/room/link.c"
-#include "/std/room/move.c"
 #include "/std/room/terrain.c"
+#include "/std/room/description.c"
+#include "/std/room/move.c"
 #include "/std/room/objects.c"
 
 static object   room_link_cont;	/* Linked container */
@@ -43,9 +42,8 @@ create_room()
 
 /*
  * Function name: create_container
- * Description  : Constructor. Since you may not redefine this function,
- *                you must define the function create_room() to create your
- *                room.
+ * Description  : Constructor. Since you may not redefine this function, you
+ *                must define the function create_room() to create your room.
  */
 nomask void
 create_container()
@@ -68,7 +66,7 @@ create_container()
     }
 
     create_room();
-    reset_auto_objects();
+    init_map_data();
 
     accept_here = all_inventory(this_object());
     if (!sizeof(accept_here))
@@ -123,8 +121,6 @@ nomask void
 reset_container()
 {
     cleanup_loot();
-
-    reset_auto_objects();
     reset_room();
 
     if (!sizeof(accept_here))
@@ -243,8 +239,24 @@ update_internal(int l, int w, int v)
     ::update_internal(l, w, v);
 
     if (room_link_cont)
+    {
 	room_link_cont->update_internal(l, w, v);
+    }
 }
+
+#if 0
+/*
+ * Function name: hook_change_invis
+ * Description  : Called when the (in)visibility state of a living in the room
+ *                changes. Use obj->query_invis() to find out the new state.
+ *                This is a non-existent pseudo-routine for documentation.
+ * Arguments    : object ob - the object that changes visibility.
+ */
+public void
+hook_change_invis(object ob)
+{
+}
+#endif
 
 /*
  * Function name: clean_up
@@ -288,12 +300,11 @@ stat_object()
     str = ::stat_object();
 
     if (query_prop(ROOM_I_INSIDE))
-	str += "inside\t";
+	str += "inside\t ";
     else
-	str += "outside\t";
+	str += "outside\t ";
 
     type = query_prop(ROOM_I_TYPE);
-    str += " ";
     switch (type)
     {
     case 0: str += "normal"; break;
@@ -303,7 +314,6 @@ stat_object()
     case 4: str += "beach"; break;
     default: str += "unknown type"; break;
     }
-    str += "\t";
 
     return str + "\n";
 }
@@ -354,8 +364,6 @@ public mixed
 block_action(string cmd, object actor, object target, int cmd_type)
 {
     string subl, acs_type;
-
-    /* Check for subloc restrictions */
 
     /* No problem if both actor and target are in the same subloc */
     if ((subl = actor->query_subloc()) == target->query_subloc())

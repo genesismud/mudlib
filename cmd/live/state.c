@@ -32,6 +32,7 @@ inherit "/cmd/std/command_driver";
 #include <files.h>
 #include <filter_funs.h>
 #include <formulas.h>
+#include <gmcp.h>
 #include <language.h>
 #include <login.h>
 #include <mail.h>
@@ -48,11 +49,12 @@ inherit "/cmd/std/command_driver";
 /*
  * Global constants
  */
-private mixed beauty_strings, skillmap, compare_strings;
+private mixed beauty_strings, compare_strings;
 private string *stat_names, *health_state, *mana_state, *enc_weight;
-private string *intox_state, *stuff_state, *soak_state, *improve_fact;
+private string *intox_state, *stuff_state, *soak_state, *progress_fact;
 private string *brute_fact, *panic_state, *fatigue_state;
 private mapping lev_map;
+private mapping skillmap;
 
 /* Prototype */
 public int second(string str);
@@ -61,15 +63,12 @@ public int second(string str);
 void
 create()
 {
-    seteuid(getuid(this_object())); 
-    
+    seteuid(getuid(this_object()));
+
     /* These global arrays are created once for all since they are used
-       quite often. They should be considered constant, so do not mess
-       with them
-    */
-
+     * quite often. They should be considered constant, so do not mess
+     * with them. */
     skillmap =        SS_SKILL_DESC;
-
     stat_names =      SD_STAT_NAMES;
 
     compare_strings = ({ SD_COMPARE_STR, SD_COMPARE_DEX, SD_COMPARE_CON,
@@ -77,7 +76,6 @@ create()
                          SD_COMPARE_HIT, SD_COMPARE_PEN, SD_COMPARE_AC });
 
     beauty_strings =  ({ SD_BEAUTY_FEMALE, SD_BEAUTY_MALE });
-
     brute_fact =      SD_BRUTE_FACT;
     health_state =    SD_HEALTH;
     mana_state =      SD_MANA;
@@ -86,9 +84,8 @@ create()
     soak_state =      SD_SOAK;
     stuff_state =     SD_STUFF;
     intox_state =     SD_INTOX;
-    improve_fact =    SD_IMPROVE;
+    progress_fact =   SD_PROGRESS;
     enc_weight =      SD_ENC_WEIGHT;
-
     lev_map =         SD_LEVEL_MAP;
 }
 
@@ -145,7 +142,7 @@ query_cmdlist()
  *                  sublocations responsible for extra descriptions of the
  *                  living object.
  */
-public void 
+public void
 using_soul(object live)
 {
     live->add_subloc(SUBLOC_MISCEXTRADESC, file_name(this_object()));
@@ -153,7 +150,7 @@ using_soul(object live)
 }
 
 /* **************************************************************************
- * Here follows some support functions. 
+ * Here follows some support functions.
  * **************************************************************************/
 
 /*
@@ -164,8 +161,8 @@ using_soul(object live)
 public string
 beauty_text(int num, int sex)
 {
-    if (sex != 1)
-        sex = 0;
+    if (sex != G_FEMALE)
+        sex = G_MALE;
 
     return GET_PROC_DESC(num, beauty_strings[sex]);
 }
@@ -173,42 +170,16 @@ beauty_text(int num, int sex)
 public string
 show_subloc_size(object on, object for_obj)
 {
-    string race, res;
-    int val, rval, *proc;
+    string race = on->query_race();
 
-    race = on->query_race();
-
-    if (member_array(race, RACES) >= 0)
+    if (!IN_ARRAY(race, RACES) ||
+        !strlen(on->query_height_desc()))
     {
-        val = on->query_prop(CONT_I_HEIGHT);
-        rval = RACEATTR[race][0];
-        val = 100 * val / (rval ? rval : val);
-        proc = SPREAD_PROC;
-
-        for (rval = 0; rval < sizeof(proc); rval++)
-            if (val <= proc[rval])
-                break;
-        rval = (rval < sizeof(proc) ? rval : sizeof(proc) -1 );
-
-        res = " " + HEIGHTDESC[rval] + " and ";
-
-        val = on->query_prop(CONT_I_WEIGHT) / on->query_prop(CONT_I_HEIGHT);
-        rval = RACEATTR[race][5];
-        val = 100 * val / (rval ? rval : val);
-        proc = SPREAD_PROC;
-
-        for (rval = 0; rval < sizeof(proc); rval++)
-            if (val <= proc[rval])
-                break;
-        rval = (rval < sizeof(proc) ? rval : sizeof(proc) -1 );
-
-        res += WIDTHDESC[rval] + " for " + LANG_ADDART(on->query_race_name()) +
-            ".\n";
+	return "";
     }
-    else
-        res = "";
 
-    return res;
+    return " " + on->query_height_desc() + " and " + on->query_width_desc() +
+        " for " + LANG_ADDART(on->query_race_name()) + ".\n";
 }
 
 public string
@@ -217,21 +188,18 @@ show_subloc_looks(object on, object for_obj)
     if (on->query_prop(NPC_I_NO_LOOKS))
         return "";
 
-    return (for_obj == on ?
-                "You look " : capitalize(on->query_pronoun()) + " looks ") +
-                beauty_text(for_obj->my_opinion(on),
-                            (on->query_gender() == G_FEMALE ? 0 : 1)) + ".\n";
+    return (for_obj == on ? "You look " : capitalize(on->query_pronoun()) + " looks ") +
+        beauty_text(for_obj->my_opinion(on),
+        (on->query_gender() == G_FEMALE ? G_MALE : G_FEMALE)) + ".\n";
 }
 
 public string
 show_subloc_fights(object on, object for_obj)
 {
-    object eob;
+    object eob = (object)on->query_attack();
 
-    eob = (object)on->query_attack();
-    
-    return " fighting " + (eob == for_obj ? "you" : 
-                           (string)eob->query_the_name(for_obj)) + ".\n";
+    return " fighting " + (eob == for_obj ? "you" :
+        (string)eob->query_the_name(for_obj)) + ".\n";
 }
 
 public string
@@ -244,7 +212,7 @@ show_subloc_health(object on, object for_obj)
  * Function name: show_subloc
  * Description:   Shows the specific sublocation description for a living
  */
-public string 
+public string
 show_subloc(string subloc, object on, object for_obj)
 {
     string res, cap_pronoun, cap_pronoun_verb, tmp;
@@ -264,14 +232,14 @@ show_subloc(string subloc, object on, object for_obj)
         cap_pronoun_verb = res;
         cap_pronoun = capitalize(on->query_pronoun()) + " seems to be ";
     }
-    
+
     if (strlen(tmp = show_subloc_size(on, for_obj)))
         res += tmp;
     else
         res = "";
 
     res += show_subloc_looks(on, for_obj);
-    
+
     if (on->query_attack())
         res += cap_pronoun_verb + show_subloc_fights(on, for_obj);
 
@@ -302,7 +270,7 @@ get_proc_text(int proc, mixed maindescs, int turnindex = 0, mixed subdescs = 0)
 }
 
 /* **************************************************************************
- * Here follows the actual functions. Please add new functions in the 
+ * Here follows the actual functions. Please add new functions in the
  * same order as in the function name list.
  * **************************************************************************/
 
@@ -332,8 +300,7 @@ write_adverbs(string *adverb_list, int total)
         (size == 1 ? " matches" : " match") + " your inquiry.\n\n");
 
     index = -1;
-    size = strlen(ALPHABET);
-    while(++index < size)
+    while(++index < ALPHABET_LEN)
     {
 	words = filter(adverb_list,
             &wildmatch((ALPHABET[index..index] + "*"), ));
@@ -682,6 +649,98 @@ compare_armour(object armour1, object armour2)
         print2 + ".\n");
 }
 
+/*
+ * Function name:   compare_projectiles
+ * Description:     Compares the stats of two projectiles.
+ * Arguments:       (object) projectile1 - the left hand side to compare.
+ *                  (object) projectile2 - the right hand side to compare.
+ * Returns:         Nothing
+ */
+void
+compare_projectiles(object projectile1, object projectile2)
+{
+    object  tmp;
+    string  str1, str2, print1, print2;
+    int     skill, seed, swap, stat1, stat2;
+    
+    skill = (2000 / (1 + this_player()->query_skill(SS_APPR_OBJ) +
+            this_player()->query_skill(SS_WEP_MISSILE)));
+    seed = atoi(OB_NUM(projectile1)) + atoi(OB_NUM(projectile2));
+
+    /* Always use the same order. After all, we don't want "compare X with Y"
+     * to differ from "compare Y with X".
+     */
+    if (OB_NUM(projectile1) > OB_NUM(projectile2))
+    {
+        tmp = projectile1;
+        projectile1 = projectile2;
+        projectile2 = tmp;
+        swap = 1;
+    }
+
+    str1 = projectile1->singular_short(this_player());
+    str2 = projectile2->singular_short(this_player());
+
+    /* Some people will want to compare items with the same description. */
+    if (str1 == str2)
+    {
+        if (swap)
+        {
+            str1 = "first " + str1;
+            str2 = "second " + str2;
+        }
+        else
+        {
+            str2 = "first " + str2;
+            str1 = "second " + str1;
+        }
+    }
+
+    /* Gather the to-hit values. */
+    stat1 = projectile1->query_hit() + random(skill, seed);
+    stat2 = projectile2->query_hit() + random(skill, seed + 27);
+
+    if (stat1 > stat2)
+    {
+        stat1 = (100 - ((80 * stat2) / stat1));
+        print1 = str1;
+        print2 = str2;
+    }
+    else
+    {
+        stat1 = (100 - ((80 * stat1) / stat2));
+        print1 = str2;
+        print2 = str1;
+    }
+
+    stat1 = ((stat1 * sizeof(compare_strings[6])) / 100);
+    write("Hitting someone with the " + print1 + " is " +
+        compare_strings[6][((stat1 > 3) ? 3 : stat1)] + " the " +
+        print2 + " and ");
+
+    /* Compare the penetration values. */
+    stat1 = projectile1->query_pen() + random(skill, seed);
+    stat2 = projectile2->query_pen() + random(skill, seed + 27);
+
+    if (stat1 > stat2)
+    {
+        stat1 = (100 - ((80 * stat2) / stat1));
+        print1 = str1;
+        print2 = str2;
+    }
+    else
+    {
+        stat1 = (100 - ((80 * stat1) / stat2));
+        print1 = str2;
+        print2 = str1;
+    }
+
+    stat1 = ((stat1 * sizeof(compare_strings[7])) / 100);
+    write("damage inflicted by the " + print1 + " is " +
+        compare_strings[7][((stat1 > 3) ? 3 : stat1)] + " the " +
+        print2 + ".\n");
+} /* compare_projectiles */
+
 int
 compare(string str)
 {
@@ -821,6 +880,21 @@ compare(string str)
         compare_armour(obj1, obj2);
         return 1;
     }
+    
+    /* Compare two projectiles. */
+    if (IS_PROJECTILE_OBJECT(obj1))
+    {
+        if (function_exists("create_projectile", obj2) != 
+            function_exists("create_projectile", obj1))
+        {
+            notify_fail("The " + obj1->short(this_player()) + " can only be "
+            + "compared to another projectile of the same type.\n");
+            return 0;
+        }
+
+        compare_projectiles(obj1, obj2);
+        return 1;
+    }
 
     notify_fail("It does not seem possible to compare " +
         LANG_THESHORT(obj1) + " with " + LANG_THESHORT(obj2) + ".\n");
@@ -840,8 +914,10 @@ email(string str)
         return 1;
     }
 
-    this_player()->set_mailaddr(str);
-    write("Changed your email address.\n");
+    if (this_player()->set_mailaddr(str)) {
+        write("Changed your email address.\n");
+    }
+
     return 1;
 }
 
@@ -852,8 +928,6 @@ int
 health(string str)
 {
     object *oblist = ({ });
-    int index;
-    int size;
     int display_self;
 
     str = (stringp(str) ? str : "");
@@ -924,11 +998,18 @@ health(string str)
 
     if (display_self)
     {
-        write("You are physically " +
-            GET_NUM_DESC(this_player()->query_hp(), this_player()->query_max_hp(), health_state) +
-            " and mentally " +
-            GET_NUM_DESC(this_player()->query_mana(), this_player()->query_max_mana(), mana_state) +
-            ".\n");
+        if (this_player()->query_ghost())
+        {
+            write("You would be feeling much better with an actual body.\n");
+        }
+        else
+        { 
+            write("You are physically " +
+                GET_NUM_DESC(this_player()->query_hp(), this_player()->query_max_hp(), health_state) +
+                " and mentally " +
+                GET_NUM_DESC(this_player()->query_mana(), this_player()->query_max_mana(), mana_state) +
+                ".\n");
+        }
     }
     else if (!sizeof(oblist))
     {
@@ -936,12 +1017,10 @@ health(string str)
         return 1;
     }
 
-    index = -1;
-    size = sizeof(oblist);
-    while(++index < size)
+    foreach(object obj: oblist)
     {
-        write(oblist[index]->query_The_name(this_player()) + " is " +
-            show_subloc_health(oblist[index], this_player()) + ".\n");
+        write(obj->query_The_name(this_player()) + " is " +
+            show_subloc_health(obj, this_player()) + ".\n");
     }
     return 1;
 }
@@ -958,21 +1037,24 @@ levels(string str)
 
     if (!str)
     {
-        notify_fail("Available level descriptions:\n" + 
-                    break_string(COMPOSITE_WORDS(ix) + ".", 70, 3) + "\n");
+        notify_fail("Available level descriptions:\n" +
+            break_string(COMPOSITE_WORDS(ix) + ".", 77, 3) + "\n");
         return 0;
     }
+
+    /* A nice gesture of backward compatibility for lazy mortals and their scripts. */
+    if (str == "improve") str = "progress";
 
     levs = lev_map[str];
     if (!sizeof(levs))
     {
-        notify_fail("No such level descriptions. Available:\n" + 
-                    break_string(COMPOSITE_WORDS(ix) + ".", 70, 3) + "\n");
+        notify_fail("No such level descriptions. Available:\n" +
+            break_string(COMPOSITE_WORDS(ix) + ".", 77, 3) + "\n");
         return 0;
     }
 
     write("Level descriptions for: " + capitalize(str) + "\n" +
-          break_string(COMPOSITE_WORDS(levs) + ".", 70, 3) + "\n");
+        break_string(COMPOSITE_WORDS(levs) + ".", 77, 3) + "\n");
     return 1;
 }
 
@@ -983,32 +1065,40 @@ nomask int
 options(string arg)
 {
     string *args, rest;
-    int     wi;
+    int     wi, proc;
+    int     client;
 
     if (!stringp(arg))
     {
-        options("morelen");
-        options("screenwidth");
+        /* Please keep this list sorted (on the associated text). */
+        options("autowrap");
         options("brief");
         options("echo");
-        options("wimpy");
-        options("see");
-        options("unarmed");
         options("gagmisses");
-        options("web");
-//        options("merciful");
+        options("intimate");
+//      options("merciful");
+        options("morelen");
+        options("giftfilter");
+        options("screenwidth");
+        options("see");
         options("showunmet");
-        options("autowrap");
+        options("silentships");
         options("inventory");
+        options("unarmed");
+        options("web");
+        options("wimpy");
 	if (this_player()->query_wiz_level())
 	{
+	    write("\n");
+	    options("autoline");
 	    options("autopwd");
-	    options("autolinecmd");
+	    options("alwaysknown");
+	    options("allcommune");
 	    options("timestamp");
 	}
         return 1;
     }
-    
+
     args = explode(arg, " ");
     if (sizeof(args) == 1)
     {
@@ -1016,96 +1106,135 @@ options(string arg)
         {
         case "morelen":
         case "more":
-            write("More length:     " +
-                this_player()->query_option(OPT_MORE_LEN) + "\n");
+	    client = this_player()->query_prop(OPT_MORE_LEN);
+            write("More length         <morelen>: " +
+                this_player()->query_option(OPT_MORE_LEN, 1) +
+		(client ? "  (client = " + client + ")" : "") + "\n");
             break;
 
         case "screenwidth":
         case "sw":
-            wi = this_player()->query_option(OPT_SCREEN_WIDTH);
-            write("Screen width:    " + ((wi > -1) ? ("" + wi) : "Off") + "\n");
+	    client = this_player()->query_prop(OPT_SCREEN_WIDTH);
+            wi = this_player()->query_option(OPT_SCREEN_WIDTH, 1);
+            write("Screen width    <screenwidth>: " +
+	        ((wi > -1) ? ("" + wi) : "Off") +
+		(client ? "  (client = " + client + ")" : "") + "\n");
             break;
 
         case "brief":
-            write("Brief display:   " +
+            write("Brief display         <brief>: " +
                 (this_player()->query_option(OPT_BRIEF) ? "On" : "Off") + "\n");
             break;
 
         case "echo":
-            write("Echo commands:   " +
+            write("Echo commands          <echo>: " +
                 (this_player()->query_option(OPT_ECHO) ? "On" : "Off") + "\n");
             break;
 
         case "wimpy":
             wi = this_player()->query_whimpy();
-            write("Wimpy at:       '");
+            write("Wimp from combat at   <wimpy>: ");
             if (wi)
             {
                 wi = wi * sizeof(health_state) / 100;
-                write(capitalize(health_state[wi]) + "'\n");
+                write(capitalize(health_state[wi]) + "\n");
             }
             else
-                write("Brave'\n");
+                write("Brave (do not wimp)\n");
             break;
-            
+
         case "see":
         case "fights":
-            write("See fights:      " +
+            write("See other fights     <fights>: " +
                 (this_player()->query_option(OPT_NO_FIGHTS) ? "Off" : "On") + "\n");
             break;
 
         case "unarmed":
-            write("Unarmed combat:  " + 
+            write("Unarmed combat      <unarmed>: " +
                 (this_player()->query_option(OPT_UNARMED_OFF) ? "Off" : "On") + "\n");
             break;
 
         case "gagmisses":
-            write("Gag misses:      " + 
+            write("Gag your misses   <gagmisses>: " +
                 (this_player()->query_option(OPT_GAG_MISSES) ? "On" : "Off") + "\n");
             break;
 
+	case "gift":
+        case "giftfilter":
+            write("Refuse gifts     <giftfilter>: " +
+                (this_player()->query_option(OPT_GIFT_FILTER) ? "On" : "Off") + "\n");
+            break;
+
+        case "intimate":
+            write("Intimate behaviour <intimate>: " +
+                (this_player()->query_option(OPT_BLOCK_INTIMATE) ? "Off" : "On") + "\n");
+            break;
+
         case "merciful":
-            write("Merciful combat: " + 
+            write("Merciful combat    <mercifil>: " +
                 (this_player()->query_option(OPT_MERCIFUL_COMBAT) ? "On" : "Off") + "\n");
             break;
 
         case "showunmet":
-            write("Show unmet:      "+ 
+            write("Show unmet descs  <showunmet>: " +
                 (this_player()->query_option(OPT_SHOW_UNMET) ? "On" : "Off") + "\n");
             break;
 
+        case "silentships":
+            write("Silent ships    <silentships>: " +
+                (this_player()->query_option(OPT_SILENT_SHIPS) ? "On" : "Off") + "\n");
+            break;
+
         case "autowrap":
-            write("Auto-wrapping:   " + 
+            write("Auto wrapping      <autowrap>: " +
                 (this_player()->query_option(OPT_AUTOWRAP) ? "On" : "Off") + "\n");
             break;
 
         case "web":
-            write("Web publication: " +
-                (this_player()->query_option(OPT_WEBPERM) ? "No" : "Yes") + "\n");
+            write("Web rankings/stats      <web>: " +
+                (this_player()->query_option(OPT_WEB_PERMISSION) ? "On" : "Off") + "\n");
             break;
 
         case "inventory":
         case "table":
-            write("Table inventory: " +
+            write("Table inventory       <table>: " +
                 (this_player()->query_option(OPT_TABLE_INVENTORY) ? "On" : "Off") + "\n");
             break;
+
+	case "autoline":
+	case "cmd":
+	    if (this_player()->query_wiz_level())
+	    {
+		write("Auto line cmds     <autoline>: " +
+		    (this_player()->query_option(OPT_AUTOLINECMD) ? "On" : "Off") + "\n");
+		break;
+	    }
+	    /* Intentional fallthrough to default if not a wizard. */
 
         case "autopwd":
 	case "pwd":
 	    if (this_player()->query_wiz_level())
 	    {
-	        write("Auto pwd on cd:  " +
+	        write("Auto pwd on cd      <autopwd>: " +
 		    (this_player()->query_option(OPT_AUTO_PWD) ? "On" : "Off") + "\n");
 		break;
 	    }
 	    /* Intentional fallthrough to default if not a wizard. */
 
-	case "autolinecmd":
-	case "cmd":
+	case "allcommune":
 	    if (this_player()->query_wiz_level())
 	    {
-		write("Auto line cmds:  " +
-		    (this_player()->query_option(OPT_AUTOLINECMD) ? "On" : "Off") + "\n");
+		write("See all communes <allcommune>: " +
+		    (this_player()->query_option(OPT_ALL_COMMUNE) ? "On" : "Off") + "\n");
+		break;
+	    }
+	    /* Intentional fallthrough to default if not a wizard. */
+
+	case "alwaysknown":
+	    if (this_player()->query_wiz_level())
+	    {
+		write("Be known to all <alwaysknown>: " +
+		    (this_player()->query_option(OPT_ALWAYS_KNOWN) ? "On" : "Off") + "\n");
 		break;
 	    }
 	    /* Intentional fallthrough to default if not a wizard. */
@@ -1113,12 +1242,12 @@ options(string arg)
 	case "timestamp":
 	    if (this_player()->query_wiz_level())
 	    {
-		write("Timestamp lines: " +
+		write("Timestamp lines   <timestamp>: " +
 		    (this_player()->query_option(OPT_TIMESTAMP) ? "On" : "Off") + "\n");
 		break;
 	    }
 	    /* Intentional fallthrough to default if not a wizard. */
-	    
+
 	default:
             return notify_fail("Syntax error: No such option.\n");
             break;
@@ -1160,7 +1289,7 @@ options(string arg)
         }
         options("screenwidth");
         break;
-        
+
     case "brief":
         this_player()->set_option(OPT_BRIEF, (args[1] == "on"));
         options("brief");
@@ -1172,10 +1301,10 @@ options(string arg)
         break;
 
     case "wimpy":
-        if (args[1] == "brave")
+        if (lower_case(args[1]) == "brave")
         {
             this_player()->set_whimpy(0);
-        }            
+        }
         else if (args[1] == "?")
             write("brave, " + implode(health_state, ", ") + "\n");
         else
@@ -1190,19 +1319,23 @@ options(string arg)
                 return 0;
             }
 
-            wi = (100 * (wi + 1)) / sizeof(health_state);
-            if (wi > 99)
-                wi = 99;
+            proc = min(99, (100 * (wi + 1)) / sizeof(health_state));
+	    /* Verify the reverse calculation to avoid rounding issues. */
+	    if ((proc * sizeof(health_state) / 100) != wi)
+	    {
+		proc--;
+	    }
 
-            this_player()->set_whimpy(wi);
+            this_player()->set_whimpy(proc);
         }
         options("wimpy");
         break;
 
     case "see":
-    case "fights":
         /* This to accomodate people typing "options see fights" */
         args -= ({ "fights" });
+        /* Intentional fallthrough */
+    case "fights":
         if (sizeof(args) == 2)
         {
             this_player()->set_option(OPT_NO_FIGHTS, (args[1] != "on"));
@@ -1226,6 +1359,26 @@ options(string arg)
         options("gagmisses");
         break;
 
+    case "gift":
+        /* This to accomodate people typing "options gift filter" */
+        args -= ({ "filter" });
+        /* Intentional fallthrough */
+    case "giftfilter":
+        if (sizeof(args) == 2)
+        {
+            this_player()->set_option(OPT_GIFT_FILTER, (args[1] == "on"));
+        }
+        options("giftfilter");
+        break;
+
+    case "intimate":
+        if (sizeof(args) == 2)
+        {
+            this_player()->set_option(OPT_BLOCK_INTIMATE, (args[1] != "on"));
+        }
+        options("intimate");
+        break;
+
     case "merciful":
         this_player()->set_option(OPT_MERCIFUL_COMBAT, (args[1] == "on"));
         options("merciful");
@@ -1236,13 +1389,18 @@ options(string arg)
         options("showunmet");
         break;
 
+    case "silentships":
+        this_player()->set_option(OPT_SILENT_SHIPS, (args[1] == "on"));
+        options("silentships");
+        break;
+
     case "autowrap":
         this_player()->set_option(OPT_AUTOWRAP, (args[1] == "on"));
         options("autowrap");
         break;
 
     case "web":
-        this_player()->set_option(OPT_WEBPERM, (args[1] == "no"));
+        this_player()->set_option(OPT_WEB_PERMISSION, (args[1] == "on"));
         options("web");
         break;
 
@@ -1251,6 +1409,24 @@ options(string arg)
         this_player()->set_option(OPT_TABLE_INVENTORY, (args[1] == "on"));
         options("inventory");
         break;
+
+    case "allcommune":
+        if (this_player()->query_wiz_level())
+	{
+            this_player()->set_option(OPT_ALL_COMMUNE, (args[1] == "on"));
+            options("allcommune");
+	    break;
+	}
+        /* Intentional fallthrough to default if not a wizard. */
+
+    case "alwaysknown":
+        if (this_player()->query_wiz_level())
+	{
+            this_player()->set_option(OPT_ALWAYS_KNOWN, (args[1] == "on"));
+            options("alwaysknown");
+	    break;
+	}
+        /* Intentional fallthrough to default if not a wizard. */
 
     case "autopwd":
     case "pwd":
@@ -1262,14 +1438,14 @@ options(string arg)
 	}
         /* Intentional fallthrough to default if not a wizard. */
 
-    case "autolinecmd":
+    case "autoline":
     case "cmd":
         if (this_player()->query_wiz_level())
 	{
             this_player()->set_option(OPT_AUTOLINECMD,(args[1] == "on"));
 	    // Make sure the line command set gets updated.
-	    "/cmd/wiz/apprentice"->update_commands();
-            options("autolinecmd");
+	    WIZ_CMD_APPRENTICE->update_commands();
+            options("autoline");
 	    break;
 	}
         /* Intentional fallthrough to default if not a wizard. */
@@ -1305,10 +1481,13 @@ options(string arg)
 static void
 second_password(string password, string name)
 {
-    if (SECURITY->register_second(name, password))
+    if (!SECURITY->register_second(name, password))
     {
-        second("list");
+        /* Error message would be printed within the call. */
+        return;
     }
+    
+    second("list");
 }
 
 public int
@@ -1324,6 +1503,7 @@ second(string str)
     args = explode(lower_case(str), " ");
     switch (args[0])
     {
+    case "a":
     case "add":
         if (sizeof(args) != 2)
         {
@@ -1363,6 +1543,7 @@ varargs int
 vitals(string str, object target = this_player())
 {
     string name;
+    string hyped;
     int self;
     int value1;
     int value2;
@@ -1394,6 +1575,7 @@ vitals(string str, object target = this_player())
         vitals("intox", this_player());
         vitals("alignment", this_player());
         vitals("encumbrance", this_player());
+        vitals("quickness", this_player());
         vitals("age", this_player());
         return 1;
 
@@ -1404,7 +1586,13 @@ vitals(string str, object target = this_player())
 
     case "health":
     case "mana":
-        write((self ? "You are" : (name + " is")) + " physically " + 
+        if (this_player()->query_ghost())
+        {
+            write((self ? "You" : name) +
+                " would be feeling much better with an actual body.\n");
+            return 1;
+        }
+        write((self ? "You are" : (name + " is")) + " physically " +
             GET_NUM_DESC(target->query_hp(), target->query_max_hp(), health_state) +
             " and mentally " +
             GET_NUM_DESC(target->query_mana(), target->query_max_mana(), mana_state) +
@@ -1433,20 +1621,28 @@ vitals(string str, object target = this_player())
 
     case "panic":
     case "fatigue":
+        hyped = (target->query_relaxed_from_combat() ? "" : " and full of adrenaline");
         /* Current fatigue really is an "energy left" value that counts down. */
         value1 = target->query_max_fatigue() - target->query_fatigue();
         write((self ? "You feel" : (name + " feels")) + " " +
             GET_NUM_DESC_SUB(target->query_panic(), F_PANIC_WIMP_LEVEL(target->query_stat(SS_DIS)), panic_state, SD_STAT_DENOM, 2) +
-            " and " +
-            GET_NUM_DESC_SUB(value1, target->query_max_fatigue(), fatigue_state, SD_STAT_DENOM, 1) + ".\n");
+            (strlen(hyped) ? ", " : " and ") +
+            GET_NUM_DESC_SUB(value1, target->query_max_fatigue(), fatigue_state, SD_STAT_DENOM, 1) +
+            hyped + ".\n");
         return 1;
 
     case "stuffed":
     case "soaked":
         write((self ? "You can" : (name + " can")) + " " +
             GET_NUM_DESC(target->query_stuffed(), target->query_prop(LIVE_I_MAX_EAT), stuff_state) +
-            " and " +
+	    " and " +
             GET_NUM_DESC(target->query_soaked(), target->query_prop(LIVE_I_MAX_DRINK), soak_state) + ".\n");
+        return 1;
+    case "quickness":
+    case "haste":
+        int value = ftoi((1.0 - target->query_speed(1.0)) * 100.0);
+        string desc = GET_NUM_DESC_CENTER(value, 60, 0, 1, SD_QUICKNESS);
+        write((self ? "You are" : (name + " is")) + " moving at " + LANG_ADDART(desc) + " pace.\n");
         return 1;
 
     default:
@@ -1467,6 +1663,7 @@ vitals(string str, object target = this_player())
         vitals("intox", target);
         vitals("alignment", target);
         vitals("encumbrance", target);
+        vitals("quickness", target);
         vitals("age", target);
         return 1;
     }
@@ -1482,14 +1679,15 @@ vitals(string str, object target = this_player())
 varargs int
 show_stats(string str)
 {
-    int a, i, j, c;
+    int limit, index, stat;
     object ob;
-    string start_be, start_have, *stats;
+    string start_be, start_have, text, *stats;
+    string *immortal = ({ }), *epic = ({ }), *supreme = ({ });
     string orig_brute, actual_brute;
 
     if (str == "reset")
     {
-        this_player()->add_prop(PLAYER_I_LASTXP, this_player()->query_exp());
+	this_player()->reset_exp_gain_desc();
         write("Resetting your progress counter.\n");
         return show_stats(0);
     }
@@ -1497,6 +1695,7 @@ show_stats(string str)
     if (!strlen(str))
     {
         ob = this_player();
+        str = "You";
         start_be = "You are ";
         start_have = "You have ";
     }
@@ -1507,58 +1706,71 @@ show_stats(string str)
             notify_fail("Curious aren't we?\n");
             return 0;
         }
-        start_be = capitalize(str) + " is ";
-        start_have = capitalize(str) + " has ";
-    }
-
-    a = ob->query_prop(PLAYER_I_LASTXP);
-    j = ob->query_exp() - a;
-    if (a <= 0)
-    {
-        write("Your progress indicator was not working properly " +
-            "and is now reset.\n");
-        ob->add_prop(PLAYER_I_LASTXP, ob->query_exp());
-    }
-    else if (j > 0)
-    {
-        /* The progress is measured relatively to your current exp. If
-         * you gained more than 6.6% of the exp you had when you logged
-         * in, you get the maximum progress measure. There are a minimum
-         * and a maximum, though.
-         */
-        a /= 15;
-        if (a > SD_IMPROVE_MAX)
-            a = SD_IMPROVE_MAX;
-        else if (a < SD_IMPROVE_MIN)
-            a = SD_IMPROVE_MIN;
-        
-        write(start_have + "made " + GET_NUM_DESC(j, a, improve_fact) +
-            " progress since you last logged in.\n");
-    }
-    else
-    {
-        write(start_have + "made no measurable progress since you logged " +
-            "in today.\n");
+        str = capitalize(str);
+        start_be = str + " is ";
+        start_have = str + " has ";
     }
 
     stats = ({ });
-    for (i = 0; i < SS_NO_EXP_STATS; i++)
+    for (index = 0; index < SS_NO_EXP_STATS; index++)
     {
-        stats += ({ GET_STAT_LEVEL_DESC(i, ob->query_stat(i)) });
+        stat = ob->query_stat(index);
+        if (stat >= SD_STATLEVEL_SUP) supreme += ({ SD_LONG_STAT_DESC[index] });
+        else if (stat >= SD_STATLEVEL_IMM) immortal += ({ SD_LONG_STAT_DESC[index] });
+        else if (stat >= SD_STATLEVEL_EPIC) epic += ({ SD_LONG_STAT_DESC[index] });
+        else stats += ({ GET_STAT_LEVEL_DESC(index, stat) });
     }
-    write(start_be + LANG_ADDART(COMPOSITE_WORDS(stats)) +  " " + ob->query_nonmet_name() + ".\n");
+    text = start_be + LANG_ADDART(sizeof(stats) ? COMPOSITE_WORDS(stats) + " " : "") + ob->query_nonmet_name();
+
+    stats = ({ });
+    if (sizeof(epic)) stats += ({ SD_STATLEV_EPIC + " " + COMPOSITE_WORDS(epic) });
+    if (sizeof(immortal)) stats += ({ SD_STATLEV_IMM + " " + COMPOSITE_WORDS(immortal) });
+    if (sizeof(supreme)) stats += ({ SD_STATLEV_SUP + " " + COMPOSITE_WORDS(supreme) });
+    if (sizeof(stats)) text += " with " + COMPOSITE_WORDS(stats);
+    write(text + ".\n");
 
     /* brutalfactor */
     actual_brute = GET_NUM_DESC_SUB(ftoi(ob->query_brute_factor(0) * 1000.0), 1000, brute_fact, SD_STAT_DENOM, 2);
-    orig_brute = GET_NUM_DESC_SUB(ftoi(ob->query_brute_factor(1) * 1000.0), 1000, brute_fact, SD_STAT_DENOM, 2);
-
-    write(start_be + actual_brute + ".\n");
-    if (actual_brute != orig_brute)
+    if (ob->query_exp_quest() > F_QUEST_EXP_MAX_BRUTE)
     {
-        write("After recovery from death, " + lower_case(start_be) +
-	    orig_brute + ".\n");
+        actual_brute += ", helped maximally by your quest experience";
+    }
+    write(start_be + actual_brute + ".\n");
+
+    /* If we're recovering from death, we may have a lower brute than actually
+     * should have had. But only print the message if the brute level would be
+     * different. */
+    if (ob->query_exp() < ob->query_max_exp())
+    {
+        orig_brute = GET_NUM_DESC_SUB(ftoi(ob->query_brute_factor(1) * 1000.0), 1000, brute_fact, SD_STAT_DENOM, 2);
+        if (actual_brute != orig_brute)
+        {
+            write("Without death recovery assistance, " + lower_case(str) +
+                " would have been " + orig_brute + ".\n");
+        }
     }
 
+    /* Progress on combat and general experience. */
+    if (text = ob->query_exp_gain_desc())
+    {
+        write(start_have + "made " + text + " progress since you logged in.\n");
+    }
+    else
+    {
+        write(start_have + "made no measurable progress since you logged in.\n");
+    }
+
+    /* Progress on quest experience. */
+    if (text = ob->query_exp_quest_gain_desc())
+    {
+        write(start_have + "received " + text + " quest experience since you logged in.\n");
+    }
+
+    write("As an explorer, " + lower_case(start_have) + "done " +
+        GET_NUM_DESC(ob->query_exp_quest(), 
+            F_QUEST_EXP_MAX_BRUTE * sizeof(SD_LEVEL_MAP["quest-progress"]) / (sizeof(SD_LEVEL_MAP["quest-progress"]) - 1),
+            SD_LEVEL_MAP["quest-progress"]) + ".\n");
+    
     return 1;
 }
 
@@ -1572,15 +1784,12 @@ show_stats(string str)
 varargs int
 show_skills(string str)
 {
-    int index, skill, wrap, iLow, iHigh, num;
+    int num, wrap;
     object player = this_player();
-    int *skills;
+    int *skills, *gr_skills;
     string *words;
-    mapping skdesc;
-    string group = "";
-
-    wrap = 1;
-    skdesc = SS_SKILL_DESC;
+    string extra, group = "";
+    string *groups = SS_SKILL_GROUPS;
 
     words = str ? explode(str, " ") : ({ });
     switch(sizeof(words))
@@ -1593,95 +1802,183 @@ show_skills(string str)
         if (!this_player()->query_wiz_level() || !(player = find_player(words[0])))
         {
             player = this_player();
-            group = words[0];
+            groups = ({ capitalize(words[0]) });
         }
         break;
     case 2:
         /* Player specifies both the person to see and the group to see. */
         if (this_player()->query_wiz_level())
-            player = find_player(words[0]);        
-        group = words[1];
+            player = find_player(words[0]);
+        groups = ({ capitalize(words[1]) });
         break;
     default:
         notify_fail("Too many arguments. Syntax: stats [player] [skill group]\n");
         return 0;
     }
-    
+
     if (!objectp(player))
     {
         notify_fail("No player " + words[0] + " found.\n");
         return 0;
     }
 
-    skills = player->query_all_skill_types();
+    skills = sort_array(player->query_all_skill_types());
     SKILL_LIBRARY->sk_init();
 
-    switch (group)
+    foreach(string group: groups)
     {
-        case "general":
-            iLow = 70;
-            iHigh = 200;
-            break;
-        case "fighting":
-            iLow = 0;
-            iHigh = 29;
-            break;
-        case "magic":
-            iLow = 30;
-            iHigh = 49;
-            break;
-        case "thief":
-            iLow = 50;
-            iHigh = 69;
-            break;
-        case "guild":
-            iLow = 100000;
-            iHigh = MAXINT;
-            break;
-        case "all":
-        case "":
-            iLow = 0;
-            iHigh = MAXINT;
-            break;
-        default:
-            notify_fail("Unknown group '" + group + "'.\n" +
-                "Valid groups are: general, fighting, magic, thief, guild or all.\n");
-            return 0;
-    }
-
-    foreach(int skill: skills)
-    {
-        if (skill < iLow || skill > iHigh)
-            continue;
-
-        if (!(num = player->query_skill(skill)))
+        if (!pointerp(SS_SKILL_GROUP_LIMIT[group]))
         {
-            player->remove_skill(skill);
+            write("-- " + group + " is not a valid skills group.\n");
             continue;
         }
-        if (pointerp(skdesc[skill]))
-            str = skdesc[skill][0];
-        else if (!strlen(str = player->query_skill_name(skill)))
-            continue;
+        gr_skills = filter(skills, &operator(>=)(,SS_SKILL_GROUP_LIMIT[group][0]));
+        gr_skills = filter(gr_skills, &operator(<=)(,SS_SKILL_GROUP_LIMIT[group][1]));
+        wrap = 0;
+        write("-- " + group + " skills --\n");
+        foreach(int skill: gr_skills)
+        {
+            if (!(num = player->query_skill(skill)))
+            {
+                player->remove_skill(skill);
+                continue;
+            }
+            if (pointerp(skillmap[skill]))
+                str = skillmap[skill][0];
+            else if (!strlen(str = player->query_skill_name(skill)))
+                continue;
+            extra = (player->query_skill_extra(skill) ? "*" : "");
 
-        /* Print the text in two columns. */
-        if (++wrap % 2)
-        {
-            write(sprintf("%-18s %s\n", str + ":", SKILL_LIBRARY->sk_rank(num)));
+            /* Print the text in two columns. */
+            if (++wrap % 2)
+            {
+                write(sprintf("%-16s %-20s     ", capitalize(str) + ":",
+                    SKILL_LIBRARY->sk_rank(num) + extra)[..41]);
+            }
+            else
+            {
+                write(sprintf("%-16s %s\n", capitalize(str) + ":",
+                    SKILL_LIBRARY->sk_rank(num) + extra)[..39]);
+            }
         }
-        else
-        {
-            write(sprintf("%-18s %-20s ", str + ":", SKILL_LIBRARY->sk_rank(num)));
-        }
-    }
-    if (wrap > 1)
-        write("\n");
-    else
-    {
-        write(((player == this_player()) ? "You have " :
-            (player->query_name() + " has ")) + "no skills" +
-            (strlen(group) ? " in the " + group + " group" : "") + ".\n");
+        if (!wrap)
+            write("no skills\n");
+        else if (wrap % 2)
+            write("\n");
     }
 
     return 1;
+}
+
+/*
+ * Function name: gmcp_char_skills_get
+ * Description  : Implementation of the "char.skills.get" command for GMCP.
+ * Arguments    : object player - the player who wants to know.
+ *                mixed data - the paramters.
+ */
+void
+gmcp_char_skills_get(object player, mixed data)
+{
+    int *skills;
+    int value;
+    string group;
+    string name;
+
+    /* Send the Groups. */
+    if (!mappingp(data) || !data[GMCP_GROUP])
+    {
+        /* We don't filter this for actual skills the player has in this group. */
+        player->catch_gmcp(GMCP_CHAR_SKILLS_GROUPS, SS_SKILL_GROUPS);
+        return;
+    }
+
+    /* List the skills within a group. */
+    if (!data[GMCP_NAME])
+    {
+        /* Not a valid skill group. */
+        if (!pointerp(SS_SKILL_GROUP_LIMIT[data[GMCP_GROUP]])) return;
+
+        group = data[GMCP_GROUP];
+        /* This will filter all skills in a particular group that the player has. */
+        skills = sort_array(player->query_all_skill_types());
+        skills = filter(skills, &operator(>=)(,SS_SKILL_GROUP_LIMIT[group][0]));
+        skills = filter(skills, &operator(<=)(,SS_SKILL_GROUP_LIMIT[group][1]));
+
+        data = ([ ]);
+        foreach(int skill: skills)
+        {
+            if (pointerp(skillmap[skill]))
+                name = skillmap[skill][0];
+            else if (!strlen(name = player->query_skill_name(skill)))
+                continue;
+
+            data[name] = player->query_skill(skill);
+        }
+        player->catch_gmcp(GMCP_CHAR_SKILLS_LIST, ([ GMCP_GROUP : group, GMCP_LIST : data ]) );
+        return;
+    }
+
+    /* Lists the data for one skill. Since we don't have any actual info, we echo the name. */
+    player->catch_gmcp(GMCP_CHAR_SKILLS_INFO, ([ GMCP_GROUP : data[GMCP_GROUP],
+        GMCP_NAME : data[GMCP_NAME], GMCP_INFO : data[GMCP_NAME],
+        GMCP_VALUE : player->query_skill(SS_SKILL_LOOKUP[name] ) ]) );
+}
+
+/*
+ * Function name: gmcp_char_vitals_get
+ * Description  : Implementation of the "char.vitals.get" command for GMCP.
+ * Arguments    : object player - the player who wants to know.
+ *                mixed data - the paramters.
+ */
+void
+gmcp_char_vitals_get(object player, mixed data)
+{
+    mapping result = ([ ]);
+
+    /* Treat individual request too. */
+    if (stringp(data))
+    {
+	if (lower_case(data) == "all")
+	    data = ({ GMCP_HEALTH, GMCP_MANA, GMCP_FATIGUE, GMCP_ENCUMBER,
+                GMCP_PANIC, GMCP_PROGRESS, GMCP_FOOD, GMCP_DRINK, GMCP_INTOX });
+        else
+            data = ({ data });
+    }
+    /* Send the Lists. */
+    if (!pointerp(data))
+    {
+        /* We don't filter this for actual skills the player has in this group. */
+        player->catch_gmcp(GMCP_CHAR_VITALS_LISTS,
+	    ({ GMCP_HEALTH, GMCP_MANA, GMCP_FATIGUE, GMCP_PROGRESS }) );
+        return;
+    }
+
+    foreach(string list: data)
+    {
+	switch(list)
+	{
+	case GMCP_HEALTH:
+	case GMCP_MANA:
+	case GMCP_PROGRESS:
+	case GMCP_ENCUMBER:
+	case GMCP_PANIC:
+	    result += ([ list : lev_map[list] ]);
+	    break;
+	case GMCP_DRINK:
+	    result += ([ list : lev_map["soaked"] ]);
+	    break;
+	case GMCP_FOOD:
+	    result += ([ list : lev_map["stuffed"] ]);
+	    break;
+	case GMCP_INTOX:
+	    result += ([ list : ({ SD_INTOX_SOBER }) + lev_map["intox"] ]);
+	    break;
+	case GMCP_FATIGUE:
+	    result += ([ list : GET_NUM_DESC_COMBOS(lev_map[list], SD_STAT_DENOM, 1) ]);
+	    break;
+	}
+    }
+    
+    /* Lists the levels available for improvement. */
+    player->catch_gmcp(GMCP_CHAR_VITALS_LEVELS, result);
 }

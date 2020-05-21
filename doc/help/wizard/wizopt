@@ -5,18 +5,22 @@ ACCESS LEVEL
 	apprentice or higher
 
 DESCRIPTION
-	Front-end to the "options" command. See options.
+	Options only for wizards.
 
 ARGUMENTS
+        allcommune <on/off>  - See all communes as they happen.
+
+	alwaysknown <on/off> - Mortal players always know your name.
+
 	autopwd <on/off>     - Automatic display of the current working 
         [pwd on/off]           directory when you change it.
 
-	autolinecmd <on/off> - Automatically insert line commands into
-        [cmd on/off]	       the apprentice soul command space.
-			       This option is default on.
+	autolinecmd <on/off> - Have the wizard line commands automatically
+        [cmd on/off]	       available as comment. This means you can do
+		               'someline xxx' instead of having to do
+			       'line someline xxx' to speak on someline.
 
 	timestamp <on/off>   - Show the wiz line with a time stamp.
 
-
 SEE ALSO
-	cd, options
+	cd, commune, line, options

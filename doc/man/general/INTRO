@@ -1,35 +1,43 @@
-3.0... What changed?                  (last change: april 27th, 1992)
---------------------
+Intro to LPC 3.0 -- Latest Revision: June 27th, 2017 by Gorboth
+==============================================================================
+Note from Gorboth: This intro material is the product of the wizard Tricky, 
+one of the early experts on LPC and the mudlib. I have taken his original
+INTRO file, last reportedly updated in April of 1992, and brought it into
+the modern era, carefully revising the material where necessary to eliminate
+certain practices that may no longer apply and to include various important
+concepts that have become standard-practice in the 25 years that have elapsed
+since the guide was originally drafted.
+=============================================================================
 
 Index
 -----
         Preface
-	Introduction
+        Introduction
 
-	The 3.0 mud
-	    Some commands
-	    Directories under 3.0
+        The 3.0 mud
+            Some commands
+            Directories under 3.0
 
-	LPC 3.0
-	    Types
-	    Arrays
-	    Mappings
+        LPC 3.0
+            Types
+            Arrays
+            Mappings
 
-	Objects in 3.0
-	    Objects and properties
-	    Some examples
-		ROOM.C
-		OBJECT.C
-		CONTAINER.C
-		MONSTER.C
-		ARMOUR.C
-		WEAPON.C
+        Objects in 3.0
+            Objects and properties
+            Some examples
+                ROOM.C
+                OBJECT.C
+                CONTAINER.C
+                MONSTER.C
+                ARMOUR.C
+                WEAPON.C
 
-	VBFC
-	Skills
+        VBFC
+        Skills
         Debugging
-	Interesting documents
-	Constants for different metals
+        Interesting documents
+        Constants for different metals
 
 
 Preface
@@ -41,20 +49,25 @@ fill in the piece between the brackets in your command with something
 that makes sense. If something is between braces ([...]) it means
 that that part is optional, and can be left out.
 
-
 Introduction
 ------------
 I wrote this doc, to help people who have absolutely no experience in
 programming LPC 3.0, or with the 3.0 mud itself. I hope that you will
 be enlightened in the use of 3.0 and that you can make simple 3.0
 objects after you have read this doc. Some people think this is the
-reference guide for LPC 3.0. Let me assure you that it isn't, and that
-such a document would be hard to write. LPC 3.0 is a language on the move,
-and I have learned that the best way to learn it is to look in the sources.
-However, not everyone will be able or willing to do that, so I hope that
-reading this doc will get you on the coding track a bit sooner. If you
-want to know the bottom of everything you are using, I suggest you take a
-look in all the files you include/inherit.
+reference guide for LPC 3.0. Let me assure you that it is not, and that
+if you wish to have a more comprehensive guide, you can read what I have
+written in "man LPC". An absolute reference exists in Mrpr's seminal and
+authoritative work found at /w/mrpr/open/lpc/lpc.txt and will require
+approximately a month of your study if you wish to delve into its awesome
+offerings. In the end, it is the best source we will probably ever have.
+For now, though, let's keep things to a manageable size!
+
+LPC 3.0 is a language on the move, and I have learned that the best way to
+learn it is to look in the sources. However, not everyone will be able or
+willing to do that, so I hope that reading this doc will get you on the
+coding track a bit sooner. If you want to know the bottom of everything you
+are using, I suggest you take a look in all the files you include/inherit.
 
 It could very well be that this document is not very clear to the layman.
 The problem is that I have been programming in LPC for a long time now, and
@@ -63,29 +76,27 @@ important explanations that ought to be given. If you find such a spot in
 this document, or notice an erroneous remark or erroneous code, do not
 refrain from mailing me, your help is greatly appreciated.
 
-                                                   Tricky
-
 The 3.0 mud
 -----------
 
 Some commands
 -------------
-There are a few commands that really are interesting in 3.0, of which the
-most important ones are probably:
+There are numerous commands that become essential in the LPC environment.
+Here are some of the most relevant to begin your wizard career:
 
    allcmd          Shows all your commands.
 
    localcmd        Shows all commands added by your direct environment.
 
-   help <cmd>      Shows often help on the command <cmd>. In order to keep
-                   this document short, I have not explained every following
-                   command in full. Should you need more help, use "help".
+   help <cmd>      Shows avalable help on the command <cmd>. To keep
+                   this document brief, I have not explained the following
+                   commands in full. Should you need more help, use "help".
 
    sman [-k] [-s] <fun>
                    Searches for help on the function <fun>. If you use the
                    -k flag, the function <fun> will serve as a keyword, all
                    matching functions will be displayed. This is used to
-		   search the mudlib sources. If you use the -s flag, you
+                   search the mudlib sources. If you use the -s flag, you
                    get to see the sourcecode of the function. Note that
                    this works fine when the searchtable is updated regu-
                    larly, but that it could occur that you end up in the
@@ -94,19 +105,16 @@ most important ones are probably:
 
    man [-k] <subject>
                    Searches for help on the function <fun>. If you use the
-		   -k flag, the function <fun> will serve as a keyword, all
-		   matching functions will be displayed. This command is
-		   used to search for information on efuns and general
-		   subjects.
+                   -k flag, the function <fun> will serve as a keyword, all
+                   matching functions will be displayed. This command is
+                   used to search for information on efuns and general
+                   subjects.
 
   ed <file>        Edit a file. Most of the help on the editor can be
                    obtained within it! Try "h", or "?" in the editor.
-                   NOTE: you don't have to do your editing in Ed, if
-                   you can ftp, try this: "ftp milou.cs.chalmers.se", use
-                   the login "lpmud:<yourname>" and your own mud-password.
-                   Then you can use "[m]put" and "[m]get" to transfer
-                   files to and from your own directory. That way, you
-                   can use all the comforts of your home editor.
+                   NOTE: you don't have to do your editing in Ed. Do
+                   "man ftp" for infomation that will allow you to code
+                   using all the comforts of your home editor.
 
    cp <from> <to>  Copy the file <from> to the file <to>. You may even
                    use wildcards like "*" to match files. There is a
@@ -140,7 +148,7 @@ most important ones are probably:
 
 Well, those were by far not all commands, but these are the most basic ones.
 If you want to know more, use "allcmd" to find out your commands, and then
-ask "help" on one of them.
+ask "help" on any of them.
 
 
 Directories under 3.0
@@ -229,11 +237,17 @@ interesting directories are.
 
    /d
       In this directory all the domain directories are located. As you
-      probably have noticed, all domains start with a capital, whereas
-      wizardnames start with a lowercase letter. If a wizard has a
-      directory, but is not in a domain, he is automatically in the Wiz
-      domain.
- 
+      probably have noticed, all domains start with a capital.
+
+   /w
+      This directory contains the individual directories of every wizard
+      in Genesis.
+
+   /w/<your_name>
+      Yep, this is your directory. You have read and write access to it.
+      This directory can also be accessed as ~. E.g.: ~/workroom.c is
+      your workroom, whereas ~mrpr/workroom.c is Mrpr's home office.
+
    /d/Wiz
       This directory is the home of the braves. Most of the keepers and
       arches have their directories in this directory. You will probably
@@ -241,12 +255,8 @@ interesting directories are.
 
    /d/<Your_domain>
       In this directory is your directory located. You have read access
-      to all files and directories in this directory.
-
-   /d/<Your_domain>/<your_name>
-      Yep, this is your directory. You have read and write access to it.
-      This directory can also be accessed as ~. E.g.: ~/workroom.c is
-      your workroom, whereas ~mrpr/workroom.c is Mrpr's home office.
+      to all files and directories in this directory. Remember to
+      type the domain's name with a capital letter.
 
    /d/<Your_domain>/common
       This is the common directory of the domain you're in. Every wizard
@@ -254,7 +264,7 @@ interesting directories are.
       someone wants to debug your stuff when you are away.
 
    /d/<Your_domain>/open              and
-   /d/<Your_domain>/<your_name>/open
+   /w/<your_name>/open
       Everyone (including people outside your domain) has read-access to
       these directories. That is why you don't need to write in the /open
       directory, simply put your open stuff in your own open directory!
@@ -270,7 +280,6 @@ every directory in their domain, arches and keepers can write everywhere
 they please. Note that you can allow other wizzes to read and/or write in
 your own directories by doing "sanction [R][W] <name>", or by simply
 putting the stuff you want them to examine in your open directory.
-
 
 So much for the introductory part, let's get down to the serious business:
 
@@ -303,17 +312,17 @@ more easy, and maybe even directly at the compilation and not wait until
 the bugous function is called.
 
 LPC 3.0 knows these types:
-	void		Used for functions that do not return anything
-	int		Integers, ranging from -(2^31) to 2^31
-	int *		An array of integers, e.g. ({ 1, 2, 3 })
+        void            Used for functions that do not return anything
+        int             Integers, ranging from -(2^31) to 2^31
+        int *           An array of integers, e.g. ({ 1, 2, 3 })
         string          A string of characters and special characters,
-			e.g. "\tHi!\n"
-	string *	An array of strings, e.g. ({ "foo", "bar" })
-	object		An object as you get with clone_object()
-	object *	An array of objects
+                        e.g. "\tHi!\n"
+        string *        An array of strings, e.g. ({ "foo", "bar" })
+        object          An object as you get with clone_object()
+        object *        An array of objects
         mapping         A special array, e.g. ([ "foo":"f", "bar":"b" ])
         mixed           Anything of the above.
-	mixed *		An array of mixed values.
+        mixed *         An array of mixed values.
 
 Several of these types can be checked within your code with the functions
 intp(), stringp(), objectp(), mappingp(), which can be useful if you want
@@ -328,44 +337,44 @@ on if they are applied to functions or variables.
 
 Applied to functions:
 
-	static <basic type> 
-		The function can only be called by this object. It can't
-		be directly accessed with call_other.
+        static <basic type> 
+                The function can only be called by this object. It can't
+                be directly accessed with call_other.
 
-	private <basic type>
-		This function is only callable from other functions in the
-		same compilation unit (the same file and files that include
-		or are included by the file). It can't be directly accesessed
-		with call_other, and it can't be called from functions in
-		other modules in the inheritance chain.
+        private <basic type>
+                This function is only callable from other functions in the
+                same compilation unit (the same file and files that include
+                or are included by the file). It can't be directly accesessed
+                with call_other, and it can't be called from functions in
+                other modules in the inheritance chain.
 
-	public <basic type>
-		This function is normally callable. It is the same as if you
-		didn't put a qualifier at all.
+        public <basic type>
+                This function is normally callable. It is the same as if you
+                didn't put a qualifier at all.
 
-	nomask <basic type>
-		A nomask function can't be hidden by an inheriting function.
-		Neither can it be shadowed.
+        nomask <basic type>
+                A nomask function can't be hidden by an inheriting function.
+                Neither can it be shadowed.
 
-	varargs <basic type>
-		A note to the compiler that the function may be called with
-		a variable number of arguments.
+        varargs <basic type>
+                A note to the compiler that the function may be called with
+                a variable number of arguments.
 
 Varargs and nomask can be combined with any of the other modifiers and with
 each other... 
 
 Applied to global variables:
 
-	static <basic type>
-		This variable will not be saved when the object is saved
-		with save_object() or changed by a restore_object().
-	 
-	private <basic type>
-		This variable can only be accessed by functions in the same
-		compilation unit.
+        static <basic type>
+                This variable will not be saved when the object is saved
+                with save_object() or changed by a restore_object().
+         
+        private <basic type>
+                This variable can only be accessed by functions in the same
+                compilation unit.
 
-	public <basic type>
-		This is the same as a variable with no modifier.
+        public <basic type>
+                This is the same as a variable with no modifier.
 
 Arrays
 ------
@@ -391,22 +400,22 @@ Here are a few array functions that are very handy:
         if the element is not included in the array.
 
    explode(str1, str2)
-	This function returns an array that consists of the loose strings
-	that come into existence after the string str1 is divided in parts
-	by cutting on every occurence of str2. Eg. if you did
-	explode("Humpty Dumpty fell of a wall.", " "), you would get
-	({ "Humpty", "Dumpty", "fell", "of", "a", "wall." })
+        This function returns an array that consists of the loose strings
+        that come into existence after the string str1 is divided in parts
+        by cutting on every occurence of str2. Eg. if you did
+        explode("Humpty Dumpty fell of a wall.", " "), you would get
+        ({ "Humpty", "Dumpty", "fell", "of", "a", "wall." })
 
    implode(arr, str)
-	This function returns a string that is made of all elements of the
-	array arr, with the string str placed between them. E.g.:
-	implode(({ "foo","bar","zukini." }), " and ") would return
-	"foo and bar and zukini."  
+        This function returns a string that is made of all elements of the
+        array arr, with the string str placed between them. E.g.:
+        implode(({ "foo","bar","zukini." }), " and ") would return
+        "foo and bar and zukini."  
 
    arr[from..to]
-	This notation returns a piece of an array from element from to
-	element to. The function slice_array, which did exactly the same,
-	is obsolete. E.g.: ({ 1, 2, 3, 4 })[1..2] returns ({ 2, 3 }).
+        This notation returns a piece of an array from element from to
+        element to. The function slice_array, which did exactly the same,
+        is obsolete. E.g.: ({ 1, 2, 3, 4 })[1..2] returns ({ 2, 3 }).
 
    filter(arr, fun, obj)
          This function returns an array with all elements in it for which the
@@ -450,7 +459,7 @@ is the most common usage.  They can be of any type, e.g., int or object.
 
 Objects in 3.0
 --------------
-As Commander wrote in his NEW_V3 doc, all objects will inherit something.
+As has been detailed before elsewhere, all objects will inherit something.
 The file that is being inherited is called /std/xxxx. The first function
 you define in your object, in which you will probably set the name, the
 long description and the short description, is called "create_xxxx", where
@@ -504,9 +513,9 @@ Some examples of interesting properties to set:
    #include "/sys/stdproperties.h"
 
       ...
-      add_prop(OBJ_I_WEIGHT, 10000); 	    /* Set weight to 10 Kg    */
+      add_prop(OBJ_I_WEIGHT, 10000);        /* Set weight to 10 Kg    */
       add_prop(OBJ_M_NO_DROP, "@@my_drop"); /* VBFC (explained below) */
-      add_prop(OBJ_I_INVIS", 1);	    /* Make invisible	      */
+      add_prop(OBJ_I_INVIS", 1);            /* Make invisible         */
       ...
 
    int
@@ -552,32 +561,32 @@ room.
 
    void
    create_room()
-   {
-      set_short("Entrance");   /* This will show up when the player is in */
-                               /* "brief" mode.                           */
-      /* Set the long description of the room */
-      set_long(break_string(
-         "There is something very peculiar with this room... It is "
-       + "cube-shaped, yet it has no corners! You wonder what sorceror "
-       + "would make up such a mind-boggling kind of room... Luckily "
-       + "you can escape to the south.\n",70));
+    {
+       /* This will show up when the player is in "brief" mode. */
+       set_short("Entrance");
 
-      add_exit("/d/Genesis/start/human/church", "south", 0, 1); /* add exit */
+       /* Set the long description of the room */
+       set_long(
+          "There is something very peculiar with this room... It is "
+        + "cube-shaped, yet it has no corners! You wonder what sorceror "
+        + "would make up such a mind-boggling kind of room... Luckily "
+        + "you can escape to the south.\n"); 
 
-      /* Make the corner examinable */
-      add_item(({ "corner", "round corner", "edge" }), break_string(
-         "You desperately search for a corner, but you cannot locate one. "
-       + "How is this possible? You are starting to get a headache.\n", 70));
+       /* create a room exit */
+       add_exit("/d/Genesis/start/human/church", "south", 0, 1); 
 
-      add_prop(ROOM_I_INSIDE, 1); /* This is an indoors room */
+       /* Make the corner examinable */
+       add_item( ({ "corner", "round corner", "edge" }),
+          "You desperately search for a corner, but you cannot locate one. "
+        + "How is this possible? You are starting to get a headache.\n");
+
+       /* This is an indoors room */
+       add_prop(ROOM_I_INSIDE, 1);
    }
 
-That was the room... As you can see, I used the break_string("...",70)
-technique to make sure that the string is cut into lines of length < 70
-characters. The same technique is used with add_item. Note that it is
-possible to give either one string, or an array of strings as first
-argument to add_item. The given description will be shown every time a
-player wants to look at the identifier string.
+That was the room... Note that it is possible to give either one string,
+or an array of strings as first argument to add_item. The given description
+will be shown every time a player wants to look at the identifier string(s).
 The add_exit function has four arguments: The filename of the room that is
 connected to this room, the command that will get you there and the third
 argument is an optional VBFC function (explained below). If that function
@@ -600,14 +609,14 @@ This is what the code would look like:
    void
    create_object()
    {
-      set_name("bulb");           /* The id of this object   */
-      set_pname("bulbs");         /* The plural id           */
-      set_short("lightbulb");     /* The short description   */
-      set_pshort("lightbulbs");   /* Plural short descr.     */
+       set_name("bulb");           /* The id of this object   */
+       set_pname("bulbs");         /* The plural id           */
+       set_short("lightbulb");     /* The short description   */
+       set_pshort("lightbulbs");   /* Plural short descr.     */
                                   /* Long description        */
-      set_long("This lightbulb is now more like a dark bulb.\n");
-      add_prop(OBJ_I_WEIGHT,75);  /* Set weight property to 0.075 Kg  */
-      add_prop(OBJ_I_VOLUME,200); /* Set volume property to 0.200 Ltr */
+       set_long("This lightbulb is now more like a dark bulb.\n");
+       add_prop(OBJ_I_WEIGHT,75);  /* Set weight property to 0.075 Kg  */
+       add_prop(OBJ_I_VOLUME,200); /* Set volume property to 0.200 Ltr */
    }
 
 That was all! You could leave out the add_prop(...) part, but then the
@@ -633,66 +642,83 @@ would have written the lightbulb something like this:
    void
    create_object()
    {
-      set_name("bulb");           /* The id of this object   */
-      set_pname("bulbs");         /* The plural id           */
-      set_short("@@my_short");    /* The short description   */
-      set_pshort("@@my_pshort");  /* Plural short descr.     */
-      set_long("@@my_long");      /* Long description        */
-      add_prop(OBJ_I_WEIGHT,75);  /* Set weight property to 0.075 Kg  */
-      add_prop(OBJ_I_VOLUME,200); /* Set volume property to 0.200 Ltr */
-      lighted = 0;
+       set_name("bulb");           /* The id of this object   */
+       set_pname("bulbs");         /* The plural id           */
+       set_short("@@my_short");    /* The short description   */
+       set_pshort("@@my_pshort");  /* Plural short descr.     */
+       set_long("@@my_long");      /* Long description        */
+       add_prop(OBJ_I_WEIGHT,75);  /* Set weight property to 0.075 Kg  */
+       add_prop(OBJ_I_VOLUME,200); /* Set volume property to 0.200 Ltr */
+       lighted = 0;
    }
 
    void
    init()
    {
-      add_action("do_light", "light"); /* Add the command 'light' */
+       add_action("do_light", "light"); /* Add the command 'light' */
    }
 
    string
    my_short()
    {
-      if (lighted)
-         return "lightbulb (bright)";
-      return "lightbulb (dim)";
+       if (lighted)
+       {
+          return "lightbulb (bright)";
+       }
+
+       return "lightbulb (dim)";
    }
 
    string
    my_pshort()
    {
-      if (lighted)
-         return "lightbulbs (bright)";
-      return "lightbulbs (dim)";
+       if (lighted)
+       {
+          return "lightbulbs (bright)";
+       }
+
+       return "lightbulbs (dim)";
    }
 
    string
    my_long()
    {
-      if (lighted)
-         return "The lightbulb is currently lit.\n";
-      return "The lightbulb is more like a dark bulb. Perhaps you can light "
-           + "it.\n";
+       if (lighted)
+       {
+           return "The lightbulb is currently lit.\n";
+       }
+
+       return "The lightbulb is more like a dark bulb. Perhaps you can light "
+            + "it.\n";
    }
 
    int
    do_light(string str)
    {
-      if (str != "bulb") /* Did the player type 'light bulb'? */
-      {
-         notify_fail("Light what?"); /* Set message if everything fails */
-         return 0;                   /* 0 means we didn't recognise it  */
-      }
-      if (lighted)
-      {
-         notify_fail("The bulb is already lighted.");
-         return 0;                   /* 0 means we didn't recognise it  */
-      }
-      lighted = 1;
-      write("You light your lightbulb.\n"); /* Message to the player */
-      say(QCTNAME(this_player()) + " lights "
-        + this_player()->query_possessive() + " lightbulb.\n");
-      return 1; /* We recognised the command */
+       if (str != "bulb") /* Did the player type 'light bulb'? */
+       {
+          notify_fail("Light what?"); /* Set message if everything fails */
+          return 0;                   /* 0 means we didn't recognise it  */
+       }
+
+       if (lighted)
+       {
+          notify_fail("The bulb is already lighted.");
+          return 0;                   /* 0 means we didn't recognise it  */
+       }
+
+       lighted = 1;
+
+       write("You light your lightbulb.\n"); /* Message to the player */
+       say(QCTNAME(this_player()) + " lights "
+         + this_player()->query_possessive() + " lightbulb.\n");
+
+       return 1; /* We recognised the command */
    }
+
+Above, I use a bit of white space to make the code more readable. This
+practice is well documented in the file "man code_standards" and should
+be used in every piece of code you write. It makes Lars smile.
 
 As you can see, I use for the short, plural short and long description weird
 strings, like "@@my_short". This is called Value By Function Call, and is
@@ -720,8 +746,7 @@ typical 3.0 thing happens: the macro QCTNAME(). This stands for Query-
 CapitalizeTheName, and makes sure that people who know this_player() get to
 see her name, but that people who do not know her get to see something like
 "The cute happy hobbit" instead. There is a good document that describes the
-met-nonmet system exellently, I believe it is called
-/doc/man/general/meet_people.
+met-nonmet system by typing "man meet_people".
 
 Because we want to say "his lightbulb" for men and "her lightbulb" for
 women we ask the possessive article of the player with query_possessive().
@@ -746,16 +771,16 @@ want to make a nightstand:
    void
    create_container()
    {
-      set_name("nightstand");
-      set_short("crummy old nightstand");
-      set_adj(({"crummy","old"});      /* extra adjectives, the player    */
-                                       /* can now do "exa old nightstand" */
-      set_long("The crummy old nightstand will probably not last long.\n");
-      add_prop(CONT_I_WEIGHT,     20000);   /* It weighs 20 Kg            */
-      add_prop(CONT_I_MAX_WEIGHT, 27000);   /* It can contain up to 7 Kg  */
-      add_prop(CONT_I_VOLUME,     14000);   /* It measures 14 Ltr         */
-      add_prop(CONT_I_MAX_VOLUME, 17000);   /* It can contain 3 Ltr       */
-      add_prop(CONT_I_RIGID, 1);            /* It is a rigid object       */
+       set_name("nightstand");
+       set_short("crummy old nightstand");
+       set_adj( ({ "crummy", "old" }) ); /* extra adjectives, so the player*/
+                                         /* can do "exa old nightstand"    */
+       set_long("The crummy old nightstand will probably not last long.\n");
+       add_prop(CONT_I_WEIGHT,     20000);   /* It weighs 20 Kg            */
+       add_prop(CONT_I_MAX_WEIGHT, 27000);   /* It can contain up to 7 Kg  */
+       add_prop(CONT_I_VOLUME,     14000);   /* It measures 14 Ltr         */
+       add_prop(CONT_I_MAX_VOLUME, 17000);   /* It can contain 3 Ltr       */
+       add_prop(CONT_I_RIGID, 1);            /* It is a rigid object       */
    }
 
 As you notice, the MAX_WEIGHT and MAX_VOLUME are the WEIGHT and the VOLUME
@@ -773,36 +798,38 @@ talking monster. Let's make an ugly nazgul by the name of Dschik.
    /* Dschik, the ugly nazgul */
 
    inherit "/std/monster";
+
    #include "/sys/stdproperties.h"
    #include "/sys/ss_types.h"
 
    void
    create_monster()
    {
-      set_name("dschik");
-      set_race_name("nazgul");
-      set_adj("ugly");
-      set_long("Nazguls are ugly, but this one is one of the uglier types.\n");
+       set_name("dschik");
+       set_race_name("nazgul");
+       set_adj("ugly");
+       set_long("Nazguls are ugly, but this one is one of the uglier "
+         + "types.\n");
 
-               /* STR DEX CON INT WIS DIS */
-      set_stats(({ 15, 13, 19,  3,  3, 70 })); /* Set his stats */
-      set_hp(1000);           /* Heal him fully */
+                /* STR DEX CON INT WIS DIS */
+       set_stats(({ 15, 13, 19,  3,  3, 70 })); /* Set his stats */
+       set_hp(1000);           /* Heal him fully */
       
-      set_chat_time(10);      /* Set the time between speaking    */
-      add_chat("Go away!");   /* Add some lines to say (randomly) */
-      add_chat("Who are you?");
-      add_chat("Go hither, foul creature!");
+       set_chat_time(10);      /* Set the time between speaking    */
+       add_chat("Go away!");   /* Add some lines to say (randomly) */
+       add_chat("Who are you?");
+       add_chat("Go hither, foul creature!");
 
-      set_cchat_time(4);      /* Set some combat chat lines */
-      add_cchat("This is that one, fatal mistake!");
-      add_cchat("Prepare to die!");
+       set_cchat_time(4);      /* Set some combat chat lines */
+       add_cchat("This is that one, fatal mistake!");
+       add_cchat("Prepare to die!");
 
-      set_act_time(7);        /* Set some random actions */
-      add_act("growl");
-      add_act("grin");
+       set_act_time(7);        /* Set some random actions */
+       add_act("growl");
+       add_act("grin");
    }
 
-This really is the most basic monster you can possible make. There are much
+This really is the most basic monster you can possibly make. There are much
 more intersting features of monsters, such as making them do sequences of
 actions, letting them react to the outside world etc., but I won't discuss
 them here. Notice that I don't set the WEIGHT and VOLUME properties, so
@@ -811,15 +838,15 @@ they will be set to 70 Kg and 70 Ltr.
 This monster is not very tough. Novices begin with their stats between 8
 and 18. This is what the stats mean:
 
-	- STR	Strength, determines how much one can carry or how hard a
-		player can hit.
-	- DEX	Dexterity, determines how good someone is in handling
-		weapons.
-	- CON	Constitution, determines the maximum number of hitpoints.
-	- INT	Intelligence, determines the maximum number of mana.
-	- WIS	Wisdom
-	- DIS	Discipline, determines how quickly someone will wimp out.
-		Someone with low DIS is a chicken, high DIS means she's bold.
+        - STR   Strength, determines how much one can carry or how hard a
+                player can hit.
+        - DEX   Dexterity, determines how good someone is in handling
+                weapons.
+        - CON   Constitution, determines the maximum number of hitpoints.
+        - INT   Intelligence, determines the maximum number of mana.
+        - WIS   Wisdom
+        - DIS   Discipline, determines how quickly someone will wimp out.
+                Someone with low DIS is a chicken, high DIS means she's bold.
 
 
 ARMOUR.C
@@ -842,24 +869,24 @@ to obtain. Here is an example of a blue platemail:
    void
    create_armour()
    {
-      set_name("platemail");
-      set_short("blue platemail");
-      set_long("The blue platemail is heavy and doesn't look magical.\n");
+       set_name("platemail");
+       set_short("blue platemail");
+       set_long("The blue platemail is heavy and doesn't look magical.\n");
 
-      set_default_armour(
-         19,          /* Armour class */
-         A_BODY,      /* Armour type  */
-         0,           /* Armour/weapon modifier list, it can be use to modify */
-		      /* the armour class towards different damage types      */
-         0);          /* Object that defines wear and remove */
+       set_default_armour(
+          19,       /* Armour class */
+          A_BODY,   /* Armour type  */
+          0,        /* Armour/weapon modifier list, it can modify      */
+                    /* the armour class towards different damage types */
+          0);       /* Object that defines wear and remove             */
 
-      add_prop(OBJ_I_WEIGHT, 11000); /* 11 Kg. Well, it is a platemail... */
-      add_prop(OBJ_I_VOLUME,  1380); /* An iron platemail (see table)     */
-      add_prop(OBJ_I_VALUE, F_VALUE_ARMOUR(19) + random(200) - 100);
+       add_prop(OBJ_I_WEIGHT, 11000); /* 11 Kg. Well, it is a platemail*/
+       add_prop(OBJ_I_VOLUME,  1380); /* An iron platemail (see table) */
+       add_prop(OBJ_I_VALUE, F_VALUE_ARMOUR(19) + random(200) - 100);
                   /* Standard formula to calculate value with given ac */
    }
 
-I think this platemail is selfexplanatory... It is a body armour, when worn
+I think this platemail is self-explanatory... It is a body armour, when worn
 is provides a protection of ac 19, then the value is set to the standard
 formula for an armour of ac class 19. The value is randomized a bit, so the
 players will not be able to judge an armour by the price it has. With this
@@ -889,21 +916,22 @@ which would be very light.
    void
    create_weapon()
    {
-      set_name("katana");
-      set_short("copper katana");
-      set_long("The copper katana looks like it can slice things easily.\n");
+       set_name("katana");
+       set_short("copper katana");
+       set_long("The copper katana looks like it can slice things "
+         + "easily.\n");
 
-      set_default_weapon(
-         19,      /* Weapon hit (see /sys/wa_types for max.)      */
-         33,      /* Penetration (see same file for max)          */
-         W_SWORD, /* Weapon type                                  */
-         W_SLASH | W_IMPALE,  /* Damage type                      */
-         W_NONE,  /* A one hand weapon, free to choose which hand */
-         0);      /* The object defining the (un)wield functions  */
+       set_default_weapon(
+          19,      /* Weapon hit (see /sys/wa_types for max.)      */
+          33,      /* Penetration (see same file for max)          */
+          W_SWORD, /* Weapon type                                  */
+          W_SLASH | W_IMPALE,  /* Damage type                      */
+          W_NONE,  /* A one hand weapon, free to choose which hand */
+          0);      /* The object defining the (un)wield functions  */
 
-      add_prop(OBJ_I_WEIGHT, 5000); /* 5.0 Kg   */
-      add_prop(OBJ_I_VOLUME,  560); /* 0.56 Ltr */
-      add_prop(OBJ_I_VALUE,F_VALUE_WEAPON(19) + random(130) - 65);
+       add_prop(OBJ_I_WEIGHT, 5000); /* 5.0 Kg   */
+       add_prop(OBJ_I_VOLUME,  560); /* 0.56 Ltr */
+       add_prop(OBJ_I_VALUE,F_VALUE_WEAPON(19) + random(130) - 65);
                   /* Standard formula to calculate value with given hit */
    }
 
@@ -999,19 +1027,22 @@ can. Let's say you want to make a function that turns on a remote-control.
 You would make the code something like this:
 
         void
-	set_remote(string arg)
+        set_remote(string arg)
         {
            global_remote = arg;
         }
 
         string
-	query_remote()
+        query_remote()
         {
            return check_call(global_remote);
         }
 
 The check_call() function handles the VBFC part, so you don't have to worry
 about that yourself.
+
+For comprehensive instruction on this feature of LPC, you can type
+"man VBFC_MANUAL" thanks to Mercade.
 
 
 Skills
@@ -1025,10 +1056,12 @@ There are dozens of skills, and you can find all of them in the file
     int
     try_climb(object pl)
     {
-       if (pl->query_skill(SS_CLIMB) > 10)
-          return 1;
-       else
-          return 0;
+        if (pl->query_skill(SS_CLIMB) > 10)
+        {
+            return 1;
+        }
+        
+        return 0;
     }
 
 It is not mandatory, but use the skills that players can have as often as
@@ -1066,7 +1099,7 @@ searchwork for you. On Genesis you can examine that file with the command
 
 All errors are of the form:
 
-	<object filename> line <nr>: <error message>
+        <object filename> line <nr>: <error message>
 
 If you look at the errorlog, usually a number of errors are given. It is
 wise to solve the highest new one first, because all the lower errors
@@ -1078,90 +1111,90 @@ that a forgotten semicolon (";") generates an error a few lines lower.
 
 Let's have a few error messages, and see what causes them:
 
-	"d/Genesis/fatty/donut.c line 28:Illegal LHS"
+        "d/Genesis/fatty/donut.c line 28:Illegal LHS"
 
-		The LHS stands for Left Hand Statement. Line 28 contains
-		an equal-sign ("="), the part on the left is not of the
-		same type as the part on the right. So, you may not make
-		them equal.
-
-
-	"d/Genesis/fatty/donut.c line 12:Newline in string"
-
-		On that line, a string was declared, but not closed with
-		a doublequote ("). E.g. set_short("donut);
+                The LHS stands for Left Hand Statement. Line 28 contains
+                an equal-sign ("="), the part on the left is not of the
+                same type as the part on the right. So, you may not make
+                them equal.
 
 
-	"d/Genesis/fatty/donut.c line 186:Variable SS_EATING not declared !"
+        "d/Genesis/fatty/donut.c line 12:Newline in string"
 
-		This one is clear. On line 186 a variable is used that has
-		not been declared previously. Don't be misled by the name
-		`variable'. It can well be that you forgot to #include some
-		file that does define it. Since #defines are usually names
-		consisting of only capitals, we probably forgot to #include
-		or #define something here.
+                On that line, a string was declared, but not closed with
+                a doublequote ("). E.g. set_short("donut);
 
 
-	"d/Genesis/fatty/donut.c line 20:Return type not matching: "int ""
+        "d/Genesis/fatty/donut.c line 186:Variable SS_EATING not declared !"
 
-		At that line you return a value that is not of the same
-		type as the function promised to return in its declaration.
-		Either adjust the declaration, or return something of the
-		correct type.
-
-
-	"d/Genesis/fatty/donut.c line 27:Wrong number of arguments to eat"
-
-		The function eat() was not declared to get the number of
-		arguments given to it on line 27. That might be an error
-		of you, but perhaps you want to give not always the same
-		number of arguments. In that case you forgot to give the
-		function the following declaration: "varargs eat(...)".
+                This one is clear. On line 186 a variable is used that has
+                not been declared previously. Don't be misled by the name
+                `variable'. It can well be that you forgot to #include some
+                file that does define it. Since #defines are usually names
+                consisting of only capitals, we probably forgot to #include
+                or #define something here.
 
 
-	"d/Genesis/fatty/donut.c line 59:Undefined function smear"
+        "d/Genesis/fatty/donut.c line 20:Return type not matching: "int ""
 
-		There are two possibilities: you forgot to define the
-		function (or mistyped its name), or you did define it,
-		but below the function that calls it. If you don't declare
-		functions with types, the gamedriver is not picky about
-		that last fault, but if you do, you should either move
-		the declaration of the function above the call to it, or
-		place a prototype (e.g. "int smear();") on top of the file.
+                At that line you return a value that is not of the same
+                type as the function promised to return in its declaration.
+                Either adjust the declaration, or return something of the
+                correct type.
 
 
-	"d/Genesis/fatty/donut.c line 100:syntax error"
+        "d/Genesis/fatty/donut.c line 27:Wrong number of arguments to eat"
 
-		This is a mean one. A syntax error means to say that the
-		the syntaxrules of LPC were violated. This could mean that
-		you forgot a semicolon, bracket or brace ("}") somewhere.
-		It could also mean something completely different, like
-		you put to "+"-signs next to each other, without something
-		like a number or text between them. Look closely at the lines
-		preceding the line of the error.
+                The function eat() was not declared to get the number of
+                arguments given to it on line 27. That might be an error
+                of you, but perhaps you want to give not always the same
+                number of arguments. In that case you forgot to give the
+                function the following declaration: "varargs eat(...)".
 
 
-	"d/Genesis/fatty/donut.c line 85:Illegal to redefine nomask function"
+        "d/Genesis/fatty/donut.c line 59:Undefined function smear"
 
-		The name of the function on that line has already been used
-		before. Probably in the object it inherits. Whoever wrote
-		that object didn't want us to redefine that function, and
-		declared it "nomask".
-
-
-	"d/Genesis/fatty/donut.c line 85:Missing type for argument"
-
-		If the functions are declared with types, their arguments
-		should also have types. E.g. "void foo_gnu(object gnat)".
+                There are two possibilities: you forgot to define the
+                function (or mistyped its name), or you did define it,
+                but below the function that calls it. If you don't declare
+                functions with types, the gamedriver is not picky about
+                that last fault, but if you do, you should either move
+                the declaration of the function above the call to it, or
+                place a prototype (e.g. "int smear();") on top of the file.
 
 
-	"d/Genesis/fatty/donut.c line 93:Bad type for argument 1 ( object
-								 vs string )
+        "d/Genesis/fatty/donut.c line 100:syntax error"
 
-		The function called in line 93 was declared to receive a
-		different type of argument then what was given to it.
-		E.g. "foo_gnu("bar");", where foo_gnu() was defined as
-		above.
+                This is a mean one. A syntax error means to say that the
+                the syntaxrules of LPC were violated. This could mean that
+                you forgot a semicolon, bracket or brace ("}") somewhere.
+                It could also mean something completely different, like
+                you put to "+"-signs next to each other, without something
+                like a number or text between them. Look closely at the lines
+                preceding the line of the error.
+
+
+        "d/Genesis/fatty/donut.c line 85:Illegal to redefine nomask function"
+
+                The name of the function on that line has already been used
+                before. Probably in the object it inherits. Whoever wrote
+                that object didn't want us to redefine that function, and
+                declared it "nomask".
+
+
+        "d/Genesis/fatty/donut.c line 85:Missing type for argument"
+
+                If the functions are declared with types, their arguments
+                should also have types. E.g. "void foo_gnu(object gnat)".
+
+
+        "d/Genesis/fatty/donut.c line 93:Bad type for argument 1 ( object
+                                                                 vs string )
+
+                The function called in line 93 was declared to receive a
+                different type of argument then what was given to it.
+                E.g. "foo_gnu("bar");", where foo_gnu() was defined as
+                above.
 
 
 
@@ -1207,3 +1240,4 @@ kinds of metal, where Weight = Volume x Rho.
    Iron             7.9             about 1.5 ltr, it will weigh about
    Silver          10.5             1.5*19.3 = 29 Kg.
    Zinc             6.9
+

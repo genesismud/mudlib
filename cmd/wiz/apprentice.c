@@ -32,6 +32,7 @@
  * - ranking
  * - regret
  * - review
+ * - rh
  * - rsupport
  * - rwho
  * - sanction
@@ -51,7 +52,7 @@
 #pragma strict_types
 #pragma save_binary
 
-inherit "/cmd/std/tracer_tool_base.c";
+inherit "/cmd/std/tracer_tool_base";
 
 #include <cmdparse.h>
 #include <composite.h>
@@ -191,6 +192,7 @@ query_cmdlist()
         "ranking":"ranking",
         "regret":"regret",
         "review":"review",
+        "rh":"report_handler",
 #ifdef UDP_ENABLED
         "rsupport":"rsupport",
         "rwho":"rwho",
@@ -271,67 +273,70 @@ adjdesc(string str)
  * Description  : This function actually prints the commands linked to the
  *                souls in the wizard.
  * Arguments    : string *soul_list - the souls in this section.
- *                string  soul      - then soul the wizard wants to see, ""
+ *                string  str       - then soul the wizard wants to see, ""
  *                                    if (s)he wants to see all.
  */
 static nomask void
-print_soul_list(string *soul_list, string soul)
+print_soul_list(string *soul_list, string str)
 {
-    int    index = -1;
-    int    size = sizeof(soul_list);
     string soul_id;
-    string *list;
+    string *list, *lines;
 
-    while(++index < size)
+    foreach(string soul: soul_list)
     {
-        soul_id = soul_list[index]->get_soul_id();
-        if (strlen(soul) &&
-            (soul != soul_id))
+	lines = 0;
+        soul_id = soul->get_soul_id();
+        if (strlen(str) && (str != soul_id))
         {
             continue;
         }
 
         write("----- " + capitalize(soul_id) + ":\n");
-        list = m_indices(soul_list[index]->query_cmdlist());
-
-        /* To print the list of this soul, don't list the lines. 
-        if (soul == get_soul_id())
-        {
-            list -= m_indices(query_line_cmdlist());
-	    } */
+        list = m_indices(soul->query_cmdlist());
 
         if (sizeof(list))
         {
-            write(break_string(implode(sort_array(list), ", "), 76) + "\n");
+            /* When printing this soul, print the lines separately. */
+            if (soul_id == get_soul_id())
+            {
+                lines = m_indices(query_line_cmdlist());
+		list -= lines;
+	    }
+            write(implode(sort_array(list), ", ") + "\n");
         }
+	if (sizeof(lines))
+	{
+            write("----- Lines:\n");
+            write(implode(sort_array(lines), ", ") + "\n");
+	}
     }
 }
 
 nomask int
-allcmd(string soul)
+allcmd(string str)
 {
     object ob;
     int    specific = 0;
-    string *list;
+    string *args;
 
     CHECK_SO_WIZ;
 
-    if (stringp(soul))
+    if (stringp(str))
     {
-        list = explode(soul + " ", " ");
-        if (sizeof(list) > 1)
+        args = explode(str + " ", " ");
+        if (sizeof(args) > 1)
         {
-            soul = list[1];
+            str = args[1];
             specific = 1;
         }
-        if (list[0] == "me")
+        if (args[0] == "me")
         {
             ob = this_interactive();
         }
         else
         {
-            ob = find_living(list[0]);
-            if (!objectp(ob) && sizeof(list) > 1)
+            ob = find_living(args[0]);
+            if (!objectp(ob) && sizeof(args) > 1)
             {
                 notify_fail("Syntax: allcmd [name] [soul]\n");
                 return 0;
@@ -348,8 +353,7 @@ allcmd(string soul)
         ob = this_interactive();
     }
 
-    if (!specific ||
-        (soul == "base"))
+    if (!specific || (str == "base"))
     {
         /* We do not sort the local commands because their order is linked
          * to the order of their execution. The first command listed is
@@ -358,14 +362,13 @@ allcmd(string soul)
          * in the inventory.
          */
         write("----- Base:\n");
-        write(break_string(implode(ob->local_cmd(), ", "), 76) + "\n");
+        write(implode(ob->local_cmd(), ", ") + "\n");
     }
 
-    soul = (specific ? soul : "");
-
-    print_soul_list(ob->query_wizsoul_list(), soul);
-    print_soul_list(ob->query_tool_list(),    soul);
-    print_soul_list(ob->query_cmdsoul_list(), soul);
+    str = (specific ? str : "");
+    print_soul_list(ob->query_wizsoul_list(), str);
+    print_soul_list(ob->query_tool_list(),    str);
+    print_soul_list(ob->query_cmdsoul_list(), str);
 
     return 1;
 }
@@ -452,10 +455,12 @@ bit(string args)
 
     if (argc == 5)
     {
-        if (SECURITY->query_wiz_rank(this_player()->query_real_name()) <
-            WIZ_ARCH)
-        {
-            notify_fail("You are not allowed to give a domain name as " +
+	string wname = this_player()->query_real_name();
+	int rank = SECURITY->query_wiz_rank(wname);
+
+	if (rank < WIZ_LORD)
+	{
+	    notify_fail("You are not allowed to give a domain name as " +
                 "argument. In order to change a bit administered by your " +
                 "own domain, you can omit the domain argument.\n");
             return 0;
@@ -467,6 +472,14 @@ bit(string args)
             notify_fail("There is no domain named '" + argv[2] + "'.\n");
             return 0;
         }
+
+	if ((rank == WIZ_LORD) &&
+	    (SECURITY->query_domain_lord(argv[2]) != wname))
+	{
+            notify_fail("You not the liege of the domain '" +
+		argv[2] + "'.\n");
+            return 0;
+	}
 
         if (!seteuid(argv[2]))
         {
@@ -671,15 +684,22 @@ nomask static string
 map_interactive_seconds(string name)
 {
     object player = find_player(name);
+    int open = 0;
+
+    if (SECURITY->query_wiz_rank(name))
+    {
+        name += (open ? "," : "(") + "Wiz";
+        open = 1;
+    }
     if (!objectp(player))
     {
-        return name;
+        return name + (open ? ")" : "");
     }
     if (interactive(player))
     {
-        return name + "(In)";
+        return name + (open ? "," : "(") + "In)";
     }
-    return name + "(LD)";
+    return name + (open ? "," : "(") + "LD)";
 }
 
 /*
@@ -692,13 +712,15 @@ map_interactive_seconds(string name)
 nomask static void
 finger_player(string name, int show_long)
 {
+    int    rank;
     int    real;
-    int    pinfo;
+    int    badname;
+    mixed  info;
     object player;
     object env;
     string pronoun;
     string domain;
-    string str, line;
+    string str, line, filename;
     string *names;
     int    chtime;
     int    restricted;
@@ -730,14 +752,14 @@ finger_player(string name, int show_long)
         write(LD_PRESENT_TO(player));
     }
 
+    rank = SECURITY->query_wiz_rank(name);
     pronoun = ((this_player()->query_real_name() == name) ? "You are " :
                capitalize(player->query_pronoun()) + " is ");
 
     /* Display the rank/level of the player. */
-    if (SECURITY->query_wiz_rank(name) >= WIZ_APPRENTICE)
+    if (rank >= WIZ_APPRENTICE)
     {
-        line = pronoun +
-            LANG_ADDART(WIZ_RANK_NAME(SECURITY->query_wiz_rank(name))) +
+        line = pronoun + LANG_ADDART(WIZ_RANK_NAME(rank)) +
 #ifdef USE_WIZ_LEVELS
             " (level " + SECURITY->query_wiz_level(name) + ")" +
 #endif USE_WIZ_LEVELS
@@ -755,15 +777,21 @@ finger_player(string name, int show_long)
         line = pronoun + "a mortal player.";
     }
     /* Display pinfo hint to those who have a need to know. */
-    pinfo = (WIZ_CMD_HELPER->valid_user() && (file_size(PINFO_FILE(name)) > 0));
-    line += (pinfo ? " PInfo available." : "") + "\n";
-    write(line);
+    if (WIZ_CMD_HELPER->valid_user() && (file_size(PINFO_FILE(name)) > 0))
+    {
+        line += " PInfo available.";
+    }
+    /* Identify if name is marked as inappropriate. */
+    if (pointerp(info = SECURITY->query_bad_name_info(name)))
+    {
+        line += " Marked Bad name by " + capitalize(info[0]) + ".";
+    }
+    write(line + "\n");
 
     /* Display the domain the player is in. */
     if (strlen(domain = SECURITY->query_wiz_dom(name)))
     {
-        write(pronoun +
-              ((SECURITY->query_wiz_rank(name) == WIZ_LORD) ? "Liege" :
+        write(pronoun + ((rank == WIZ_LORD) ? "Liege" :
                "a member") + " of the domain " + domain + ", added by " +
               (strlen(str = SECURITY->query_wiz_chd(name)) ?
                capitalize(str) : "root") +
@@ -772,6 +800,19 @@ finger_player(string name, int show_long)
                (" on " + ctime(chtime)) : "") +
 #endif FOB_KEEP_CHANGE_TIME
               ".\n");
+    }
+
+    if (sizeof(names = SECURITY->query_lord_domains(name)))
+    {
+	if (rank == WIZ_LORD)
+	    names -= ({ domain });
+
+	if (sizeof(names))
+	{
+	    write(pronoun + "also Lord over the domain" +
+		(sizeof(names) == 1 ? " " : "s ") +
+		COMPOSITE_WORDS(sort_array(names)) + ".\n");
+	}
     }
 
     /* Arch team memberships. */
@@ -859,10 +900,32 @@ finger_player(string name, int show_long)
     write("Age  : " + CONVTIME(player->query_age() * 2) + ".\n");
     if (strlen(str = player->query_mailaddr()) && (str != "none"))
     {
-        write("Email: " + str + "\n");
+        str = "Email: " + str;
     }
-    player->finger_info();
+    else
+    {
+        str = "";
+    }
+    if (player->query_gmcp_client())
+    {
+        str += (strlen(str) ? " " : "") + "GMCP: " +
+            player->query_gmcp_client() + " " + player->query_gmcp_version();
+    }
+    if (strlen(str))
+    {
+        write(str + "\n");
+    }
 
+    /* Display the special local info about the player, if any. */
+#ifdef INFOWIZ_PATH
+    filename = INFOWIZ_PATH + name;
+    if (file_size(filename) > 0)
+    {
+	write("-- Special info on " + capitalize(name) + ":\n");
+	cat(filename);
+    }
+#endif INFOWIZ_PATH
+    
     /* Clean up after ourselves if the player is not logged in. */
     if (!real)
     {
@@ -931,6 +994,7 @@ finger(string str)
     string *names;
     mapping gread;
     mixed *banished;
+    string leader;
 
     CHECK_SO_WIZ;
 
@@ -1031,8 +1095,10 @@ finger(string str)
     /* Wizard wants to see a particular class of wizards. */
     if ((index = member_array(LANG_SWORD(str), WIZ_N)) > -1)
     {
-        write("The following " + LANG_PWORD(WIZ_N[index]) + " are registered:\n");
-        finger_wizards(SECURITY->query_wiz_list(WIZ_R[index]), arg_l);
+        names = SECURITY->query_wiz_list(WIZ_R[index]);
+        write("The following (" + sizeof(names) + ") " +
+            LANG_PWORD(WIZ_N[index]) + " are registered:\n");
+        finger_wizards(names, arg_l);
         return 1;
     }
 
@@ -1047,8 +1113,10 @@ finger(string str)
     /* Wizard wants to list an admin team */
     if (member_array(str, SECURITY->query_teams()) > -1)
     {
-        write("The following wizards are registered:\n");
-        finger_wizards(SECURITY->query_team_list(str), arg_l);
+        leader = SECURITY->query_team_leader(str);
+        write("Leader : " + (strlen(leader) ? capitalize(leader) : "nobody") + "\n");
+        write("Members: ");
+        finger_wizards((string *)SECURITY->query_team_list(str) - ({ leader }), arg_l);
         return 1;
     }
 
@@ -1146,7 +1214,7 @@ goto(string dest)
 
     CHECK_SO_WIZ;
 
-    if (!stringp(dest))
+    if (!strlen(dest))
     {
         if (objectp(loc = this_interactive()->query_prop(LIVE_O_LAST_ROOM)))
         {
@@ -1158,15 +1226,26 @@ goto(string dest)
         return 0;
     }
 
+    /* Check for player or living. */
     if (!objectp(loc = find_player(dest)))
     {
         loc = find_living(dest);
     }
 
-    if (objectp(loc) &&
-        objectp(environment(loc)))
+    if (objectp(loc))
     {
-        this_interactive()->move_living("X", environment(loc));
+        if (!objectp(loc = environment(loc)))
+        {
+            notify_fail(capitalize(dest) + " is in the void.\n");
+            return 0;
+        }
+        if (loc == environment(this_player()))
+        {
+            notify_fail("You are already at the location of " +
+                capitalize(dest) + ".\n");
+            return 0;
+        }
+        this_interactive()->move_living("X", loc);
         return 1;
     }
 
@@ -1211,6 +1290,12 @@ goto(string dest)
             notify_fail("Destination '" + dest + "' not found.\n");
             return 0;
         }
+    }
+
+    if (loc == environment(this_player()))
+    {
+        notify_fail("You are already in " + file_name(loc) + ".\n");
+        return 0;
     }
 
     this_interactive()->move_living("X", loc);
@@ -1461,7 +1546,9 @@ last(string str)
         for (i = 0, sz = sizeof(args) ; i < sz ; i++)
         {
             plist += ({ "<" + args[i] });
-            plist += map(sort_array(SECURITY->query_seconds(args[i])), &operator(+)(">"));
+            string *seconds = SECURITY->query_seconds(args[i]);
+            if (pointerp(seconds))
+                plist += map(sort_array(seconds), &operator(+)(">"));
         }
     }
     else
@@ -1577,7 +1664,8 @@ newhooks(string str)
         return 0;
     }
     pl->update_hooks();
-    write("Updated command hooks for " + str + "(" + file_name(pl) + ").\n");
+    write("Updated command hooks for " + capitalize(str) + " (" +
+        file_name(pl) + ").\n");
     return 1;
 }
 
@@ -1594,9 +1682,7 @@ newhooks(string str)
 nomask string
 notify_string(int nf)
 {
-    string nstring;
-
-    nstring = "";
+    string nstring = "";
 
     if (nf & 1)
         nstring += "A";
@@ -1646,7 +1732,7 @@ notify(string str)
         {
             words = explode(read_file(file), "\n");
             write("You have individual notification on " +
-                  COMPOSITE_WORDS(map(words, capitalize)) + ".\n");
+                COMPOSITE_WORDS(map(words, capitalize)) + ".\n");
         }
         else
         {
@@ -1768,17 +1854,20 @@ notify(string str)
     }
 
     this_interactive()->set_notify(nf);
-    write("Ok.\n");
+    if (this_player()->query_option(OPT_ECHO))
+	write("Notify status set to: " + notify_string(nf) + ".\n");
+    else
+        write("Ok.\n");
     return 1;
 }
-
-static mixed *old_rank = 0;
-static int old_time = -1;
-#define MIN_DIFF_TIME 300
 
 /* **************************************************************************
  * ranking - Print a ranking list of the domains
  */
+
+static mixed *old_rank = 0;
+static int old_time = -1;
+#define MIN_DIFF_TIME 300
 
 nomask int
 rank_sort(mixed *elem1, mixed *elem2)
@@ -1897,6 +1986,17 @@ review(string str)
           "\nmmout:\t" + tp->query_mm_out() +
           "\nmmin:\t" + tp->query_mm_in() + "\n");
     return 1;
+}
+
+/* **************************************************************************
+ * rh - report handler
+ */
+nomask int
+report_handler(string str)
+{
+    CHECK_SO_WIZ;
+
+    return REPORT_CENTRAL->report_handler(str);
 }
 
 /* **************************************************************************
@@ -2083,12 +2183,17 @@ title(string t)
 nomask int
 wizopt(string arg)
 {
-    if (!stringp(arg))
+    int result = 1;
+
+    if (!strlen(arg))
     {
         /* These names directly link to the options arguments. */
-        return CMD_LIVE_STATE->options("autolinecmd");
-        return CMD_LIVE_STATE->options("autopwd");
-        return CMD_LIVE_STATE->options("timestamp");
+        result |= CMD_LIVE_STATE->options("autoline");
+        result |= CMD_LIVE_STATE->options("autopwd");
+        result |= CMD_LIVE_STATE->options("alwaysknown");
+        result |= CMD_LIVE_STATE->options("allcommune");
+        result |= CMD_LIVE_STATE->options("timestamp");
+        return result;
     }
     else
     {

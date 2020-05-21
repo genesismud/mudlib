@@ -77,7 +77,8 @@ inherit "/cmd/std/command_driver";
  *                Define this in an object that is drinkable. It is by default
  *                built into /std/drink.c
  * Returns      : string - an error message upon failure.
- *                int 1  - when successfully imbided.
+ *                int 1 - when successfully consumed.
+ *                int 0 - access failure (preferred to returning "").
  */
 public mixed
 command_drink()
@@ -90,7 +91,8 @@ command_drink()
  *                Define this in an object that is edible. It is by default
  *                built into /std/food.c
  * Returns      : string - an error message upon failure.
- *                int 1  - when successfully eaten.
+ *                int 1 - when successfully eaten.
+ *                int 0 - access failure (preferred to returning "").
  */
 public mixed
 command_eat()
@@ -103,7 +105,8 @@ command_eat()
  *                Define this in an object that contains light and can be
  *                extinguished. It is by default built into /std/torch.c
  * Returns      : string - an error message upon failure.
- *                int 1  - when successfully extinguished.
+ *                int 1 - when successfully extinguished.
+ *                int 0 - access failure (preferred to returning "").
  */
 public mixed
 command_extinguish()
@@ -116,7 +119,8 @@ command_extinguish()
  *                Define this in an object that can be held. It is by default
  *                built into /lib/holdable_item.c
  * Returns      : string - an error message upon failure.
- *                int 1  - when successfully eaten.
+ *                int 1 - when successfully eaten.
+ *                int 0 - access failure (preferred to returning "").
  */
 public mixed
 command_hold()
@@ -129,7 +133,8 @@ command_hold()
  *                Define this in an object that can contain light and can be
  *                lit. It is by default built into /std/torch.c
  * Returns      : string - an error message upon failure.
- *                int 1  - when successfully lit.
+ *                int 1 - when successfully lit.
+ *                int 0 - access failure (preferred to returning "").
  */
 public mixed
 command_light()
@@ -142,7 +147,8 @@ command_light()
  *                Define this in an object that can be read.
  * Arguments    : int more - if true, the command should read using more.
  * Returns      : string - an error message upon failure.
- *                int 1  - when successfully read.
+ *                int 1 - when successfully read.
+ *                int 0 - access failure (preferred to returning "").
  */
 public mixed
 command_read(int more)
@@ -155,7 +161,8 @@ command_read(int more)
  *                Define this in an object that can be held and thus released.
  *                It is by default built into /lib/holdable_item.c
  * Returns      : string - an error message upon failure.
- *                int 1  - when successfully released.
+ *                int 1 - when successfully released.
+ *                int 0 - access failure (preferred to returning "").
  */
 public mixed
 command_release()
@@ -168,7 +175,8 @@ command_release()
  *                Define this in an object that can be worn and thus removed.
  *                It is by default built into /lib/wearble_item.c
  * Returns      : string - an error message upon failure.
- *                int 1  - when successfully removed.
+ *                int 1 - when successfully removed.
+ *                int 0 - access failure (preferred to returning "").
  */
 public mixed
 command_remove()
@@ -181,7 +189,8 @@ command_remove()
  *                Define this in an object that can be wielded and thus
  *                unwielded. It is by default built into /std/weapon.c
  * Returns      : string - an error message upon failure.
- *                int 1  - when successfully unwield.
+ *                int 1 - when successfully unwield.
+ *                int 0 - access failure (preferred to returning "").
  */
 public mixed
 command_unwield()
@@ -195,6 +204,7 @@ command_unwield()
  *                built into /lib/wearble_item.c
  * Returns      : string - an error message upon failure.
  *                int 1  - when successfully worn.
+ *                int 0 - access failure (preferred to returning "").
  */
 public mixed
 command_wear()
@@ -207,7 +217,8 @@ command_wear()
  *                Define this in an object that can be wielded. It is by
  *                default built into /std/weapon.c
  * Returns      : string - an error message upon failure.
- *                int 1  - when successfully wielded.
+ *                int 1 - when successfully wielded.
+ *                int 0 - access failure (preferred to returning "").
  */
 public mixed
 command_wield()
@@ -269,9 +280,9 @@ query_cmdlist()
 
 /*
  * Function name: use_items
- * Description:   Cause the actor to "use" the given items
+ * Description:   Cause the actor to "use" the given items.
  * Arguments:     object *items - the items to use
- *                function f - the function to call in the objects found to
+ *                function func - the function to call in the objects found to
  *                             use them.
  *                int silent - suppress the default message given when items
  *                             are successfully used.
@@ -279,18 +290,16 @@ query_cmdlist()
  *                           successfully used
  */
 varargs public object *
-use_items(object *items, function f, int silent)
+use_items(object *items, function func, int silent)
 {
     mixed res;
-    object *used;
-    string fail_msg;
-    int fail, i;
+    object *used = ({ });
+    string fail_msg = "";
 
-    for (i = 0, used = ({}), fail_msg = ""; i < sizeof(items); i++)
+    foreach(object item: items)
     {
         /* Call the function to "use" the item */
-        res = f(items[i]);
- 
+        res = func(item);
         if (!res)
 	{
 	    /* The item cannot be used in this way */
@@ -300,13 +309,12 @@ use_items(object *items, function f, int silent)
         if (stringp(res))
 	{
 	    /* The attempt to use the item failed */
-            fail = 1;
 	    fail_msg += res;
 	}
         else
 	{
 	    /* The item was successfully used */
-	    used += ({ items[i] });
+	    used += ({ item });
 	}
     }
         
@@ -314,15 +322,15 @@ use_items(object *items, function f, int silent)
     {
         /* Nothing could be used.  Say why. */
 
-        if (!fail)
+        if (!strlen(fail_msg))
 	{
-            notify_fail("You cannot seem to " + query_verb() + 
+            notify_fail("You seem unable to " + query_verb() + 
                 ((sizeof(items) > 1) ? " those" : " that") + ".\n");
             return 0;
 	}
 
         write(fail_msg);
-        return ({});
+        return ({ });
     }
 
     if (!silent)
@@ -342,7 +350,7 @@ use_items(object *items, function f, int silent)
  *                by the string.
  * Arguments:     string str  - the string describing what to use
  *                object *obs - the items to be matched with the string 
- *                function f  - the function to call in the objects found to
+ *                function func - the function to call in the objects found to
  *                              use them.
  *                int silent  - suppress the default message given when items are
  *                              successfully used.
@@ -352,7 +360,7 @@ use_items(object *items, function f, int silent)
  *                           successfully used
  */
 varargs public object *
-use_described_items(string str, object *obs, function f, int silent,
+use_described_items(string str, object *obs, function func, int silent,
     int use_one)
 {
     mixed *items;
@@ -365,6 +373,12 @@ use_described_items(string str, object *obs, function f, int silent,
         return 0;
     }
 
+    /* For herbs, "eat all" would have nasty consequences. */
+    if (str == "all")
+    {
+        items -= FILTER_HERB_OBJECTS(items);
+    }
+
     if (use_one && (sizeof(items) > 1))
     {
         notify_fail("Be more specific!  You can only " + query_verb() +
@@ -372,7 +386,7 @@ use_described_items(string str, object *obs, function f, int silent,
         return 0;
     }
 
-    return use_items(items, f, silent);
+    return use_items(items, func, silent);
 }
 
 public int

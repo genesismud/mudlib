@@ -239,6 +239,12 @@
  */
 #define PARSE_THIS(s, p) (object *)COMMAND_DRIVER->parse_this(s, p)
 
+/*
+ * PARSE_SPECIAL_NAMES - Special terms that are treated separately in the
+ * routine parse_this().
+ */
+#define PARSE_SPECIAL_NAMES ({ "team", "enemy", "me", "myself" })
+
 /* ACTION_OTHER - An unclassified action */
 #define ACTION_OTHER     0
 
@@ -322,17 +328,53 @@
 #define CMDPARSE_PARALYZE_ALLOW_CMDS(cmds) \
     (void)CMDPARSE_STD->paralyze_allow_cmds(cmds)
 
-/* CMDPARSE_PARALYZE_ALLOWED
+/*
+ * CMDPARSE_PARALYZE_ALLOWED
  *
  * These commands should always be allowed, even if the person is paralyzed
  * or otherwise incapacitated.
  */
 #define CMDPARSE_PARALYZE_ALLOWED \
-    ({ "adverbs", "bug", "commune", "date", "email", "forget", "help", \
-       "idea", "last", "levels", "look", "mwho", "options", "praise", \
-       "quit", "remember", "remembered", "reply", "save", "skills", \
-       "stats", "sysbug", "sysidea", "syspraise", "systypo", "team", \
-       "typo", "vitals", "who" })
+    ({ "adverbs", "alias", "bug", "commune", "date", "email", "exa", \
+       "examine", "forget", "h", "health", "help", "idea", "last", \
+       "levels", "l", "look", "mwho", "nick", "options", "praise", "quit", \
+       "remember", "remembered", "reply", "save", "skills", "stats", \
+       "sysbug", "sysidea", "syspraise", "systypo", "team", "typo", "v", \
+       "vitals", "who" })
+
+/*
+ * FIND_NEIGHBOURS(search, depth)
+ * FIND_NEIGHBOURS_SELF(search, depth)
+ *
+ * Use this to recursively search through the neighbouring rooms to a
+ * particular room to find the rooms e.g. shout or scream will be heard in.
+ *
+ * The 'search' argument is a room or array of rooms to start around. The
+ * 'depth' is the number of rooms to travel from each seed room.
+ *
+ * For depths > 1, by default FIND_NEIGHBOURS will exclude the seed room(s).
+ * Use FIND_NEIGHBOURS_SELF to include the seed room(s) too.
+ */
+#define FIND_NEIGHBOURS(search, depth) \
+    (object *)CMDPARSE_STD->find_neighbours(search, depth, 0)
+#define FIND_NEIGHBOURS_SELF(search, depth) \
+    (object *)CMDPARSE_STD->find_neighbours(search, depth, 1)
+
+/*
+ * Fix to get rid of the obnoxius 'What ?' when we try to walk in a nonexistant
+ * direction. These are the default direction commands.
+ */
+#define DEFAULT_DIRECTIONS ({ "north", "south", "east", "west", \
+    "up", "down", "northeast", "northwest", "southeast", "southwest" })
+
+/*
+ * QUESTION_FILTER - array of prepositions and articles that are filtered
+ *     out on general questions to simplify parsing. They are meant to be
+ *     only words that do not relate to the specific nature of questions,
+ *     which is why I'm leaving out words like who/what/where.
+ */
+#define QUESTION_FILTER ({ "a", "an", "the", "those", "these", "is", "are", \
+    "about", "how" })
 
 /* No definitions beyond this line. */
 #endif CMDPARSE_DEF

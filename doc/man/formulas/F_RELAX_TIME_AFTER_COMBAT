@@ -7,4 +7,5 @@ Description: After combat ended, the player needs to wait for a certain time
 
 Arguments  : int tme - the time() value when the last hit was made.
 
-Returns    : int - the time() value when the player is allowed to quit.
+Returns    : int - the number of seconds it will take to relax (NOT the time()
+                   value when the person is relaxed).

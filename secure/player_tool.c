@@ -13,17 +13,14 @@
 
 inherit "/std/object";
 
-#include <filepath.h>
+#include <files.h>
 #include <macros.h>
 #include <std.h>
 #include <stdproperties.h>
 
-#define PRIVATE		 ("/private")
-#define PRIVATE_DIR(p)	 ((p) + PRIVATE)
-#define PLAYERS		 ("/players")
-#define PLAYERS_DIR(p)	 (PRIVATE_DIR(p) + PLAYERS)
-#define BACKUP		 ("/player_tool")
-#define BACKUP_DIR	 (PLAYERS + BACKUP)
+#define PRIVATE_DIR(p)	 ((p) + "/private")
+#define PLAYERS_DIR(p)	 (PRIVATE_DIR(p) + "/players")
+#define BACKUP_DIR	 ("/data/players/player_tool")
 #define PREDEATH	 (".predeath")
 #define PREDEATH_FILE(p) (PLAYER_FILE(p) + PREDEATH) 
 
@@ -169,17 +166,15 @@ valid_filename(string name)
  * Descriptions : Copies an original playerfile into the player tool backup
  *                directory before overwriting it. It uses sequential numbers
  *                to avoid overwriting any files.
- * Arguments    : string
+ * Arguments    : string name - name of the player
  * Returns      : int 1/0 - success/failure.
  */
 nomask static int
-backup_playerfile(string str)
+backup_playerfile(string name)
 {
     string backup;
     string file;
     int number = 1;
-
-    backup = BACKUP_DIR + "/" + str + ".o.";
 
     if (file_size(BACKUP_DIR) != -2)
     {
@@ -192,12 +187,13 @@ backup_playerfile(string str)
 	write("Backup directory created " + BACKUP_DIR + "\n");
     }
 
+    backup = BACKUP_DIR + "/" + name + ".o.";
     while(file_size(backup + number) > 0)
     {
 	number++;
     }
 
-    file = PLAYER_FILE(str) + ".o";
+    file = PLAYER_FILE(name) + ".o";
     backup = backup + number;
     if (!rename(file, backup))
     {

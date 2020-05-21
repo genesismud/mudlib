@@ -17,10 +17,6 @@
 #endif
 
 #ifndef F_FORMULAS
-#include "/config/sys/formulas2.h"
-#endif
-
-#ifndef F_FORMULAS
 #define F_FORMULAS
 
 /*
@@ -58,7 +54,7 @@
 #define F_ARMOUR_REPAIR_COST_FACTOR             (10)
 #define F_ARMOUR_VALUE_REDUCE(m_cond)		(max((100 - (m_cond) * 5), 10))
 #define F_ARMOUR_BREAK(m_cond, likely)		((m_cond)>(20 - (likely) / 2 ) \
-		|| (m_cond) > random(40 - (likely)))
+		|| (m_cond - 3) > random(40 - (likely)))
 
 #define F_ARMOUR_CONDITION_WORSE(hits, ac, lik)	((hits) > random(500) + \
 		4 * (40 - (lik)))
@@ -101,8 +97,8 @@
 #define F_LEGAL_WEAPON_REPAIR_CORR(rep, corr)	((rep) <= (corr) && \
 							(rep) < (corr) / 2 + 1)
 #define F_WEAPON_REPAIR_COST_FACTOR             (10)
-#define F_WEAPON_BREAK(dull, corr, likely)	((dull) > (20 - (likely)) || \
-		(corr) > (5 -(likely)/ 4) || (dull) > random(40 -(likely)) || \
+#define F_WEAPON_BREAK(dull, corr, likely)	((dull - 1) > (20 - (likely)) || \
+		(corr) > (5 -(likely)/ 4) || (dull - 3) > random(40 -(likely)) || \
 		(corr) > random(10 - (likely) / 4))
 #define F_WEAPON_CONDITION_DULL(hits, pen, lik)	((hits) > random(500) + \
 		10 * (30 - (lik)))
@@ -123,14 +119,33 @@
 #define F_LEGAL_WCPEN(wc, type)      (F_LEGAL_TYPE(type)       && \
 			       ((wc) <= W_MAX_PEN[type]))
 
-#define F_DEFAULT_CLONE_UNIQUE_CHANCE 33
+/* 
+ * 2015-03-08 - Set to 100 for new unique.c
+ * #define F_DEFAULT_CLONE_UNIQUE_CHANCE 33
+ */
+#define F_DEFAULT_CLONE_UNIQUE_CHANCE 100
+
+/* Spread distribution of unique items over a week. */
+#define F_UNIQUE_DISTRIBUTION_TIME 604800
+/* Reach maximum number of items after X% of the time. */
+#define F_UNIQUE_MAX_TIME_PROC        40
+
+#define F_LEGAL_TYPE(type)   ((type) == W_SWORD   ||  \
+			      (type) == W_POLEARM ||  \
+			      (type) == W_AXE	||  \
+			      (type) == W_KNIFE   ||  \
+			      (type) == W_CLUB	||  \
+			      (type) == W_MISSILE ||  \
+			      (type) == W_JAVELIN)
 
 /*
  * Bows.
  */
 #define F_LAUNCH_W_FATIGUE_TIME(x) (20.0 + itof((x)->query_stat(SS_STR)))
 #define F_LAUNCH_W_DAM_FACTOR      100
+/* Snap chance is 1 / F_BOWSTRING_SNAP_CHANCE. */
 #define F_BOWSTRING_SNAP_CHANCE     20
+/* Break chance is 1 / F_PROJECTILE_BREAK_CHANCE. */
 #define F_PROJECTILE_BREAK_CHANCE   30
 
 /*
@@ -139,6 +154,12 @@
 #define F_EXP_HERBSEARCH(difficulty) \
     (250 + (25 * (((difficulty) > 10) ? 10 : (difficulty))))
 #define F_HERB_INTERVAL             60
+#define F_CAN_ID_HERB(id_diff, herbalism) ((id_diff) <= (herbalism))
+
+/*
+ * Alchemy
+ */
+#define F_CAN_ID_POTION(id_diff, alchemy)       ((id_diff) <= (alchemy)) 
 
 /*
  * Thievery.
@@ -153,6 +174,14 @@
 #define F_BACKSTAB_FATIGUE           (10)
 #define F_STEAL_MIN_SKILL            (20)
 #define F_BACKSTAB_MIN_SKILL         (20)
+#define F_TIME_BETWEEN_STEAL          (8)
+#define F_STEAL_MANA                  (5)
+#define F_STEAL_FATIGUE               (5)
+
+/*
+ * Heap.
+ */
+#define F_HEAP_SEE_COUNT(intel) ((intel) / 3)
 
 /* 
  * Living
@@ -176,7 +205,7 @@
  * The following constants define how quickly a living heals.
  */
 #define F_INTERVAL_BETWEEN_HP_HEALING		20  /*(in sec)*/
-#define F_INTERVAL_BETWEEN_MANA_HEALING		30  /*(in sec)*/
+#define F_INTERVAL_BETWEEN_MANA_HEALING		20  /*(in sec)*/
 #define F_INTERVAL_BETWEEN_FATIGUE_HEALING	60  /*(in sec)*/
 #define F_INTERVAL_BETWEEN_STUFFED_HEALING	20  /*(in sec)*/
 #define F_INTERVAL_BETWEEN_SOAKED_HEALING	20  /*(in sec)*/
@@ -189,27 +218,24 @@
 /* Amount to heal per interval for various stats */
 #define F_HEADACHE_RATE                 1
 #define F_SOBER_RATE                    1
-#define F_MANA_HEAL_RATE                1
 #define F_UNSTUFF_RATE                  1
 #define F_UNSOAK_RATE                   16
 #define F_HEAL_FORMULA(con, intox) (((con) * 5 + (intox) * 2 + 100) / 20)
 #define F_FATIGUE_FORMULA(stuffed, max) (5 + (stuffed) * 45 / (max))
 
-/* Formula to heal mana with respect to spellcasting, int and intox */
-/* Old formula, pre 2006-05-23
-#define F_MANA_HEAL_FORMULA(sc,pintox,intel) \
-    (((sc) < 31) ? 2 : ((((((sc) - 30) * MAX_MANA_UPDATE * (intel)) / \
-	1000 + 5) * (100 - (pintox)) / 1000) + 2))
-*/
+#define F_MANA_HEAL_RATE                1
+#define F_MAX_MANA(int)                 ((10 * (int) / 3) + 90)
 #define F_MANA_HEAL_FORMULA(sc, pintox, wis) \
-    (1 + ((wis / 10) * (100 - (pintox) / 2)) * ((sc) > 30 ? (sc) : 30) \
-     / 10000)
+    (3 + ((wis) * (100 - (pintox) / 2) * ((sc) > 30 ? (sc) : 30)) / 50000)
 
 /*
  * How long can a temporary stat addition be? (In heartbeats)
  */
 #define F_TMP_STAT_MAX_TIME 30
 
+/* 
+ * Cost to track something
+ */
 #define F_TRACK_MANA_COST	4
 
 /*
@@ -223,13 +249,13 @@
  * need this since query_age() is in heartbeats.
  */
 #define F_SECONDS_PER_BEAT 		2
-// #define F_NUM_BEATS(seconds) 	((seconds) / F_SECONDS_PER_BEAT)
 
 /*
  * Recovery limit. How long can you keep your items if you have been away
- * from the realms. 1209600 = 2 weeks.
+ * from the realms. 
+ * 94608000 = 3 years
  */
-#define F_RECOVERY_LIMIT	(1209600)
+#define F_RECOVERY_LIMIT	(94608000)
 
 /* 
  * Death
@@ -241,13 +267,17 @@
 #define F_GHOST_MSGOUT 	     "blows"
 #define F_NAME_OF_GHOST	     "some mist"
 
-#define F_DIE_REDUCE_XP(xp) 		((xp) / 4)
+#define F_DIE_REDUCE_XP(xp)             ((xp) / 4)
 #define F_DIE_KEEP_XP(xp)		((xp) - (F_DIE_REDUCE_XP(xp)))
 #define F_DIE_START_HP(max_hp) 		((max_hp) / 10)
 #define F_DEATH_MIN_RELATIVE_BRUTE	(0.3)
+#define F_QUEST_EXP_MAX_BRUTE		(9000000)
 #define F_DEATH_RELATIVE_BRUTE_RANGE	(1.0 - F_DEATH_MIN_RELATIVE_BRUTE)
 #define F_DEATH_MAX_EXP_PLATFORM(m)	(((m) * 9) / 10)
 #define F_DEATH_MIN_EXP_PLATFORM(m)	(((m) * 6) / 10)
+#define F_BRUTE_FACTOR(xp)		(xp < 15000000 ? (0.5 + itof(xp) / 60000000.0) : \
+			((xp) < 115000000 ? (0.72 + itof(xp) / 500000000.0) : 0.95))
+#define F_GUILD_STAT_BRUTE_FACTOR       (80)
 
 #define F_EXP_ON_KILL(k_av, v_av) \
     (int)call_other(MATH_FILE, "exp_on_kill", (k_av), (v_av))
@@ -257,16 +287,21 @@
 /*
  * Combat 
  */
-
 #define F_MAX_HP(con)  (((con) < 10) ? ((con) * 10) : (((con) * 20) - 100))
 
 #define F_PENMOD(pen, skill) ((((pen) > (skill) ? (skill) : (pen)) + 50) * \
 	(((skill) > (pen) ? (pen) + ((skill) - (pen)) / 2 : (skill)) + 50) / \
 	30 - 80)
 
-#define F_AC_MOD(ac) (((ac) + 50) * ((ac) + 50) / 50 - 50)
+#define F_STR_FACTOR(str) ((600 + (str) * 4) / 10)
+
+#define F_AC_MOD(ac) (100.0 - (100.0 / pow (2.0, itof((ac)) / 50.0)))
 
 #define F_DAMAGE(pen, dam) ((pen) - (dam))
+
+#define F_NEW_DAMAGE(pen, pblock, ac) \
+          ((pblock) < (ac) / 2 ? 0 : \
+          ((pen) * (200 - 2 * (ac) ) / (200 - (ac))))
 
 #define F_DARE_ATTACK(ob1, ob2) \
 	((ob1)->query_prop(NPC_I_NO_FEAR) || \
@@ -276,20 +311,34 @@
 #define F_UNARMED_PEN(skill, str)    ((skill) / 10 + (str) / 20)
 #define F_UNARMED_DEFAULT	     (40)
 
-#define F_RELAX_TIME_AFTER_COMBAT(tme)  ((tme) + 60 + (6 * ((tme) % 10)))
+/* How much time it takes you after combat before you can teleport/LD/quit. */
+#define F_RELAX_TIME_AFTER_COMBAT(tme)  (60 + (3 * ((tme) % 10)))
 
+#define F_MAX_QUICKNESS			(250)
 #define F_SPEED_MOD(quickness)          ((5.0 - (itof(quickness) / 100.0)) / 5.0)
 
 /*
- * Healing alco
+ * Food and drink
  */
 #define F_VALUE_ALCO(alco)		(10 + ((alco) * (alco) / 10))
+#define F_CAN_DRINK_ALCO(curtox, mintox, maxtox, strength) \
+     ((strength >= 0) ? (((curtox + strength) <= maxtox) && (strength <= (maxtox / 3))) \
+                      :  (((curtox + strength) >= mintox) && (strength >= (mintox / 2))))
+#define F_CAN_EAT_FOOD(curam, maxam, amount) \
+  ((amount >= 0) ? (((curam + amount) <= maxam) && (amount <= maxam / 5)) \
+		 : ((curam + amount) >= 0))
 
 /*
  * Magic 
  */
 #define F_VALUE_MAGICOB_HEAL(hp)	(5 * (hp) + (hp) * (hp) / 4)
 #define F_VALUE_MAGIC_COMP(hp)		((hp) * 20)
+
+/*
+ * Shop/trade
+ */
+#define F_MAX_BUY_OBJECTS      1
+#define F_MAX_SELL_OBJECTS    30
 
 /*
  * Some general values

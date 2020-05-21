@@ -21,6 +21,7 @@
  * - Set
  * - Tail
  * - Top
+ * - Zap
  */
 
 #pragma no_clone
@@ -29,7 +30,9 @@
 
 inherit "/cmd/std/tracer_tool_base";
 
-#include <filepath.h>
+#include <composite.h>
+#include <files.h>
+#include <language.h>
 #include <macros.h>
 #include <std.h>
 #include <stdproperties.h>
@@ -112,7 +115,9 @@ query_cmdlist()
              "Set"      : "Set",
 
 	     "Tail"	: "Tail",
-	     "Top"	: "Top"
+	     "Top"	: "Top",
+
+	     "Zap"      : "Zap"
              ]);
 }
 
@@ -187,7 +192,7 @@ Call(string str)
 
     str = extract(implode(explode((str + " "), "\\n"), "\n"), 0, -2);
     args = explode(str, " ");
-    if (sizeof(args) == 1)
+    if (sizeof(args) <= 1)
     {
         notify_fail("Syntax: Call <object> <function> [<arguments>]\n");
         return 0;
@@ -364,7 +369,6 @@ Clean(string str)
 {
     object ob, *ob_list;
     string tmp;
-    int    index;
     int    size;
 
     CHECK_SO_WIZ;
@@ -387,32 +391,29 @@ Clean(string str)
     }
 
     ob_list = all_inventory(ob);
-
-    index = -1;
     size = sizeof(ob_list);
-
     if (!size)
     {
         write("Nothing in object inventory to destruct.\n");
         return 1;
     }
 
-    while(++index < size)
+    foreach(object target: ob_list)
     {
-        if (query_interactive(ob_list[index]))
+        if (query_interactive(target))
             continue;
 
         catch(write("Destructing: " +
-            (stringp(tmp = ob_list[index]->short(this_interactive())) ?
-            capitalize(tmp) : file_name(ob_list[index])) + "\n"));
+            (stringp(tmp = target->short(this_interactive())) ?
+            capitalize(tmp) : file_name(target)) + "\n"));
 
         /* Try to remove it the easy way if possible. */
-        catch(ob_list[index]->remove_object());
+        catch(target->remove_object());
 
         /* Destruct if the hard way if it still exists. */
-        if (objectp(ob_list[index]))
+        if (objectp(target))
         {
-            SECURITY->do_debug("destroy", ob_list[index]);
+            SECURITY->do_debug("destroy", target);
         }
     }
 
@@ -488,12 +489,18 @@ Destruct(string str)
 int
 Dump(string str)
 {
-    int     i, j, sz, query_list, ret, calls, etime;
+    int     i, query_list, calls, etime;
     object  ob, *ob_list;
     string  *args, flag, extra, *props, path, tmp;
-    mixed   *data, *vars, *funcs, *item;
+    mixed   *data, *vars, *funcs;
 
     CHECK_SO_WIZ;
+
+    if (!strlen(str))
+    {
+        notify_fail("Syntax: Dump <object> <flag>\n");
+        return 0;
+    }
 
     flag = extra = "";
     if (stringp(str))
@@ -509,6 +516,12 @@ Dump(string str)
     }
     else
 	path = str;
+
+    /* Backward compatibility for 'Dump <obj> vars' */
+    if (flag == "vars")
+    {
+	flag = "*";
+    }
 
     if (!objectp(ob = get_assign(path)))
 	ob = parse_list(path);
@@ -537,7 +550,6 @@ Dump(string str)
         write("Creator: " + tmp + "  ");
     }
     write("UID: " + getuid(ob) + "  EUID: " + geteuid(ob) + "\n");
-
     write("\n");
 
     switch (flag)
@@ -605,9 +617,7 @@ Dump(string str)
 	break;
 
     case "light":
-	write(sprintf("Object: %-52s : OBJ CONT ROOM\n\n",
-		      RPATH(file_name(ob))));
-
+	write(sprintf("Object: %-52s : OBJ CONT ROOM\n\n", RPATH(file_name(ob))));
 	light_status(ob, 0);
 	break;
 
@@ -625,16 +635,16 @@ Dump(string str)
 	    break; 
 	}
 
-	data = ({});
+	data = ({ });
 	foreach (string func: funcs)
 	{
 	    sscanf(func, "%d:%d: %s", calls, etime, func);
-	    item = allocate(4);
-	    item[0] = etime;
-	    item[1] = calls;
-	    item[2] = calls ? itof(etime) / itof(calls) : -1.0;
-	    item[3] = func;
-	    data += ({ item });
+	    vars = allocate(4);
+	    vars[0] = etime;
+	    vars[1] = calls;
+	    vars[2] = calls ? itof(etime) / itof(calls) : -1.0;
+	    vars[3] = func;
+	    data += ({ vars });
 	}
 
 	funcs = sort_array(data, &profile_sort(extra,));
@@ -642,8 +652,7 @@ Dump(string str)
 	write(sprintf("%16s %16s %14s   %s\n\n", "Time", "Calls", "Average", "Function"));
 	foreach (mixed func: funcs)
 	    write(sprintf("%16d %16d %14s : %s\n", func[0], func[1],
-		       (func[2] > 0.0 ? sprintf("%10.4f", func[2]) : "-"), func[3]));
-
+		 (func[2] > 0.0 ? sprintf("%10.4f", func[2]) : "-"), func[3]));
 	break;
 
     case "profile_avg":
@@ -659,15 +668,15 @@ Dump(string str)
 	    break; 
 	}
 
-	data = ({});
+	data = ({ });
 	foreach (mixed func: funcs)
 	{
-	    item = allocate(4);
-	    item[0] = func[1];
-	    item[1] = func[2];
-	    item[2] = func[2] > 0.0 ? func[1] / func[2] : -1.0;
-	    item[3] = func[0];
-	    data += ({ item });
+	    vars = allocate(4);
+	    vars[0] = func[1];
+	    vars[1] = func[2];
+	    vars[2] = func[2] > 0.0 ? func[1] / func[2] : -1.0;
+	    vars[3] = func[0];
+	    data += ({ vars });
 	}
 
 	funcs = sort_array(data, &profile_sort(extra,));
@@ -681,10 +690,10 @@ Dump(string str)
     case "props":
     case "properties":
         props = sort_array(ob->query_props());
-        for (i = 0; i < sizeof(props); i++)
+	foreach(string prop: props)
         {
-            write(sprintf(" %-30s : ", props[i]));
-            print_value(ob->query_prop_setting(props[i]));
+            write(sprintf(" %-30s : ", prop));
+            print_value(ob->query_prop_setting(prop));
         }
         write("\n");
 	break;
@@ -692,19 +701,6 @@ Dump(string str)
     case "shadows":
         while (ob = shadow(ob,0))
             write(file_name(ob) + "\n");
-        write("\n");
-	break;
-
-    case "vars":
-    case "variables":
-	data = SECURITY->do_debug("get_variables", ob);
-	vars = m_indices(data);
-
-        for (i = 0; i < sizeof(vars); i++)
-        {
-            write(sprintf(" %-30s : ", vars[i]));
-            print_value(data[vars[i]]);
-        }
         write("\n");
 	break;
 
@@ -716,19 +712,20 @@ Dump(string str)
 	break;
 
     default:
+        /* Default to check variable(s) */
 	data = SECURITY->do_debug("get_variables", ob);
-	vars = m_indices(data);
-    
-	if (member_array(flag, vars) > 0)
+	vars = sort_array(m_indices(data));
+	vars = filter(vars, &wildmatch(flag, ));
+	if (!sizeof(vars))
 	{
-	    write(flag + " : ");
-	    print_value(data[flag]);
-	    write("\n");
+	    return notify_fail("Unknown parameter or variable name: " + flag + "\n");
 	}
-	else
-	    return notify_fail("Unknown parameter or variable name.\n");
-
-	break;
+	foreach(string var: vars)
+        {
+            write(sprintf(" %-30s : ", var));
+            print_value(data[var]);
+        }
+        write("\n");
     }
 
     return 1;
@@ -957,12 +954,11 @@ object_items(object target)
 static nomask void
 light_status(object target, int level)
 {
-    object *inv    = all_inventory(target);
+    object *ob_list = all_inventory(target);
     int    c_light = target->query_prop(CONT_I_LIGHT);
     int    o_light = target->query_prop(OBJ_I_LIGHT);
     int    r_light = target->query_prop(ROOM_I_LIGHT);
-    int    index   = -1;
-    int    size    = sizeof(inv);
+    int    size    = sizeof(ob_list);
     string desc;
 
     if ((level == 0) || living(target) || size ||
@@ -1004,9 +1000,9 @@ light_status(object target, int level)
         write("\n");
     }
 
-    while(++index < size)
+    foreach(object obj: ob_list)
     {
-        light_status(inv[index], (level + 1));
+        light_status(obj, (level + 1));
     }
 }
 
@@ -1363,7 +1359,8 @@ Top(string arg)
     int show = 10, criteria = -1, c;
     int total, latest, per_call, calls;
     if (arg)
-        foreach (string param : explode(arg, " ")) {
+        foreach (string param : explode(arg, " "))
+        {
             int paramlen = strlen(param) - 1;
             if (paramlen < 0)
                 continue;
@@ -1375,30 +1372,39 @@ Top(string arg)
                 latest = 1;
             else if (param == "absolute"[..paramlen])
                 latest = 0;
-            else if (param == "percall"[..paramlen]) {
+            else if (param == "percall"[..paramlen])
+            {
                 per_call = 1;
                 calls = 0;
-            } else if (param == "numcalls"[..paramlen]) {
+            }
+            else if (param == "numcalls"[..paramlen])
+            {
                 calls = 1;
                 per_call = 0;
-            } else if (param == "time"[..paramlen])
+            }
+            else if (param == "time"[..paramlen])
                 calls = per_call = 0;
-            else if (sscanf(param, "C%i", c) >= 1 && c >= 0 && c <= 9) {
+            else if (sscanf(param, "C%i", c) >= 1 && c >= 0 && c <= 9)
+            {
                 latest = total = per_call = calls = 0;
                 if (c % 2)
                     latest = 1;
                 c = c / 2;
                 if (c == 2)
                     calls = 1;
-                 else {
-                     if (c >= 3) {
+                 else
+                 {
+                     if (c >= 3)
+                     {
                          per_call = 1;
                          c -= 3;
                      }
                      if (c % 2)
                          total = 1;
                  }
-            } else if (sscanf(param, "%i", show) < 1) {
+            }
+            else if (sscanf(param, "%i", show) < 1)
+            {
                 if (param != "?" && param != "help")
                     write(sprintf("Unknown parameter %O to top.\n", param));
                 write("Allowed parameters are 'intrinsic', 'cumulative', 'absolute', 'latest', 'time', 'numcalls', 'percall' and <number>.\n");
@@ -1417,93 +1423,101 @@ Top(string arg)
             }
         }
 
-    if (calls)
-        criteria = 4 + latest; 
-    else 
-        criteria = 6 * per_call + 2 * total + latest;
+        if (calls)
+            criteria = 4 + latest; 
+        else 
+            criteria = 6 * per_call + 2 * total + latest;
 
-    show = min(max(0, show), 1000);
-  
-    if (show) {
-    mixed *avg = SECURITY->do_debug("top_functions", show, criteria);
-    if (!pointerp(avg))
-        return 0;
-    write("\n");
-    if (latest) {
-        float timebase = SECURITY->do_debug("profile_timebase");
-        if (intp(timebase))
-            timebase = -1.0;
-        write(sprintf("%8.3f seconds average\n", timebase));
-    }
-    int time_offset = 3 + 2 * total + latest;
-    int call_offset = 7 + latest;
-    float max_percall = -1.0;
-    float max_time = -1.0;
-    float max_calls = -1.0;
-    foreach (mixed *func : avg) {
-        float calls = func[call_offset];
-        if (calls > max_calls)
-            max_calls = calls;
-        float time = func[time_offset];
-        if (time > max_time)
-            max_time = time;
-        if (calls > 1.0e-30) {
-            float percall = time / calls;
-            if (percall > max_percall)
-                max_percall = percall;
+        show = min(max(0, show), 1000);
+
+        if (show)
+        {
+        mixed *avg = SECURITY->do_debug("top_functions", show, criteria);
+        if (!pointerp(avg))
+            return 0;
+        write("\n");
+        if (latest)
+        {
+            float timebase = SECURITY->do_debug("profile_timebase");
+            if (intp(timebase))
+                timebase = -1.0;
+            write(sprintf("%8.3f seconds average\n", timebase));
+        }
+
+        int time_offset = 3 + 2 * total + latest;
+        int call_offset = 7 + latest;
+        float max_percall = -1.0;
+        float max_time = -1.0;
+        float max_calls = -1.0;
+        foreach (mixed *func : avg)
+        {
+            float calls = func[call_offset];
+            if (calls > max_calls)
+                max_calls = calls;
+            float time = func[time_offset];
+            if (time > max_time)
+                max_time = time;
+            if (calls > 1.0e-30)
+            {
+                float percall = time / calls;
+                if (percall > max_percall)
+                    max_percall = percall;
+            }
+        }
+
+        string timeunit, callunit, percallunit;
+        float timefactor, callfactor, percallfactor;
+
+        int factor = 0, maxfactor = sizeof(units) - 1;
+        while (max_time  * unit_factor[factor] < 100.0 && factor < maxfactor)
+            factor++;
+        timefactor = unit_factor[factor];
+        timeunit = sprintf("%ss%s", units[factor], latest ? "/s" : "");
+
+        factor = 0;
+        if (latest)
+            while (max_calls  * unit_factor[factor] < 100.0 && factor < maxfactor)
+                factor++;
+        else
+            while (max_calls  * unit_factor[factor] < 100.0 && unit_factor[factor] < 1.0)
+                factor++;
+        callfactor = unit_factor[factor];
+        callunit = sprintf("%scalls%s", units[factor], latest ? "/s" : "");
+
+        factor = 0;
+        while (max_percall * unit_factor[factor] < 100.0 && factor < maxfactor)
+            factor++;
+        percallfactor = unit_factor[factor];
+        percallunit = sprintf("%ss/call", units[factor]);
+
+        write(sprintf("   %9s   %9s   %9s\n", timeunit, callunit, percallunit));
+        int i = 1;
+        foreach (mixed *func : avg)
+        {
+            float time = func[time_offset];
+            float num_calls = func[call_offset];
+
+            string time_per_call;
+
+            if (num_calls > 1.0e-30)
+                time_per_call =  sprintf("%9.2f", time / num_calls * percallfactor);
+            else
+                time_per_call = "-";
+            if (!latest && callfactor == 1.0)
+                write(HANGING_INDENT(sprintf("%2d %9.2f / %9i = %9s : %s() in /%s",
+                    i, time * timefactor, ftoi(num_calls), time_per_call, func[1], func[0]), 39, 0));
+            else if (!latest && callfactor > 1.0e-4)
+                write(HANGING_INDENT(sprintf("%2d %9.2f / %9.2f = %9s : %s() in /%s",
+                    i, time * timefactor, num_calls * callfactor, time_per_call, func[1], func[0]), 39, 0));
+            else
+                write(HANGING_INDENT(sprintf("%2d %9.2f / %9.2f = %9s : %s() in /%s",
+                    i, time * timefactor, num_calls * callfactor, time_per_call, func[1], func[0]), 39, 0));
+            i++;
         }
     }
-    string timeunit, callunit, percallunit;
-    float timefactor, callfactor, percallfactor;
-
-    int factor = 0, maxfactor = sizeof(units) - 1;
-    while (max_time  * unit_factor[factor] < 100.0 && factor < maxfactor)
-        factor++;
-    timefactor = unit_factor[factor];
-    timeunit = sprintf("%ss%s", units[factor], latest ? "/s" : "");
-
-    factor = 0;
-    if (latest)
-        while (max_calls  * unit_factor[factor] < 100.0 && factor < maxfactor)
-            factor++;
-    else
-        while (max_calls  * unit_factor[factor] < 100.0 && unit_factor[factor] < 1.0)
-            factor++;
-    callfactor = unit_factor[factor];
-    callunit = sprintf("%scalls%s", units[factor], latest ? "/s" : "");
-
-    factor = 0;
-    while (max_percall * unit_factor[factor] < 100.0 && factor < maxfactor)
-        factor++;
-    percallfactor = unit_factor[factor];
-    percallunit = sprintf("%ss/call", units[factor]);
-
-    write(sprintf("    %10s   %10s   %10s\n", timeunit, callunit, percallunit));
-    int i = 1;
-    foreach (mixed *func : avg) {
-        float time = func[time_offset];
-        float num_calls = func[call_offset];
-
-        string time_per_call;
-
-        if (num_calls > 1.0e-30)
-            time_per_call =  sprintf("%10.4f", time / num_calls * percallfactor);
-        else
-            time_per_call = "-";
-        if (!latest && callfactor == 1.0)
-            write(sprintf("%3d %10.4f / %10i = %10s : %s() in %s\n", i, time * timefactor,
-                          ftoi(num_calls), time_per_call, func[1], func[0]));
-        else if (!latest && callfactor > 1.0e-4)
-            write(sprintf("%3d %10.4f / %10.3f = %10s : %s() in %s\n", i, time * timefactor,
-                          num_calls * callfactor, time_per_call, func[1], func[0]));
-        else
-            write(sprintf("%3d %10.4f / %10.4f = %10s : %s() in %s\n", i, time * timefactor,
-                          num_calls * callfactor, time_per_call, func[1], func[0]));
-        i++;
-    }
-    }
     write("\n");
-    foreach (string line : explode(SECURITY->do_debug("load_average"), ", ")) {
+    foreach (string line : explode(SECURITY->do_debug("load_average"), ", "))
+    {
          string *a = explode(line, " ");
          string one, five, fifteen;
          string name = implode(a[1..], " ");
@@ -1511,6 +1525,67 @@ Top(string arg)
          write(sprintf("%9.2f %9.2f %9.2f %s\n", 
                one, five, fifteen, name));
     }
+    return 1;
+}
+
+/*
+ * Zap - instantly kill an NPC
+ *
+ * Syntax   : Zap [-M] [<object>]
+ * Arguments: <object> - the object to kill
+ *            -M - kill a mortal player (for arches only)
+ * Default  : 'here'
+ */
+int
+Zap(string str)
+{
+    object ob;
+    int    mflag;
+
+    CHECK_SO_WIZ;
+
+    if (!strlen(str))
+    {
+        str = "enemy";
+    }
+
+    if (sscanf(str, "-M %s", str) == 1)
+    {
+        if (WIZ_CHECK < WIZ_ARCH)
+        {
+            notify_fail("The -M is for archwizards only.\n");
+            return 0;
+        }
+        mflag = 1;
+    }
+
+    if (!objectp(ob = get_assign(str)))
+	ob = parse_list(str);
+
+    if (!objectp(ob))
+    {
+        notify_fail("Object '" + str + "' not found.\n");
+        return 0;
+    }
+
+    if (!living(ob))
+    {
+        notify_fail(LANG_THESHORT(ob) + " is not alive. Destruct it instead.\n");
+        return 0;
+    }
+
+    if (!mflag && interactive(ob))
+    {
+        notify_fail("Use the -M flag for real players.\n");
+        return 0;
+    }
+
+    actor("You zap", ({ ob }), " with a bolt of lightning.");
+    all2actbb(" zaps", ({ ob }), " with a bolt of lightning.");
+    target(" zaps you with a bolt of lightning.", ({ ob }));
+
+    ob->set_hp(0);
+    ob->do_die(this_player());
     return 1;
 }
 

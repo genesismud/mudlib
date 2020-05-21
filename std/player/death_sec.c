@@ -10,6 +10,7 @@
  */
 
 #include <formulas.h>
+#include <login.h>
 #include <ss_types.h>
 #include <std.h>
 
@@ -19,6 +20,31 @@
 void make_scar();
 void modify_on_death();
 int query_average();
+
+/*
+ * Function name: death_modify_stat
+ * Description:   Modification function for free stats on death
+ * Returns:       The modified stat.
+ */
+int
+death_modify_stat(int stat)
+{
+    return query_stat(stat);
+}
+
+/*
+ * Function name: death_sequence
+ * Description:   Defines what happens to the player after death
+ */
+void
+death_sequence()
+{
+    object death_mark;
+    if (!query_ghost()) return;
+    
+    death_mark = clone_object(DEFAULT_DEATH);
+    death_mark->move(this_object(), 1);
+}
 
 /*
  * Function name:   second_life
@@ -58,7 +84,7 @@ second_life(object killer)
     tell_object(this_object(), F_DEATH_MESSAGE);
 
     this_object()->death_sequence();
-    save_me(0); /* Save the death badge if player goes linkdead. */
+    save_me(); /* Save the death badge if player goes linkdead. */
 
     return 1;
 }
@@ -102,7 +128,7 @@ modify_on_death()
     set_hp(F_DIE_START_HP(query_max_hp()));
 
     /* Update the progress indicator. */ 
-    add_prop(PLAYER_I_LASTXP, query_exp());
+    reset_exp_gain_desc();
     update_last_stats();
 }
 
@@ -136,7 +162,7 @@ remove_ghost(int quiet)
 
     set_ghost(0);
 
-    save_me(0);
+    save_me();
     return 1;
 }
 

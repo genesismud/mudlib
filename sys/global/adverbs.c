@@ -31,12 +31,17 @@
  * for the search algorithm uses the fact that the list is ordered
  * alphabetically. Therefore, in create, we will sort the list for people who
  * are too sloppy to sort the list themselves ;-) The variable adverbs_size
- * contains the size of the array. The adverb_replacements is a mapping with
- * special replacements, formatted  ([ (string)adverb : (string)replacement ])
+ * contains the size of the array.
+ * The adverb_replacements is a mapping with special replacements, formatted
+ *     ([ (string)adverb : (string)replacement ])
+ *
+ * Attributes for players are formatted
+ *     ([ (string)category : (string*)attributes ])
  */
 static string *adverbs;
 static int     adverbs_size;
 static mapping adverb_replacements = ([ ]);
+static mapping attributes = ([ ]);
 
 /*
  * Function name: create
@@ -46,19 +51,17 @@ static mapping adverb_replacements = ([ ]);
 nomask void
 create()
 {
-    string *lines;
+    string *lines, *words;
     string adverb;
     string replacement;
-    int    index = -1;
-    int    size;
 
     setuid();
     seteuid(getuid());
 
     /* Read the adverbs-file if possible. */
-    if (file_size(ADVERB_SAVE_FILE) > 0)
+    if (file_size(ADVERB_FILE) > 0)
     {
-	adverbs = sort_array(explode(read_file(ADVERB_SAVE_FILE), "\n"));
+	adverbs = sort_array(explode(read_file(ADVERB_FILE), "\n"));
 	adverbs_size = sizeof(adverbs);
     }
 
@@ -69,17 +72,30 @@ create()
     }
 
     /* Read the replacement adverbs-file if possible. */
-    if (file_size(ADVERB_REPLACEMENT_SAVE_FILE) > 0)
+    if (file_size(ADVERB_REPLACEMENT_FILE) > 0)
     {
-        lines = explode(read_file(ADVERB_REPLACEMENT_SAVE_FILE), "\n");
-        size = sizeof(lines);
-        while(++index < size)
+        lines = explode(read_file(ADVERB_REPLACEMENT_FILE), "\n");
+	foreach(string line: lines)
         {
-            if (sscanf(lines[index], "%s:%s", adverb, replacement) == 2)
+            if (sscanf(line, "%s:%s", adverb, replacement) == 2)
             {
                 adverb_replacements[adverb] = replacement;
             }
         }
+    }
+
+    /* Read the adverbs-file if possible. */
+    if (file_size(ATTRIBUTES_FILE) > 0)
+    {
+	lines = explode(read_file(ATTRIBUTES_FILE), "==");
+	foreach(string line: lines)
+	{
+	    words = explode(line, "\n");
+	    if (sizeof(words))
+	    {
+	        attributes[lower_case(words[0])] = sort_array(words[1..]);
+	    }
+	}
     }
 }
 
@@ -150,6 +166,10 @@ member_adverb(string pattern)
     {
         return member_array("sadly", adverbs);
     }
+    if (pattern == "light")
+    {
+        return member_array("lightly", adverbs);
+    }
 
     low = 0;
     high = (adverbs_size - 1);
@@ -157,8 +177,8 @@ member_adverb(string pattern)
     /* This is the actual binary search loop. It searches until it has found
      * an interval of size two that includes the adverb we were looking for.
      * Even for a list of 500 adverbs it will only rank 2log(500) ~= 10 turns
-     * of the loop to find the adverb, so no additional overhead to check
-     * whether the low boundary might match the adverb is added.
+     * of the loop to find the adverb, so no additional overhead is added to
+     * check whether the low boundary might match the adverb.
      */
     while ((low + 1) < high)
     {
@@ -200,7 +220,7 @@ full_adverb(string pattern)
 {
     int index = member_adverb(pattern);
 
-    /* Adverb is really a service adverb. Just return in. */
+    /* Adverb is really a service adverb. Just return it. */
     if (index == -2)
     {
         return pattern;
@@ -252,11 +272,10 @@ public nomask int
 dump_adverbs()
 {
     int index = -1;
-    int size = strlen(ALPHABET);
     string *words;
 
     catch(rm(DUMP_ADVERBS_OUT));
-    while(++index < size)
+    while(++index < ALPHABET_LEN)
     {
 	words = filter(adverbs, &wildmatch((ALPHABET[index..index] + "*")));
 
@@ -299,4 +318,64 @@ mapping
 query_all_adverb_replacements()
 {
     return adverb_replacements + ([ ]);
+}
+
+/*
+ * Function name: query_attribute_categories
+ * Description  : Find out the list of categories.
+ * Returns      : string * - the list of categories.
+ */
+string *
+query_attribute_categories()
+{
+    return sort_array(m_indices(attributes));
+}
+
+/*
+ * Function name: query_attributes
+ * Description  : Find out the list of attributes for a certain category.
+ * Returns      : string * - the list of attributes.
+ */
+string *
+query_attributes(string category)
+{
+    return secure_var(attributes[category]);
+}
+
+/*
+ * Function name: query_is_attribute
+ * Description  : Find out is a string is a valid attribute.
+ * Arguments    : string str - the attribute to test.
+ * Returns      : int - if true, it's a valid attribute.
+ */
+int
+query_is_attribute(string str)
+{
+    foreach(string category: m_indices(attributes))
+    {
+	if (IN_ARRAY(str, attributes[category]))
+	{
+	    return 1;
+	}
+    }
+    return 0;
+}
+
+/*
+ * Function name: query_attribute_category
+ * Description  : Find out the category to a certain attribute.
+ * Arguments    : string str - the attribute to test.
+ * Returns      : string - the category, or 0.
+ */
+string
+query_attribute_category(string str)
+{
+    foreach(string category: m_indices(attributes))
+    {
+	if (IN_ARRAY(str, attributes[category]))
+	{
+	    return category;
+	}
+    }
+    return 0;
 }

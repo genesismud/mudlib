@@ -3,6 +3,7 @@ NAME
 
 SYNOPSIS
 	wiz <message>
+	wiz -
 
 DESCRIPTION
 	This will send a message to all wizards in the game. Internally
@@ -12,6 +13,7 @@ DESCRIPTION
 
 ARGUMENTS
 	<message> - the message to send all wizards.
+        -         - display the last 20 messages on the line.
 
 SEE ALSO
 	busy, line, wize

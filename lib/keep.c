@@ -138,8 +138,13 @@ query_unsellable()
 {
     mixed pvalue = this_object()->query_prop_setting(OBJ_M_NO_SELL);
 
-    return (functionp(pvalue) &&
-        !wildmatch("*->keep_obj_m_no_sell", function_name(pvalue)));
+    /* Since we cannot do a stright comparison on function pointers, we have
+     * transform that into strings first. */
+    if (functionp(pvalue))
+    {
+        return (sprintf("%O", pvalue) != sprintf("%O", keep_obj_m_no_sell));
+    }
+    return !!pvalue;
 }
 
 /*

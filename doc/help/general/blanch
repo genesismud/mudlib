@@ -1,11 +1,11 @@
 NAME
-	blanche
+	blanch
 
 SYNOPSYS
-	blanche
-	blanche <adverb>
-	blanche [at] <target>
-	blanche <adverb> [at] <target>
+	blanch
+	blanch <adverb>
+	blanch [at] <target>
+	blanch <adverb> [at] <target>
 
 OPTIONS
 	<adverb> - any adverb from the available set or a period . to not

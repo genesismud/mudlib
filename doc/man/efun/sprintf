@@ -1,4 +1,3 @@
-
 USAGE
 
   string s;
@@ -16,6 +15,7 @@ Valid argument type specifiers are:
   "s" : the argument is a string.
   "d" : the argument is an integer to be included in decimal representation.
   "i" : same as "d".
+  "f" : the argument is a floating point. Use %S.Pf" with P as presision.
   "o" : the argument is an integer to be included in octal representation.
   "x" : the argument is an integer to be included in hexidecimal
         representation.

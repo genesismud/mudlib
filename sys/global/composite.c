@@ -419,15 +419,14 @@ hanging_indent(string to_print, int length, int width)
         return (to_print + "\n");
     }
 
-    length = ((length > 20) ? 20 : length);
-
     /* I'm sure you'll appreciate this return-statement.
      * Doesn't it look cute? *smile* /Mercade
      */
+    length = min(length, 40);
     tmp = explode(break_string(to_print, scrw), "\n");
     return (implode( ({ tmp[0] }) +
         (explode(break_string(implode(tmp[1..], " "),
         (scrw - length)), "\n")),
-        ("\n" + "                    "[1..length])) + "\n");
+        ("\n" + "                                        "[1..length])) + "\n");
 }
 

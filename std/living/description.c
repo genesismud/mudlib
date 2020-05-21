@@ -10,9 +10,6 @@
  * in a number of places. The reason for this is to allow those
  * functions to be shadowed as internal function calls are not
  * possible to shadow.
- *
- * $Id:$
- *
  */
 
 #include <composite.h>
@@ -413,7 +410,8 @@ query_exp_title()
     if (query_wiz_level())
 	return LD_WIZARD;
  
-    return GET_EXP_LEVEL_DESC(this_object()->query_average_stat());
+    return GET_EXP_LEVEL_DESC(this_object()->query_average_stat(),
+        this_object()->query_gender());
 }
 
 /*
@@ -435,9 +433,15 @@ query_presentation()
     c = this_object()->query_al_title();
 #endif
 
+    /* If there is no (guild) title, use the experience title as title. */
+    if (!strlen(a) && strlen(b))
+    {
+        b = "the " + implode(map(explode(b, " "), capitalize), " ");
+    }
+
     return query_name() +
 	(strlen(a) ? (" " + a + ",") : "") +
-	(strlen(b) ? (" " + b + ",") : "") + " " +
+	(strlen(b) ? (" " + b + ", ") : " ") +
 	this_object()->query_gender_string() + " " + 
         this_object()->query_race_name()
 #ifndef NO_ALIGN_TITLE
@@ -650,7 +654,6 @@ static void
 describe_combat(object *livings)
 {
     int     index;
-    int     size;
     string  text = "";
     string  subst = "";
     object  victim;
@@ -662,7 +665,7 @@ describe_combat(object *livings)
      * people to actually fight. Note that if there is only one living, it
      * is possible that we fight that living.
      */
-    if ((size = sizeof(livings)) < 1)
+    if (sizeof(livings) < 2)
 	return;
 
     /* First compile a mapping of all combats going on in the room.
@@ -671,17 +674,15 @@ describe_combat(object *livings)
      * list since it isn't in there yet.
      */
     livings += ({ this_object() });
-    size++;
-    index = -1;
-    while(++index < size)
+    foreach(object obj: livings)
     {
 	/* Only if the living is actually fighting. */
-	if (objectp(victim = livings[index]->query_attack()))
+	if (objectp(victim = obj->query_attack()))
 	{
 	    if (pointerp(fights[victim]))
-		fights[victim] += ({ livings[index] });
+		fights[victim] += ({ obj });
 	    else
-		fights[victim] = ({ livings[index] });
+		fights[victim] = ({ obj });
 	}
     }
 
@@ -737,21 +738,19 @@ describe_combat(object *livings)
      */
     m_delkey(fights, this_object());
     livings = m_indices(fights);
-    size = sizeof(livings);
-    index = -1;
-    while(++index < size)
+    foreach(object obj: livings)
     {
 	/* Victim is fighting (one of his) attackers. */
-	if (objectp(victim = livings[index]->query_attack()) &&
-	    (member_array(victim, fights[livings[index]]) >= 0))
+	if (objectp(victim = obj->query_attack()) &&
+	    IN_ARRAY(victim, fights[obj]))
 	{
-	    fights[livings[index]] -= ({ victim });
+	    fights[obj] -= ({ victim });
 
             if (pointerp(fights[victim]))
-                fights[victim] -= ({ livings[index] });
+                fights[victim] -= ({ obj });
 
 	    /* Start with the the name of one of the fighters. */
-	    text += livings[index]->query_The_name(this_object());
+	    text += obj->query_The_name(this_object());
 
 	    /* Then the people helping the first combatant. */
 	    if (sizeof(fights[victim]))
@@ -765,22 +764,21 @@ describe_combat(object *livings)
 	    text += " and " + victim->query_the_name(this_object());
 
 	    /* And the helpers on the other side. */
-	    if (sizeof(fights[livings[index]]))
+	    if (sizeof(fights[obj]))
 		text += ", aided by " +
-		    FO_COMPOSITE_ALL_LIVE(fights[victim], this_object());
+		    FO_COMPOSITE_ALL_LIVE(fights[obj], this_object());
 
            text += " are fighting each other.\n";
 	}
-	else if (sizeof(fights[livings[index]]))
+	else if (sizeof(fights[obj]))
 	{
-	    text += capitalize(FO_COMPOSITE_ALL_LIVE(fights[livings[index]],
-		this_object())) +
-		((sizeof(fights[livings[index]]) == 1) ? " is" : " are") +
+	    text += capitalize(FO_COMPOSITE_ALL_LIVE(fights[obj], this_object())) +
+		((sizeof(fights[obj]) == 1) ? " is" : " are") +
 		" fighting " +
-		livings[index]->query_the_name(this_object()) + ".\n";
+		obj->query_the_name(this_object()) + ".\n";
 	}
 
-	m_delkey(fights, livings[index]);
+	m_delkey(fights, obj);
     }
 
     write(text);
@@ -804,6 +802,7 @@ do_glance(int brief)
 {
     object env;
     string item;
+    string text;
 
     /* Don't waste the long description on NPC's. */
     if (!interactive(this_object()))
@@ -831,6 +830,7 @@ do_glance(int brief)
 	return 1;
     }
 
+    text = capitalize(env->short(this_object()) + ".");
     /* Describe the room and its contents. */
 #ifdef DAY_AND_NIGHT
     if (!env->query_prop(ROOM_I_INSIDE) && 
@@ -838,13 +838,15 @@ do_glance(int brief)
 	 (HOUR < 5)) &&
 	((env->query_prop(OBJ_I_LIGHT) +
 	 query_prop(LIVE_I_SEE_DARK)) < 2))
+    {
 	write(LD_IS_NIGHT(env));
+    }
     else
 #endif
     {
 	if (brief)
   	{
-	    write(capitalize(env->short()) + ".\n");
+	    write(text + "\n");
 	    write(env->exits_description());
 	}
 	else
@@ -934,9 +936,10 @@ my_opinion(object ob)
 public void
 appraise_object(int num)
 {
-    write("\n" + this_object()->long(this_player()) + "\n");
-    write(break_string(LD_APPRAISE(appraise_weight(num), appraise_volume(num)),
-	75) + "\n");
+    /* Nobody is concerned with volume of livings. Display weight only. */
+    write("\n" + this_object()->long(0, this_player()) + "\nYou " +
+        APPRAISE_VERB + " " + query_possessive() + " weight is about " +
+	appraise_weight(num) + ".\n");
 }
 
 /*

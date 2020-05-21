@@ -18,6 +18,7 @@
  */
 
 #include "/sys/flags.h"
+#include "/sys/formulas.h"
 #include "/sys/log.h"
 #include "/sys/stdproperties.h"
 #include "/sys/time.h"
@@ -29,13 +30,6 @@
 #define NOTIFY_IP     (16)
 #define NOTIFY_NO_LD  (32)
 #define NOTIFY_BLOCK  (64)
-
-#define NOTIFY_LOGIN   (0)
-#define NOTIFY_LOGOUT  (1)
-#define NOTIFY_LINKDIE (2)
-#define NOTIFY_REVIVE  (3)
-#define NOTIFY_SWITCH  (4)
-#define NOTIFY_REAL_LD (5)
 
 #define GRAPH_PERIODS (24)
 #define GRAPH_QUEUE   (WIZ_KEEPER)
@@ -424,8 +418,7 @@ probe_for_graph()
 
     tmp = allocate(GRAPH_SIZE);
     /* Get all real players. */
-    players = filter(users(), &operator(==)(PLAYER_SEC_OBJECT) @
-                     &function_exists("enter_game"));
+    players = FILTER_PLAYER_OBJECTS(users());
 
     /* Count all mortals and wizards in their respective ranks. Note that
      * the keepers are counted with the arches.
@@ -525,63 +518,77 @@ update_wiz_notify(string name)
 public void
 notify(object ob, int level)
 {
-    string name     = ob->query_real_name();
-    string message  = "[" + capitalize(name) + " ";
-    string ip_name  = query_ip_name(ob);
-    string wizname;
+    string name = ob->query_real_name();
+    string message_text;
+    string age_text = "";
+    string stat_text = "";
+    string second_text;
+    string log_text;
+    string ip_name = query_ip_name(ob);
+    string ip_number = query_ip_number(ob);
+    string wname;
     string log;
     object *players = users() - ({ 0, ob });
+    string *names;
+    string *seconds = this_object()->query_seconds(name);
     int    notify_lvl;
-    int    index    = -1;
-    int    size;
-    int    rank     = query_wiz_rank(name);
-    string domain   = query_wiz_dom(name);
-    int    ld       = (level >= NOTIFY_LINKDIE);
-    mixed  tmp;
+    int    rank = query_wiz_rank(name);
+    string domain = query_wiz_dom(name);
+    int    ld = (level >= CONNECT_LINKDIE);
 
     switch(level)
     {
-    case NOTIFY_LOGIN:
-        tmp = sprintf("login  %s", ip_name); 
-        message += "logged in.";
+    case CONNECT_LOGIN:
+        log_text = sprintf("login  %s [%s]", ip_number, ip_name); 
+        message_text = "logged in; ";
+	if (rank)
+	{
+	    message_text += (WIZ_RANK_NAME(rank) +
+	        (strlen(domain) ? ("; " + domain) : ""));
+	}
+	else
+	{
+	    stat_text = ob->query_average_stat() + " av; ";
+	    age_text = "age " + TIME2STR(ob->query_age() * F_SECONDS_PER_BEAT, 1);
+	}
         break;
 
-    case NOTIFY_LOGOUT:
-        tmp = "quit";
-        message += "logged out.";
+    case CONNECT_LOGOUT:
+        log_text = "quit";
+        message_text = "logged out";
         break;
 
-    case NOTIFY_LINKDIE:
+    case CONNECT_LINKDIE:
         if (ob->query_relaxed_from_combat())
         {
-            tmp = "linkdeath";
-            message += "link-died.";
+            log_text = "linkdeath";
+            message_text = "link-died";
         }
         else
         {
-            tmp = "linkdeath in combat";
-            message += "link-died in combat";
+            log_text = "linkdeath in combat";
+            message_text = "link-died in combat";
         }
         break;
 
-    case NOTIFY_REVIVE:
-        tmp = sprintf("revive %s", ip_name); 
-        message += "revived from linkdeath";
+    case CONNECT_REVIVE:
+        log_text = sprintf("revive %s [%s]", ip_number, ip_name); 
+        message_text = "revived from linkdeath";
         break;
 
-    case NOTIFY_SWITCH:
-        tmp = sprintf("switch %s", ip_name); 
-        message += "reconnected.";
+    case CONNECT_SWITCH:
+        log_text = sprintf("switch %s [%s]", ip_number, ip_name);
+        message_text = "reconnected";
         break;
 
-    case NOTIFY_REAL_LD:
-        tmp = "actual linkdeath after combat";
-        message += "link-died after combat";
+    case CONNECT_REAL_LD:
+        log_text = "actual linkdeath after combat";
+        message_text = "link-died after combat";
         break;
 
     default:
-        tmp = "unknown notification type: " + level;
-        message += " did something unpredictable (level " + level + ").";
+        log_text = "unknown notification type: " + level;
+        message_text = "did something unpredictable (level " + level + ")";
     }
 
 #ifdef LOG_ENTER
@@ -594,7 +601,7 @@ notify(object ob, int level)
     }
 
     write_file(log, sprintf("%s %-11s: %s\n", ctime(time()),
-        capitalize(name), tmp));
+        capitalize(name), log_text));
 #endif LOG_ENTER
 
     ip_name = (strlen(ip_name) ? (" (" + ip_name + ")") : "");
@@ -610,43 +617,59 @@ notify(object ob, int level)
         players = filter(players, &notify_try_block(, rank));
     }
 
-    size = sizeof(players);
-    while(++index < size)
+    foreach(object wizard: players)
     {
-        notify_lvl = players[index]->query_notify();
-        wizname = players[index]->query_real_name();
-
-        if (!(tmp = wiz_notify_map[wizname]))
-        {
-            update_wiz_notify(wizname);
-            tmp = wiz_notify_map[wizname];
-        }
-
-        if (member_array(name, tmp) >= 0)
-        {
-            notify_lvl = NOTIFY_ALL | (notify_lvl & NOTIFY_IP) |
-                (notify_lvl & NOTIFY_NO_LD);
-        }
-
-        if ((!notify_lvl) ||
-            (players[index]->query_prop(WIZARD_I_BUSY_LEVEL) & BUSY_F) ||
-            (ld &&
-             (notify_lvl & NOTIFY_NO_LD)))
+        /* Do not bother busy wizards. */
+        if (wizard->query_prop(WIZARD_I_BUSY_LEVEL) & BUSY_F)
         {
             continue;
         }
 
-        if ((notify_lvl & NOTIFY_ALL) ||
-            (rank &&
-             (notify_lvl & NOTIFY_WIZARDS)) ||
-            ((notify_lvl & NOTIFY_LORDS) &&
-             (rank >= WIZ_LORD)) ||
-            ((notify_lvl & NOTIFY_DOMAIN) &&
-             (domain == query_wiz_dom(players[index]->query_real_name()))))
+        /* Cache the wizard notify information for speed. */
+        wname = wizard->query_real_name();
+        if (!pointerp(names = wiz_notify_map[wname]))
         {
-            tell_object(players[index], message +
-                (((notify_lvl & NOTIFY_IP) && valid_query_ip(players[index])) ?
-                 ip_name : "") + "]\n");
+            update_wiz_notify(wname);
+            names = wiz_notify_map[wname];
+        }
+
+        second_text = "";
+        /* Notify level == notification on wizards. */
+        notify_lvl = wizard->query_notify();
+        /* However, also check for notified mortals. */
+        if (IN_ARRAY(name, names))
+        {
+            notify_lvl = NOTIFY_ALL | (notify_lvl & (NOTIFY_IP | NOTIFY_NO_LD));
+        }
+        /* For arches, also check seconds. */
+        else if ((query_wiz_rank(wname) >= WIZ_ARCH) &&
+            sizeof(names = seconds & names))
+        {
+            notify_lvl = NOTIFY_ALL | (notify_lvl & (NOTIFY_IP | NOTIFY_NO_LD));
+            foreach(string sname: names)
+            {
+                second_text += ":" + capitalize(sname);
+            }
+        }
+
+        if (!notify_lvl ||
+            (ld && (notify_lvl & NOTIFY_NO_LD)))
+        {
+            continue;
+        }
+
+        /* These are the different notify possibilities. */
+        if ((notify_lvl & NOTIFY_ALL) ||
+            (rank && (notify_lvl & NOTIFY_WIZARDS)) ||
+            ((notify_lvl & NOTIFY_LORDS) && (rank >= WIZ_LORD)) ||
+            ((notify_lvl & NOTIFY_DOMAIN) && (domain == query_wiz_dom(wname))))
+        {
+            tell_object(wizard, "[" + capitalize(name) + second_text + " " +
+	        message_text +
+		(((SECURITY->query_restrict(wname) & RESTRICT_STAT)) ? "" : stat_text) +
+		age_text +
+                (((notify_lvl & NOTIFY_IP) && valid_query_ip(wizard)) ? ip_name : "") +
+                "]\n");
         }
     }
 }

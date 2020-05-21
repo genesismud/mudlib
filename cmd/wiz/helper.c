@@ -1,11 +1,12 @@
 /*
  * /cmd/wiz/helper.c
  *
- * This special soul contains some commands useful for wizards with a
- * helper function. The following commands are supported:
+ * This special soul contains some commands useful for wizards with a helper
+ * function. It is added automatically to Lords++ and People in AoD and AoP
+ * teams. The following commands are supported:
  *
+ * - badname
  * - elog
- * - msecond
  * - pinfo
  */
 
@@ -16,10 +17,13 @@
 
 inherit "/cmd/std/command_driver";
 
+#include <composite.h>
+#include <formulas.h>
 #include <log.h>
 #include <macros.h>
+#include <options.h>
 #include <std.h>
-#include <composite.h>
+#include <time.h>
 
 public nomask mixed compile_dates(int back);
 public nomask void find_log(mixed data);
@@ -27,7 +31,6 @@ public nomask void find_log(mixed data);
 #define ELOG_REPEAT_TIME	2.0
 #define ELOG_NUM_REPEATS	50
 
-#define ALLOWED_LIEGE_COMMANDS ({ "pinfo" })
 #define PINFO_EDIT_DONE     "pinfo_edit_done"
 #define PINFO_WRITE_DONE    "pinfo_write_done"
 
@@ -38,6 +41,9 @@ public nomask void find_log(mixed data);
  */
 private static mapping pinfo_edit = ([ ]);
 private static mapping elog_mess = ([]);
+private static mapping pinfo_dates = ([ ]);
+/* Used during badname listing for sorting purpose. */
+private static mapping badnames_login, badnames_set;
 
 /*
  * Function name: create
@@ -98,9 +104,9 @@ nomask mapping
 query_cmdlist()
 {
     return ([
-	"elog":"elog",
-	"msecond":"msecond",
-        "pinfo" : "pinfo",
+        "badname": "badname",
+	"elog"   : "elog",
+        "pinfo"  : "pinfo",
         ]);
 }
 
@@ -154,6 +160,170 @@ valid_user()
     /* All others, no show. */
     return 0;
 }
+
+/* ***************************************************************************
+ * badname - Flag a player as having an inappropriate name.
+ */
+
+nomask int
+badname_sort_login(string name1, string name2)
+{
+    return badnames_login[name2] - badnames_login[name1];
+}
+
+nomask int
+badname_sort_set(string name1, string name2)
+{
+    return badnames_set[name2] - badnames_set[name1];
+}
+
+public nomask int
+badname(string str)
+{
+    mixed info;
+    string *names;
+    object player;
+    string text, name, age;
+    int tme;
+    mapping badnames_text = ([ ]);
+ 
+    CHECK_ALLOWED;
+    if (!strlen(str))
+    {
+	str = "-d";
+    }
+
+    if (str == "purge")
+    {
+	write("Purging badnames.\n");
+	SECURITY->purge_bad_names();
+	return 1;
+    }
+
+    if (IN_ARRAY(str, ({ "-d", "-n", "-l" }) ) )
+    {
+        names = SECURITY->query_bad_names();
+        if (!sizeof(names))
+        {
+            return notify_fail("No names marked as inappropriate.\n");
+        }
+
+	badnames_login = ([ ]);
+	badnames_set = ([ ]);
+	foreach(string name: names)
+	{
+            if (objectp(player = find_player(name)))
+            {
+                badnames_login[name] = time() + 100;
+                text = interactive(find_player(name)) ? "Logged on " : "Linkdead  ";
+		age = TIME2STR(player->query_age() * F_SECONDS_PER_BEAT, 2);
+            }
+            else if (objectp(player = SECURITY->finger_player(name)))
+            {
+                badnames_login[name] = player->query_login_time();
+                text = TIME2FORMAT(badnames_login[name], "d mmm yyyy");
+		age = TIME2STR(player->query_age() * F_SECONDS_PER_BEAT, 2);
+                player->remove_object();
+            }
+            else
+            {
+                badnames_login[name] = 0;
+                text = "Unknown";
+		age = "Unknown";
+            }
+	    info = SECURITY->query_bad_name_info(name);
+	    badnames_set[name] = info[1];
+
+            badnames_text[name] = sprintf("%-11s %-11s  %10s   %-11s  %s\n",
+                capitalize(name), text, age, capitalize(info[0]),
+		TIME2FORMAT(info[1], "d mmm yyyy"));
+        }
+	switch(str)
+	{
+	case "-n":
+	    names = sort_array(names);
+	    break;
+	case "-l":
+            names = sort_array(names, badname_sort_login);
+	    break;
+	case "-d":
+	default:
+	    names = sort_array(names, badname_sort_set);
+	}
+
+	badnames_login = 0;
+	badnames_set = 0;
+
+        write("Name        Last Login     Age        Set by       On date\n" +
+              "=============================================================\n");
+	foreach(string name: names)
+	{
+	    write(badnames_text[name] ? badnames_text[name] : "");
+	}
+        return 1;
+    }
+
+    name = lower_case(str);
+    if (wildmatch("-r *", name))
+    {
+        name = name[3..];
+        if (!SECURITY->is_bad_name(name))
+        {
+            write("The name " + capitalize(name) + " is not marked as inappropriate.\n");
+            return 1;
+        }
+        info = SECURITY->query_bad_name_info(name);
+        SECURITY->remove_bad_name(name);
+        
+        /* Log the action here so that automatic removal of bad names e.g. at
+	 * purge is not marked.
+	 */
+        SECURITY->log_syslog("BADNAME", ctime(time()) + " " + capitalize(name) +
+            " -> not a bad name by " + capitalize(this_interactive()->query_real_name()) +
+            ".\n", -1);
+
+        write("Name " + capitalize(name) + " is no longer marked as " +
+            "inappropriate. Was set by " + capitalize(info[0]) + ".\n");
+        return 1;
+    }
+
+    if (!SECURITY->exist_player(name))
+    {
+         return notify_fail("There is no player named " + capitalize(name) + ".\n");
+    }
+    if (SECURITY->query_wiz_level(name))
+    {
+         write("Inappropriate as that name may be, " +
+             capitalize(name) + " is a wizard.\n");
+         return 1;
+    }
+    if (SECURITY->is_bad_name(name))
+    {
+        write("The name " + capitalize(name) + " is already marked as inappropriate.\n");
+        return 1;
+    }
+    player = SECURITY->finger_player(name);
+    tme = player->query_age() * F_SECONDS_PER_BEAT;
+    player->remove_object();
+    if (tme > 86400)
+    {
+	write("Player " + capitalize(name) + " is already " + CONVTIME(tme) +
+	    " old. Better have a conversation.\n");
+	return 1;
+    }
+
+    if (!SECURITY->set_bad_name(name))
+    {
+	write("Error setting " + capitalize(name) + " as inappropriate.\n");
+    }
+    else
+    {
+        write("Name " + capitalize(name) + " marked as inappropriate.\n");
+    }
+
+    return 1;
+}
+
 
 /* ***************************************************************************
  *  elog - Examine the login log
@@ -367,233 +537,6 @@ find_log(mixed data)
     }
 }
 
-
-/* ***************************************************************************
- *  msecond - Modify seconds entry in mortals
- */
-
-/*
- * Function name: patch_second
- * Description  : edit a stored player second entry
- * Arguments	: what - 1 - add, 0 - remove
- *		  who - whom to edit
- *		  name - the name to add/remove
- */
-public void
-patch_second(int what, string who, string name)
-{
-    string file = PLAYER_FILE(who);
-    mapping plmap;
-    string query = this_interactive()->query_real_name();
-    
-    if (!SECURITY->exist_player(who))
-    {
-        return;
-    }
-
-    if (SECURITY->query_wiz_rank(query) < WIZ_ARCH)
-    {
-        write("This command is not available for non-arches when the " +
-            "player is not present in the realms.\n");
-        return;
-    }
-
-    plmap = restore_map(file);
-
-    if (!m_sizeof(plmap["m_seconds"]))
-    {
-        plmap["m_seconds"] = ([]);
-    }
-    if (what == 1)
-    {
-	if (sizeof(plmap["m_seconds"][name]) == 0)
-	{
-	    plmap["m_seconds"][name] = ({ query, time() });
-	}
-    }
-    else
-    {
-	plmap["m_seconds"] = m_delete(plmap["m_seconds"], name);
-    }
-#ifdef LOG_SECONDS
-    SECURITY->log_syslog(LOG_SECONDS, (ctime(time()) + " " + capitalize(query) + (what == 1 ? " added " : " removed ") + capitalize(name) + (what == 1 ? " to " : " from ") + capitalize(who) + ".\n"));
-#endif LOG_SECONDS
-
-    save_map(plmap, file);
-}
-
-/*
- * Function name: msecond
- * Description  : modify seconds entry in mortal
- */
-public int
-msecond(string str)
-{
-    string *slist, *args = ({});
-    int i, sz;
-    mixed info;
-    object plob;
-
-    CHECK_ALLOWED;
-
-    if (stringp(str))
-    {
-	args = explode(lower_case(str), " ");
-    }
-
-    if (!sizeof(args) || sizeof(args) == 0)
-    {
-	notify_fail("Syntax: msecond <mortal>\n" +
-		    "        msecond a[dd] <name> to <mortal>\n" +
-		    "        msecond r[emove] <name> from <mortal>\n");
-	return 0;
-    }
-
-    switch (args[0])
-    {
-    case "a":
-    case "add":
-	if (sizeof(args) != 4 || args[2] != "to")
-	{
-	    msecond("");
-	    return 0;
-	}
-	if (!SECURITY->exist_player(args[1]))
-	{
-	    notify_fail("The player " + capitalize(args[1]) + " does not exist.\n");
-	    return 0;
-	}
-	if (!SECURITY->exist_player(args[3]))
-	{
-	    notify_fail("The player " + capitalize(args[3]) + " does not exist.\n");
-	    return 0;
-	}
-
-	// Do the actual adding
-
-	// Make a list of all seconds who need to be notified/added
-	if (!objectp(plob = find_player(args[3])))
-	    plob = SECURITY->finger_player(args[3]);
-	slist = ({ args[3] }) + plob->query_seconds();
-	if (plob->query_finger_player())
-	{
-	    plob->remove_object();
-	}
-
-	// First add as per the command, including all other seconds
-	for (i = 0, sz = sizeof(slist) ; i < sz ; i++)
-	{
-	    if (args[1] == slist[i])
-		continue;
-	    if (objectp(plob = find_player(slist[i])))
-		plob->add_second(args[1]);
-	    else
-		patch_second(1, slist[i], args[1]);
-	}
-
-	// Then add the reverse (all seconds to the first name)
-	plob = find_player(args[1]);
-	for (i = 0, sz = sizeof(slist) ; i < sz ; i++)
-	{
-	    if (args[1] == slist[i])
-		continue;
-	    if (objectp(plob))
-		plob->add_second(slist[i]);
-	    else
-		patch_second(1, args[1], slist[i]);
-	}
-	
-	write("Added second " + capitalize(args[1]) + " to " + COMPOSITE_WORDS(map(slist, capitalize)) + ".\n");
-	break;
-
-    case "r":
-    case "remove":
-	if (sizeof(args) != 4 || args[2] != "from")
-	{
-	    msecond("");
-	    return 0;
-	}
-	if (!SECURITY->exist_player(args[3]))
-	{
-	    notify_fail("The player " + capitalize(args[3]) + " does not exist.\n");
-	    return 0;
-	}
-
-	// Make a list of all seconds who need to be notified/removed
-	if (!objectp(plob = find_player(args[3])))
-	{
-	    plob = SECURITY->finger_player(args[3]);
-	}
-	slist = ({ args[3] }) + plob->query_seconds();
-	if (plob->query_finger_player())
-	{
-	    plob->remove_object();
-	}
-
-	// First remove as per the command, including all other seconds
-	for (i = 0, sz = sizeof(slist) ; i < sz ; i++)
-	{
-	    if (objectp(plob = find_player(slist[i])))
-		plob->remove_second(args[1]);
-	    else
-		patch_second(0, slist[i], args[1]);
-	}
-
-	// Then remove the reverse (all seconds from the first name)
-	plob = find_player(args[1]);
-	for (i = 0, sz = sizeof(slist) ; i < sz ; i++)
-	{
-	    if (objectp(plob))
-		plob->remove_second(slist[i]);
-	    else
-		patch_second(0, args[1], slist[i]);
-	}
-	
-	write("Removed second " + capitalize(args[1]) + " from " + COMPOSITE_WORDS(map(slist, capitalize)) + ".\n");
-	break;
-
-    default:
-	if (sizeof(args) != 1)
-	{
-	    msecond("");
-	    return 0;
-	}
-	if (!SECURITY->exist_player(args[0]))
-	{
-	    notify_fail("The player " + capitalize(args[0]) + " does not exist.\n");
-	    return 0;
-	}
-	if (!objectp(plob = find_player(args[0])))
-	{
-	    plob = SECURITY->finger_player(args[0]);
-	}
-	str = args[0];
-	args = sort_array(plob->query_seconds());
-
-	if (!sizeof(args))
-	{
-	    write(sprintf("%-10s: ", capitalize(str)) + "No seconds\n");
-	}
-	else
-	{
-	    write(sprintf("%-10s: ", capitalize(str)));
-	    for (i = 0, sz = sizeof(args) ; i < sz ; i++)
-	    {
-		if (i > 0)
-		    write("          : ");
-		info = plob->query_second_info(args[i]);
-		write(sprintf("%-10s added %s by %s\n", capitalize(args[i]), ctime(info[1]), capitalize(info[0])));
-	    }
-	}
-	if (plob->query_finger_player())
-	{
-	    plob->remove_object();
-	}
-	break;
-    }
-    return 1;
-}
-
 /* ***************************************************************************
  *  pinfo - Edit/view the information file on a player.
  */
@@ -608,6 +551,7 @@ public void
 pinfo_write_done(string text)
 {
     string wname = this_player()->query_real_name();
+    string file;
 
     if (MASTER_OB(previous_object()) != EDITOR_OBJECT)
     {
@@ -630,10 +574,15 @@ pinfo_write_done(string text)
     /* Make sure we have the proper euid. */
     SECURITY->set_helper_soul_euid();
 
-    write_file(pinfo_edit[wname], ctime(time()) + " " + capitalize(wname) +
-	       " (" + capitalize(WIZ_RANK_NAME(SECURITY->query_wiz_rank(wname))) +
-	       "):\n" + text + "\n");
-    pinfo_edit = m_delete(pinfo_edit, wname);
+    file = PINFO_FILE(pinfo_edit[wname]);
+    write_file(file, ctime(time()) + " " + capitalize(wname) + " (" +
+        capitalize(WIZ_RANK_NAME(SECURITY->query_wiz_rank(wname))) +
+	"):\n" + text + "\n");
+#ifdef LOG_PINFO
+    SECURITY->log_syslog(LOG_PINFO, ctime(time()) + " " + capitalize(wname) +
+	" wrote pinfo on " + capitalize(pinfo_edit[wname]) + ".\n");
+#endif
+    m_delkey(pinfo_edit, wname);
     write("Information saved.\n");
 }
 
@@ -647,6 +596,7 @@ public void
 pinfo_edit_done(string text)
 {
     string wname = this_player()->query_real_name();
+    string file;
 
     if (MASTER_OB(previous_object()) != EDITOR_OBJECT)
     {
@@ -669,13 +619,30 @@ pinfo_edit_done(string text)
     /* Make sure we have the proper euid. */
     SECURITY->set_helper_soul_euid();
 
-    rm(pinfo_edit[wname]);
-    write_file(pinfo_edit[wname], text + "\n" + ctime(time()) + " " +
-	       capitalize(wname) + " (" +
-	       capitalize(WIZ_RANK_NAME(SECURITY->query_wiz_rank(wname))) +
-	       "):\nRe-edited the previous text.\n\n");
-    pinfo_edit = m_delete(pinfo_edit, wname);
+    file = PINFO_FILE(pinfo_edit[wname]);
+    rm(file);
+    write_file(file, text + "\n" + ctime(time()) + " " + capitalize(wname) +
+	" (" + capitalize(WIZ_RANK_NAME(SECURITY->query_wiz_rank(wname))) +
+	"):\nRe-edited the previous text.\n\n");
+#ifdef LOG_PINFO
+    SECURITY->log_syslog(LOG_PINFO, ctime(time()) + " " + capitalize(wname) +
+	" edited pinfo on " + capitalize(pinfo_edit[wname]) + ".\n");
+#endif
+    m_delkey(pinfo_edit, wname);
     write("Information saved.\n");
+}
+
+/*
+ * Function name: sort_pinfo_list
+ * Description  : Sorts the names in the pinfo list descendingly based on when
+ *                they were last edited.
+ * Arguments    : string name1, name2 - the names to sort
+ * Returns      : int -1 / 0 / 1 - sort modifiers.
+ */
+public int
+sort_pinfo_list (string name1, string name2)
+{
+    return pinfo_dates[name2] - pinfo_dates[name1];
 }
 
 nomask int
@@ -685,17 +652,25 @@ pinfo(string str)
     string name;
     string wname = this_player()->query_real_name();
     int    rank = SECURITY->query_wiz_rank(wname);
+    int    scrw = this_player()->query_option(OPT_SCREEN_WIDTH);
+    int    index;
     string cmd;
     string text;
     string file;
     object editor;
+    int    ftime;
+    string *files = ({ });
 
     CHECK_ALLOWED;
 
     if (!strlen(str))
     {
-	notify_fail("Syntax: pinfo [r / t / w / d / e] <name> [<text>]\n");
+	notify_fail("Syntax: pinfo [r / t / w / d / e] <name> [<text>] / l\n");
 	return 0;
+    }
+    if (str == "l")
+    {
+        str += " 10";
     }
 
     args = explode(str, " ");
@@ -724,8 +699,8 @@ pinfo(string str)
 
     case WIZ_LORD:
         /* Can handle their subject wizards. */
-	if ((SECURITY->query_wiz_dom(wname) ==
-	     SECURITY->query_wiz_dom(name)) &&
+	if ((SECURITY->query_domain_lord(
+		    SECURITY->query_wiz_dom(name)) == wname) &&
 	    (SECURITY->query_wiz_rank(name) < rank))
 	{
 	    break;
@@ -769,6 +744,10 @@ pinfo(string str)
 	}
 
 	rm(file);
+#ifdef LOG_PINFO
+	SECURITY->log_syslog(LOG_PINFO, ctime(time()) + " " + capitalize(wname) +
+	    " deleted pinfo on " + capitalize(name) + ".\n");
+#endif
 	write("Removed pinfo on " + capitalize(name) + ".\n");
 	return 1;
 
@@ -785,10 +764,34 @@ pinfo(string str)
 	    return 1;
 	}
 
-	pinfo_edit[wname] = file;
+	pinfo_edit[wname] = name;
 	text = read_file(file);
 	clone_object(EDITOR_OBJECT)->edit(PINFO_EDIT_DONE, text,
-					  sizeof(explode(text, "\n")));
+	    sizeof(explode(text, "\n")));
+	return 1;
+
+    case "l":
+	foreach(string letter: explode(ALPHABET, ""))
+	{
+	    files += get_dir(PINFO_FILE(letter + "*"));
+	}
+	pinfo_dates = ([ ]);
+	foreach(string name: files)
+	{
+	    /* Filter on last quarter. */
+	    if ((ftime = file_time(PINFO_FILE(name))) > (time() - 7776000))
+	    {
+	        pinfo_dates[name] = ftime;
+	    }
+	}
+	files = sort_array(m_indices(pinfo_dates), sort_pinfo_list);
+	files = files[..29];
+	for (index = 0; index < sizeof(files); index++)
+	{
+	    files[index] = FORMAT_NAME(files[index]) + " " + ctime(pinfo_dates[files[index]]);
+	}
+	scrw = ((scrw >= 40) ? (scrw - 3) : 79);
+	write(sprintf("%-*#s\n", scrw, implode(files, "\n")));
 	return 1;
 
     case "m":
@@ -842,12 +845,16 @@ pinfo(string str)
 	    }
 
 	    write_file(file, ctime(time()) + " " + capitalize(wname) + " (" +
-		       capitalize(WIZ_RANK_NAME(SECURITY->query_wiz_rank(wname))) +
-		       "):\n" + text + "\n\n");
+		capitalize(WIZ_RANK_NAME(SECURITY->query_wiz_rank(wname))) +
+		"):\n" + text + "\n\n");
+#ifdef LOG_PINFO
+	    SECURITY->log_syslog(LOG_PINFO, ctime(time()) + " " + capitalize(wname) +
+		" wrote pinfo on " + capitalize(name) + ".\n");
+#endif
 	}
 	else
 	{
-	    pinfo_edit[wname] = file;
+	    pinfo_edit[wname] = name;
 	    clone_object(EDITOR_OBJECT)->edit(PINFO_WRITE_DONE);
 	}
 

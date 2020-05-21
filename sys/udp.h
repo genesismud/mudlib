@@ -78,8 +78,20 @@
  * that many such single extension files will be available through ftp
  * from alcazar.cd.chalmers.se::/pub/cdlib/udp_extensions
  */
-#include "/config/sys/udp2.h"
 
+/* At Genesis, we don't want to have anything to do with UDP. */
+#undef UDP_ENABLED
+
+#define UDP_RWHO_Q 	"rwho_q"
+#define UDP_RWHO_A 	"rwho_a"
+
+#define RWHO_NO_MORTALS
+
+#define UDP_SUPPORT_ARRAY ({ UDP_STARTUP, UDP_SHUTDOWN, UDP_PING_Q, \
+			     UDP_PING_A, UDP_MUDLIST_Q, UDP_MUDLIST_A, \
+			     UDP_WARNING, UDP_SUPPORTED_Q, UDP_SUPPORTED_A, \
+			     UDP_RWHO_Q, UDP_RWHO_A, UDP_GWIZMSG, \
+			     UDP_GTELL, UDP_GFINGER_Q, UDP_GFINGER_A })
 
 /*
  * You should define the below arrar in your udp2.h file so that

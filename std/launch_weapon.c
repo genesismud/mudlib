@@ -27,8 +27,6 @@ inherit "/std/weapon";
 #include <formulas.h>
 #include "/std/combat/combat.h"
 
-#define ENV(x) environment(x)
-
 string Valid_projectile,    /* The type of projectiles we use. */
        Shoot_command,       /* The command word used to shoot. */
        Aim_command,         /* The command word used to aim. */
@@ -125,10 +123,13 @@ create_weapon()
     Fire_command = "fire";
     Unload_command = "unload";
 
-    create_launch_weapon();
 
+    /* Allow redefinition of a sling to be a single handed weapon, like a sling. */
     set_hands(W_BOTH);
     set_wt(W_MISSILE);
+    
+    create_launch_weapon();
+
     set_wf(this_object());
 }
 
@@ -416,9 +417,9 @@ parse_aim(string args)
     }
     
     Archer = query_wielded();
-    people = FILTER_CAN_SEE(FILTER_LIVE(all_inventory(ENV(Archer))), Archer) - 
+    people = FILTER_CAN_SEE(FILTER_LIVE(all_inventory(environment(Archer))), Archer) - 
       ({ Archer });
-    Archer_env = ENV(Archer);
+    Archer_env = environment(Archer);
 
     // Parse patterns matching: shoot black orc
     if (parse_command(args, people, " [at] [the] %l ", livings) &&
@@ -431,14 +432,14 @@ parse_aim(string args)
 	}
 
 	Target = livings[ABS(livings[0])];
-	Target_env = ENV(Target);
+	Target_env = environment(Target);
 	Adj_room_desc = 0;
 	Org_room_desc = 0;
 	hitloc = 0;
 	return 1;
     }
     
-    // Perhapps the target stands in an adjecent room?
+    // Perhaps the target stands in an adjecent room?
     if ((other_rooms = Archer_env->query_range_targets(Archer)))
     {
         // Loop through the adjecent rooms.
@@ -469,7 +470,7 @@ parse_aim(string args)
 		Target = livings[ABS(livings[0])];
 		Adj_room_desc = other_rooms[i + 2];
 		Org_room_desc = other_rooms[i + 3];
-		Target_env = ENV(Target);
+		Target_env = environment(Target);
 
 		if (strlen(location))
 		{
@@ -548,7 +549,7 @@ parse_aim(string args)
 	    return -1;
 	}
 
-	Target_env = ENV(Target);
+	Target_env = environment(Target);
 	Adj_room_desc = 0;
 	Org_room_desc = 0;
 	return 1;
@@ -568,10 +569,9 @@ parse_aim(string args)
 public int
 shoot(string args)
 {
-
     object archer = query_wielded();
 
-    if (!living(ENV(this_object())) || query_prop(OBJ_I_BROKEN))
+    if (!living(environment(this_object())) || query_prop(OBJ_I_BROKEN))
     {
         return 0;
     }
@@ -638,7 +638,7 @@ aim(string args)
 {
     object archer = query_wielded();
 
-    if (!living(ENV(this_object())) || query_prop(OBJ_I_BROKEN))
+    if (!living(environment(this_object())) || query_prop(OBJ_I_BROKEN))
     {
         return 0;
     }
@@ -663,7 +663,7 @@ aim(string args)
         return 1;
     }
 
-    // Thou shallt possess missiles.
+    // Thou shalt possess missiles.
     if (!Projectile)
     {
 	try_load();
@@ -955,7 +955,7 @@ do_fire()
         if (Projectile)
 	{
             Projectile->unload();
-	    Projectile->move(ENV(this_object()), 1);
+	    Projectile->move(environment(this_object()), 1);
 	}
 
 	reset_launch_weapon();
@@ -972,16 +972,15 @@ do_fire()
     }     
 
     // Archer should not move while aiming.
-    if (ENV(Archer) != Archer_env)
+    if (environment(Archer) != Archer_env)
     {
-        tell_object(Archer, "The movment made you lose your target.\n");
+        tell_object(Archer, "The movement made you lose your target.\n");
 	unload_projectile();
 	return;
     }
 
     // The target should not move away from the archer while he is aiming.
-
-    if (!(Target && (ENV(Target) == Target_env || ENV(Target) == Archer_env)))
+    if (!(Target && (environment(Target) == Target_env || environment(Target) == Archer_env)))
     {
         tell_object(Archer, "Your target has dissapeared.\n");
 	unload_projectile();
@@ -989,7 +988,6 @@ do_fire()
     }
 
     // The archer should be alive.
-
     if (Archer->query_ghost())
     {
         tell_object(Archer, "You can not do that. You are... eh. Dead!\n");
@@ -997,8 +995,7 @@ do_fire()
         return;
     }
 
-    // Thou shalt not shoot at the dead.
-
+    // Thou shallt not shoot at the dead.
     if (Target->query_ghost())
     {
         if (Target)
@@ -1045,7 +1042,6 @@ do_fire()
     combat_ob->cb_calc_speed();
 
     // First do some check if we actually attack.
-
     if (pointerp(fail = Archer->query_prop(LIVE_AS_ATTACK_FUMBLE)) &&
         sizeof(fail))
     {
@@ -1069,28 +1065,34 @@ do_fire()
         else
         {
             Archer->remove_prop(LIVE_I_ATTACK_DELAY);
-	}
+        }
     }
 
-    if (Archer->query_prop(LIVE_I_STUNNED))
+    /* Changed LIVE_I_CONCENTRATE to function in the same manner as the stun */
+    if (Archer->query_prop(LIVE_I_STUNNED) ||
+        Archer->query_prop(LIVE_I_CONCENTRATE))
     {
         set_alarm(combat_ob->cb_query_speed(), 0.0, &do_fire());
         return;
     }
 
+   /*
+    * Commented out due to the above mentioned change.
+    *
     if (Archer->query_prop(LIVE_I_CONCENTRATE))
     {
         tell_object(Archer, 
-		    "You too busy with other things to shoot right now.\n");
+		    "You are too busy with other things to shoot right now.\n");
 	unload_projectile();
         return;
     }
+    */
 
     // Mark this moment as being in combat.
     combat_ob->cb_update_combat_time();
     Next_round = time() + ftoi(combat_ob->cb_query_speed());
 
-    if (ENV(Archer) == ENV(Target))
+    if (environment(Archer) == environment(Target))
     {
         Archer->attack_object(Target);
         tell_object(Archer,
@@ -1131,7 +1133,6 @@ do_fire()
     // Make sure there is a proper delay where you can not fire after you
     // have fired an arrow.
     // And make sure you are not attacked if the target can not see you.
-
     if (hitsuc <= 0)
     {
         return;
@@ -1141,7 +1142,6 @@ do_fire()
      * The intended victim can also force a fail. like in the weapon
      *  case, if fail, the cause must produce explanatory text himself.
      */
-
     hitsuc = Target->query_not_attack_me(Archer, attack_location);
 
     if (hitsuc > 0)
@@ -1219,11 +1219,11 @@ do_fire()
     if (!Target || Target->query_ghost())
     {
         tell_object(Archer, Target->query_The_name(Archer) + 
-		    " is allready dead.\n");
+		    " is already dead.\n");
 	unload_projectile();
     }
     
-    // Oops, Lifeform turned into a deadform. Reward the killer. //
+    // Oops, lifeform turned into a deadform. Reward the killer. //
     if ((int)Target->query_hp() <= 0)
     {
         Target->do_die(Archer);
@@ -1232,8 +1232,7 @@ do_fire()
     /*
      * Fighting is quite tiresome you know
      */
-    
-    ftg = random(3) + 1;
+        ftg = random(3) + 1;
     if (Archer->query_fatigue() >= ftg)
     {
         Archer->add_fatigue(-ftg);
@@ -1271,12 +1270,12 @@ try_load()
     }
 
     set_this_player(query_wielded());
-    stack_env = ENV(Projectile_stack);
+    stack_env = environment(Projectile_stack);
     
     if (stack_env == query_wielded() ||
 	(stack_env->query_prop(CONT_I_IS_QUIVER) &&
 	 !stack_env->query_prop(CONT_I_CLOSED) &&
-	 ENV(stack_env) == query_wielded()))
+	 environment(stack_env) == query_wielded()))
     {
 	    // We still have the stack present.
 	    load_projectile();
@@ -1322,7 +1321,7 @@ long(string str, object for_obj)
 /*
  * Function name: try_hit
  * Description  : Try hit is called from the combat object when the archer
- *                fights. Since a bow only shoot every second round it
+ *                fights. Since a bow only shoots every second round it
  *                tries to load a missile first round and fires the missile
  *                the second round.
  *                
@@ -1374,7 +1373,6 @@ try_hit(object target)
     }
 }
 
-
 /*
  * Function name: wield_secondary_weapon
  * Description  : Commands the player to wield the secondary weapon he has
@@ -1385,7 +1383,6 @@ wield_secondary_weapon()
 {
     this_player()->command("$" + Sec_wep_cmd);
 }
-
 
 /*
  * Function name: load_projectile
@@ -1643,13 +1640,13 @@ did_hit(int aid, string hdesc, int phurt, object target, int dt,
     if (!random(F_PROJECTILE_BREAK_CHANCE))
     {
         this_object()->
-	    tell_all_projectile_break(Projectile, target, ENV(target));
+	    tell_all_projectile_break(Projectile, target, environment(target));
 	Projectile->set_broken(1);
     }  
     
     if (phurt < 5)
     {
-        move_projectile_to_env(ENV(target), Projectile);
+        move_projectile_to_env(environment(target), Projectile);
     }
     else
     {
@@ -1751,7 +1748,7 @@ tell_archer_unload(object archer, object target, object projectile)
 public void
 tell_others_unload(object archer, object target, object projectile)
 {
-    tell_room(ENV(archer), QCTNAME(archer) + " unloads " +
+    tell_room(environment(archer), QCTNAME(archer) + " unloads " +
 	      archer->query_possessive() + " " + short() + ".\n",
 	      ({ archer }), archer);
 }
@@ -1771,7 +1768,7 @@ public void
 tell_archer_load(object archer, object target,
 		 object projectile, string adj_desc)
 {
-    if (ENV(archer) == ENV(target))
+    if (environment(archer) == environment(target))
     {
         archer->catch_msg("You load your " + short() + " with " +
  			  LANG_ADDART(Projectile->singular_short()) + 
@@ -1803,7 +1800,7 @@ public void
 tell_others_load(object archer,  object target,
 		 object projectile, string adj_desc)
 {
-    if (ENV(archer) == ENV(target))
+    if (environment(archer) == environment(target))
     {
         // X loads his weapon and aims at Y.
         tell_bystanders_miss(QCTNAME(archer) + " loads " + 
@@ -1812,7 +1809,7 @@ tell_others_load(object archer,  object target,
 			     QCTNAME(archer) + " loads " + 
 			     archer->query_possessive() + " " + short() + 
 			     " and aims at something.\n",
-			     0, 0, archer, target, ENV(archer));
+			     0, 0, archer, target, environment(archer));
     }
     else
     {
@@ -1822,7 +1819,7 @@ tell_others_load(object archer,  object target,
 			     QCTNAME(archer) + " loads " + 
 			     archer->query_possessive() + " " + short() + 
 			     " and aims at something " + adj_desc + ".\n",
-			     0, 0, archer, target, ENV(archer));
+			     0, 0, archer, target, environment(archer));
     }
 }
 
@@ -1839,7 +1836,7 @@ tell_others_load(object archer,  object target,
 public void
 tell_target_load(object archer,  object target, object projectile)
 {
-    if (ENV(target) == ENV(archer))
+    if (environment(target) == environment(archer))
     {
         tell_object(target, archer->query_The_name(target) + " loads " +
 		    archer->query_possessive() + " " + short() + " with " + 
@@ -1859,7 +1856,7 @@ tell_target_load(object archer,  object target, object projectile)
 public void 
 tell_all_projectile_break(object projectile, object target)
 {
-    tell_room(ENV(target), "The " +
+    tell_room(environment(target), "The " +
 	      Projectile->singular_short() + " breaks!\n");
 }
 
@@ -2063,6 +2060,7 @@ public void
 move_projectile_to_env(object location, object projectile)
 {
     projectile->add_prop(OBJ_I_HIDE, 33 * random(3));
+    projectile->add_prop(OBJ_O_LOOTED_IN_ROOM, location);
     projectile->move(location, 1);
 }
 

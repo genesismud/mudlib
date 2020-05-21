@@ -10,22 +10,25 @@
 #pragma strict_types
 
 inherit "/std/callout";
+inherit "/lib/item_expiration";
 
 #include <composite.h>
 #include <language.h>
 #include <macros.h>
+#include <money.h>
 #include <ss_types.h>
 #include <std.h>
 #include <stdproperties.h>
 
 #define SEARCH_PARALYZE "_search_paralyze_"
+#define OBJ_I_SEARCH_ALARM_ID "_obj_i_search_alarm_id"
 
 static string   obj_pshort,     /* Plural short description */
                 obj_subloc,     /* Current sublocation */
-                *obj_names,     /* The name(s) of the object */
-                *obj_pnames,    /* The plural name(s) of the object */
-                *obj_adjs,      /* The adjectivs accepted */
-                *obj_commands;  /* The commands for each command item */
+               *obj_names,      /* The name(s) of the object */
+               *obj_pnames,     /* The plural name(s) of the object */
+               *obj_adjs,       /* The adjectivs accepted */
+               *obj_commands;   /* The commands for each command item */
 static mixed    obj_items,      /* The items (pseudo look) of this object */
                 obj_cmd_items,  /* The command items of this object */
                 obj_state,      /* The internal state, used for light etc */
@@ -34,10 +37,11 @@ static mixed    obj_items,      /* The items (pseudo look) of this object */
                 magic_effects;  /* Magic items effecting this object. */
 static int      obj_no_show,    /* Don't display this object. */
                 obj_no_show_c,  /* Don't show this object in composite desc */
-                obj_no_change;  /* Lock value for configuration */
+                obj_no_change,  /* Lock value for configuration */
+                will_not_recover; /* True if it won't recover */
 static object   obj_previous;   /* Caller of function resulting in VBFC */
 static mapping  obj_props;      /* Object properties */
-private static int hb_index,    /* Identification of hearbeat callout */
+private static int hb_alarm_id,    /* Identification of hearbeat callout */
                 reset_interval; /* Constant used to set reset interval */
 
 /*
@@ -51,8 +55,7 @@ public  mixed   query_prop(string prop);
         mixed   query_adj(int arg);
         mixed   query_adjs();
         void    set_no_show_composite(int i);
-public  nomask varargs int check_recoverable(int flag);
-        int     search_hidden(object obj, object who);
+public  int     search_hidden(object obj, object who);
         int     is_live_dead(object obj, int what);
 
 /* 
@@ -85,8 +88,7 @@ parse_command_plural_id_list()
 public string *
 parse_command_adjectiv_id_list() 
 {
-    return (sizeof(obj_adjs) ? obj_adjs : (stringp(obj_adjs) ?
-                                           ({ obj_adjs }) : 0));
+    return (sizeof(obj_adjs) ? obj_adjs : (stringp(obj_adjs) ? ({ obj_adjs }) : 0));
 }
 
 /*
@@ -109,8 +111,8 @@ set_heart_beat(mixed repeat, string func = "heart_beat")
     else
         throw("Wrong argument 1 to set_heart_beat.\n");
 
-    if (hb_index)
-        remove_alarm(hb_index);
+    if (hb_alarm_id)
+        remove_alarm(hb_alarm_id);
 
     if (delay > 0.0)
     {
@@ -119,7 +121,7 @@ set_heart_beat(mixed repeat, string func = "heart_beat")
         ret = set_alarm(delay, delay, mkfunction(func));
         set_this_player(tp);
     }
-    return hb_index = ret;
+    return hb_alarm_id = ret;
 }
 
 /*
@@ -149,6 +151,9 @@ create()
 
     /* Add the name based on the object number. */
     add_name(OB_NAME(this_object()), 1);
+    
+    if (query_item_expiration())
+        update_item_expiration_alarm();
 }
 
 /*
@@ -333,6 +338,7 @@ varargs public mixed
 long(string str, object for_obj)
 {
     int index;
+    mixed retval;
 
     if (!str)
     {
@@ -348,11 +354,11 @@ long(string str, object for_obj)
     index = sizeof(obj_items);
     while(--index >= 0)
     {
-        if (member_array(str, obj_items[index][0]) >= 0)
+        if (IN_ARRAY(str, obj_items[index][0]))
         {
-            return (obj_items[index][1] ?
-                    (string) check_call(obj_items[index][1]) :
-                    "You see nothing special.\n");
+            retval = (string) check_call(obj_items[index][1]);
+
+            return retval ? retval : "You see nothing special.\n";
         }
     }
 
@@ -583,7 +589,7 @@ change_prop(string prop, mixed val)
 /*
  * Function name: remove_prop
  * Description:   Removes a property string from the property list.
- * Arguments:     prop - The property string to be removed.
+ * Arguments:     string prop - The property string to be removed.
  */
 public void
 remove_prop(string prop)
@@ -633,6 +639,38 @@ query_prop(string prop)
     return check_call(obj_props[prop]);
 }
 #endif
+
+/* 
+ * Function name: inc_prop
+ * Description  : Increase the value of a property. This works on integer
+ *                properties only (and assumes no VBFC has been applied).
+ * Arguments    : string prop - the property to adjust.
+ *                int delta - the value to add (default = 1).
+ */
+public varargs nomask void
+inc_prop(string prop, int delta = 1)
+{
+    mixed value = query_prop(prop);
+
+    if (intp(value))
+    {
+        add_prop(prop, value + delta);
+    }
+}
+
+/* 
+ * Function name: dec_prop
+ * Description  : Decrease the value of a property. This works on integer
+ *                properties only (and assumes no VBFC has been applied).
+ *                Note: dec_prop(PROP, 5) subtracts 5 from the value of PROP.
+ * Arguments    : string prop - the property to adjust.
+ *                int delta - the value to subtract (default = 1).
+ */
+public varargs nomask void
+dec_prop(string prop, int delta = 1)
+{
+    inc_prop(prop, -delta);
+}
 
 /*
  * Function name: query_props
@@ -700,14 +738,13 @@ update_state()
 {
     int l, w, v;
 
-    l = query_prop(OBJ_I_LIGHT); 
-    w = query_prop(OBJ_I_WEIGHT);
-    v = query_prop(OBJ_I_VOLUME);
-
-    /* More properties can be added here if need be
-     */
+    /* More properties can be added here if need be. */
     if (environment(this_object()))
     {
+        l = query_prop(OBJ_I_LIGHT); 
+        w = query_prop(OBJ_I_WEIGHT);
+        v = query_prop(OBJ_I_VOLUME);
+
         environment(this_object())->update_internal(l - obj_state[0],
                                                     w - obj_state[1],
                                                     v - obj_state[2]);
@@ -769,10 +806,8 @@ move(mixed dest, mixed subloc)
         is_room = (int) dest->query_prop(ROOM_I_IS);
 
         if (old)
-            is_live_old = (function_exists("create_container",
-                                           old) == "/std/living");
-        is_live_dest = (function_exists("create_container",
-                                        dest) == "/std/living");
+            is_live_old = living(old);
+        is_live_dest = living(dest);
 
         if (old && is_live_old && this_object()->query_prop(OBJ_M_NO_DROP))
             return 2;
@@ -842,7 +877,7 @@ move(mixed dest, mixed subloc)
         move_object(dest);
     }
 
-    obj_subloc = subloc != 1 ? subloc : 0;
+    obj_subloc = ((subloc != 1) ? subloc : 0);
 
     if (old != dest)
     {
@@ -944,9 +979,8 @@ recursive_rm(object ob)
 /*
  * Function name: remove_object
  * Description:   Removes this object from the game.
- * Returns:       True if the object was removed.
  */
-public int
+public void
 remove_object()
 {
     map(all_inventory(this_object()), recursive_rm);
@@ -954,7 +988,6 @@ remove_object()
         environment(this_object())->leave_inv(this_object(),0);
     this_object()->leave_env(environment(this_object()),0);
     destruct();
-    return 1;
 }
 
 /*
@@ -2061,21 +2094,21 @@ remove_prop_obj_i_broken()
  * Function name: cut_sig_fig
  * Description:   Will reduce the number given to a new number with two
  *                significant numbers.
- * Arguments:     fig - the number to correct.
+ * Arguments:     int value - the number to correct.
+ *                int base - the numerical base (default = 10)
  * Returns:       the number with two significant numbers
  */
-public int
-cut_sig_fig(int fig)
+public varargs int
+cut_sig_fig(int value, int base = 10)
 {
-    int fac;
-    fac = 1;
+    int factor = 1;
 
-    while(fig > 100)
+    while(value > (base * base))
     {
-        fac = fac * 10;
-        fig = fig / 10;
+        factor *= base;
+        value /= base;
     }
-    return fig * fac;
+    return value * factor;
 }
 
 #if 0
@@ -2109,21 +2142,18 @@ linkdeath_hook(object player, int linkdeath)
 public string
 appraise_value(int num)
 {
-    int value, skill, seed;
+    int value, skill;
 
-    if (!num)
-        skill = this_player()->query_skill(SS_APPR_VAL);
-    else
-        skill = num;
-
-    skill = 1000 / (skill + 1);
+    skill = (num ? num : this_player()->query_skill(SS_APPR_VAL));
+    skill = random((1000 / (skill + 1)), atoi(OB_NUM(this_object())));
     value = query_prop(OBJ_I_VALUE);
-    sscanf(OB_NUM(this_object()), "%d", seed);
-    skill = random(skill, seed);
-    value = cut_sig_fig(value + (skill % 2 ? -skill % 70 : skill) *
-        value / 100);
+    if (!value)
+        return "nothing";
 
-    return value + " cc";
+    /* Caveat - using 12-based coinage. */
+    value = cut_sig_fig(value + (skill % 2 ? -skill % 70 : skill) * value / 100, 12);
+
+    return MONEY_TEXT_NUM_SPLIT(value);
 }
 
 /*
@@ -2135,22 +2165,24 @@ appraise_value(int num)
 public string
 appraise_weight(int num)
 {
-    int value, skill, seed;
+    int value, skill;
 
-    if (!num)
-        skill = this_player()->query_skill(SS_APPR_OBJ);
+    skill = (num ? num : this_player()->query_skill(SS_APPR_OBJ));
+    skill = random((1000 / (skill + 1)), atoi(OB_NUM(this_object())));
+    /* One routine for both objects and containers. Intentionally consider the
+     * full weight of the container including its contents. But for livings,
+     * only the weight of the living. */
+    if (living(this_object()))
+        value = query_prop(CONT_I_WEIGHT);
     else
-        skill = num;
+        value = query_prop(OBJ_I_WEIGHT);
+    value = cut_sig_fig(value + (skill % 2 ? -skill % 70 : skill) * value / 100);
 
-    skill = 1000 / (skill + 1);
-    value = query_prop(OBJ_I_WEIGHT);
-    sscanf(OB_NUM(this_object()), "%d", seed);
-    skill = random(skill, seed);
-    value = cut_sig_fig(value + (skill % 2 ? -skill % 70 : skill) *
-        value / 100);
-
-    if (value > 10000)
+    /* Display whole kilograms, fractions of kilograms or grams. */
+    if ((value > 10000) || (!(value % 1000)))
         return (value / 1000) + " kilograms";
+    else if (value > 1000)
+        return sprintf("%3.1f", itof(value) / 1000.0) + " kilograms";
     else
         return value + " grams";
 }
@@ -2164,22 +2196,24 @@ appraise_weight(int num)
 public string
 appraise_volume(int num)
 {
-    int value, skill, seed;
+    int value, skill;
 
-    if (!num)
-        skill = this_player()->query_skill(SS_APPR_OBJ);
+    skill = (num ? num : this_player()->query_skill(SS_APPR_OBJ));
+    skill = random((1000 / (skill + 1)), atoi(OB_NUM(this_object())));
+    /* One routine for both objects and containers. Intentionally consider the
+     * full volume of the container including its contents. But for livings,
+     * only the volume of the living. */
+    if (living(this_object()))
+        value = query_prop(CONT_I_VOLUME);
     else
-        skill = num;
+        value = query_prop(OBJ_I_VOLUME);
+    value = cut_sig_fig(value + (skill % 2 ? -skill % 70 : skill) * value / 100);
 
-    skill = 1000 / (skill + 1);
-    value = query_prop(OBJ_I_VOLUME);
-    sscanf(OB_NUM(this_object()), "%d", seed);
-    skill = random(skill, seed);
-    value = cut_sig_fig(value + (skill % 2 ? -skill % 70 : skill) *
-        value / 100);
-
-    if (value > 10000)
+    /* Display whole liters, fractions of liters or milliliters. */
+    if ((value > 10000) || (!(value % 1000)))
         return (value / 1000) + " liters";
+    else if (value > 1000)
+        return sprintf("%3.1f", itof(value) / 1000.0) + " liters";
     else
         return value + " milliliters";
 }
@@ -2213,26 +2247,67 @@ appraise_light(int num)
  * Function name: appraise_object
  * Description:   This function is called when someon tries to appraise this
  *                object.
- * Arguments:    num - use this number instead of skill if given.
+ * Arguments:     int num - use this number instead of skill if given.
  */
 public void
 appraise_object(int num)
 {
-    write(long() + "\n");
-    write("You appraise that the weight is " + appraise_weight(num) +
-        " and you guess its volume is about " + appraise_volume(num) +
+    write(this_object()->long() + "\n");
+    write("You " + APPRAISE_VERB + " that the weight is " +
+        appraise_weight(num) + " and you " + APPRAISE_VERB +
+	" its volume is about " + appraise_volume(num) +
         ". You estimate its worth to " + appraise_value(num) + "." +
         appraise_light(num));
-    if (this_object()->check_recoverable() == 1)
+    if (this_object()->check_recoverable() != 1)
     {
         write(" " + capitalize(LANG_THESHORT(this_object())) +
-	    " seems to be able to last a while.");
+	    " does not seem to be able to last a while.");
     }
     if (this_object()->query_keepable())
     {
         write(this_object()->appraise_keep(num));
     }
     write("\n");
+    
+    if (this_object()->query_item_expiration())
+        write(appraise_item_expiration() + "\n");
+}
+
+/*
+ * Function name: may_not_recover
+ * Description  : This function will be true if the weapon may not recover.
+ * Returns      : int - 1 - no recovery, 0 - recovery.
+ */
+nomask int
+may_not_recover()
+{
+    return will_not_recover;
+}
+
+/*
+ * Function name: set_may_recover
+ * Description  : In some situations it is undesirable to have a weapon
+ *                not recover. This function may then be used to force the
+ *                weapon to be recoverable.
+ *
+ *                This function may _only_ be called when a craftsman sells
+ *                a weapon he created to a player! It may expressly not be
+ *                called in weapons that are to be looted from NPC's!
+ */
+nomask void
+set_may_recover()
+{
+    will_not_recover = 0;
+}
+
+/*
+ * Function name: set_may_not_recover
+ * Description  : Call this to force the weapon to be non-recoverable.
+ */
+nomask void
+set_may_not_recover()
+{
+    will_not_recover = 1;
 }
 
 /*
@@ -2249,10 +2324,8 @@ check_recoverable(int flag)
 {
     string str, path, arg;
 
-    /* Armours and weapons have a chance to fail on recovery.
-     */
-    if (!flag &&
-        this_object()->may_not_recover())
+    /* Armours and weapons have a chance to fail on recovery. */
+    if (!flag && may_not_recover())
     {
         return 0;
     }
@@ -2267,8 +2340,8 @@ check_recoverable(int flag)
             arg = 0;
         }
 
-        /* Check for arg to be <= 128 bytes long */
-        if (strlen(arg) <= 128)
+        /* Check for arg to be <= 512 bytes long */
+        if (strlen(arg) <= 512)
             return 1;
     }
 
@@ -2291,50 +2364,50 @@ query_value()
 
 /*
  * Function name: search_now
- * Description:   Perform the search now.
- * Arguments:     arr - An array consisting of ({ searcher, str })
+ * Description  : Perform the search now.
+ * Arguments    : object player - the player searching
+ *                string str - the 
  */
 void
-search_now(mixed *arr)
+search_now(object player, string str)
 {
     string fun;
     string hidden = "";
-    object *live, *dead, *found;
+    object *liveobjs, *deadobjs, *found;
 
     if (query_prop(ROOM_I_IS))
     {
-        if (CAN_SEE_IN_ROOM(arr[0]))
+        if (CAN_SEE_IN_ROOM(player))
 	{
-            found = all_inventory(this_object()) - ({ arr[0] });
-            found = filter(found, &search_hidden(, arr[0]));
+            found = all_inventory(this_object()) - ({ player });
+            found = filter(found, &search_hidden(, player));
     
             if (sizeof(found))
             {
-        	dead = filter(found, &is_live_dead(, 0));
-        	live = filter(found, &is_live_dead(, 1));
+        	deadobjs = filter(found, &is_live_dead(, 0));
+        	liveobjs = filter(found, &is_live_dead(, 1));
             }
 
-            if (sizeof(dead))
+            if (sizeof(deadobjs))
 	    {
-        	hidden = COMPOSITE_DEAD(dead);
-
-                if (sizeof(live))
+        	hidden = COMPOSITE_DEAD(deadobjs);
+                if (sizeof(liveobjs))
                 {
                     hidden += " and ";
                 }
 	    }
-            if (sizeof(live))
+            if (sizeof(liveobjs))
 	    {
-        	hidden += COMPOSITE_LIVE(live);
+        	hidden += COMPOSITE_LIVE(liveobjs);
 	    }
-    
+
             if (strlen(hidden))
             {
-        	tell_object(arr[0], "You find " + hidden + ".\n");
-        	tell_room(environment(arr[0]), QCTNAME(arr[0]) + " finds " +
-        	    hidden + ".\n", ( ({ arr[0] }) + live));
-        	live->catch_tell(arr[0]->query_The_name(live) +
-                    " finds you.\n");
+        	tell_object(player, "You find " + hidden + ".\n");
+        	tell_room(environment(player), QCTNAME(player) + " finds " +
+        	    hidden + ".\n", ( ({ player }) + liveobjs));
+		foreach(object obj: liveobjs)
+        	    obj->catch_tell(player->query_The_name(obj) + " finds you.\n");
             }
         }
     }
@@ -2342,18 +2415,19 @@ search_now(mixed *arr)
     fun = query_prop(OBJ_S_SEARCH_FUN);
     if (fun)
     {
-        fun = call_other(this_object(), fun, arr[0], arr[1]);
+        fun = call_other(this_object(), fun, player, str);
     }
 
     if (strlen(fun))
     {
-        tell_object(arr[0], fun);
+        tell_object(player, fun);
     }
     else if (!sizeof(found))
     {
-        tell_object(arr[0], "Your search reveals nothing special.\n");
+        tell_object(player, "Your search reveals nothing special.\n");
     }
-    present(SEARCH_PARALYZE, arr[0])->remove_object();
+    present(SEARCH_PARALYZE, player)->remove_object();
+    remove_prop(OBJ_I_SEARCH_ALARM_ID);
 }
 
 /*
@@ -2400,18 +2474,18 @@ search_hidden(object obj, object who)
 void
 search_object(string str)
 {
-    int time;
+    int seconds = query_prop(OBJ_I_SEARCH_TIME) + 5;
+    int alarm_id;
     object obj;
 
-    time = query_prop(OBJ_I_SEARCH_TIME) + 5;
-
-    if (time < 1)
+    if (seconds < 1)
     {
-        search_now(({ this_player(), str }));
+        search_now(this_player(), str);
     }
     else
     {
-        set_alarm(itof(time), 0.0, &search_now( ({ this_player(), str }) ));
+        alarm_id = set_alarm(itof(seconds), 0.0, &search_now(this_player(), str));
+	add_prop(OBJ_I_SEARCH_ALARM_ID, alarm_id);
         seteuid(getuid(this_object()));
         obj = clone_object("/std/paralyze");
         if (query_prop(ROOM_I_IS))
@@ -2420,7 +2494,8 @@ search_object(string str)
             obj->set_standard_paralyze("searching " + short(this_player()));
         obj->set_name(SEARCH_PARALYZE);
         obj->set_stop_fun("stop_search");
-        obj->set_remove_time(time + 1);
+        obj->set_remove_time(seconds + 1);
+	obj->set_combat_stop(1);
         obj->move(this_player(), 1);
     }
 }
@@ -2437,21 +2512,12 @@ search_object(string str)
 varargs int
 stop_search(mixed arg)
 {
-    mixed *calls = get_all_alarms();
-    int i, s;
+    int alarm_id = query_prop(OBJ_I_SEARCH_ALARM_ID);
 
-    for (i = 0, s = sizeof(calls); i < s; i++)
-    {
-        if (calls[i][1] == "search_now")
-        {
-            /* This fourth level of indirection is necessary because the
-             * argument to search_now() is an array, not a direct arg. */
-            if (calls[i][4][0][0] == this_player())
-            {
-                remove_alarm(calls[i][0]);
-            }
-        }
-    }
+    remove_prop(OBJ_I_SEARCH_ALARM_ID);
+    if (alarm_id)
+        remove_alarm(alarm_id);
+    
     return 0;
 }
 
@@ -2533,3 +2599,4 @@ init()
         add_action(cmditem_action, obj_commands[index]);
     }
 }
+

@@ -1,5 +1,38 @@
+/*
+ * /std/room/terrain.c
+ *
+ * File containing terrain and map related functions.
+ */
+
 #include <terrain.h>
+
 static int room_terrain;
+
+/* The map coordinates of this room. */
+static string map_mapfile,
+              map_section;
+static int    map_x, map_y,
+              map_zoomx, map_zoomy;
+
+/*
+ * Function name: init_map_data
+ * Description  : Obtain the map information from the map central.
+ */
+void
+init_map_data()
+{
+    mixed mapdata = MAP_CENTRAL->query_room_map_data(MASTER);
+
+    if (pointerp(mapdata) && (sizeof(mapdata) == 6))
+    {
+	map_mapfile = mapdata[0];
+	map_section = mapdata[1];
+	map_x = mapdata[2];
+	map_y = mapdata[3];
+	map_zoomx = mapdata[4];
+	map_zoomy = mapdata[5];
+    }
+}
 
 /*
  * Function name: terrain_includes_all

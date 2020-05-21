@@ -3,6 +3,7 @@ NAME
 
 SYNOPSIS
 	accept <name>
+	accept <name> <domain>
 
 DESCRIPTION
 	With this command a Liege can accept anyone into the domain who
@@ -16,7 +17,9 @@ DESCRIPTION
 	Remember to assign a suitable mentor to the new wizard.
 
 ARGUMENTS
-	<name>	the name of the player to accept.
+	<name>	 - the name of the player whose application to accept.
+	<domain> - the name of the domain to deny the application to. This
+		   is only useful for lieges, arches and keepers.
 
 SEE ALSO
 	applications, apply, deny, draft, expel, leave, regret, mentor,

@@ -1,37 +1,21 @@
 /*
  * container.c
  *
- * Contains all routines relating to objects that can hold other objects
- *
+ * Contains all routines relating to objects that can hold other objects.
  */
 
 #pragma save_binary
 #pragma strict_types
 
 inherit "/std/object";  
-
-/*
-   Defined functions and variables:
-
-   set_room(string/object)        Set the room that is the internal of this
-                                  object. If this is set there is no objects
-                                 in this object.
-
-   update_light()                 This is usually not called except when an
-                                  object CHANGES light status inside this
-                                  container.
-
-   There are query_xx() functions for all of the above set_xx() functions.
-
-   These usual functions are also defined:
-   reset(), long(), short(), id()
-*/
+inherit "/lib/keep";
 
 #include <macros.h>
 #include <stdproperties.h>
 #include <composite.h>
 #include <subloc.h>
 #include <ss_types.h>
+#include <state_desc.h>
 
 /*
  * All variables in this file must be declared static. This is to ensure
@@ -52,10 +36,19 @@ static  mapping   cont_sublocs,    /* Map of sublocations and the object res-
 static private string *NotifyProps;   /* Properties to notify about changes of */
 
 /*
+ * container_objects = ([ (string)filename :
+ *     ({ (int)count, (function)condition, (function)init_call, (object *)clones }) ])
+ */
+static mapping container_objects;
+
+
+
+/*
  * Prototypes
  */
 void create_container();
 void reset_container();
+void reset_auto_objects();
 void update_internal(int l, int w, int v);
 public int light();
 public nomask int weight();
@@ -86,8 +79,10 @@ create_object()
     create_container();
 
     NotifyProps = ({ CONT_I_ATTACH, CONT_I_TRANSP, CONT_I_CLOSED,
-			 CONT_I_LIGHT, OBJ_I_LIGHT, CONT_I_WEIGHT,
-			 OBJ_I_WEIGHT, CONT_I_VOLUME, OBJ_I_VOLUME });
+	CONT_I_LIGHT, OBJ_I_LIGHT, CONT_I_WEIGHT, OBJ_I_WEIGHT,
+	CONT_I_VOLUME, OBJ_I_VOLUME });
+
+    reset_auto_objects();
 }
 
 /*
@@ -107,18 +102,10 @@ nomask int remove_prop_obj_i_volume() { return 1; }
 public void
 create_container()
 {
-/* 
-  This is nonsense! If we do clone_object() and configure the
-  container, then OBJ_I_WEIGHT and OBJ_I_VOLUME are set to a number.
-  The vbfc is removed, and the whole stuff won't work!
-
-    ::create_object();
-*/
-
     ::set_name("container");
 
-    add_prop(CONT_I_WEIGHT, 1000);      /* 1 Kg is weight of empty container */
-    add_prop(CONT_I_VOLUME, 1000);      /* 1 liter is volume of empty cont. */
+    add_prop(CONT_I_WEIGHT, 1000);     /* 1 Kg is weight of empty container */
+    add_prop(CONT_I_VOLUME, 1000);     /* 1 liter is volume of empty cont. */
 
     add_prop(CONT_I_MAX_WEIGHT, 1000); /* 1 Kg is max total weight */
     add_prop(CONT_I_MAX_VOLUME, 1000); /* 1 liter is max total volume */
@@ -129,15 +116,20 @@ create_container()
  * Description:   Reset the container 
  */
 public nomask void
-reset_object() { reset_container(); }
+reset_object()
+{
+    reset_auto_objects();
+    reset_container();
+}
 
 /*
  * Function name: reset_container
  * Description:   Reset the container (standard)
  */
 public void
-reset_container() { /* this does not exist any more. ::reset_object(); */ }
-
+reset_container()
+{
+}
 
 /*
  * Function name: volume_left()
@@ -171,9 +163,8 @@ query_internal_light() { return cont_cur_light; }
 public int
 light()
 {
-    int li;
+    int li = query_prop(CONT_I_LIGHT);
 
-    li = query_prop(CONT_I_LIGHT);
     if (query_prop(CONT_I_TRANSP) || 
         query_prop(CONT_I_ATTACH) ||
         !query_prop(CONT_I_CLOSED))
@@ -197,9 +188,8 @@ light()
 public nomask int
 weight()
 {
-    int wi;
+    int wi = query_prop(CONT_I_WEIGHT);
 
-    wi = query_prop(CONT_I_WEIGHT);
     if (cont_linkroom)
         return cont_linkroom->query_prop(OBJ_I_WEIGHT) + wi;
     else
@@ -247,7 +237,10 @@ set_room(mixed room)
  * Description:   Ask what room is connected to the internal of this object
  */
 public mixed
-query_room() { return cont_linkroom; }
+query_room()
+{
+    return cont_linkroom;
+}
 
 /*
  * Function name: prevent_enter
@@ -408,8 +401,7 @@ update_internal(int l, int w, int v)
         query_prop(CONT_I_CLOSED))
         l = 0;
 
-    /* Rigid containers do not change in size
-    */
+    /* Rigid containers do not change in size. */
     if (query_prop(CONT_I_RIGID))
         v = 0;
 
@@ -426,18 +418,17 @@ update_internal(int l, int w, int v)
 public void
 update_light(int recursive)
 {
-    int i;
-    object *ob_list;
-    
-    ob_list = all_inventory(this_object());
+    object *ob_list = all_inventory(this_object());
+
     cont_cur_light = 0;
     if (!sizeof(ob_list))
         return;
-    for (i = 0; i < sizeof(ob_list); i++)
+
+    foreach(object ob: ob_list)
     {
         if (recursive)
-            ob_list[i]->update_light(recursive);
-        cont_cur_light += ob_list[i]->query_prop(OBJ_I_LIGHT);
+            ob->update_light(recursive);
+        cont_cur_light += ob->query_prop(OBJ_I_LIGHT);
     }
 }
 
@@ -519,23 +510,11 @@ notify_change_prop(string prop, mixed val, mixed old)
     if (ld < 0)
         return;
         
-    /* 0 -> turn off, 1 -> turn on 
-     */
-  /*
- * Changed the following line from 'if (ld == 1)', as
- * it appeared to be having the reverse effect from which
- * it was intended to. I.e. brightening the object when a 
- * container was being closed, darkening when it was being
- * opened (with a light source in the container).
- *
- * Khail - Dec 5/96
- */
+    /* 0 -> turn off, 1 -> turn on */
     if (ld == 0)
         update_internal(n, 0, 0);
     else
         update_internal(-n, 0, 0);
-    
-    return;
 }
 
 /*
@@ -590,21 +569,25 @@ describe_contents(object for_obj, object *obarr)
     if (this_object()->query_prop(CONT_I_ATTACH))
     {
         if (sizeof(obarr) > 0)
+        {
             for_obj->catch_tell(capitalize(COMPOSITE_DEAD(obarr)) + 
-				(sizeof(obarr) > 1 ? " are" : " is") + 
-				" on the " +
-				this_object()->short() + ".\n");
+		(((sizeof(obarr) > 1) || (obarr[0]->num_heap() > 1)) ? " are" : " is") +
+		    " on the " + this_object()->short() + ".\n");
+        }
         else
             for_obj->catch_tell("There is nothing on the " + 
-				this_object()->short() + ".\n");
+		this_object()->short() + ".\n");
     }
     else if (sizeof(obarr) > 0)
+    {
         for_obj->catch_tell("The " + this_object()->short() + " contains " + 
-			    COMPOSITE_DEAD(obarr) + ".\n");
-
+	    COMPOSITE_DEAD(obarr) + ".\n");
+    }
     else
+    {
         for_obj->catch_tell("  " + "The " + this_object()->short() +
             " is empty.\n");
+    }
 }
 
 /*
@@ -662,19 +645,19 @@ show_visible_contents(object for_obj)
 public varargs void
 add_subloc(string sloc, mixed resp, mixed ids)
 {
-    int i;
     mixed old;
 
     cont_sublocs[sloc] = resp;
     if (stringp(ids))
         ids = ({ ids });
-    for (i = 0; i < sizeof(ids); i++)
+
+    foreach(string aid: ids)
     {
-        old = cont_subloc_ids[ids[i]];
+        old = cont_subloc_ids[aid];
         if (sizeof(old))
-            cont_subloc_ids[ids[i]] = old + ({ sloc });
+            cont_subloc_ids[aid] = old + ({ sloc });
         else
-            cont_subloc_ids[ids[i]] = ({ sloc });
+            cont_subloc_ids[aid] = ({ sloc });
     }
 }
 
@@ -683,7 +666,10 @@ add_subloc(string sloc, mixed resp, mixed ids)
  * Description:   Get the object corresponding to a subloc string
  */
 public object
-query_subloc_obj(string sloc) { return cont_sublocs[sloc]; }
+query_subloc_obj(string sloc)
+{
+    return cont_sublocs[sloc];
+}
 
 /* 
  * Function name: query_sublocs
@@ -798,8 +784,7 @@ subloc_filter(object ob, mixed sloc)
 public varargs string
 show_sublocs(object for_obj, mixed *slocs) 
 {
-    int il;
-    string str;
+    string str = "";
     mixed data;
 
     if (!objectp(for_obj))
@@ -810,14 +795,14 @@ show_sublocs(object for_obj, mixed *slocs)
     else
         slocs = slocs & ( m_indexes(cont_sublocs) + ({ 0 }) );
 
-    for (str = "", il = 0; il < sizeof(slocs); il++)
+    foreach(string sloc: slocs)
     {
-        data = this_object()->show_cont_subloc(slocs[il], for_obj);
+        data = this_object()->show_cont_subloc(sloc, for_obj);
 
         if (stringp(data))
             str += data;
-        else if (data == 0 && slocs[il] != 0)
-            m_delkey(cont_sublocs, slocs[il]);
+        else if (!data && sloc)
+            m_delkey(cont_sublocs, sloc);
     }
 
     return str;
@@ -891,59 +876,158 @@ stat_object()
 }
 
 /*
- * Function name: appraise_weight
- * Description:   This function is called when someon tries to appraise weight
- *                of this object.
- * Arguments:     num - use this number instead of skill if given.
+ * Function name: appraise_object
+ * Description:   This function is called when someon tries to appraise this
+ *                object.
+ * Arguments:     int num - use this number instead of skill if given.
  */
-public string
-appraise_weight(int num)
+public void
+appraise_object(int num)
 {
-    int value, skill, seed;
+    int value, skill;
+    int procweight, procvolume;
 
-    if (!num)
-        skill = this_player()->query_skill(SS_APPR_OBJ);
-    else
-        skill = num;
+    ::appraise_object(num);
 
-    skill = 1000 / (skill + 1);
-    value = query_prop(CONT_I_WEIGHT);
-    sscanf(OB_NUM(this_object()), "%d", seed);
-    skill = random(skill, seed);
-    value = cut_sig_fig(value + (skill % 2 ? -skill % 70 : skill) *
-        value / 100);
+    /* Tables and the like have no fill ratio. */
+    if (query_prop(CONT_I_ATTACH) || query_prop(CONT_I_CLOSED))
+        return;
 
-    if (value > 10000)
-        return (value / 1000) + " kilograms";
-    else
-        return value + " grams";
+    skill = (num ? num : this_player()->query_skill(SS_APPR_OBJ));
+    skill = random((1000 / (skill + 1)), atoi(OB_NUM(this_object())));
+
+    value = weight();
+    value = cut_sig_fig(value + (skill % 2 ? -skill % 70 : skill) * value / 100);
+    /* Don't consider the weight of the container itself in the fill ratio. */
+    procweight = (value - query_prop(CONT_I_WEIGHT)) * 100 /
+        (query_prop(CONT_I_MAX_WEIGHT) - query_prop(CONT_I_WEIGHT));
+
+    /* Directly reference the internal variable for volume to avoid getting the
+     * max volume of a rigid container. */
+    value = cont_cur_volume + query_prop(CONT_I_VOLUME);
+    value = cut_sig_fig(value + (skill % 2 ? -skill % 70 : skill) * value / 100);
+    /* Don't consider the weight of the container itself in the fill ratio. */
+    procvolume = (value - query_prop(CONT_I_VOLUME)) * 100 /
+        (query_prop(CONT_I_MAX_VOLUME) - query_prop(CONT_I_VOLUME));
+
+    write("The " + short() + " appears to be " +
+	GET_PROC_DESC(max(procweight, procvolume), SD_CONTAINER_FILLED) + ".\n");
 }
 
 /*
- * Function name: appraise_volume
- * Description:   This function is called when someon tries to appraise volume
- *                of this object.
- * Arguments:     num - use this number instead of skill if given.
+ * Function Name: reset_auto_objects
+ * Description  : Reset any items on the list of objects to automatically
+ *                reset.
+ *                It will only clone 15 items at a time, if more is needed
+ *                they will be cloned after a short delay.
  */
-public string
-appraise_volume(int num)
+void
+reset_auto_objects()
 {
-    int value, skill, seed;
+    int clone_count;
+    object leader;
+    
+    if (!mappingp(container_objects))
+        return;
 
-    if (!num)
-        skill = this_player()->query_skill(SS_APPR_OBJ);
-    else
-        skill = num;
+    foreach (string file, mixed data : container_objects)
+    {
+        /* This code is relying heavily on the copy-by-reference of arrays */
+        int count = data[0];
+        function condition = data[1];
+        function init_call = data[2];
+        object *clones = data[3];
+        
+        clones = filter(clones, objectp);
+        
+        if (functionp(condition))
+            clones = filter(clones, condition);
+        
+        while (sizeof(clones) < count)
+        {
+            object ob = clone_object(file);
+            if (!objectp(ob))
+                return;
 
-    skill = 1000 / (skill + 1);
-    value = query_prop(CONT_I_VOLUME);
-    sscanf(OB_NUM(this_object()), "%d", seed);
-    skill = random(skill, seed);
-    value = cut_sig_fig(value + (skill % 2 ? -skill % 70 : skill) *
-        value / 100);
+            if (functionp(init_call))
+                init_call(ob);
 
-    if (value > 10000)
-        return (value / 1000) + " liters";
-    else
-        return value + " milliliters";
+            if (living(ob))
+	    {
+                ob->move_living("xx", this_object(), 1, 1);
+		/* If there's another NPC already, team them up. */
+		if (sizeof(clones))
+		{
+		    leader = clones[0]->query_leader();
+		    (leader ? leader : clones[0])->team_join(ob);
+		}
+	    }
+            else
+                ob->move(this_object(), 1);
+            
+            clones += ({ ob });
+
+            clone_count++;
+            if (clone_count > 15)
+            {
+                set_alarm(5.0 * rnd(), 0.0, &reset_auto_objects());
+                return;
+            }
+        }
+        
+        data[3] = clones;
+    }
 }
+
+/*
+ * Function Name: add_auto_object
+ * Description  : Add an object to the list of objects that should
+ *                be automatically reset.
+ * 
+ *                NOTE: In most cases you don't want this function, you wan't
+ *                      the interfaces add_npc or add_object
+ *                      
+ * Arguments    : string file - The file to clone
+ *                int count   - How many should be cloned.
+ *                function condition - Whas is the condition for the cloning
+ *                                     to take place.
+ *                function init - Can be a set to a function to be called in
+ *                                the newly cloned object.
+ */
+varargs void
+add_auto_object(string file, int count = 1, function condition = 0,
+    function init_call = 0)
+{
+    if (!stringp(file))
+        return 0;
+
+    if (!mappingp(container_objects))
+        container_objects = ([ ]);
+    
+    container_objects[file] = ({ count, condition, init_call, ({ }) });
+
+    /* Reset has to be started for the cloning to be done */
+    if (!query_reset_active())
+    {
+        enable_reset();
+    }
+}
+
+/*
+ * Function Name: add_object
+ * Description  : Clone an object into the container, reset it when
+ *                it has been removed from the container.
+ * Arguments    : string file - the file to clone
+ *                int count   - how many of this item.
+ *                function init - (optional) If you want a function to be
+ *                                called in the object add it here.
+ *                                For example &->add_name("extra name")
+ *                                to have add_name called.
+ */
+varargs void
+add_object(string file, int count = 1, function init_call = 0)
+{
+    add_auto_object(file, count,
+        &operator(==)(, this_object()) @ &environment(), init_call);
+}
+

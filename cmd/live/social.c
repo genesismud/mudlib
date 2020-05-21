@@ -8,6 +8,7 @@
  * - assist
  * - emote
  * - forget
+ * - gifts
  * - introduce
  * - introduced
  * - invite
@@ -49,6 +50,7 @@ inherit "/cmd/std/command_driver";
 #include <time.h>
 
 varargs int team(string str);
+int remembered(string str);
 
 /*
  * Function name: create
@@ -88,18 +90,22 @@ query_cmdlist()
     return ([
              "aggressive":"aggressive",
              "assist":"assist",
+             "assist!":"assist",
 
              "emote":"emote",
 
              "forget":"forget",
 
+	     "gifts":"gifts",
+
              "introduce":"intro_live",
-             "introduced":"introduced_list",
+             "introduced":"introduced",
              "invite":"invite",
 
              "join":"join",
 
              "kill":"kill",
+             "kill!":"kill",
 
              "last":"last",
              "leave":"leave",
@@ -109,7 +115,7 @@ query_cmdlist()
              "present":"intro_live",
 
              "remember":"remember_live",
-             "remembered":"remember_live",
+             "remembered":"remembered",
 
              "spar":"spar",
              "stop":"stop",
@@ -160,6 +166,7 @@ assist(string str)
     object friend;
     object victim;
     mixed  tmp;
+    int pkill = (query_verb() == "assist!");
 
     if (!CAN_SEE_IN_ROOM(this_player()))
     {
@@ -171,6 +178,12 @@ assist(string str)
     {
         notify_fail("Umm yes, killed. That's what you are.\n");
         return 0;
+    }
+
+    if (str == "!")
+    {
+	pkill = 1;
+	str = "";
     }
 
     if (!strlen(str))
@@ -200,11 +213,18 @@ assist(string str)
     }
     else
     {
+        /* Require an exaclamation for attacking players. */
+        if (str[-1..] == "!")
+        {
+	    pkill = 1;
+	    str = str[..-2];
+        }
+
         obs = parse_this(str, "[the] %l");
         if (sizeof(obs) > 1)
         {
-            notify_fail(break_string("Be specific, you can't assist " +
-                COMPOSITE_ALL_LIVE(obs) + " at the same time.", 76) + "\n");
+            notify_fail("Be specific, you can't assist " +
+                COMPOSITE_ALL_LIVE(obs) + " at the same time.\n");
             return 0;
         }
         else if (sizeof(obs) == 0)
@@ -233,9 +253,8 @@ assist(string str)
     if ((member_array(friend, this_player()->query_enemy(-1)) != -1) ||
         (victim == this_player()))
     {
-        write(break_string("Help " + friend->query_the_name(this_player()) +
-            " to kill you? There are easier ways to commit seppuku!", 76) +
-            "\n");
+        write("Help " + friend->query_the_name(this_player()) +
+            " to kill you? There are easier ways to commit seppuku!\n");
         return 1;
     }
 
@@ -249,7 +268,7 @@ assist(string str)
     if (member_array(victim, this_player()->query_team_others()) != -1)
     {
         notify_fail("But " + victim->query_the_name(this_player()) +
-            " is a team with you.\n");
+            " is in a team with you.\n");
         return 0;
     }
 
@@ -279,6 +298,15 @@ assist(string str)
         return 1;
     }
 
+    /* Require an exclamation mark for attacking another player. */
+    if (!this_player()->query_npc() && !victim->query_npc() && !pkill)
+    {
+        write("Attack " + victim->query_the_name(this_player()) + "?!? That " +
+            "requires an exclamation mark at the end of the command.\n");
+        return 1;
+    }
+
+    /* Protect against accidental attacking of players you know.
     if ((!this_player()->query_npc()) &&
         (this_player()->query_met(victim)) &&
         (this_player()->query_prop(LIVE_O_LAST_KILL) != victim))
@@ -288,6 +316,7 @@ assist(string str)
             "?!? Please confirm by trying again.\n");
         return 1;
     }
+     */
 
     this_player()->reveal_me(1);
 
@@ -391,6 +420,106 @@ forget(string name)
     }
     write("Ok.\n");
     return 1;
+}
+
+/*
+ * gifts - Accept or reject gifts from someone.
+ */
+int
+gifts(string str)
+{
+    string *words;
+    int success;
+
+    CMD_LIVE_STATE->options("giftfilter");
+    if (!strlen(str) || str == "list")
+    {
+        if (sizeof(words = this_player()->query_gift_accept(0)))
+        {
+            write(HANGING_INDENT("Accepting gifts from: " + COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
+            success = 1;
+        }
+        if (sizeof(words = this_player()->query_gift_today(0)))
+        {
+            write(HANGING_INDENT("Accepting gifts from: " + COMPOSITE_WORDS(map(words, capitalize)) + ", this login only.", 4, 0));
+            success = 1;
+        }
+        if (sizeof(words = this_player()->query_gift_reject(0)))
+        {
+            write(HANGING_INDENT("Rejecting gifts from: " + COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
+            success = 1;
+        }
+        if (success)
+            return 1;
+
+        notify_fail("No list for accepting or rejecting gifts.\n");
+        return 0;
+    }
+
+    words = explode(lower_case(str), " ");
+    if (sizeof(words) != 2)
+    {
+        notify_fail("Gifts what? Syntax: gifts accept|reject|remove|today <name>\n");
+        return 0;
+    }
+
+    switch(words[0])
+    {
+    case "accept":
+        if (this_player()->add_gift_accept(words[1]))
+        {
+            write("Accepting gifts from " + capitalize(words[1]) + ".\n");
+            return 1;
+        }
+        notify_fail(capitalize(words[1]) + " was already on the list.\n");
+        return 0;
+
+    case "reject":
+        if (this_player()->add_gift_reject(words[1]))
+        {
+            write("Rejecting gifts from " + capitalize(words[1]) + ".\n");
+            return 1;
+        }
+        notify_fail(capitalize(words[1]) + " was already on the list.\n");
+        return 0;
+
+    case "remove":
+        if (this_player()->remove_gift_reject(words[1]))
+        {
+            write("Removed rejecting of gifts from " + capitalize(words[1]) + ".\n");
+            success = 1;
+        }
+        if (this_player()->remove_gift_accept(words[1]))
+        {
+            write("Removed accepting of gifts from " + capitalize(words[1]) + ".\n");
+            success = 1;
+        }
+        if (this_player()->remove_gift_today(words[1]))
+        {
+            write("Removed accepting of gifts from " + capitalize(words[1]) + ".\n");
+            success = 1;
+        }
+        if (!success) write(capitalize(words[1]) + " was not on your gifts lists.\n");
+        return 1;
+
+    case "today":
+        if (this_player()->query_gift_accept(words[1]))
+        {
+            notify_fail("You already accept gifts from " + capitalize(words[1]) + ".\n");
+            return 0;
+        }
+        if (this_player()->add_gift_today(words[1]))
+        {
+            write("Accepting gifts from " + capitalize(words[1]) + " until logout.\n");
+            return 1;
+        }
+        notify_fail(capitalize(words[1]) + " was already on the list.\n");
+        return 0;
+
+    default:
+        notify_fail("Gifts what?\n");
+        return 0;
+    }
 }
 
 /*
@@ -518,10 +647,9 @@ intro_live(string str)
 
     if (!intro_self)
     {
-        introducee->catch_msg(break_string(
-            this_player()->query_The_name(introducee) +
+        introducee->catch_msg(this_player()->query_The_name(introducee) +
             " introduces you to " + 
-            FO_COMPOSITE_ALL_LIVE(vis_targets, introducee) + ".", 75) + "\n");
+            FO_COMPOSITE_ALL_LIVE(vis_targets, introducee) + ".\n");
     }
 
     if (this_player()->query_option(OPT_ECHO))
@@ -548,25 +676,30 @@ intro_live(string str)
  * introduced - Give a list of livings we have been introduced to.
  */
 int
-introduced_list(string str)
+introduced(string str)
 {
-    object ob;
-    mapping tmp;
-    
-    tmp = this_player()->query_introduced();
-    if (mappingp(tmp))
-    {
-        write("You remember having been introduced to:\n");
-        write(break_string(implode(map(sort_array(m_indexes(tmp)),
-            capitalize), ", "), 70) + "\n");
+    mapping memory;
+    string *names;
+    int index, size;
 
-        return 1;
-    }
-    else
+    memory = this_player()->query_introduced();
+    if (!(size = m_sizeof(memory)))
     {
-        write("You don't remember having been introduced to anyone.\n");
+        write("You don't remember being introduced to anyone.\n");
         return 1;
     }
+
+    names = sort_array(m_indices(memory));
+    for (index = 0; index < size; index++)
+    {
+        /* Wizards get an asterisk. */
+        if (SECURITY->query_wiz_level(names[index]))
+	    names[index] += "*";
+    }
+    write("You were introduced to the following " +
+      (size == 1 ? "person" : "people") + ":\n");
+    write(HANGING_INDENT("  " + implode(map(names, capitalize), ", "), 2, 0));
+    return 1;
 }
 
 /*
@@ -593,8 +726,9 @@ join(string str)
 varargs int 
 kill(string str)
 {
-    object ob;
+    object victim;
     mixed  tmp, *oblist;
+    int pkill = (query_verb() == "kill!");
 
     if (!CAN_SEE_IN_ROOM(this_player()))
     {
@@ -614,6 +748,13 @@ kill(string str)
         return 0;
     }
 
+    /* Require an exaclamation for attacking players. */
+    if (str[-1..] == "!")
+    {
+	pkill = 1;
+	str = str[..-2];
+    }
+
     str = lower_case(str);
     if (!parse_command(str, all_inventory(environment(this_player())),
        "[the] %i", oblist) || !sizeof(oblist = NORMAL_ACCESS(oblist, 0, 0)))
@@ -629,27 +770,26 @@ kill(string str)
         return 0;
     }
 
-    ob = oblist[0];
-
-    if (!living(ob))
+    victim = oblist[0];
+    if (!living(victim))
     {
-       write(capitalize(LANG_THESHORT(ob)) + " isn't alive!\n");
+       write(capitalize(LANG_THESHORT(victim)) + " isn't alive!\n");
        return 1;
     }
  
-    if (ob->query_ghost())
+    if (victim->query_ghost())
     {
-        write(ob->query_The_name(this_player()) + " is already dead!\n");
+        write(victim->query_The_name(this_player()) + " is already dead!\n");
         return 1;
     }
 
-    if (ob == this_player())
+    if (victim == this_player())
     {
         write("What? Attack yourself?\n");
         return 1;
     }
 
-    if (this_player()->query_attack() == ob)
+    if (this_player()->query_attack() == victim)
     {
         write("Yes, yes.\n");
         return 1;
@@ -664,7 +804,7 @@ kill(string str)
         return 1;
     }
 
-    if (tmp = ob->query_prop(OBJ_M_NO_ATTACK))
+    if (tmp = victim->query_prop(OBJ_M_NO_ATTACK))
     {
         if (stringp(tmp))
         {
@@ -673,57 +813,67 @@ kill(string str)
         else
         {
             write("You feel a divine force protecting " +
-                ob->query_the_name(this_player()) + ", your attack fails.\n");
+                victim->query_the_name(this_player()) + ", your attack fails.\n");
         }
 
         return 1;
     }
 
-    if (member_array(ob, this_player()->query_team_others()) != -1)
+    if (member_array(victim, this_player()->query_team_others()) != -1)
     {
-        write("You cannot attack " + ob->query_the_name(this_player()) +
-            " as " + ob->query_pronoun() + " is in your team.\n");
+        write("You cannot attack " + victim->query_the_name(this_player()) +
+            " as " + victim->query_pronoun() + " is in your team.\n");
         return 1;
     }
 
-    if (!this_player()->query_npc() &&
-        this_player()->query_met(ob) &&
-        (this_player()->query_prop(LIVE_O_LAST_KILL) != ob))
+    /* Require an exclamation mark for attacking another player. */
+    if (!this_player()->query_npc() && !victim->query_npc() && !pkill)
     {
-        this_player()->add_prop(LIVE_O_LAST_KILL, ob);
-        /* Only ask if the person did not use the real name of the target. */
-        if (str != ob->query_real_name())
+        write("Attack " + victim->query_the_name(this_player()) + "?!? That " +
+            "requires an exclamation mark at the end of the command.\n");
+        return 1;
+    }
+
+    /* Accidental pkill protection on when you're attacking someone you know,
+     * but only ask if the person did not use the real name of the target.
+    if (!this_player()->query_npc() &&
+        this_player()->query_met(victim) &&
+        (this_player()->query_prop(LIVE_O_LAST_KILL) != victim))
+    {
+        this_player()->add_prop(LIVE_O_LAST_KILL, victim);
+        if (str != victim->query_real_name())
         {
-            write("Attack " + ob->query_the_name(this_player()) +
+            write("Attack " + victim->query_the_name(this_player()) +
                 "?!? Please confirm by trying again.\n");
             return 1;
         }
     }
+     */
 
     this_player()->reveal_me(1);
 
     /* Check if we dare! */
-    if (!F_DARE_ATTACK(this_player(), ob))
+    if (!F_DARE_ATTACK(this_player(), victim))
     {
         write("Umm... no. You do not have enough self-discipline to dare!\n");
-        say(QCTNAME(this_player()) + " considers attacking " + QTNAME(ob) +
-            ", though does not dare to do so.\n", ({ ob, this_player() }) );
-        tell_object(ob, this_player()->query_The_name(ob) +
+        say(QCTNAME(this_player()) + " considers attacking " + QTNAME(victim) +
+            ", though does not dare to do so.\n", ({ victim, this_player() }) );
+        tell_object(victim, this_player()->query_The_name(victim) +
             " looks at you as if ready to attack, though you see fear in " +
             this_player()->query_possessive() + " eyes.\n");
         return 1;
     }
 
-    say(QCTNAME(this_player()) + " attacks " + QTNAME(ob) + ".\n",
-        ({ this_player(), ob }) );
-    tell_object(ob, this_player()->query_The_name(ob) + " attacks you!\n");
+    say(QCTNAME(this_player()) + " attacks " + QTNAME(victim) + ".\n",
+        ({ this_player(), victim }) );
+    tell_object(victim, this_player()->query_The_name(victim) + " attacks you!\n");
 
-    this_player()->attack_object(ob);
-    this_player()->add_prop(LIVE_O_LAST_KILL, ob);
+    this_player()->attack_object(victim);
+    this_player()->add_prop(LIVE_O_LAST_KILL, victim);
 
     if (this_player()->query_option(OPT_ECHO))
     {
-        write("You attack " + ob->query_the_name(this_player()) + ".\n");
+        write("You attack " + victim->query_the_name(this_player()) + ".\n");
     }
     else
     {
@@ -852,54 +1002,26 @@ int
 remember_live(string str)
 {
     object ob;
-    mapping tmp;
     int num;
     
-    if (!stringp(str) ||
-        query_verb() == "remembered")
+    if (!strlen(str))
     {
-        tmp = this_player()->query_remembered();
-        if (mappingp(tmp))
-        {
-            if (num = m_sizeof(tmp))
-            {
-                num = F_MAX_REMEMBERED(this_player()->query_stat(SS_INT),
-                    this_player()->query_stat(SS_WIS)) - num;
-                if (num < 0)
-                    num = 0;
-
-                write("These are the people you remember:\n");
-                write(break_string(implode(map(sort_array(m_indexes(tmp)),
-                    capitalize), ", "), 70) + "\n");
-                write("Your brain can handle " + LANG_WNUM(num) +
-                        " more name" + (num == 1 ? ".\n" : "s.\n") );
-                return 1;
-            }
-            else
-            {
-                write("You do not seem to remember anyone.\n");
-                return 1;
-            }
-        }
-        else
-        {
-            write("You don't remember knowing anyone at all.\n");
-            return 1;
-        }
+        return remembered("");
     }
-
+    
     str = lower_case(str);    
 
     /* Silly people remembering themselves can get problems with 'who'. */
     if (this_player()->query_real_name() == str)
     {
-        notify_fail("Sure, as if you would forget yourself if you did " +
-            "not remember your name.\n");
+        notify_fail("Yes, you vaguely remember " +
+	    LANG_ADDART(capitalize(str)) + ".\n");
         return 0;
     }
 
     if (objectp(ob = find_living(str)) &&
-        (ob->query_prop(LIVE_I_NON_REMEMBER)))
+        ((ob->query_prop(LIVE_I_NON_REMEMBER) ||
+	  ob->query_prop(LIVE_I_NEVERKNOWN))))
     {   
         notify_fail("Remember " + ob->query_objective() + "? Never!\n");
         return 0;
@@ -918,9 +1040,46 @@ remember_live(string str)
         return 1;
     default:
         notify_fail("You can't remember having been introduced to " + 
-                    capitalize(str) + ".\n");
+             capitalize(str) + ".\n");
         return 0;
     }
+}
+
+/*
+ * remembered - List the people you remember meeting
+ */
+int
+remembered(string str)
+{
+    mapping memory;
+    string *names;
+    int index, size;
+
+    memory = this_player()->query_remembered();
+    if (!(size = m_sizeof(memory)))
+    {
+        write("You don't remember knowing anyone at all.\n");
+        return 1;
+    }
+
+    names = sort_array(m_indices(memory));
+    for (index = 0; index < size; index++)
+    {
+        /* Wizards get an asterisk, non-existent players a plus. */
+        if (SECURITY->query_wiz_level(names[index]))
+	    names[index] += "*";
+	else if (!SECURITY->exist_player(names[index]))
+	    names[index] += "+";
+    }
+    write("You remember the following " +
+      (size == 1 ? "person" : "people") + ":\n");
+    write(HANGING_INDENT("  " + implode(map(names, capitalize), ", "), 2, 0));
+
+    size = max((F_MAX_REMEMBERED(this_player()->query_stat(SS_INT),
+        this_player()->query_stat(SS_WIS)) - size), 0);
+    write("Your brain can handle " + LANG_WNUM(size) +
+        " more name" + (size == 1 ? ".\n" : "s.\n") );
+    return 1;
 }
 
 /*
@@ -1033,6 +1192,23 @@ stop(string str)
             notify_fail("You are already as peaceful as can be.\n");
             return 0;
         }
+	/* Intentional fallthrough. */
+    }
+    else if (str == "counting")
+    {
+        notify_fail("You are not counting anything. You may have lost count of that, too.\n");
+	return 0;
+    }
+    else if (parse_command(lower_case(str), ({ }),"[the] 'world'"))
+    {
+        /* Just a little humour. We did open the door. /Mercade */
+        notify_fail("Find sanctuary in the Keeper's Pagoda and meditate.\n");
+        return 0;
+    }
+    else if (str[..7] != "fighting")
+    {
+        notify_fail("Stop what? Fighting? Counting? The world?\n");
+        return 0;
     }
     else
     {
@@ -1152,8 +1328,8 @@ stop(string str)
  * team - Handles all the team related commands.
  */
 
-#define FAIL_IF_LEADER(text) if (leader) { notify_fail("You cannot " + (text) + " as you are lead by " + leader->query_the_name(this_player()) + ".\n"); return 0; }
-#define FAIL_IF_NOT_LEADER(text) if (!sizeof(members)) { notify_fail("You cannot " + (text) + " as you are not leading a team.\n"); return 0; }
+#define FAIL_IF_HAS_LEADER(text) if (leader) { notify_fail("You cannot " + (text) + " as you are led by " + leader->query_the_name(this_player()) + ".\n"); return 0; }
+#define FAIL_IF_NO_MEMBERS(text) if (!sizeof(members)) { notify_fail("You cannot " + (text) + " as you are not leading a team.\n"); return 0; }
 
 static int
 team_invite(object *oblist)
@@ -1226,19 +1402,20 @@ team_join(object leader)
         write("You fail to join your leader.\n");
         return 1;
     }
- 
+
     if (!this_player()->query_option(OPT_BRIEF))
     {
         write("As you enter the team, you switch to brief mode.\n");
         this_player()->add_prop(TEMP_BACKUP_BRIEF_OPTION, 1);
         this_player()->set_option(OPT_BRIEF, 1);
     }
- 
+
     write("Your leader is now " + leader->short() + ".\n");
     say(QCTNAME(this_player()) + " joins the team of " +
         QTNAME(leader) + ".\n", ({ leader, this_player() }));
     tell_object(leader, this_player()->query_The_name(leader) +
         " joins your team.\n");
+    leader->gmcp_team_update();
     return 1;
 }
 
@@ -1266,7 +1443,7 @@ varargs int
 team(string str)
 {
     string  arg = "";
-    int     done;
+    int     done, brief;
     int     size = 0;
     object *oblist = ({ });
     object  leader = this_player()->query_leader();
@@ -1288,19 +1465,39 @@ team(string str)
     switch(str)
     {
     case "disband":
-        FAIL_IF_NOT_LEADER("disband your team");
+        FAIL_IF_NO_MEMBERS("disband your team");
         write("You disband your team.\n");
 	members->catch_msg(QCTNAME(this_player()) + " disbands " +
             this_player()->query_possessive() + " team and forces you to leave.\n");
+        map(members, &team_leave(, this_player(), 1));
+	members->gmcp_team();
+
         members = FILTER_PRESENT(members);
         all2actbb(" disbands " + this_player()->query_possessive() +
             " team, forcing", members, " to leave.");
-
-        map(members, &team_leave(, this_player(), 1));
+        this_player()->gmcp_team();
         return 1;
-    
+
+    case "follow":
+        FAIL_IF_NO_MEMBERS("command the team to follow");
+        if (!this_player()->query_prop(LIVE_I_TEAM_NO_FOLLOW))
+        {
+            write("Your team already follows you around.\n");
+            return 1;
+        }
+        this_player()->remove_prop(LIVE_I_TEAM_NO_FOLLOW);
+        write("You instruct your team to follow you.\n");
+        target(" instructs you " + ((sizeof(members) > 1) ?
+            ("and the rest of " + this_player()->query_possessive() + " team ") : "") +
+            "to follow.", members);
+        say(QCTNAME(this_player()) + " instructs " +
+            this_player()->query_possessive() + " team to follow.\n",
+            members + ({ this_player() }) );
+        this_player()->gmcp_team_update();
+        return 1;
+
     case "invite":
-        FAIL_IF_LEADER("invite anyone");
+        FAIL_IF_HAS_LEADER("invite anyone");
         if (!size)
         {
             notify_fail("Invite who to your team?\n");
@@ -1331,7 +1528,7 @@ team(string str)
         return 1;
 
     case "join":
-        FAIL_IF_LEADER("join another team");
+        FAIL_IF_HAS_LEADER("join another team");
         switch(size)
         {
         case 0:
@@ -1346,7 +1543,7 @@ team(string str)
         return team_join(oblist[0]);
 
     case "leader":
-        FAIL_IF_NOT_LEADER("assign a new team leader");
+        FAIL_IF_NO_MEMBERS("assign a new team leader");
         if (this_player()->query_attack())
         {
             notify_fail("You cannot re-arrange your team while you are in combat.\n");
@@ -1367,14 +1564,14 @@ team(string str)
 
         if (!IN_ARRAY(leader, members))
         {
-            write(rear->query_The_name(this_player()) +
+            write(leader->query_The_name(this_player()) +
                 " is not a member of your team.\n");
             return 1;
         }
 
         /* Remove the members from the old leader (me).
 	 * Note: both this and the next foreach are written as foreach instead
-	 * of map as a functionpointer (as used in map)  cannot be shadowed. */
+	 * of map as a functionpointer (as used in map) cannot be shadowed. */
         foreach(object ob: members)
         {
             this_player()->team_leave(ob);
@@ -1387,11 +1584,11 @@ team(string str)
             leader->team_join(ob);
         }
     
-        done = this_player()->query_option(OPT_BRIEF);
+        brief = this_player()->query_option(OPT_BRIEF);
         write("You make " + leader->query_the_name(this_player()) +
             " the leader of your team" +
-            (done ? "" : " and switch into brief mode") + ".\n");
-        if (!done)
+            (brief ? "" : " and switch into brief mode") + ".\n");
+        if (!brief)
         {
             this_player()->add_prop(TEMP_BACKUP_BRIEF_OPTION, 1);
             this_player()->set_option(OPT_BRIEF, 1);
@@ -1406,7 +1603,8 @@ team(string str)
         }
         all2actbb(" makes", ({ leader}), " the leader of " +
             this_player()->query_possessive() + " team.");
-        members->catch_msg("You are now lead by " + QTNAME(leader) + ".\n");
+        members->catch_msg("You are now led by " + QTNAME(leader) + ".\n");
+        leader->gmcp_team_update();
         return 1;
 
     case "leave":
@@ -1424,9 +1622,11 @@ team(string str)
             say(QCTNAME(this_player()) + " leaves the team of " +
                 QTNAME(leader) + ".\n", ({ leader, this_player() }));
             team_leave(this_player(), leader, 0);
+	    this_player()->gmcp_team();
+            leader->gmcp_team_update();
             return 1;
         }
-        FAIL_IF_NOT_LEADER("remove someone from your team");
+        FAIL_IF_NO_MEMBERS("remove someone from your team");
         if (!sizeof(oblist))
         {
             if (!strlen(arg))
@@ -1448,9 +1648,11 @@ team(string str)
         write("You force " + COMPOSITE_ALL_LIVE(oblist) + " to leave your team.\n");
         oblist->catch_msg(QCTNAME(this_player()) + " forces you to leave " +
             this_player()->query_possessive() + " team.\n");
+	oblist->gmcp_team();
         oblist = FILTER_PRESENT(oblist);
         all2actbb(" forces", oblist, " to leave " +
             this_player()->query_possessive() + " team.");
+        this_player()->gmcp_team_update();
         return 1;
 
     case "list":
@@ -1476,14 +1678,16 @@ team(string str)
         if (sizeof(members))
         {
             write("You are the leader of your team. The members are " +
-                COMPOSITE_ALL_LIVE(members) + ".\n");
+                COMPOSITE_ALL_LIVE(members) +
+                (this_player()->query_prop(LIVE_I_TEAM_NO_FOLLOW) ?
+                    ". The team is instructed to stay put" : "") + ".\n");
             return 1;
         }
         notify_fail("You are not in a team.\n");
         return 0;
 
     case "rear":
-        FAIL_IF_NOT_LEADER("assign a new rear guard");
+        FAIL_IF_NO_MEMBERS("assign a new rear guard");
         switch(size)
         {
         case 0:
@@ -1521,10 +1725,29 @@ team(string str)
         rear->catch_tell(this_player()->query_The_name(rear) +
             " places you at the rearguard of " + this_player()->query_possessive() +
             " team.\n");
+        this_player()->gmcp_team_update();
+        return 1;
+
+    case "stay":
+        FAIL_IF_NO_MEMBERS("command the team to stay");
+        if (this_player()->query_prop(LIVE_I_TEAM_NO_FOLLOW))
+        {
+            write("Your team is already staying put.\n");
+            return 1;
+        }
+        this_player()->add_prop(LIVE_I_TEAM_NO_FOLLOW, 1);
+        write("You instruct your team to stay put.\n");
+        target(" instructs you" + ((sizeof(members) > 1) ?
+            (" and the rest of " + this_player()->query_possessive() + " team") : "") +
+            " to stay put.", members);
+        say(QCTNAME(this_player()) + " instructs " +
+            this_player()->query_possessive() + " team to stay put.\n",
+            members + ({ this_player() }) );
+        this_player()->gmcp_team_update();
         return 1;
 
     default:
-        notify_fail("The command \"team " + str + "\" is not know.\n");
+        notify_fail("The command \"team " + str + "\" is not known.\n");
         return 0;
     }
 
@@ -1621,7 +1844,8 @@ print_who(string opts, object *list, object *nonmet, int size)
         }
         else if (sizeof(list) < size)
         {
-            write(", of which " + sizeof(list) + " fit your selection");
+            write(", of which " + sizeof(list) + " fit" +
+	        ((sizeof(list) == 1) ? "s" : "") + " your selection");
         }        
         write(".\n");
     }
@@ -1657,7 +1881,7 @@ print_who(string opts, object *list, object *nonmet, int size)
         {
             if (sizeof(list))
             {
-                metnames += ({ "\\/\\/\\/\\/" });
+                metnames += ({ "-wizards-" });
             }
             metnames += map(wizards, format_who_name);
         }

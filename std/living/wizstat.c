@@ -4,7 +4,7 @@
  * Contains the code to implement the various wizardly information commands.
  */
 
-#include <filepath.h>
+#include <files.h>
 #include <formulas.h>
 
 public int
@@ -47,7 +47,7 @@ stat_living()
           "File: %-35s  Uid&Euid: %s\n"  +
 	  "-----------------------------------------------------------------------------\n" +
 	  "Exp: %9d %8s)  Quest: %7d  Combat: %8d  General: %8d\n" +
- 	  "Weight: %6d %8s)  Volume: %6d %8s)\n" +
+ 	  "Weight: %6d %8s)  Volume: %6d %8s)   Brute: %4.1f%% (%4.1f%%)\n" +
 	  "Hp:  %4d %5s)  Mana:  %4d %5s)  Panic: %4d %5s)  Fatigue: %4d %5s)\n" +  
 	  "Eat: %4d %5s)  Drink: %4d %5s)  Intox: %4d %5s)  Av.Stat: %4d\n" +  
  	  "\n" +
@@ -56,7 +56,7 @@ stat_living()
           "Base: %@7d\n" +
           "Exp:  %@7s\n" +
 	  "Learn:%@7d\n\n" +
-	  "Align: %d  Scar: %d  Hide: %d  Invis: %d  Ghost: %d  Npc: %d  Whimpy: %d%%\n",
+	  "Align: %d  Scar: %d  Hide: %d  Invis: %d  Ghost: %d  Npc: %d  Wimpy: %d%%\n",
 		  capitalize(query_real_name()),
 		  WIZ_RANK_NAME(SECURITY->query_wiz_rank(query_real_name())),
 #ifdef USE_WIZ_LEVELS
@@ -76,6 +76,8 @@ stat_living()
 		  "(" + to->query_prop(CONT_I_MAX_WEIGHT),
 		  to->query_prop(OBJ_I_VOLUME),
 		  "(" + to->query_prop(CONT_I_MAX_VOLUME),
+		  to->query_brute_factor(0) * 100.0,
+		  to->query_brute_factor(1) * 100.0,
 		  to->query_hp(),
 		  "(" + to->query_max_hp(),
 		  to->query_mana(),
@@ -91,7 +93,7 @@ stat_living()
 		  to->query_intoxicated(),
 		  "(" + to->query_prop(LIVE_I_MAX_INTOX),
 		  to->query_average_stat(),
-		  SS_STAT_DESC,
+		  SD_STAT_DESC,
                   map(stats, &to->query_stat()),
                   map(map(stats, &to->query_acc_exp()), base_stat),
                   map(map(stats, &to->query_acc_exp()), round_stat),

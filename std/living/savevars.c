@@ -12,9 +12,11 @@
 #include <const.h>
 #include <filter_funs.h>
 #include <formulas.h>
+#include <gmcp.h>
 #include <macros.h>
 #include <ss_types.h>
 #include <stdproperties.h>
+#include <state_desc.h>
 #include <std.h>
 
 private string m_in,            /* Messages when entering or leaving a room. */
@@ -38,7 +40,7 @@ private int    hit_points,      /* The hitpoints of this lifeform. */
                exp_max_total,   /* Maximum amount of exp the player ever had */
                is_ghost,        /* If lifeform is dead */
                alignment,       /* Depends on good or chaotic lifeform */
-               gender,          /* G_NEUTER, G_MALE or G_FEMALE (0-2) */
+               gender,          /* G_MALE, G_FEMALE or G_NEUTER (0-2) */
                appearance,      /* What we look like (0-99) */
                opinion,         /* What we think of others appearance */
                intoxicated,     /* How drunk are we? */
@@ -55,19 +57,11 @@ static mapping
 /*
  * Prototypes
  */
-
 int query_stuffed();
 int query_intoxicated();
 int query_stat(int stat);
 int query_skill(int skill);
-int query_stat_pref_total();
 int query_guild_pref_total();
-void heal_hp(int hp);
-void add_mana(int sp);
-int query_fatigue();
-int query_mana();
-nomask public int remove_cmdsoul(string soul);
-nomask public int remove_toolsoul(string soul);
 
 /*
  *  These vars keep track of the last time the appropriate var was updated.
@@ -82,24 +76,15 @@ static private int last_intox;
 static private int last_con;
 static private int last_stuffed;
 
-static nomask void
-savevars_delay_reset()
-{
-    last_stuffed = query_stuffed();
-    last_intox = query_intoxicated();
-    last_con = query_stat(SS_CON);
-}
-
 /*
- * Function name:   save_vars_reset
- * Description:     Resets some variables which are used to keep track
- *                  of how variables change with time.
+ * Function name: save_vars_reset
+ * Description  : Resets some variables which are used to keep track of how
+ *                variables change with time.
+ * Arguments    : int t - the time() value to use (default = NOW)
  */
-static nomask void
-save_vars_reset()
+static nomask varargs void
+save_vars_reset(int t = time())
 {
-    int t = time();
-
     intoxicated_time  = t;
     stuffed_time      = t;
     soaked_time       = t;
@@ -107,7 +92,12 @@ save_vars_reset()
     mana_time         = t;
     fatigue_time      = t;
 
-    set_alarm(1.0, 0.0, savevars_delay_reset);
+    /* To initialize, set the last-stuffed and intox to current. For players
+     * we don't have the CON yet, but that'll only affect the first round.
+     */
+    last_stuffed = stuffed;
+    last_intox = intoxicated;
+    last_con = 0;
 }
 
 /*
@@ -328,7 +318,7 @@ set_title(string t)
     if (this_player() != this_object() && interactive(this_object()))
         SECURITY->log_syslog(LOG_TITLE, ctime(time()) + " " +
             query_real_name() + " new title " + t + " by " +
-            this_player()->query_real_name() + "\n");
+            this_player()->query_real_name() + "\n", 50000);
 #endif
     title = t;
 }
@@ -346,7 +336,7 @@ set_al_title(string t)
     if (this_player() != this_object() && interactive(this_object()))
         SECURITY->log_syslog(LOG_AL_TITLE, ctime(time()) + " " +
             query_real_name() + " new title " + t + " by " +
-            this_player()->query_real_name() + "\n");
+            this_player()->query_real_name() + "\n", 50000);
 #endif
     al_title = t;
 }
@@ -441,6 +431,34 @@ query_al_title()
 #endif
 
 /*
+ * Function name: query_gmcp
+ * Description  : Find out whether a GMCP package is supported. This routine is
+ *                here so it can be masked in the player object.
+ * Arguments    : string package - the package to test.
+ * Returns      : int - 0 for all NPC's.
+ */
+public int
+query_gmcp(string package)
+{
+    return 0;
+}
+
+/* prototype for routine in /std/player/getmsg_sec.c */
+public void gmcp_char(string package, string name, mixed value) { }
+
+/*
+ * Function name:   query_max_hp
+ * Description:     Calculates the maximum number of hitpoints that the
+ *                  living can achieve.
+ * Returns:         The maximum
+ */
+public int
+query_max_hp()
+{
+    return F_MAX_HP(query_stat(SS_CON));
+}
+
+/*
  * Function name: calculate_hp
  * Description  : Compute the current number of hitpoints of the living,
  *                taking into account the constitution and intoxication.
@@ -448,21 +466,29 @@ query_al_title()
 void
 calculate_hp()
 {
-    int n, con, intox;
+    int interval, con, intox;
     int tmpcon, tmpintox;
 
-    n = (time() - hp_time) / F_INTERVAL_BETWEEN_HP_HEALING;
-    if (n > 0)
+    interval = (time() - hp_time) / F_INTERVAL_BETWEEN_HP_HEALING;
+    if (interval > 0)
     {
         con = query_stat(SS_CON);
         intox = query_intoxicated();
         tmpcon = (con + last_con) / 2;
         tmpintox = (intox + last_intox) / 2;
 
-        hp_time += n * F_INTERVAL_BETWEEN_HP_HEALING;
-        heal_hp(n * F_HEAL_FORMULA(tmpcon, tmpintox));
+        hp_time += interval * F_INTERVAL_BETWEEN_HP_HEALING;
+        hit_points += interval * F_HEAL_FORMULA(tmpcon, tmpintox);
+        hit_points = min(hit_points, query_max_hp());
+
         last_con = con;
         last_intox = intox;
+
+        /* Update the GMCP information for players. */
+        if (query_gmcp(GMCP_CHAR))
+        {
+            gmcp_char(GMCP_CHAR_VITALS, GMCP_HEALTH, GET_NUM_DESC(hit_points, query_max_hp(), SD_HEALTH));
+        }
     }
 }
 
@@ -479,15 +505,58 @@ query_hp()
 }
 
 /*
- * Function name:   query_max_hp
- * Description:     Calculates the maximum number of hitpoints that the
- *                  living can achieve.
- * Returns:         The maximum
+ * Function name:   heal_hp
+ * Description:     Increase the number of hitpoints with a few.
+ * Arguments:       hp: The difference
+ */
+void
+heal_hp(int hp)
+{
+    string text;
+    object obj;
+
+    this_object()->calculate_hp();
+
+#ifdef LOG_REDUCE_HP
+    if (!query_npc() && (hp < 0) && (-hp >= hit_points))
+    {
+        text = sprintf("%s %s %d->%d by ", ctime(time()), query_name(),
+	    hit_points, hit_points + hp);
+	text += (this_interactive() ? this_interactive()->query_name() : "?");
+
+        if (obj = previous_object())
+            text += " " + file_name(obj) + ", " + obj->short() +
+		" (" + getuid(obj) + ")\n";
+        else
+            text += " ??\n";
+
+	/* Don't log CHUMLOCK heal-hp. */
+	if (objectp(obj) && (MASTER_OB(obj) == CHUMLOCK_OBJECT))
+	    text = "";
+
+	if (strlen(text))
+	    SECURITY->log_syslog(LOG_REDUCE_HP, text, 100000);
+    }
+#endif
+
+    hit_points = min(max(hit_points + hp, 0), query_max_hp());
+
+    /* Update the GMCP information for players. */
+    if (query_gmcp(GMCP_CHAR))
+    {
+        gmcp_char(GMCP_CHAR_VITALS, GMCP_HEALTH, GET_NUM_DESC(hit_points, query_max_hp(), SD_HEALTH));
+    }
+}
+
+/*
+ * Function name:   reduce_hit_point
+ * Description:     Reduce the number of hitpoints with a few.
+ * Arguments:       dam: The number of damage hitpoints.
  */
 public int
-query_max_hp()
+reduce_hit_point(int dam)
 {
-    return F_MAX_HP(query_stat(SS_CON));
+    heal_hp(-dam);
 }
 
 /*
@@ -505,57 +574,6 @@ set_hp(int hp)
 }
 
 /*
- * Function name:   heal_hp
- * Description:     Increase the number of hitpoints with a few.
- * Arguments:       hp: The difference
- */
-void
-heal_hp(int hp)
-{
-    string text;
-    object o;
-
-    this_object()->calculate_hp();
-
-#ifdef LOG_REDUCE_HP
-    o = previous_object();
-    if (!query_npc() && (hp < 0) && (-hp >= hit_points))
-    {
-        text = sprintf("%s %s %d->%d by ", ctime(time()), query_name(),
-	    hit_points, hit_points + hp);
-
-	text += (this_interactive() ? this_interactive()->query_name() : "?");
-
-        if (o)
-            text += " " + file_name(o) + ", " + o->short() +
-		" (" + getuid(o) + ")\n";
-        else
-            text += " ??\n";
-
-	/* Don't log CHUMLOCK heal-hp. */
-	if (objectp(o) && (MASTER_OB(o) == CHUMLOCK_OBJECT))
-	    text = "";
-
-	if (strlen(text))
-	    SECURITY->log_syslog(LOG_REDUCE_HP, text);
-    }
-#endif
-
-    hit_points = min(max(hit_points + hp, 0), query_max_hp());
-}
-
-/*
- * Function name:   reduce_hit_point
- * Description:     Reduce the number of hitpoints with a few.
- * Arguments:       dam: The number of damage hitpoints.
- */
-public int
-reduce_hit_point(int dam)
-{
-    heal_hp(-dam);
-}
-
-/*
  * Function name:   query_max_mana
  * Description:     Calculates that maximum of mana points that a living
  *                  can get.
@@ -564,7 +582,66 @@ reduce_hit_point(int dam)
 public int
 query_max_mana()
 {
-    return query_stat(SS_INT) * 10;
+    return F_MAX_MANA(query_stat(SS_INT)); 
+}
+
+/*
+ * Function name: calculate_mana
+ * Description  : Compute the current mana points of the living,
+ *                taking into account the wisdom and intoxication.
+ */
+void
+calculate_mana()
+{
+    int interval, wis, sc, pintox;
+
+    interval = (time() - mana_time) / F_INTERVAL_BETWEEN_MANA_HEALING;
+    if (interval > 0)
+    {
+        wis = query_stat(SS_WIS);
+        pintox = query_intoxicated();
+        pintox = ((((pintox < 0) ? 0 : pintox) * 100) / query_prop(LIVE_I_MAX_INTOX));
+        sc = query_skill(SS_SPELLCRAFT);
+        mana_time += interval * F_INTERVAL_BETWEEN_MANA_HEALING;
+        mana += interval * F_MANA_HEAL_FORMULA(sc, pintox, wis);
+        mana = min(mana, query_max_mana());
+
+        /* Update the GMCP information for players. */
+        if (query_gmcp(GMCP_CHAR))
+        {
+            gmcp_char(GMCP_CHAR_VITALS, GMCP_MANA, GET_NUM_DESC(mana, query_max_mana(), SD_MANA));
+        }
+    }
+}
+
+/*
+ * Function name:   query_mana
+ * Description:     Gives the number of mana points that the living has
+ * Returns:         The number of mana points.
+ */
+public int
+query_mana()
+{
+    calculate_mana();
+    return mana;
+}
+
+/*
+ * Function name:   add_mana
+ * Description:     Add a certain amount of mana points
+ * Arguments:       sp: The number of mana points to change.
+ */
+void
+add_mana(int sp)
+{
+    calculate_mana();
+    mana = min(max(mana + sp, 0), query_max_mana());
+
+    /* Update the GMCP information for players. */
+    if (query_gmcp(GMCP_CHAR))
+    {
+        gmcp_char(GMCP_CHAR_VITALS, GMCP_MANA, GET_NUM_DESC(mana, query_max_mana(), SD_MANA));
+    }
 }
 
 /*
@@ -578,49 +655,9 @@ query_max_mana()
 void
 set_mana(int sp)
 {
-    query_mana(); // heal mana *before* setting the value
+    calculate_mana();
     mana = 0;
     add_mana(sp);
-}
-
-/*
- * Function name:   add_mana
- * Description:     Add a certain amount of mana points
- * Arguments:       sp: The number of mana points to change.
- */
-void
-add_mana(int sp)
-{
-    query_mana();
-    mana = min(max(mana + sp, 0), query_max_mana());
-}
-
-/*
- * Function name:   query_mana
- * Description:     Gives the number of mana points that the living has
- * Returns:         The number of mana points.
- */
-public int
-query_mana()
-{
-    int n;
-    int wis;
-    int sc;
-    int pintox;
-
-    n = (time() - mana_time) / F_INTERVAL_BETWEEN_MANA_HEALING;
-    if (n > 0)
-    {
-        wis = query_stat(SS_WIS);
-        pintox = query_intoxicated();
-        pintox = ((((pintox < 0) ? 0 : pintox) * 100) / query_prop(LIVE_I_MAX_INTOX));
-        sc = query_skill(SS_SPELLCRAFT);
-
-        mana_time += n * F_INTERVAL_BETWEEN_MANA_HEALING;
-        add_mana(n * F_MANA_HEAL_FORMULA(sc, pintox, wis));
-    }
-
-    return mana;
 }
 
 /*
@@ -636,25 +673,6 @@ query_max_fatigue()
 }
 
 /*
- * Function name:   add_fatigue
- * Description:     Add an amount of fatigue points to the current amount
- *                  of the living. Observe, negative argument makes a player
- *                  more tired.
- * Arguments:       f: the amount of change
- */
-public void
-add_fatigue(int f)
-{
-    query_fatigue();
-
-    fatigue += f;
-    if (fatigue < 0)
-        fatigue = 0;
-    if (fatigue > query_max_fatigue())
-        fatigue = query_max_fatigue();
-}
-
-/*
  * Function name: calculate_fatigue
  * Description  : Compute the present fatigue value of the player, taking
  *                the stuffed value into account.
@@ -662,32 +680,26 @@ add_fatigue(int f)
 void
 calculate_fatigue()
 {
-    int n, stuffed, tmpstuffed;
+    int interval, stuffed, tmpstuffed, maximum;
 
-    n = (time() - fatigue_time) / F_INTERVAL_BETWEEN_FATIGUE_HEALING;
-    if (n > 0)
+    interval = (time() - fatigue_time) / F_INTERVAL_BETWEEN_FATIGUE_HEALING;
+    if (interval > 0)
     {
         stuffed = query_stuffed();
         tmpstuffed = (stuffed + last_stuffed) / 2;
-        fatigue_time += n * F_INTERVAL_BETWEEN_FATIGUE_HEALING;
-        add_fatigue(n *
-            F_FATIGUE_FORMULA(tmpstuffed, query_prop(LIVE_I_MAX_EAT)));
+        fatigue_time += interval * F_INTERVAL_BETWEEN_FATIGUE_HEALING;
+        fatigue += interval * F_FATIGUE_FORMULA(tmpstuffed, query_prop(LIVE_I_MAX_EAT));
+        fatigue = min(fatigue, query_max_fatigue());
         last_stuffed = stuffed;
+
+        /* Update the GMCP information for players. */
+        if (query_gmcp(GMCP_CHAR))
+        {
+            maximum = query_max_fatigue();
+            gmcp_char(GMCP_CHAR_VITALS, GMCP_FATIGUE,
+                GET_NUM_DESC_SUB(maximum - fatigue, maximum, SD_FATIGUE, SD_STAT_DENOM, 1));
+        }
     }
-
-}
-
-/*
- * Function name:   set_fatigue
- * Description:     Set the fatigue points of the living to a certain amount.
- * Arguments:       f: The amount to set.
- */
-public void
-set_fatigue(int f)
-{
-    query_fatigue(); // heal fatigue *before* setting the value
-    fatigue = 0;
-    add_fatigue(f);
 }
 
 /*
@@ -703,6 +715,43 @@ query_fatigue()
 }
 
 /*
+ * Function name:   add_fatigue
+ * Description:     Add an amount of fatigue points to the current amount
+ *                  of the living. Observe, negative argument makes a player
+ *                  more tired.
+ * Arguments:       f: the amount of change
+ */
+public void
+add_fatigue(int f)
+{
+    int maximum;
+
+    this_object()->calculate_fatigue();
+    fatigue = min(max(fatigue + f, 0), query_max_fatigue());
+
+    /* Update the GMCP information for players. */
+    if (query_gmcp(GMCP_CHAR))
+    {
+        maximum = query_max_fatigue();
+        gmcp_char(GMCP_CHAR_VITALS, GMCP_FATIGUE,
+            GET_NUM_DESC_SUB(maximum - fatigue, maximum, SD_FATIGUE, SD_STAT_DENOM, 1));
+    }
+}
+
+/*
+ * Function name:   set_fatigue
+ * Description:     Set the fatigue points of the living to a certain amount.
+ * Arguments:       f: The amount to set.
+ */
+public void
+set_fatigue(int f)
+{
+    this_object()->calculate_fatigue();
+    fatigue = 0;
+    add_fatigue(f);
+}
+
+/*
  * Function name: refresh_living()
  * Description  : This function is called to give the living full mana,
  *                full hitpoints and full fatigue.
@@ -711,12 +760,38 @@ query_fatigue()
 void
 refresh_living()
 {
-    if (!(this_object()->query_npc()))
+    if (!query_npc())
         return;
 
     heal_hp(query_max_hp());
     add_mana(query_max_mana());
     add_fatigue(query_max_fatigue());
+}
+
+/*
+ * Function name: gmcp_char_vitals
+ * Description  : This routine is called by an alarm to send the initial set
+ *                of char.vitals data when people subscribe.
+ */
+nomask public void
+gmcp_char_vitals()
+{
+    int maximum;
+
+    gmcp_char(GMCP_CHAR_VITALS, GMCP_HEALTH, GET_NUM_DESC(hit_points, query_max_hp(), SD_HEALTH));
+    gmcp_char(GMCP_CHAR_VITALS, GMCP_MANA, GET_NUM_DESC(mana, query_max_mana(), SD_MANA));
+    gmcp_char(GMCP_CHAR_VITALS, GMCP_INTOX, (intoxicated ? GET_NUM_DESC_SUB(intoxicated,
+        query_prop(LIVE_I_MAX_INTOX), SD_INTOX, SD_STAT_DENOM, 0) : SD_INTOX_SOBER));
+    gmcp_char(GMCP_CHAR_VITALS, GMCP_FOOD, GET_NUM_DESC(stuffed,
+        query_prop(LIVE_I_MAX_EAT), SD_STUFF));
+    gmcp_char(GMCP_CHAR_VITALS, GMCP_DRINK, GET_NUM_DESC(soaked,
+        query_prop(LIVE_I_MAX_DRINK), SD_SOAK));
+    gmcp_char(GMCP_CHAR_VITALS, GMCP_QPROGRESS, SD_NO_PROGRESS);
+    gmcp_char(GMCP_CHAR_VITALS, GMCP_PROGRESS, SD_NO_PROGRESS);
+
+    maximum = query_max_fatigue();
+    gmcp_char(GMCP_CHAR_VITALS, GMCP_FATIGUE,
+        GET_NUM_DESC_SUB(maximum - fatigue, maximum, SD_FATIGUE, SD_STAT_DENOM, 1));
 }
 
 /*
@@ -786,6 +861,9 @@ query_max_exp()
 public void
 update_max_exp()
 {
+    exp_max_total = max(query_exp(), exp_max_total);
+
+#if 0
     int new_max_exp = F_DEATH_MAX_EXP_PLATFORM(exp_max_total);
 
     /* When a player dies, he is helped to regain his former self. However,
@@ -800,197 +878,21 @@ update_max_exp()
     {
         exp_max_total = query_exp();
     }
-}
-
-/*
- * Function name: set_exp_combat
- * Description  : Set the amount of combat experience the living has.
- * Arguments    : int exp - the amount of combat experience.
- */
-static void
-set_exp_combat(int exp)
-{
-    exp_combat = exp;
-}
-
-/*
- * Function name: query_exp_combat
- * Description  : Gives the amount of combat experience the living has.
- * Returns      : int - the combat experience points
- */
-public int
-query_exp_combat()
-{
-    return exp_combat;
-}
-
-/*
- * Function name: query_brute_factor
- * Description  : Calculates the brutality factor, that is, the factor between
- *                the combat+general experience and the total experience. The
- *                best possible brute factor is 0 and the worst is 1. This is
- *                the fraction of the experience that is not awarded to the
- *                player when he gains new combat/general experience.
- * Arguments    : int base - if true, do not apply the death relaxation.
- * Returns      : float - the brute factor.
- */
-varargs public float
-query_brute_factor(int base = 0)
-{
-    float brute;
-    int min_exp, current_exp;
-
-    current_exp = query_exp();
-    brute = itof(exp_combat + exp_general) / itof(current_exp + 1);
-
-    /* When recovering from death, we can limit the brute penalty. Use
-     * linear extrapolation to find the actual brute fraction within the
-     * experience range where brute lowering is applied.
-     *
-     * Read carefully:
-     *   Brute is a fraction on the exp gained, but here we scaling the
-     *   the brute itself; a fraction on the fraction of exp, if you will.
-     *
-     * The following scaling takes place:
-     * - current > maximum: full application of brute.
-     * - current < minimum: brute scaled with minumum relative brute.
-     * - else: brute scaled to [ minimum relative brute - 1.0 ]
-     */
-    if (!base && (current_exp < query_max_exp()))
-    {
-        min_exp = F_DEATH_MIN_EXP_PLATFORM(query_max_exp());
-        if (current_exp < min_exp)
-        {
-	    brute = brute * F_DEATH_MIN_RELATIVE_BRUTE;
-        }
-        else
-        {
-	    brute = brute * (F_DEATH_MIN_RELATIVE_BRUTE +
-	       (F_DEATH_RELATIVE_BRUTE_RANGE * (itof(current_exp - min_exp) / itof(query_max_exp() - min_exp))));
-	}
-    }
-
-    /* For small players, we can limit the brute factor. */
-#ifdef MAX_EXP_RED_FRIENDLY
-    if ((current_exp < MAX_EXP_RED_FRIENDLY) && (brute > MAX_COMB_EXP_RED))
-    {
-        brute = MAX_COMB_EXP_RED;
-    }
 #endif
-
-    return brute;
 }
 
 /*
- * Function name: add_exp_combat
- * Description  : This function should be called to add combat experience
- *                to the living. To remove combat experience, add a negative
- *                amount.
- * Arguments    : int exp - the amount of general experience to add.
+ * Function name: reset_max_exp
+ * Description  : Reset the maximum amount of experience the player ever had.
  */
 public void
-add_exp_combat(int exp)
+reset_max_exp()
 {
-    float fact;
-    int   taxed;
-
-    /* Positive combat experience. */
-    if (exp > 0)
-    {
-	/* Modify the added experience with the brute factor. */
-        exp -= ftoi(itof(exp) * query_brute_factor());
-
-        /* Add the experience to the total. */
-        exp_combat += exp;
-
-        /* Deduct the tax. */
-        taxed = query_guild_pref_total();
-        if (taxed > 0)
-            exp_combat -= ((exp * taxed) / 100);
-    }
-    /* Negative combat experience. */
-    else
-    {
-        /* Don't remove more than the player has. */
-        if (exp < -exp_combat)
-            exp = 1 - exp_combat;
-
-        /* Deduct the experience from the total. */
-        exp_combat += exp;
-    }
-
-    /* Report the experience added and distribute over the stats. */
-    SECURITY->bookkeep_exp("combat", exp);
-    update_acc_exp(exp);
-    /* Give player growth message. */
-    check_last_stats();
+    exp_max_total = 0;
 }
 
-/*
- * Function name: set_exp_general
- * Description  : Set the amount of general experience the living has.
- * Arguments    : int exp - the amount of general experience.
- */
-static void
-set_exp_general(int exp)
-{
-    exp_general = exp;
-}
-
-/*
- * Function name: query_exp_general
- * Description  : Gives the amount of general experience the living has.
- * Returns      : int - the general experience points.
- */
-public int
-query_exp_general()
-{
-    return exp_general;
-}
-
-/*
- * Function name: add_exp_general
- * Description  : This function should be called to add general experience
- *                to the living. To remove general experience, add a negative
- *                amount.
- * Arguments    : int exp - the amount of general experience to add.
- */
-public void
-add_exp_general(int exp)
-{
-    int taxed;
-
-    /* Positive general experience. */
-    if (exp > 0)
-    {
-	/* Modify the added experience with the brute factor. */
-        exp -= ftoi(itof(exp) * query_brute_factor());
-
-        /* Add the experience to the total. */
-        exp_general += exp;
-
-        /* Deduct the tax. */
-        taxed = query_guild_pref_total();
-        if (taxed > 0)
-            exp_general -= ((exp * taxed) / 100);
-    }
-    /* Negative general experience. */
-    else
-    {
-        /* Don't remove more than the player has. */
-        if (exp < -exp_general)
-            exp = 1 - exp_general;
-
-        /* Deduct the experience from the total. */
-        exp_general += exp;
-    }
-
-    /* Report the experience added and distribute over the stats. */
-    SECURITY->bookkeep_exp("general", exp);
-    update_acc_exp(exp);
-    /* Give player growth message. */
-    check_last_stats();
-}
+/* Dummy routine so it can be masked in /std/player.c */
+public void check_last_stats(int quest) {}
 
 /*
  * Function name: set_exp_quest
@@ -1036,10 +938,214 @@ add_exp_quest(int exp)
     exp = (QUEST_FACTOR * exp) / 10;
     exp_points += exp;
 
+    int guild_exp = exp * query_guild_pref_total() / 100;
+
     /* Distribute the experience over the stats using the tax-free method. */
-    update_acc_exp(exp, 1);
+    update_acc_exp(exp, guild_exp);
     /* Give player growth message. */
-    check_last_stats();
+    check_last_stats(1);
+}
+
+/*
+ * Function name: set_exp_combat
+ * Description  : Set the amount of combat experience the living has.
+ * Arguments    : int exp - the amount of combat experience.
+ */
+static void
+set_exp_combat(int exp)
+{
+    exp_combat = exp;
+}
+
+/*
+ * Function name: query_exp_combat
+ * Description  : Gives the amount of combat experience the living has.
+ * Returns      : int - the combat experience points
+ */
+public int
+query_exp_combat()
+{
+    return exp_combat;
+}
+
+/*
+ * Function name: query_brute_factor
+ * Description  : Calculates the brutality factor, that is, the factor between
+ *                the combat+general experience and the total experience. The
+ *                best possible brute factor is 0 and the worst is 1. This is
+ *                the fraction of the experience that is not awarded to the
+ *                player when he gains new combat/general experience.
+ * Arguments    : int base - if true, do not apply the death relaxation.
+ * Returns      : float - the brute factor.
+ */
+varargs public float
+query_brute_factor(int base = 0)
+{
+    float brute;
+    int min_exp, current_exp, old_exp = 0;
+
+    /* We limit the amount of quest-exp that counts towards the brute factor.
+     * However, we don't want that to be taken into account for checking
+     * against the query_max_exp().
+     */
+    if (query_exp_quest() > F_QUEST_EXP_MAX_BRUTE)
+    {
+        old_exp = query_exp_quest() - F_QUEST_EXP_MAX_BRUTE;
+    }
+
+    current_exp = query_exp() - old_exp;
+    brute = itof(exp_combat + exp_general) / itof(current_exp + 1);
+
+    /* When recovering from death, we can limit the brute penalty. Use
+     * linear extrapolation to find the actual brute fraction within the
+     * experience range where brute lowering is applied.
+     *
+     * Read carefully:
+     *   Brute is a fraction on the exp gained, but here we scaling the
+     *   the brute itself; a fraction on the fraction of exp, if you will.
+     *
+     * The following scaling takes place:
+     * - current > maximum: full application of brute.
+     * - current < minimum: brute scaled with minumum relative brute.
+     * - else: brute scaled to [ minimum relative brute - 1.0 ]
+     */
+    if (!base && (current_exp + old_exp < query_max_exp()))
+    {
+        min_exp = F_DEATH_MIN_EXP_PLATFORM(query_max_exp() - old_exp);
+        if (current_exp < min_exp)
+        {
+	    brute = brute * F_DEATH_MIN_RELATIVE_BRUTE;
+        }
+        else
+        {
+	    brute = brute * (F_DEATH_MIN_RELATIVE_BRUTE +
+	        (F_DEATH_RELATIVE_BRUTE_RANGE * (itof(current_exp - min_exp) / itof(query_max_exp() - old_exp - min_exp))));
+	}
+    }
+
+    /* For small players, we can limit the brute factor. */
+#ifdef MAX_EXP_RED_FRIENDLY
+    if ((current_exp < MAX_EXP_RED_FRIENDLY) && (brute > MAX_COMB_EXP_RED))
+    {
+        brute = MAX_COMB_EXP_RED;
+    }
+#endif
+
+    return brute;
+}
+
+/*
+ * Function name: add_exp_combat
+ * Description  : This function should be called to add combat experience
+ *                to the living. To remove combat experience, add a negative
+ *                amount.
+ * Arguments    : int exp - the amount of general experience to add.
+ */
+public void
+add_exp_combat(int exp)
+{
+    int stat_exp, guild_exp;
+
+    /* Positive combat experience. */
+    if (exp > 0)
+    {
+        /* Modify the added experience with the brute factor. */
+        stat_exp = ftoi(itof(exp) * (1.0 - query_brute_factor()));
+        int tax = stat_exp * query_guild_pref_total() / 100;
+
+        /* Deduct tax and and the stat exp to the total */
+	stat_exp -= tax;
+        exp_combat += stat_exp; 
+
+        /* Calculate the experience to add to the guild stat using static brute */
+        guild_exp = exp * (100 - F_GUILD_STAT_BRUTE_FACTOR) / 100 * query_guild_pref_total() / 100;
+    }
+    /* Negative combat experience. */
+    else
+    {
+        /* Don't remove more than the player has. */
+        if (exp < -exp_combat)
+            exp = 1 - exp_combat;
+
+        /* Deduct the experience from the total. */
+        update_max_exp();
+        stat_exp = exp;
+        exp_combat += stat_exp;
+    }
+
+    /* Report the experience added and distribute over the stats. */
+    SECURITY->bookkeep_exp("combat", stat_exp);
+    update_acc_exp(stat_exp, guild_exp);
+    /* Give player growth message. */
+    check_last_stats(0);
+}
+
+/*
+ * Function name: set_exp_general
+ * Description  : Set the amount of general experience the living has.
+ * Arguments    : int exp - the amount of general experience.
+ */
+static void
+set_exp_general(int exp)
+{
+    exp_general = exp;
+}
+
+/*
+ * Function name: query_exp_general
+ * Description  : Gives the amount of general experience the living has.
+ * Returns      : int - the general experience points.
+ */
+public int
+query_exp_general()
+{
+    return exp_general;
+}
+
+/*
+ * Function name: add_exp_general
+ * Description  : This function should be called to add general experience
+ *                to the living. To remove general experience, add a negative
+ *                amount.
+ * Arguments    : int exp - the amount of general experience to add.
+ */
+public void
+add_exp_general(int exp)
+{
+    int stat_exp, guild_exp;
+
+    /* Positive general experience. */
+    if (exp > 0)
+    {
+        /* Modify the added experience with the brute factor. */
+        stat_exp = ftoi(itof(exp) * (1.0 - query_brute_factor()));
+        int tax = stat_exp * query_guild_pref_total() / 100;
+
+        /* Add stat exp minus the tax to the exp total */
+        stat_exp -= tax;
+        exp_general += stat_exp;
+
+        /* Calculate the experience to add to the guild stat using static brute */
+        guild_exp = exp * (100 - F_GUILD_STAT_BRUTE_FACTOR) / 100 * query_guild_pref_total() / 100;
+    }
+    /* Negative general experience. */
+    else
+    {
+        /* Don't remove more than the player has. */
+        if (exp < -exp_general)
+            exp = 1 - exp_general;
+
+        /* Deduct the experience from the total. */
+        update_max_exp();
+        stat_exp = exp;
+        exp_general += exp;
+    }
+
+    /* Report the experience added and distribute over the stats. */
+    SECURITY->bookkeep_exp("general", stat_exp);
+    update_acc_exp(stat_exp, guild_exp);
+    /* Give player growth message. */
+    check_last_stats(0);
 }
 
 /*
@@ -1110,12 +1216,12 @@ modify_exp(string type, int amount, string reason)
     }
 
     /* Update the stats. Then log the change. */
-    update_acc_exp(new - old);
+    update_acc_exp(new - old, 0);
 
     SECURITY->log_syslog("MODIFY_EXP",
         sprintf("%s %-11s by %-11s %-1s %8i (%8d) %8i: %s\n", ctime(time()),
         capitalize(query_real_name()), capitalize(geteuid(this_interactive())),
-        capitalize(type[0..0]), old, (new - old), new, reason));
+        capitalize(type[0..0]), old, (new - old), new, reason), 100000);
 }
 
 /*
@@ -1193,7 +1299,7 @@ modify_stat(string type, int stat, int amount, string reason)
         sprintf("%s %-11s by %-11s %-1s %-3s %3i -> %3i: %s\n",
         ctime(time()), capitalize(query_real_name()),
         capitalize(geteuid(this_interactive())), capitalize(type[0..0]),
-        SS_STAT_DESC[stat][0..2], old, query_stat(stat), reason));
+        SD_STAT_DESC[stat][0..2], old, query_stat(stat), reason), 100000);
 }
 
 /*
@@ -1249,6 +1355,9 @@ set_invis(int flag)
         add_prop(OBJ_I_INVIS, 100);
     else
         add_prop(OBJ_I_INVIS, flag);
+
+    /* Hook to notify our environment that our visibility changed. */
+    environment()->hook_change_invis(this_object());
 }
 
 /*
@@ -1439,19 +1548,21 @@ query_opinion()
 public int
 query_intoxicated()
 {
-    int n;
+    int interval;
 
-    n = (time() - intoxicated_time ) / F_INTERVAL_BETWEEN_INTOX_HEALING;
-
-    if (n == 0)
-        return intoxicated;
-
-    if (intoxicated > 0)
+    interval = (time() - intoxicated_time ) / F_INTERVAL_BETWEEN_INTOX_HEALING;
+    if (interval)
     {
-        intoxicated -= n * F_SOBER_RATE;
-        intoxicated = MAX(0, intoxicated);
+        intoxicated = max(0, intoxicated - interval * F_SOBER_RATE);
+        intoxicated_time += interval * F_INTERVAL_BETWEEN_INTOX_HEALING;
+
+        /* Update the GMCP information for players. */
+        if (query_gmcp(GMCP_CHAR))
+        {
+            gmcp_char(GMCP_CHAR_VITALS, GMCP_INTOX,(intoxicated ? GET_NUM_DESC_SUB(intoxicated,
+                query_prop(LIVE_I_MAX_INTOX), SD_INTOX, SD_STAT_DENOM, 0) : SD_INTOX_SOBER));
+        }
     }
-    intoxicated_time += n * F_INTERVAL_BETWEEN_INTOX_HEALING;
 
     return intoxicated;
 }
@@ -1464,17 +1575,25 @@ query_intoxicated()
 public int
 query_stuffed()
 {
-    int t, n;
+    int interval;
+    int maxstuff = query_prop(LIVE_I_MAX_EAT);
 
-    n = (time() - stuffed_time) / F_INTERVAL_BETWEEN_STUFFED_HEALING;
+    /* After using stuffed enhancement, excrete the excess. */
+    stuffed = min(stuffed, maxstuff);
 
-    if (n == 0)
-        return stuffed;
+    interval = (time() - stuffed_time) / F_INTERVAL_BETWEEN_STUFFED_HEALING;
+    if (interval)
+    {
+        stuffed = max(0, stuffed - F_UNSTUFF_RATE * interval);
+        stuffed_time += interval * F_INTERVAL_BETWEEN_STUFFED_HEALING;
 
-    stuffed -= F_UNSTUFF_RATE * n;
-    stuffed = MAX(0, stuffed);
-
-    stuffed_time += n * F_INTERVAL_BETWEEN_STUFFED_HEALING;
+        /* Update the GMCP information for players. */
+        if (query_gmcp(GMCP_CHAR))
+        {
+            gmcp_char(GMCP_CHAR_VITALS, GMCP_FOOD, GET_NUM_DESC(stuffed,
+               maxstuff, SD_STUFF));
+        }
+    }
 
     return stuffed;
 }
@@ -1487,17 +1606,25 @@ query_stuffed()
 public int
 query_soaked()
 {
-    int n;
+    int interval;
+    int maxsoak = query_prop(LIVE_I_MAX_DRINK);
 
-    n = (time() - soaked_time) / F_INTERVAL_BETWEEN_SOAKED_HEALING;
+    /* After using soaked enhancement, discharge the excess. */
+    soaked = min(soaked, maxsoak);
 
-    if (n == 0)
-        return soaked;
+    interval = (time() - soaked_time) / F_INTERVAL_BETWEEN_SOAKED_HEALING;
+    if (interval)
+    {
+        soaked = max(0, soaked - F_UNSOAK_RATE * interval);
+        soaked_time += interval * F_INTERVAL_BETWEEN_SOAKED_HEALING;
 
-    soaked -= F_UNSOAK_RATE * n;
-    soaked = MAX(0, soaked);
-
-    soaked_time += n * F_INTERVAL_BETWEEN_SOAKED_HEALING;
+        /* Update the GMCP information for players. */
+        if (query_gmcp(GMCP_CHAR))
+        {
+            gmcp_char(GMCP_CHAR_VITALS, GMCP_DRINK, GET_NUM_DESC(soaked,
+               maxsoak, SD_SOAK));
+        }
+    }
 
     return soaked;
 }
@@ -1505,36 +1632,57 @@ query_soaked()
 /*
  * Function name:   set_intoxicated
  * Description:     Set the level of intoxication of a living.
- * Arguments:       i: The level of intoxication.
+ * Arguments:       int intox: The level of intoxication.
  */
 public void
-set_intoxicated(int i)
+set_intoxicated(int intox)
 {
     this_object()->calculate_hp();
-    intoxicated = (i < 0 ? 0 : i);
+    intoxicated = max(intox, 0);
+
+    /* Update the GMCP information for players. */
+    if (query_gmcp(GMCP_CHAR))
+    {
+        gmcp_char(GMCP_CHAR_VITALS, GMCP_INTOX, GET_NUM_DESC_SUB(intoxicated,
+            query_prop(LIVE_I_MAX_INTOX), SD_INTOX, SD_STAT_DENOM, 0));
+    }
 }
 
 /*
  * Function name:   set_stuffed
  * Description:     Set the level of stuffedness of a living
- * Arguments:       i: The level of stuffedness
+ * Arguments:       int stuff: The level of stuffedness
  */
 static void
-set_stuffed(int i)
+set_stuffed(int stuff)
 {
     this_object()->calculate_fatigue();
-    stuffed = i;
+    stuffed = max(stuff, 0);
+
+    /* Update the GMCP information for players. */
+    if (query_gmcp(GMCP_CHAR))
+    {
+        gmcp_char(GMCP_CHAR_VITALS, GMCP_FOOD, GET_NUM_DESC(stuffed,
+           query_prop(LIVE_I_MAX_EAT), SD_STUFF));
+    }
 }
 
 /*
  * Function name:   set_soaked
  * Description:     Set the level of soakedness of a living
- * Arguments:       i: The level of soakedness
+ * Arguments:       int soak: The level of soakedness
  */
 static void
-set_soaked(int i)
+set_soaked(int soak)
 {
-    soaked = i;
+    soaked = soak;
+
+    /* Update the GMCP information for players. */
+    if (query_gmcp(GMCP_CHAR))
+    {
+        gmcp_char(GMCP_CHAR_VITALS, GMCP_DRINK, GET_NUM_DESC(soaked,
+           query_prop(LIVE_I_MAX_DRINK), SD_SOAK));
+    }
 }
 
 /*
@@ -1546,7 +1694,8 @@ set_soaked(int i)
 int
 query_guild_pref_total()
 {
-    return (learn_pref[SS_RACE] + learn_pref[SS_LAYMAN] + learn_pref[SS_OCCUP]);
+    return (learn_pref[SS_RACE] + learn_pref[SS_LAYMAN] + 
+        learn_pref[SS_OCCUP] + learn_pref[SS_CRAFT]);
 }
 
 /*
@@ -1690,6 +1839,28 @@ set_guild_pref(int guildstat, int tax)
 }
 
 /*
+ * Function name: update_skill
+ * Description  : Called by set_skill when a skill changes to notify the
+ *                combat object.
+ * Arguments    : int skill - the skill number
+ */
+void
+update_skill(int skill)
+{
+    switch (skill)
+    {
+    case SS_WEP_FIRST..(SS_WEP_FIRST + 10):
+        map(this_object()->query_weapon(-1), this_object()->update_weapon);
+        break;
+        
+    case SS_2H_COMBAT:
+        this_object()->query_combat_object()->cb_calc_attackuse();
+        break;
+    }
+}
+
+
+/*
  * Function name: set_skill
  * Description  : Set a specific skill to a specific value.
  * Arguments    : int skill - the skill-number to set.
@@ -1714,7 +1885,7 @@ set_skill(int skill, int val)
                 capitalize(query_real_name()), skill, skillmap[skill], val,
                 (objectp(this_interactive()) ?
                     capitalize(this_interactive()->query_real_name()) :
-                    MASTER_OB(previous_object()))));
+                    MASTER_OB(previous_object()))), 100000);
     }
 #endif LOG_SET_SKILL
 
@@ -1723,6 +1894,7 @@ set_skill(int skill, int val)
         val = max(min(100, val), 0);
 
     skillmap[skill] = val;
+    update_skill(skill);
     return 1;
 }
 
@@ -1745,6 +1917,7 @@ set_skill_extra(int skill, int val)
     }
 
     skill_extra_map[skill] = val;
+    update_skill(skill);
 }
 
 /*
@@ -1779,11 +1952,12 @@ remove_skill(int skill)
                     capitalize(query_real_name()), skill, skillmap[skill],
                     (objectp(this_interactive()) ?
                         capitalize(this_interactive()->query_real_name()) :
-                        MASTER_OB(previous_object()))));
+                        MASTER_OB(previous_object()))), 100000);
         }
 #endif LOG_SET_SKILL
 
         m_delkey(skillmap, skill);
+        update_skill(skill);
     }
 }
 
@@ -1906,6 +2080,28 @@ valid_change_soul()
 }
 
 /*
+ * Function name:   remove_cmdsoul
+ * Description:     Remove a command soul from the list.
+ * Arguments:       soul: De filename of the soul to remove
+ * Returns:         1 if successfull,
+ *                  0 otherwise.
+ */
+nomask public int
+remove_cmdsoul(string soul)
+{
+    int index;
+
+    if (!valid_change_soul())
+        return 0;
+
+    if ((index = member_array(soul, cmdsoul_list)) < 0)
+        return 0;
+
+    cmdsoul_list = exclude_array(cmdsoul_list, index, index);
+    return 1;
+}
+
+/*
  * Function name:   add_cmdsoul
  * Description:     Add a command soul to the list of command souls. Note
  *                  that adding a soul is not enough to get the actions
@@ -1938,28 +2134,6 @@ add_cmdsoul(string soul)
 }
 
 /*
- * Function name:   remove_cmdsoul
- * Description:     Remove a command soul from the list.
- * Arguments:       soul: De filename of the soul to remove
- * Returns:         1 if successfull,
- *                  0 otherwise.
- */
-nomask public int
-remove_cmdsoul(string soul)
-{
-    int index;
-
-    if (!valid_change_soul())
-        return 0;
-
-    if ((index = member_array(soul, cmdsoul_list)) < 0)
-        return 0;
-
-    cmdsoul_list = exclude_array(cmdsoul_list, index, index);
-    return 1;
-}
-
-/*
  * Function name:   update_cmdsoul_list
  * Description:     Update the list of command souls
  * Arguments:       souls: The new filenames
@@ -1979,6 +2153,28 @@ nomask public string *
 query_cmdsoul_list()
 {
     return secure_var(cmdsoul_list);
+}
+
+/*
+ * Function name:   remove_toolsoul
+ * Description:     Remove a tool soul from the list.
+ * Arguments:       soul: De filename of the tool soul to remove
+ * Returns:         1 if successfull,
+ *                  0 otherwise.
+ */
+nomask public int
+remove_toolsoul(string soul)
+{
+    int index;
+
+    if (!valid_change_soul())
+        return 0;
+
+    if ((index = member_array(soul, tool_list)) < 0)
+        return 0;
+
+    tool_list = exclude_array(tool_list, index, index);
+    return 1;
 }
 
 /*
@@ -2012,28 +2208,6 @@ add_toolsoul(string soul)
         tool_list = ({ soul });
     else
         tool_list += ({ soul });
-    return 1;
-}
-
-/*
- * Function name:   remove_toolsoul
- * Description:     Remove a tool soul from the list.
- * Arguments:       soul: De filename of the tool soul to remove
- * Returns:         1 if successfull,
- *                  0 otherwise.
- */
-nomask public int
-remove_toolsoul(string soul)
-{
-    int index;
-
-    if (!valid_change_soul())
-        return 0;
-
-    if ((index = member_array(soul, tool_list)) < 0)
-        return 0;
-
-    tool_list = exclude_array(tool_list, index, index);
     return 1;
 }
 

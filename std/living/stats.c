@@ -1,17 +1,16 @@
 /*
-    /std/living/stats.c
-
-    This is a subpart of living.c
-    All stat and skill related routines are coded here.
-
-    This file is included into living.c
+ * /std/living/stats.c
+ *
+ * This file is included into /std/living.c
+ *
+ * All stat and skill related routines are coded here.
  */
-
 #include <files.h>
 #include <macros.h>
 #include <state_desc.h>
 #include <ss_types.h>
 
+/* Global variables NOT included in the save file. */
 static int	*delta_stat;  /* Temporary extra stats. */
 static int      *stats;	      /* Stats the calculated values from acc_exp */
 static int	*stat_extra;  /* Extra to add to the stats */
@@ -23,11 +22,11 @@ static int	*stat_extra;  /* Extra to add to the stats */
 static void
 ss_reset()
 {
-    stats = allocate(SS_NO_STATS); 
+    stats = allocate(SS_NO_STATS);
     delta_stat = allocate(SS_NO_STATS);
-    
-    learn_pref = allocate(SS_NO_STATS); 
-    acc_exp = allocate(SS_NO_STATS); 
+
+    learn_pref = allocate(SS_NO_STATS);
+    acc_exp = allocate(SS_NO_STATS);
     stat_extra = allocate(SS_NO_STATS);
 }
 
@@ -201,7 +200,7 @@ add_tmp_stat(int stat, int ds, int dt)
     int *end;
 
     tmp = query_stat(stat) - query_base_stat(stat);
-    
+
     if ((ds + tmp > 10 + query_base_stat(stat) / 10) ||
         (dt <= 0))
     {
@@ -346,136 +345,33 @@ update_stat(int stat)
 }
 
 /*
- * Function name: update_last_stats
- * Description  : Copies the current stats into the PLAYER_AI_LAST_STATS
- *                property for later reference.
- */
-public void
-update_last_stats()
-{
-    int index;
-    int *last_stats = allocate(SS_NO_EXP_STATS + 1);
-    
-    for (index = 0; index < SS_NO_EXP_STATS; index++)
-    {
-        last_stats[index] = query_base_stat(index);
-    }
-    last_stats[SS_NO_EXP_STATS] = query_average_stat();
-    
-    add_prop(PLAYER_AI_LAST_STATS, last_stats);
-}
-
-/*
- * Function name: check_last_stats
- * Description  : After experience has been added, check whether the stats
- *                of the player have changed. If so, inform the player of
- *                his stat increase.
- */
-public void
-check_last_stats()
-{
-    int index, changed = 0;
-    int *last_stats = query_prop(PLAYER_AI_LAST_STATS);
-    int *new_stats = allocate(SS_NO_EXP_STATS + 1);
-    string olddesc, newdesc;
-    
-    if (sizeof(last_stats) != (SS_NO_EXP_STATS + 1))
-    {
-        update_last_stats();
-        return;
-    }
-    
-    for (index = 0; index < SS_NO_EXP_STATS; index++)
-    {
-        new_stats[index] = query_base_stat(index);
-        if (new_stats[index] != last_stats[index])
-        {
-            changed = 1;
-            if (new_stats[index] >= SD_STATLEVEL_SUP)
-            {
-                if (last_stats[index] < SD_STATLEVEL_SUP)
-                {
-                    tell_object(this_object(), "You have reached supreme " +
-                        SD_LONG_STAT_DESC[index] + ".\n");
-                }
-            }
-            else if (new_stats[index] >= SD_STATLEVEL_IMM)
-            {
-                if (last_stats[index] < SD_STATLEVEL_IMM)
-                {
-                    tell_object(this_object(), "You have reached the " +
-                        SD_LONG_STAT_DESC[index] + " of an immortal.\n");
-                }
-            }
-            if (new_stats[index] >= SD_STATLEVEL_EPIC)
-            {
-                if (last_stats[index] < SD_STATLEVEL_EPIC)
-                {
-                    tell_object(this_object(), "You have reached epic " +
-                        SD_LONG_STAT_DESC[index] + ".\n");
-                }
-            }
-            else
-            {
-                olddesc = GET_STAT_LEVEL_DESC(index, last_stats[index]);
-                newdesc = GET_STAT_LEVEL_DESC(index, new_stats[index]);
-                if (olddesc != newdesc)
-                {
-                    tell_object(this_object(), "Your " +
-                        SD_LONG_STAT_DESC[index] + " increases from " +
-                        olddesc + " to " + newdesc + ".\n");
-                }
-            }
-        }
-    }
-  
-    index = SS_NO_EXP_STATS;
-    new_stats[index] = query_average_stat();
-    if (new_stats[index] != last_stats[index])
-    {
-        changed = 1;
-        olddesc = GET_EXP_LEVEL_DESC(last_stats[index]);
-        newdesc = GET_EXP_LEVEL_DESC(new_stats[index]);
-        if (olddesc != newdesc)
-        {
-            tell_object(this_object(), "Congratulations. You are now " +
-                "sufficiently experienced to call yourself " + newdesc + ".\n");
-        }
-    }
-    
-    if (changed)
-    {
-        add_prop(PLAYER_AI_LAST_STATS, new_stats);
-    }
-}
-
-/*
  * Function name: update_acc_exp
  * Description  : After experience had been added to the total, this function
  *                spreads it over the acc_exp for each stat. An increase in
  *                experience is spreaded according to the learn preferences,
  *                a reduction of experience is done only in the real stats.
- * Arguments    : int exp     - the experience added or removed.
- *                int taxfree - 1/0 - If true, then the player receives 100%
- *                    of the experience in his normal stats, as well as the
- *                    due tax in the guild stats.
+ *                NOTE: This method does not consider tax in any way. Any tax
+ *                      must be deducted from the xp amounts before this is
+ *                      called.
+ * Arguments    : int stat_exp     - Stat Exp is spread over the exp stats. 
+ *                int guild_exp    - Guild Exp is spread over the guild stats. 
  */
-varargs static void
-update_acc_exp(int exp, int taxfree)
+static void
+update_acc_exp(int stat_exp, int guild_exp)
 {
     int   index;
     int   total;
     float factor;
 
     /* Negative experience. Adjust only the 'real' stats. */
-    if (exp < 0)
+    if (stat_exp < 0)
     {
         /* Reduce all stats relative to their weight in the total experience.
          * Since exp < 0 the factor will be less than 1.0 (100%). We need to
          * divide by the old total experience, so subtract the negative delta
          * to add it to the new total.
          */
-        factor = 1.0 + (itof(exp) / itof(query_exp() - exp));
+        factor = 1.0 + (itof(stat_exp) / itof(query_exp() - stat_exp));
         index = -1;
         while(++index < SS_NO_EXP_STATS)
         {
@@ -487,27 +383,23 @@ update_acc_exp(int exp, int taxfree)
         return;
     }
 
-    /* Calculate the new guild stats based on the tax. */
-    index = SS_NO_EXP_STATS - 1;
-    while(++index < SS_NO_STATS)
-    {
-        set_acc_exp(index, query_acc_exp(index) +
-            ((query_learn_pref(index) * exp) / 100));
+    /* Update the acc_exp for the guild stats */
+    int tax_total = query_guild_pref_total();
+    if (guild_exp > 0 && tax_total > 0) { 
+        index = SS_NO_EXP_STATS - 1;
+        while(++index < SS_NO_STATS)
+        {
+            set_acc_exp(index, query_acc_exp(index) + 
+                    ((query_learn_pref(index) * guild_exp) / tax_total));
+        }
     }
-
-    /* For tax tree experience, we divide all experience over the real stats.
-     * To do this, we do not divide the learn pref by 100, but we split it
-     * over the total learn prefs. This way, the total of experience added to
-     * the real stats adds up to the total experience gathered.
-     */
-    total = (taxfree ? query_stat_pref_total() : 100);
 
     /* Update the acc_exp values for the real stats. */
     index = -1;
     while(++index < SS_NO_EXP_STATS)
     {
-        set_acc_exp(index, query_acc_exp(index) +
-            ((query_learn_pref(index) * exp) / total));
+        set_acc_exp(index, query_acc_exp(index) + 
+                    ((query_learn_pref(index) * stat_exp) / query_stat_pref_total()));
     }
 
     /* Recalculate the stats. */
@@ -544,8 +436,8 @@ check_acc_exp()
         return;
     }
 
-    /* The stats don't match the total experience. Update the stats. */
-    update_acc_exp(sum);
+    /* The stats don't match the total experience. */
+    update_acc_exp(sum, 0);
 }
 
 /*
@@ -585,8 +477,8 @@ set_guild_stat(int stat, int exp)
     {
 	SECURITY->log_syslog("CHANGE_STAT", ctime(time()) + " " +
 	    capitalize(this_object()->query_real_name()) + " " +
-	    SS_STAT_DESC[stat] + " " + query_base_stat(stat) +
-	    " (was: " + stat_value + ")\n");
+	    SD_STAT_DESC[stat] + " " + query_base_stat(stat) +
+	    " (was: " + stat_value + ")\n", 100000);
     }
 
     return 1;

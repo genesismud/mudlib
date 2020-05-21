@@ -113,7 +113,7 @@ add_siteban(string cmd, string ipmask, string reason)
     name = getwho();
     type = ((cmd == "nologin") ? SITEBAN_NOLOGIN : SITEBAN_NONEW);
     sitebans[ipmask] = ({ type, name, time(), reason });
-    this_object()->log_syslog(SITEBAN_LOG, sprintf("%s %-7s %-15s %-11s %s\n",
+    log_file(SITEBAN_LOG, sprintf("%s %-7s %-15s %-11s %s\n",
         ctime(time()), cmd, ipmask, capitalize(name), reason));
     save_master();
     init_sitebans();
@@ -211,7 +211,7 @@ remove_siteban(string ipmask)
 
     name = getwho();
     m_delkey(sitebans, ipmask);
-    this_object()->log_syslog(SITEBAN_LOG, sprintf("%s %-7s %-15s %-11s\n",
+    log_file(SITEBAN_LOG, sprintf("%s %-7s %-15s %-11s\n",
         ctime(time()), "removed", ipmask, capitalize(name)));
     save_master();
     init_sitebans();

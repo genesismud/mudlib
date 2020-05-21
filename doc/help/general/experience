@@ -22,7 +22,10 @@ DESCRIPTION
         With the levels command you can see what possible experience levels
         there are (levels mortal). Note that your skills may be much more
         important in combat than your stats.
-        
+
+        Brutality is a concept that reduces growth of combat and general exp
+        as you progress. Having quest experience lowers your brutality.
+
 SEE ALSO
-        stats, skillevels, levels
+        guilds, stats, skillevels, levels
 

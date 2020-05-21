@@ -35,6 +35,7 @@ inherit "/std/object";
 
 #include <files.h>
 #include <macros.h>
+#include <mail.h>
 #include <options.h>
 #include <stdproperties.h>
 
@@ -42,6 +43,13 @@ inherit "/std/object";
 #define RETURN_FUNCTION "done_editing"
 #define EDITOR_ID       "_editor_"
 #define EDIT_END        "**"
+
+#define HINT_CMDS ([ \
+    "help" : "To get help on the editor, type: ~? or ~h", \
+    "abort" : "To stop writing a note/mail, type: ~q", \
+    "quit" : "To stop writing a note/mail, type: ~q", \
+    "send" : "To send the message, type: **", \
+    "post" : "To post the note, type: **" ])
 
 /* Prototype.
  */
@@ -231,6 +239,7 @@ public varargs void
 edit(mixed ffun, string str = "", int begin = 0)
 {
     calling_ob = previous_object();
+    string complete = "complete";
 
     if (functionp(ffun))
     {
@@ -265,8 +274,16 @@ edit(mixed ffun, string str = "", int begin = 0)
         line = begin - 1;
     }
 
-    write("Extended editor! Type ~? for help and " + EDIT_END +
-        " to finish editing.\n");
+    if (IS_BOARD_OBJECT(calling_ob))
+    {
+	complete = "post the note";
+    }
+    else if (calling_ob->id(READER_ID))
+    {
+	complete = "send the mail";
+    }
+    write("Extended editor! Type ~? for help, ~q to abort and " + EDIT_END +
+        " to " + complete + ".\n");
     display(10);
 
     write(sprintf("%2d]", (line + 1)));
@@ -654,6 +671,16 @@ input(string str)
         str = extract(str, 1);
     }
 
+    /* If the player entered a line that could be interpreted as a command,
+     * give a hint. */
+    if (HINT_CMDS[str])
+    {
+	write(HINT_CMDS[str] + "\n");
+        write(sprintf("%2d]", (line + 1)));
+        input_to(input);
+	return;
+    }
+
     /* Player entered yet another line, ie. not a special command. Lets
      * add it to the text.
      */
@@ -723,11 +750,12 @@ input(string str)
     /* Player wants help on the commands.
      */
     case "~h":
+    case "~help":
     case "~?":
         write(
 "Editor Commands:\n\n" +
 "<text>     Yet another line to add to the text.\n" +
-EDIT_END + "         Finish text.\n" +
+EDIT_END + "         Finish text; send the mail or post the note.\n" +
 "~? or ~h   Print this help message.\n" +
 "~q         Cancel editing and discard text.\n" +
 "~l (~L)    Show complete text with(out) line numbers.\n" +

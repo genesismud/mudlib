@@ -3,7 +3,7 @@ NAME
 
 SYNOPSYS
 	mailadmin export <player name> <filename>
-	mailadmin purge
+	mailadmin purge [messages]
 	mailadmin reset
 	mailadmin stats
 
@@ -24,13 +24,17 @@ DESCRIPTION
      2) mailadmin purge
 
 	This option can be used to clean the mail system and remove slack
-	from it. It is advised to do this a few times a year. It will do the
-	following:
-	- remove all mailboxes from players that do no longer exist;
+	from it. It will do the	following remove all mailboxes from players
+	that do no longer exist;
+	
+	With the optional [messages] argument, it will also do:
 	- check all message files and remove the names of all recipients who
 	  no longer exist;
 	- cross check all message files with all mailboxes and remove those
 	  message files that are no longer connected to any mailbox.
+	Warning: This will take a long time (> 1 hour). Before doing this, the
+	         mail reader should be replaced with /secure/mail_no_reader to
+		 avoid people from using the system while purging!
 
      3)	mailadmin reset
 

@@ -11,7 +11,7 @@
 
 inherit "/cmd/std/command_driver";
 
-#include <filepath.h>
+#include <files.h>
 
 #define TRACER_STORES	"_tracer_stores"
 #define TRACER_VARS	"_tracer_vars"
@@ -41,6 +41,11 @@ find_item(object prev, string str)
     if (str == "me") 
     {
 	return this_interactive();
+    }
+
+    if (str == "enemy")
+    {
+        return this_interactive()->query_attack();
     }
 
     if (str == "^")
@@ -218,8 +223,7 @@ parse_list(string str)
     object prev;
 
     prev = environment(this_interactive());
-    while (objectp(prev) &&
-	   stringp(str))
+    while (objectp(prev) && stringp(str))
     {
 	if (sscanf(str, "%s:%s", tmp, rest) == 2)
 	{
@@ -289,24 +293,36 @@ print_value(mixed ret)
  * Description  : The individual arguments found in parse_arg are checked
  *                with this function to catch all arrays and to distinct
  *                between string or integer
- * Arguments    : what  - the argument to parse
- * Returns      : mixed - either an integer or a string
+ * Arguments    : string str - the argument to parse
+ * Returns      : mixed - the intended variables.
  */
 mixed
-fix_one_arg(string what)
+fix_one_arg(string str)
 {
-    int narg;
-    string apa;
+    int num;
+    object obj;
 
-    if (sscanf(what, "({%s})", apa) == 1)
+    /* Parse array as individual elements. */
+    if (sscanf(str, "({%s})", str) == 1)
     {
-	return map(explode(apa + ",", ","), fix_one_arg);
+	return map(explode(str + ",", ","), fix_one_arg);
     }
-    if (sscanf(what, "%d", narg) == 1)
+    /* A number is a number. */
+    if (sscanf(str, "%d", num) == 1)
     {
-	return narg;
+	return num;
     }
-    return what;
+    /* If it's in double quotes, it's a string. */
+    if ((str[..0]) == "\"" && (str[-1..] == "\""))
+    {
+        return str[1..-2];
+    }
+    if (objectp(obj = parse_list(str)))
+    {
+        return obj;
+    }
+
+    return str;
 }
 
 /*
@@ -318,11 +334,11 @@ fix_one_arg(string what)
  *                within the array, the elements should be devided by
  *                commas.
  *                Example: Mercade%%({Nick,Mrpr})%%45
- * Arguments    : what  - the string to parse
+ * Arguments    : string str  - the string to parse
  * Returns      : mixed - an array with arguments
  */
 mixed
-parse_arg(string what)
+parse_arg(string str)
 {
-    return map(explode(what + "%%", "%%"), fix_one_arg);
+    return map(explode(str + "%%", "%%"), fix_one_arg);
 }

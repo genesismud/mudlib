@@ -1,7 +1,7 @@
 /*
- * /player/queriess_sec.c
+ * /std/player/querys_sec.c
  *
- * This is a subpart of /std/player_sec.c
+ * This is a subpart of /std/player.c
  *
  * NOTE
  * There are some calls of the type: this_object()->function() in a number

@@ -84,6 +84,28 @@ create_cplain()
 }
 
 /*
+ * Function name: cb_calc_procuse
+ * Description  : Calculates the procuse based on 2H combat skill 
+ */
+public void
+cb_calc_attackuse()
+{
+    int extra = 0;
+
+    /*
+     * If more than two weapons wielded check the 2H combat, only with 2H
+     * skill > 20 will it be profitable to wield 2 weapons.
+     * Attack use range from 80 to 150
+     */
+    if (sizeof(cb_query_weapon(-1)) > 1)
+    {
+        extra = qme()->query_skill(SS_2H_COMBAT);
+        extra = extra > 20 ? extra / 2 : extra - 20;
+    }
+    this_object()->cb_set_attackuse(100 + extra);    
+}
+
+/*
  * Function name: cb_wield_weapon
  * Description:   Wield a weapon. Here 'weapon' can be any object.
  * Arguments:     wep - The weapon to wield.
@@ -98,8 +120,7 @@ cb_wield_weapon(object wep)
 
     aid = (int) wep->query_attack_id();
 
-    /* Can we use this weapon ?
-     */
+    /* Can we use this weapon ? */    
     if (!query_attack(aid))
     {
         return "It doesn't seem to fit your body very well.\n";
@@ -108,18 +129,8 @@ cb_wield_weapon(object wep)
     add_attack(wep->query_hit(), wep->query_modified_pen(), wep->query_dt(), 
                wep->query_procuse(), aid, 0, wep);
 
-    /*
-     * If more than two weapons wielded check the 2H combat, only with 2H
-     * skill > 20 will it be profitable to wield 2 weapons.
-     * Attack use range from 80 to 150
-     */
-    if (sizeof(cb_query_weapon(-1)) > 1)
-    {
-        extra = qme()->query_skill(SS_2H_COMBAT);
-        extra = extra > 20 ? extra / 2 : extra - 20;
-        this_object()->cb_set_attackuse(100 + extra);
-    }
 
+    cb_calc_attackuse();
     return 1;
 }
 
@@ -132,16 +143,10 @@ cb_wield_weapon(object wep)
 public void
 cb_unwield(object wep)
 {
-    int aid = (int)wep->query_attack_id();
+    int aid = wep->query_attack_id();
 
     me->cr_reset_attack(aid);
-
-   /* If we wield no more than 1 weapon our % use should go back to 100 */
-
-    if (sizeof(cb_query_weapon(-1)) < 2)
-    {
-        this_object()->cb_set_attackuse(100);
-    }
+    cb_calc_attackuse();
 }
 
 /*
@@ -236,24 +241,18 @@ cb_wear_arm(object arm)
 public void
 cb_remove_arm(object arm) 
 {
-    int i, *hids, size;
-
-    hids = query_hitloc_id();
-
     /*
      * Remove the armours effect for each hit location it protects
      */
-    i = -1;
-    size = sizeof(hids);
-    while(++i < size)
+    foreach (int hid: query_hitloc_id())
     {
-        if (member_array(arm, query_hitloc(hids[i])[HIT_ARMOURS]) >= 0)
+        if (member_array(arm, query_hitloc(hid)[HIT_ARMOURS]) >= 0)
         {
-            adjust_ac(hids[i], arm, 1);
+            adjust_ac(hid, arm, 1);
 
-            if (!sizeof(query_hitloc(hids[i])[HIT_ARMOURS]))
+            if (!sizeof(query_hitloc(hid)[HIT_ARMOURS]))
             {
-                qme()->cr_reset_hitloc(hids[i]);
+                qme()->cr_reset_hitloc(hid);
             }
         }
     }
@@ -293,8 +292,7 @@ cb_try_hit(int aid)
 {
     object wep = query_attack(aid)[ATT_OBJ];
 
-    return (wep ?
-        wep->try_hit(cb_query_attack()) : (int)qme()->cr_try_hit(aid));
+    return (wep ? wep->try_hit(cb_query_attack()) : qme()->cr_try_hit(aid));
 }
 
 /*
@@ -320,7 +318,7 @@ cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
     {
         return;
     }
-
+    
     wep = query_attack(aid)[ATT_OBJ];
     
     if (wep)
@@ -381,16 +379,14 @@ cb_update_armour(object obj)
         return;
     }
 
-    hids = query_hitloc_id();
-
-    for (i = 0; i < sizeof(hids); i++)
+    foreach (int hid: query_hitloc_id())
     {
-        arms = query_hitloc(hids[i])[HIT_ARMOURS];
+        arms = query_hitloc(hid)[HIT_ARMOURS];
 
         if (pointerp(arms) && (member_array(obj, arms) >= 0))
 	{
-            me->cr_reset_hitloc(hids[i]);
-            map(arms, &adjust_ac(hids[i], , 0));
+            me->cr_reset_hitloc(hid);
+            map(arms, &adjust_ac(hid, , 0));
         }
     }
 }
@@ -410,6 +406,6 @@ cb_update_weapon(object wep)
     }
 
     add_attack(wep->query_hit(), wep->query_modified_pen(), wep->query_dt(),
-                wep->query_procuse(), wep->query_attack_id(),
-                me->query_skill(wep->query_wt()), wep);
+        wep->query_procuse(), wep->query_attack_id(),
+        me->query_skill(wep->query_wt()), wep);
 }

@@ -3,7 +3,7 @@ NAME
 
 SYNOPSIS
 	line <channel> <message>
-	line <channel>
+	line <channel> [-]
         line config <command> <arguments>
         line list [<channel>]
 
@@ -18,8 +18,11 @@ DESCRIPTION
 	one else can become a member of a domain line.
 	
 	If you do not add a message, you will list all members of that
-	particular line, exactly like 'line list <channel>'. The
-	command dtell is an alias to 'line <your domain>'.
+	particular line, exactly like 'line list <channel>'. The command
+	dtell is an alias to 'line <your domain>'.
+
+	The wizard option 'autoline' adds <channels> as commands. This allows
+        you to do only <channel[e]> <message> without 'line' in front of it.
 
 ARGUMENTS
 	<channel> - the name of a channel or domain.
@@ -27,6 +30,7 @@ ARGUMENTS
 
         config    - see 'help lineconfig' for details on configuration.
         list      - list the members of the channel or all channels.
+        -         - display the last 20 texts on the line.
 
 SEE ALSO
-	arch, busy, dtell, liege, lineconfig, linee, wiz
+	arch, busy, dtell, liege, lineconfig, linee, wiz, wizopt

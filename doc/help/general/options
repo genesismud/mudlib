@@ -16,9 +16,9 @@ OPTIONS:
 	<option> <value>    - Set the option to the given value
 
 ARGUMENTS
-	autowrap <on/off>   - Indicate whether you want to automatically
-			      wrap notes / mails with lines exceeding 80
-			      characters per line.
+	autowrap <on/off>   - Indicate whether you want to automatically wrap
+			      notes / mails with lines exceeding 80 characters
+			      per line.
 
 	brief <on/off>      - With this option on, you only get a very short
 			      description of locations you visit. Do not use
@@ -29,7 +29,14 @@ ARGUMENTS
 			      commands echoed on the screen or not.
 
 	gagmisses <on/off>  - When this is switched on, the game will not
-			      show any misses you make in combat.
+			      show misses in combat.
+
+	giftfilter <on/off> - If switched on, don't accept gifts from anyone.
+			      Use "gifts" for accepting or rejecting from
+			      individual players.
+
+	intimate <on/off>   - Indicate whether you are in the mood for the use
+			      of intimate emotes.
 
 	inventory <on/off>  - Indicate whether you want to view your inventory
 			      in a modern tabulated display, or not.
@@ -41,7 +48,7 @@ ARGUMENTS
 			      THIS OPTION IS NOT FUNCTIONAL YET!
 
 	morelen <len>       - The amount of lines "more" displays at a time,
-                              in a range from 1 to 100. The default is 20.
+                              in a range from 10 to 100. The default is 20.
 
 	screenwidth <width> - Your screen width, which may range from 40 to
                               200 columns. The default is 80.
@@ -56,23 +63,23 @@ ARGUMENTS
         showunmet <on/off>  - Show the names of players you have not yet met
 			      when displaying the "who" list.
 
-        unarmed <on/off>    - When this is switched on, you will use unarmed
-                              combat while you are wielding a weapon. When it
-                              is switched off, then you will fully concentrate
-                              on the weapon.
+	silentships <on/off> - When used, this will silence the ships and stop
+			      the arrival announcements throughout the port.
 
-        web <yes/no>        - Give permission to publish certain information 
-                              linked to your character on the web.
+        unarmed <on/off>    - When this is on, you will use unarmed combat as
+			      well while you are wielding a weapon. When off,
+			      you will fully concentrate on the weapon.
+
+        web <on/off>        - Allow the game to publish some information and
+                              rankings about your character on our web page.
 
 	wimpy <level>       - With this option you can become a wimp and wimpy
 			      out of a fight if it does not go well for you.
-			      You may find this option very useful and it is
-                              especially recomended for beginners. However,
-			      when running away from the fight, you will have
-			      no time to decide where to run so you might end
-			      up in the next room with a dozen more of those
-			      horrible orcs. Most times it will probably save
-			      your life though. The <level> can be:
+			      However, when running away from the fight, you
+			      will have no time to decide where to run and you
+			      might end up in the next room with a dozen more
+			      of those horrible beasts. Most times it will
+			      probably save your life. The <level> can be:
 
 		   brave    - Never run, be brave!
 	           <damage> - The health description of the unacceptable

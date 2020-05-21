@@ -7,15 +7,13 @@
 #ifndef MAIL_DEFINED
 #define MAIL_DEFINED
 
-#include "/config/sys/mail2.h"
-
 #ifndef FILES_DEFINED
 #include "/sys/files.h"
 #endif  FILES_DEFINED
 
 /*
  * The format of the personal mail-files is as follows:
- * filename: /players/mail/{first-letter}/{playername}.o
+ * filename: /data/mail/{first-letter}/{playername}.o
  *
  * (mixed)   player_mail
  *              ({ ([ "from"  : (string)  message_from,
@@ -44,7 +42,7 @@
  * ])
  *
  * The message-files are formatted like:
- * filename: /players/messages/d{message-date % HASH_SIZE}/m{message-date}.o
+ * filename: /data/messages/d{message-date % HASH_SIZE}/m{message-date}.o
  * In this, the directories are named d0 - d[HASH_SIZE-1].
  *
  * ([ "to"       : (string)  message_to,
@@ -59,6 +57,15 @@
  * message_addressees are capitalized, where player_aliases is in
  * lower case.
  */
+
+/*
+ * MAIL_DIR   The directory in which the personal mail-files are stored.
+ * MSG_DIR    The directory in which all message-files are stored.
+ * ALIAS_DIR  The directory in which all aliases are stored.
+ */
+#define MAIL_DIR  "/data/mail/"
+#define MSG_DIR   "/data/messages/"
+#define ALIAS_DIR "/config/aliases/"
 
 /*
  * IS_MAIL_ALIAS(a)
@@ -153,8 +160,7 @@
 #define FLAG_NEW      2          /* Flag to indicate that there is new mail */
 #define FLAG_UNREAD   3          /* Flag to indicate you have unread mail   */
 
-#define MAIL_FLAGS ({ "no mail", "mail, but all read", "NEW mail", \
-    "unread mail, but no new mail" })
+#define MAIL_FLAGS ({ "no mail", "already read mail", "NEW mail", "unread messages" })
 
 #define MAX_CYCLE     15         /* Maximum number of mail sent in one loop */
 #define READER_ID     "_reader_" /* Id for use with present()               */
@@ -171,6 +177,68 @@
     (MAIL_DIR + extract((n), 0, 0) + "/" + (n))
 #define FILE_NAME_MESSAGE(t, h) \
     (MSG_DIR + "d" + ((t) % (h)) + "/m" + (t))
+
+/*
+ * Definitions related to export of mail to the web portal.
+ */
+#define WEB_MAIL_DIR  "/d/Web/content/mail/"
+#define WEB_MAIL_PRE  "mail-"
+#define WEB_MAIL_POST ".txt"
+#define WEB_MAIL_LEN  10
+#define WEB_MAIL_ROOT "www.genesismud.org/mail/"
+#define WEB_MAIL_TIME 30 /* Minutes the URL remains active. */
+#define WEB_MAIL_LOG  "WEB_MAIL"
+
+/*
+ * MAIL_ARCHIVE_DIR  The directory in the wizards home directory in which
+ *     archived messages are stored.
+ */
+#define MAIL_ARCHIVE_DIR "mail_archive"
+
+/*
+ * NON_DOMAINS
+ *
+ * It is impossible to send mail to these domains as a whole as they are not
+ * 'normal' domains.
+ */
+#define NON_DOMAINS ( ({ "genesis", "wiz", "debug" }) )
+
+/*
+ * HASH_SIZE
+ *
+ * The number of directories over which we hash all mail files.
+ */
+#define HASH_SIZE (100)
+
+/*
+ * WARNING_TOO_MUCH_IN_BOX
+ *
+ * This is the maximum number of messages before the limit people are supposed
+ * to have in their box before a warning by Postmaster is issued. This does
+ * not remove messages. Undefine this if you don't want a warning.
+ */
+#define WARNING_TOO_MUCH_IN_BOX (25)
+
+/* 
+ * MAX_IN_MORTAL_BOX
+ * EXTRA_IN_GUILD_BOX
+ *
+ * Mortals are restricticted to a maximum numbers they can have in their
+ * box. Only read messages are count in this sense. If they exceed the limit,
+ * messages are removed when they exit mail reader functionality. Players
+ * performing a special role in a guild can have a large maximum. Undefine
+ * this if you don't want a maximum. 
+ */
+#define MAX_IN_MORTAL_BOX  (250)
+#define EXTRA_IN_GUILD_BOX (150)
+
+/*
+ * MAX_ALIASES
+ *
+ * The maximum number of personal aliases people can have in thier mail
+ * folder.
+ */
+#define MAX_ALIASES (15)
 
 /* Do not add any definitions beyond this line. */
 #endif MAIL_DEFINED

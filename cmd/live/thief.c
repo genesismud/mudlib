@@ -13,11 +13,14 @@
 #pragma strict_types
 
 inherit "/cmd/std/command_driver";
+/* Inherit for the new special system: 2017-10-27 */
+inherit "/d/Genesis/specials/abilities";
 
 #include <cmdparse.h>
 #include <composite.h>
 #include <files.h>
 #include <filter_funs.h>
+#include <log.h>
 #include <formulas.h>
 #include <macros.h>
 #include <money.h>
@@ -27,7 +30,10 @@ inherit "/cmd/std/command_driver";
 #include <wa_types.h>
 
 // Define where to log steals, or undef to not log.
-#undef LOG_STEALS "/some_dir/open/STEAL"
+//#undef LOG_STEALS "/some_dir/open/STEAL"
+#define LOG_STEALS "STEAL_LOG"
+
+#define BACKSTAB_DIR    "/d/Genesis/specials/std/backstab"
 
 // Prototypes
 private int query_the_value(object ob);
@@ -62,14 +68,27 @@ query_cmd_soul()
 }
 
 /*************************************************************************
+ * The ability map used in the new special system.
+ * /Carnak - 2017-10-27
+ */
+public mapping
+query_ability_map()
+{
+    return ([
+                "backstab"   : BACKSTAB_DIR,
+            ]);
+}
+
+/*************************************************************************
  * The list of verbs and functions. Please add new in alfabetical order.
  */
 public mapping
 query_cmdlist()
 {
     return ( ([
-                "backstab": "backstab",
-                "steal"   : "steal",
+           /*  Ability name : Ability function */
+                "backstab"  : "do_ability",
+                "steal"     : "steal",
              ]) );
 }
 
@@ -332,7 +351,11 @@ check_watchers_see_steal(object place, object victim, object thief,
 
 /*************************************************************************
  * Backstab  -  Nail 'em in the back I say
- */
+ *
+ * This has been commented out as the code has been replaced with a stand alone
+ * special object following the new code.
+ * /Carnak - 2017-10-27
+ *
 private void
 perform_backstab(string str, object whom)
 {
@@ -488,7 +511,7 @@ perform_backstab(string str, object whom)
         (this_player()->query_prop(LIVE_O_LAST_KILL) != ob))
     {
         this_player()->add_prop(LIVE_O_LAST_KILL, ob);
-        /* Only ask if the player did not use the real name of the target. */
+        // Only ask if the player did not use the real name of the target.
         if (one != ob->query_real_name())
         {
             write("Backstab " + ob->query_the_name(this_player()) +
@@ -623,12 +646,13 @@ backstab(string str)
     }
 
     write("You prepare to perform a backstab...\n");
+    this_player()->add_prop(LIVE_I_BACKSTABBING, 1);
 
     set_alarm( (2.0 + (rnd() * 2.0)), 0.0,
         &perform_backstab(str, this_player()));
 
     return 1;
-}
+} */
 
 /*************************************************************************
  * Steal  -  Rob 'em till they are blind
@@ -690,6 +714,16 @@ steal(string str)
         return 1;
     }
 
+    if (this_player()->query_mana() < F_STEAL_MANA) {
+        notify_fail("You are too mentally exhausted to steal.\n");
+        return 0;
+    }
+
+    if (this_player()->query_fatigue() < F_STEAL_FATIGUE) {
+        notify_fail("You are too tired to steal.\n");
+        return 0;
+    }
+
     /* If we cannot see, however are we going to steal? */
     if (!CAN_SEE_IN_ROOM(this_player()))
     {
@@ -717,6 +751,20 @@ steal(string str)
             " in this place.\n");
         return 1;
     }
+
+    /* Don't allow people to try a steal attempt in rapid succession. */
+    /* Moved even further up to avoid the messages being sent to players
+     * unnecessarily due to obnoxious command spamming.
+     */
+    if ((this_player()->query_prop(LIVE_I_LAST_STEAL) +
+	    F_TIME_BETWEEN_STEAL) > time())
+    {
+        write("It is too soon to perform another steal attempt.\n");
+        return 1;
+    }
+
+    /* Reset the last attempt value. */
+    this_player()->add_prop(LIVE_I_LAST_STEAL, time());
 
     if (member_array(str2, ({ "here", "ground", "floor" })) != -1)
     {
@@ -923,8 +971,7 @@ steal(string str)
     }
 
     /* Stealing held/worn items has been outlawed, issue the bad news. */
-    if (victim &&
-        (item->query_wielded() || item->query_worn() || item->query_held()))
+    if (victim && (item->query_wielded() || item->query_worn() || item->query_held()))
     {
         write("You are unable to " + query_verb() + " worn, wielded or " +
             "held items, your attempt has been noticed.\n");
@@ -935,6 +982,10 @@ steal(string str)
 
         return 1;
     }
+
+    /* We're stealing, apply cost */
+    this_player()->add_mana(-F_STEAL_MANA);
+    this_player()->add_fatigue(-F_STEAL_FATIGUE);
 
     /* Setup the thieves base chances.. */
     tmp  = this_player()->query_skill(SS_SNEAK);
@@ -947,16 +998,21 @@ steal(string str)
     log[0] = chance;
 #endif LOG_STEALS
 
+#if 0
+/*
+ * This was turned into a general rate-limiting measure further up
+ * and so this section no longer works.
+ */
     /* If we have stolen within the last 10 minutes, lower our chances */
-    tmp = this_player()->query_prop(LIVE_I_LAST_STEAL);
-    if ((tmp = (300 + (tmp - time()))) > 0)
+    tmp = time() - this_player()->query_prop(LIVE_I_LAST_STEAL);
+    if (tmp < 1200)
     {
-        chance -= tmp;
+        chance -= (tmp / 2);
     }
     
     /* Reset the last attempt value. */
-    tmp = (time() + ((tmp > 0) ? ((tmp > 1200) ? 600 : (tmp / 2)) : 0));
-    this_player()->add_prop(LIVE_I_LAST_STEAL, tmp);
+    this_player()->add_prop(LIVE_I_LAST_STEAL, time());
+#endif
 
     /* We may get a bonus for some reason. (guild?) */
     chance += this_player()->hook_thief_steal_bonus(victim, place, item);
@@ -1092,6 +1148,7 @@ steal(string str)
     log[5] = chance;
     log[6] = notice;
 #endif LOG_STEALS
+    
 
     if ((result = (chance - notice)) < 1)
     {
@@ -1236,12 +1293,12 @@ steal(string str)
 #endif LOG_STEALS
                     this_player()->add_exp_general(xp);
 #ifdef STEAL_EXP_LOG
-                    log_file(STEAL_EXP_LOG, sprintf(
+                    SECURITY->log_syslog(STEAL_EXP_LOG, sprintf(
                         "%12s %11s: %5d %s %s (%s)\n", 
                         ctime(time())[4..15], 
                         this_player()->query_name(), xp, 
-                        file_name(item), victim->short(this_object()), 
-                        file_name(victim)));
+                        file_name(item), (victim ? victim->short(this_object()) : "unknown"), 
+                        file_name(victim ? victim : environment(this_player()))), LOG_SIZE_1M);
 #endif STEAL_EXP_LOG
                 }
             }
@@ -1310,6 +1367,7 @@ steal(string str)
             tell_object(victim, "You notice " +
                 this_player()->query_the_name(victim) + " " +
                 query_verb() + "ing " + LANG_ASHORT(item) + " from you!\n");
+            
         }
         else
         {
@@ -1357,6 +1415,9 @@ steal(string str)
 
         /* This ensures that we only get one bonus at a time */
         victim->add_prop(LIVE_I_VICTIM_ADDED_AWARENESS, ++tmp);
+
+        this_player()->hook_i_caught_stealing(success, item, place);
+        
     }
 
     /* We are only going to bother with this if we got the item */
@@ -1391,9 +1452,7 @@ steal(string str)
         log[6], log[2], log[7], log[8], 
         success, caught, log[9], ""); 
 
-    setuid();
-    seteuid(getuid(this_object()));
-    write_file(LOG_STEALS, tmp);
+    SECURITY->log_syslog(LOG_STEALS, tmp, LOG_SIZE_1M);
 #endif LOG_STEALS
 
     return 1;

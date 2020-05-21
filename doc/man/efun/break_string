@@ -5,7 +5,14 @@ SYNOPSIS
 	string break_string(string str|int foobar, int len, 
 			    void|int indent|string indent)
 
+NOTE
+
+        THIS FUNCTION SHOULD NOT BE USED FOR DESCRIPTIONS.
+        LINE BREAKS ARE DONE AUTOMATICALLY BASED ON SCREENWIDTH.
+
+
 DESCRIPTION
+
 	This function breaks a continous string without newlines into a
 	a string with newlines inserted at every `len':th character. 
 

@@ -13,8 +13,8 @@ SYNOPSYS
         <people> but/except <people>
 
 DESCRIPTION
-        This isn't a command, but simply information. Many commands, among
-        which all emotions, allow the player to specify a target for the
+        This isn't a command, but simply information. Many commands, including
+        almost all emotions, allow the player to specify a target for the
         command. The <target> to these commands can take various forms. In
         this document, these forms are explained.
 
@@ -30,12 +30,11 @@ OPTIONS
         enemy      - the person you are currently fighting.
         me/myself  - points at you.
         team       - the members of your team (insofar in the room).
-
         , and      - it is possible to combine more of the above arguments
-                     with comma's and the word "and". Note that a space is
+                     with commas and the word "and". Note that a space is
                      not necessary after a comma.
         but/except - exclude targets from your selection. It is possible to
-                     use comma's and "and" on both sides of "but/except".
+                     use commas and "and" on both sides of "but/except".
 
 EXAMPLES
         smile at Mercade, Mrpr and Tintin

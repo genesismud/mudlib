@@ -27,7 +27,8 @@ ARGUMENTS
 			(for syntax: see 'help tracer')
 
 OPTIONS
-	<var>		Will print the value of 'var' in <object>
+	<var>		Will print the value of 'var' in <object>. May contain
+			wildcards. 'Dump <object> *' prints all variables.
 
 	alarms		Lists information about the alarms in <object>.
 
@@ -47,22 +48,21 @@ OPTIONS
 	inv,		Will list all objects carried by <object>
 	inventory
 
-	items		Give a list of all pseudo-items and
-			pseudo-commands attached to the object. This will
-			yield a list with all items added with add_item()
-			and a list of all commands and items added with
-			add_cmd_item(). The list of command-items is split
-			in a section with commands and a section with
-			items. Each pair of commands and items is
+	items		Give a list of all pseudo-items and pseudo-commands
+			attached to the object. This will yield a list with
+			all items added with add_item() and a list of all
+			commands and items added with add_cmd_item(). The
+			list of command-items is split in a section with
+			commands and a section with items. Each pair is
 			terminated with their index-number.
 
-	light		Display information on the light status of an
-			object and all objects in its inventory. It will
-			tell you its light status and whether the object
-			generates of absorbs light.
+	light		Display information on the light status of an object
+			and all objects in its inventory. It will tell you
+			its light status and whether the object generates of
+			absorbs light.
 
 			EXAMPLE
-			Object: /d/Wiz/mercade/workroom      : OBJ CONT ROOM
+			Object: /w/mercade/workroom          : OBJ CONT ROOM
 
 			Mercade's workroom                   :   3        +1
 			   /doc/examples/spells/obj/lighter  :   1
@@ -70,17 +70,15 @@ OPTIONS
 			      rugsack (open)                 :   1   -1
 			         large torch (lit)           :   2
 
-			In this case, Mercade is carrying a rugsack in
-			which carry a lit torch of strength 2. The rugsack
-			itself radiates darkness of strength -1. Also,
-			Mercade has cast a light-spell of strength 1 on
-			the room he is in. The room is a basic room with
-			default light of strength 1. As you see, Mercade
-			neither generates nor absorbs light. He is just
-			transparrantly passing though the light he
-			carries. The coins He has in his pocket aren't
-			interesting from a light point of view, so they
-			are disregarded.
+			In this case, Mercade is carrying a rugsack in which
+			there is a lit torch of strength 2. The rugsack itself
+			radiates darkness of strength -1. Mercade has also
+			cast a light-spell of strength 1 on the room he is in.
+			The room is a basic room with default light of strength
+			1. Mercade neither generates nor absorbs light. He is
+			just transparrantly passing though the light he carries.
+			The coins he has in his pocket aren't interesting from
+			a light point of view, so they are disregarded.
 
 	profile		Will print the objects profile statistics if the
 			appropriate options are set in the driver.
@@ -99,8 +97,7 @@ OPTIONS
 
 	shadows		Will list all objects shadowing <object>
 
-	vars		Will list all variables in <object> with their
-			values.
+	vars		Will list all variables in <object> with their values.
 
 	wizinfo		Will print the contents of the OBJ_S_WIZINFO
 			property in <object>, if set to a value.

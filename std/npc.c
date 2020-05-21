@@ -9,6 +9,7 @@
 
 inherit "/std/creature";
 
+#include <files.h>
 #include <money.h>
 #include <stdproperties.h>
 
@@ -22,15 +23,17 @@ nomask void
 create_creature() 
 {
     if (!random(5))
-	add_leftover("/std/leftover", "tooth", random(5) + 1, 0, 1, 0);
+	add_leftover(LEFTOVER_OBJECT, "tooth", 1 + random(4) + 1, 0, 1, 0, 0);
     if (!random(5))
-	add_leftover("/std/leftover", "skull", 1, 0, 1, 1);
+	add_leftover(LEFTOVER_OBJECT, "skull", 1, 0, 1, 1, 10);
     if (!random(5))
-	add_leftover("/std/leftover", "thighbone", 2, 0, 1, 1);
+	add_leftover(LEFTOVER_OBJECT, "thighbone", 1 + random(2), 0, 1, 1, 10);
     if (!random(5))
-        add_leftover("/std/leftover", "kneecap", 2, 0, 0, 1);
+        add_leftover(LEFTOVER_OBJECT, "kneecap", 1 + random(2), 0, 0, 1, 2);
     if (!random(5))
-	add_leftover("/std/leftover", "rib", 2, 0, 1, 1);
+	add_leftover(LEFTOVER_OBJECT, "jaw", 1, 0, 1, 1, 4);
+    if (!random(5))
+	add_leftover(LEFTOVER_OBJECT, "rib", 1 + random(4), 0, 1, 1, 1);
 
     if (query_prop(LIVE_I_UNDEAD))
     {
@@ -39,25 +42,31 @@ create_creature()
 	return;
     }
 
-    if (!random(5))
-        add_leftover("/std/leftover", "ear", 2, 0, 0, 0);
-    if (!random(5))
-        add_leftover("/std/leftover", "scalp", 1, 0, 0, 1);
-    if (!random(5))
-        add_leftover("/std/leftover", "nail", random(5) + 1, 0, 0, 0);
-    if (!random(5))
-	add_leftover("/std/leftover", "heart", 1, 0, 0, 1);
-    if (!random(5))
-	add_leftover("/std/leftover", "nose", 1, 0, 0, 0);
-    if (!random(5))
-	add_leftover("/std/leftover", "eye", 2, 0, 0, 0);
-    if (!random(5))
-	add_leftover("/std/leftover", "kidney", 2, 0, 0, 1);
-    if (!random(5))
-	add_leftover("/std/leftover", "intestine", 2, 0, 0, 1);
+    if (!random(6))
+        add_leftover(LEFTOVER_OBJECT, "ear", 1 + random(2), 0, 0, 0, 1);
+    if (!random(6))
+        add_leftover(LEFTOVER_OBJECT, "scalp", 1, 0, 0, 1, 3);
+    if (!random(6))
+        add_leftover(LEFTOVER_OBJECT, "finger", 1 + random(3), 0, 0, 1, 2);
+    if (!random(6))
+        add_leftover(LEFTOVER_OBJECT, "toe", 1 + random(3), 0, 0, 1, 2);
+    if (!random(6))
+        add_leftover(LEFTOVER_OBJECT, "nail", 1 + random(4) + 1, 0, 0, 0);
+    if (!random(6))
+	add_leftover(LEFTOVER_OBJECT, "heart", 1, 0, 0, 1, 6);
+    if (!random(6))
+	add_leftover(LEFTOVER_OBJECT, "nose", 1, 0, 0, 0, 1);
+    if (!random(6))
+	add_leftover(LEFTOVER_OBJECT, "eye", 1 + random(2), 0, 0, 0, 1);
+    if (!random(6))
+	add_leftover(LEFTOVER_OBJECT, "kidney", 1 + random(2), 0, 0, 1, 3);
+    if (!random(6))
+	add_leftover(LEFTOVER_OBJECT, "intestine", 1 + random(2), 0, 0, 1, 15);
+    if (!random(6))
+	add_leftover(LEFTOVER_OBJECT, "meat", 1 + random(3), 0, 0, 1, 10);
 
-    MONEY_CONDENSE(this_object());
     create_npc(); 
+    MONEY_CONDENSE(this_object());
 }
 
 void

@@ -12,6 +12,7 @@ SYNOPSIS
 ACCESS CLASS
 	apprentice  - list only.
 	full wizard - set and clear in your own domain.
+	liege       - set and clear in domains Lord over.
 	archwizard  - set and clear in all domains.
 
 DESCRIPTION

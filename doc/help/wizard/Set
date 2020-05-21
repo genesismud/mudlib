@@ -13,9 +13,9 @@ ARGUMENTS
 	<object> - the object to set (for syntax: see 'help tracer')
 
 EXAMPLE
-	Set tmp me:#3
+	Set $tmp me:#3
 		Set the variable 'tmp' to the third object in my inventory.
-		Later you can for instance do: 'Dump tmp props' and will
+		Later you can for instance do: 'Dump $tmp props' and will
 		give the same as doing 'Dump me:#3 props'.
 
 SEE ALSO

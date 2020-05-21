@@ -7,6 +7,8 @@
 #pragma save_binary
 #pragma strict_types
 
+#include <macros.h>
+
 /*
  * Function name: find_exp
  * Called from  : MATH_FIND_EXP(sum) in <math.h>
@@ -244,4 +246,33 @@ exp_on_kill(int ka, int va)
     {
         return ftoi(800.0 * (fva * fva * fva) / (fva + fka) / (fka + 50.0));
     }
+}
+
+/*
+ * Function name: random_string
+ * Description  : Returns a random string consisting of lower case letters
+ *                and numbers. Example 6 -> "7xj0q1"
+ * Arguments    : int length - the length
+ * Returns      : string - the random string.
+ */
+public string
+random_string(int length)
+{
+     string filename = "";
+     int letter;
+
+     while (--length >= 0)
+     {
+         switch(random(36))
+         {
+         case 0..25:
+             letter = random(ALPHABET_LEN);
+             filename += ALPHABET[letter..letter];
+             break;
+         case 26..35:
+             filename += random(10);
+         }
+     }
+     
+     return filename;
 }

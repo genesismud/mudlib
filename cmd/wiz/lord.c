@@ -81,13 +81,11 @@ query_cmdlist()
 	     "promote":"promote",
 
 	     "short":"short",
-	     "startloc":"startloc",
-
 	     ]);
 }
 
 /* **************************************************************************
- * Here follows the actual functions. Please add new functions in the 
+ * Here follows the actual functions. Please add new functions in the
  * same order as in the function name list.
  * **************************************************************************/
 
@@ -95,11 +93,34 @@ query_cmdlist()
  * accept - accept someone into a domain.
  */
 nomask int
-accept(string name)
+accept(string str)
 {
+    string name, domain;
+    int rank = WIZ_CHECK;
+
     CHECK_SO_STEWARD;
 
-    return SECURITY->accept_application(name);
+    if (!strlen(str))
+    {
+	if (rank == WIZ_STEWARD)
+	    notify_fail("Syntax: accept <name>\n");
+	else
+	    notify_fail("Syntax: accept <name> <domain>\n");
+
+	return 0;
+    }
+
+    sscanf(str, "%s %s", name, domain);
+
+    if (!strlen(name))
+	name = str;
+
+    if ((rank >= WIZ_LORD) && !strlen(domain))
+    {
+	notify_fail("Syntax: accept <name> <domain>\n");
+	return 0;
+    }
+    return SECURITY->accept_application(name, domain);
 }
 
 /* **************************************************************************
@@ -173,11 +194,34 @@ demote(string str)
  * deny - deny the request from an apprentice.
  */
 nomask int
-deny(string name)
+deny(string str)
 {
+    string name, domain;
+    int rank = WIZ_CHECK;
+
     CHECK_SO_STEWARD;
 
-    return SECURITY->deny_application(name);
+    if (!strlen(str))
+    {
+	if (rank == WIZ_STEWARD)
+	    notify_fail("Syntax: deny <name>\n");
+	else
+	    notify_fail("Syntax: deny <name> <domain>\n");
+
+	return 0;
+    }
+
+    sscanf(str, "%s %s", name, domain);
+
+    if (!strlen(name))
+	name = str;
+
+    if ((rank >= WIZ_LORD) && !strlen(domain))
+    {
+	notify_fail("Syntax: deny <name> <domain>\n");
+	return 0;
+    }
+    return SECURITY->deny_application(name, domain);
 }
 
 /* **************************************************************************
@@ -249,10 +293,23 @@ limit(string str)
     /* No argument, default to the wizards own domain. */
     if (!stringp(str))
     {
+	string *doms;
+
 	if (!strlen(dname))
 	{
 	    notify_fail("You are not in any domain. Strange!\n");
 	    return 0;
+	}
+
+	if (sizeof(doms = SECURITY->query_lord_domains(name)))
+	{
+	    foreach(string str: sort_array(doms))
+	    {
+		max = SECURITY->query_domain_max(str);
+		write("Maximum number of members in " + str +
+		    " is " + max + ".\n");
+	    }
+	    return 1;
 	}
 
 	str = dname;
@@ -266,12 +323,25 @@ limit(string str)
 	return 1;
     }
 
-    /* Lords may only set their own domain. */
+    if (sscanf(str, "%s %d", dname, max) != 2)
+    {
+	notify_fail("Syntax: limit <domain> <maximum>\n");
+	return 0;
+    }
+
+    dname = capitalize(dname);
+    if (SECURITY->query_domain_number(dname) == -1)
+    {
+	notify_fail("No domain " + dname + ".\n");
+	return 0;
+    }
+
     if (SECURITY->query_wiz_rank(name) <= WIZ_LORD)
     {
-	if (sscanf(str, "%d", max) != 1)
+	/* Lords may only set their own domain(s). */
+	if (SECURITY->query_domain_lord(dname) != name)
 	{
-	    notify_fail("Syntax: limit <maximum>\n");
+	    notify_fail("You are not the Liege of " + dname + ".\n");
 	    return 0;
 	}
 
@@ -280,21 +350,6 @@ limit(string str)
 	{
 	    notify_fail("You may not raise the limit beyond the default " +
 		"maximum (" + SECURITY->query_default_domain_max() + ").\n");
-	    return 0;
-	}
-    }
-    else
-    {
-	if (sscanf(str, "%s %d", dname, max) != 2)
-	{
-	    notify_fail("Syntax: limit <domain> <maximum>\n");
-	    return 0;
-	}
-    
-	dname = capitalize(dname);
-	if (SECURITY->query_dom_num(dname) == -1)
-	{
-	    notify_fail("No domain " + dname + ".\n");
 	    return 0;
 	}
     }
@@ -345,7 +400,7 @@ mentor_fun(string arg)
 
     if (!strlen(arg))
     {
-	wlist = sort_array(filter(SECURITY->query_wiz_list(-1), 
+	wlist = sort_array(filter(SECURITY->query_wiz_list(-1),
 				  &operator(!=)(0) @ sizeof @ SECURITY->query_students));
 	for (i = 0, sz = sizeof(wlist) ; i < sz ; i++)
 	    write(sprintf("%-11s%-11s- ", capitalize(wlist[i]), SECURITY->query_wiz_dom(wlist[i])) + COMPOSITE_WORDS(map(sort_array(SECURITY->query_students(wlist[i])), capitalize)) + ".\n");
@@ -371,7 +426,7 @@ mentor_fun(string arg)
 	    if ((WIZ_CHECK < WIZ_ARCH)
 		&& ((SECURITY->query_wiz_dom(student) !=
 		     SECURITY->query_wiz_dom(mentor)) &&
-		    SECURITY->query_wiz_rank(mentor) < WIZ_ARCH))
+		    SECURITY->query_wiz_rank(mentor) < WIZ_LORD))
 	    {
 		notify_fail("mentor: The mentor and student must be in the same domain.\n");
 		return 0;
@@ -559,10 +614,22 @@ short(string str)
 
     if (!stringp(str))
     {
+	string *doms;
+
 	if (!strlen(dname))
 	{
 	    notify_fail("You are not in any domain. Strange!\n");
 	    return 0;
+	}
+
+	if (sizeof(doms = SECURITY->query_lord_domains(name)))
+	{
+	    foreach(string str: sort_array(doms))
+	    {
+		sname = SECURITY->query_domain_short(str);
+		write("Short name of " + capitalize(str) + " is " + sname + ".\n");
+	    }
+	    return 1;
 	}
 
 	str = dname;
@@ -570,29 +637,29 @@ short(string str)
 
     if (strlen(sname = SECURITY->query_domain_short(str)))
     {
-	write("Short name of " + dname + " is " + sname + ".\n");
+	write("Short name of " + capitalize(str) + " is " + sname + ".\n");
 	return 1;
     }
 
-    /* Lords may only set their own domain. */
-    if (SECURITY->query_wiz_rank(name) == WIZ_LORD)
+    if (sscanf(str, "%s %s", dname, sname) != 2)
     {
-	sname = str;
+	notify_fail("Syntax: short <domain> <short>\n");
+	return 0;
     }
-    else
-    {
-	if (sscanf(str, "%s %s", dname, sname) != 2)
-	{
-	    notify_fail("Syntax: short <domain> <short>\n");
-	    return 0;
-	}
 
-	dname = capitalize(dname);
-	if (SECURITY->query_dom_num(dname) == -1)
-	{
-	    notify_fail("No domain " + dname + ".\n");
-	    return 0;
-	}
+    dname = capitalize(dname);
+    if (SECURITY->query_domain_number(dname) == -1)
+    {
+	notify_fail("No domain " + dname + ".\n");
+	return 0;
+    }
+
+    /* Lords may only set their own domain(s). */
+    if (SECURITY->query_wiz_rank(name) <= WIZ_LORD &&
+	SECURITY->query_domain_lord(dname) != name)
+    {
+	notify_fail("You are not the Liege of " + dname + ".\n");
+	return 0;
     }
 
     sname = lower_case(sname);
@@ -620,141 +687,5 @@ short(string str)
 	    ". This is impossible. Please report this.\n");
     }
 
-    return 1;
-}
-
-/* **************************************************************************
- * startloc - handle starting locations
- */
-nomask int
-startloc(string str)
-{
-    string *sstr;
-    int what;
-
-    CHECK_SO_LORD;
-
-    notify_fail("Incorrect syntax for startloc.\n" +
-        "Syntax: startloc list [def[ault]] / [temp[orary]]\n" +
-        "        startloc add def[ault] / temp[orary] <loc>\n" +
-        "        startloc rem[ove] def[ault] / temp[orary] <loc>\n");
-
-    if (!stringp(str))
-    {
-	return 0;
-    }
-
-    sstr = explode(str, " ");
-
-    switch(sstr[0])
-    {
-    case "list":
-	if (sizeof(sstr) < 2)
-	    what = 3;
-	else
-	{
-	    switch (sstr[1])
-	    {
-	    case "default":
-	    case "def":
-		what = 1;
-		break;
-
-	    case "temporary":
-	    case "temp":
-		what = 2;
-		break;
-
-	    default:
-		notify_fail("I don't know of any '" + sstr[1] +
-			    "' start location.\n");
-		return 0;
-		break;
-	    }
-	}
-
-	if (what == 1 ||
-	    what == 3)
-	{
-	    write("Default start locations:\n");
-	    write(sprintf("%-*#s\n", 76, 
-                implode(sort_array(SECURITY->query_list_def_start(str)),
-                "\n")) + "\n");
-	}
-
-	if (what == 2 ||
-	    what == 3)
-	{
-	    write("Temporary start locations:\n");
-	    write(sprintf("%-*#s\n", 76, 
-                implode(sort_array(SECURITY->query_list_temp_start(str)),
-                "\n")) + "\n");
-	}
-	break;
-	
-    case "add":
-	if (sizeof(sstr) < 3)
-	{
-	    return 0;
-	}
-
-        if (extract(sstr[2], -2) == ".c")
-        {
-            sstr[2] = extract(sstr[2], 0, -3);
-        }
-
-	switch(sstr[1])
-	{
-	case "default":
-	case "def":
-	    SECURITY->add_def_start_loc(sstr[2]);
-	    break;
-
-	case "temporary":
-	case "temp":
-	    SECURITY->add_temp_start_loc(sstr[2]);
-	    break;
-
-	default:
-	    notify_fail("I don't know of any '" + sstr[1] +
-			"' start location.\n");
-	    return 0;
-	    break;
-	}
-	break;
-
-    case "remove":
-    case "rem":
-	if (sizeof(sstr) < 3)
-	{
-	    notify_fail("Remove what?\n");
-	    return 0;
-	}
-
-	switch(sstr[1])
-	{
-	case "default":
-	case "def":
-	    SECURITY->rem_def_start_loc(sstr[2]);
-	    break;
-
-	case "temporary":
-	case "temp":
-	    SECURITY->rem_temp_start_loc(sstr[2]);
-	    break;
-
-	default:
-	    notify_fail("I don't know of any '" + sstr[1] +
-			"' start location.\n");
-	    return 0;
-	    break;
-	}
-	break;
-
-    default:
-	return 0;
-    }
-
-    write("Ok.\n");
     return 1;
 }

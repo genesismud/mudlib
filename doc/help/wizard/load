@@ -2,7 +2,7 @@ NAME
 	load - load one or more files
 
 SYNOPSIS
-	load <file>
+	load [-r] <file>
 	load <files>
 	load stop
 
@@ -14,10 +14,12 @@ DESCRIPTION
 ARGUMENTS
 	<file>  - load one file into memory. If the file is already loaded,
 		  update it and then load it.
-	<files>	- load multiple files into memory. Files that are already
-		  in the memory are not updated and reloaded. It takes the
-		  tilde abbreviation and wildcards. Files that are loaded
-		  are automatically updated again in order not to waste
+		  Use -r for recursive to update all files in the inheritance
+		  chain of <file> before it is being reloaded.
+	<files>	- load multiple files into memory to test them. Files that
+		  are already in the memory are not updated and reloaded. It
+		  takes the tilde abbreviation and wildcards. Files that are
+		  loaded are automatically updated again in order not to waste
 		  memory.
 	stop    - when loading multiple files you may use this argument to
 		  interrupt the loading.
@@ -30,4 +32,3 @@ WARNING
 
 SEE ALSO
 	clone, destruct, update
-

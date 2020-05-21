@@ -13,3 +13,4 @@ DESCRIPTION
 	This function is subject to the rules given by the functions
 	`valid_read()' and `valid_write()' in `/secure/master.c'
 
+        NOTA BENE: The full manual guide on ed is at <man general ed>.

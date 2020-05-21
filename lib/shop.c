@@ -10,6 +10,7 @@ inherit "/lib/trade";
 #include <cmdparse.h>
 #include <composite.h>
 #include <files.h>
+#include <formulas.h>
 #include <language.h>
 #include <macros.h>
 #include <ss_types.h>
@@ -106,14 +107,46 @@ shop_hook_sell_no_value(object ob)
 
 /*
  * Function name: shop_hook_sell_worn_or_wielded
- * Description:   If object is worn or wielded and player has not said he 
- *		  wants to sell such an item
+ * Description:   If object is worn, wielded or held, and player has not said
+ *		  he wants to sell such an item
  * Arguments:	  ob - The object
  */
 void
 shop_hook_sell_worn_or_wielded(object ob)
 {
-    notify_fail("You have not specified to sell worn and wielded objects.\n");
+    if (IS_ARMOUR_OBJECT(ob))
+    {
+	notify_fail("You have to remove " + LANG_THESHORT(ob) + " before you can sell it.\n");
+	return;
+    }
+    if (IS_WEAPON_OBJECT(ob))
+    {
+	notify_fail("You have to unwield " + LANG_THESHORT(ob) + " before you can sell it.\n");
+	return;
+    }
+    notify_fail("You remove or unwield " + LANG_THESHORT(ob) + " first.\n");
+}
+
+/*
+ * Function name: shop_hook_sell_filled_container
+ * Description:   If object is a container that is not empty.
+ * Arguments:	  ob - The object
+ */
+void
+shop_hook_sell_filled_container(object ob)
+{
+    notify_fail(capitalize(LANG_THESHORT(ob)) + " is not empty.\n");
+}
+
+/*
+ * Function name: shop_hook_sell_lit_torch
+ * Description:   Trying to sell a torch that is lit.
+ * Arguments:	  ob - The object
+ */
+void
+shop_hook_sell_lit_torch(object ob)
+{
+    notify_fail(capitalize(LANG_THESHORT(ob)) + " is lit.\n");
 }
 
 /*
@@ -396,6 +429,41 @@ shop_hook_list_object(object ob, int price)
     }
 }
 
+/*
+ * Function name: query_object_value
+ * Desrciption:   What the object is worth. Allows shops to mask and
+ *                value objects differently. Specifically useful for
+ *                allowing herb shops, since herbs can normally not
+ *                be sold in regular shops.
+ */
+int
+query_object_value(object ob)
+{
+    return ob->query_prop(OBJ_I_VALUE);
+}
+
+/* 
+ * Function name: query_max_buy
+ * Description  : The number of items that can be bought in one go. Mask this
+ *                routine to change (increase) the number.
+ * Returns      : int the number, F_MAX_BUY_OBJECTS by default.
+ */
+int query_max_buy()
+{
+    return F_MAX_BUY_OBJECTS;
+}
+
+/* 
+ * Function name: query_max_sell
+ * Description  : The number of items that can be sold in one go. Mask this
+ *                routine to change (increase/decrease) the number.
+ * Returns      : int the number, F_MAX_SELL_OBJECTS by default.
+ */
+int query_max_sell()
+{
+    return F_MAX_SELL_OBJECTS;
+}
+
 /*    
  * Function name: query_buy_price
  * Description:   What price should the player pay
@@ -408,7 +476,7 @@ query_buy_price(object ob)
     int seed;
 
     sscanf(OB_NUM(ob), "%d", seed);
-    return 2 * ob->query_prop(OBJ_I_VALUE) * (query_money_greed_buy() +
+    return 2 * query_object_value(ob) * (query_money_greed_buy() +
 	15 - this_player()->query_skill(SS_TRADING) / 4 +
 	random(15, seed)) / 100;
 }
@@ -425,7 +493,7 @@ query_sell_price(object ob)
     int seed;
 
     sscanf(OB_NUM(ob), "%d", seed);
-    return ob->query_prop(OBJ_I_VALUE) * 100 / (query_money_greed_sell() +
+    return query_object_value(ob) * 100 / (query_money_greed_sell() +
 	15 - this_player()->query_skill(SS_TRADING) / 3 + 
 	random(15, seed + 1)); /* Use another seed than on buying */
 }
@@ -467,7 +535,7 @@ object
 get_store_object()
 {
     catch(store_room->teleledningsanka());
-    return find_object(store_room);
+    return find_object(query_store_room());
 }
 
 /*
@@ -551,13 +619,11 @@ do_read(string str)
 "    buy sword for gold coins    (default: the smallest denomination)\n" +
 "    buy sword for gold and get copper back\n" +
 "    sell sword for copper coins (default: the largest denomination)\n" +
-"    sell all  - will let you sell all items except for items you wield\n" +
-"                or wear. Beware that if you have many items to sell,\n" +
-"                check whether you have sold all or repeat the command.\n" +
-"    sell all! - will let you sell ALL items you have, well at least the\n" +
-"                droppable ones, and no coins. (see warning at 'sell all')\n" +
+"    sell all  - will let you sell all items except for items you wear,\n" +
+"                wield or hold, or filled containers.\n" +
 "    sell sword, sell second sword, sell sword 2, sell two swords also\n" +
 "                works.\n"+
+"    sell <xxx>! sell items including worn/wielded or filled containers.\n" +
 "    value     - will value an item you carry before you decide to sell it.\n" +
 "    show      - appraise one of the items in stock before you buy it.\n" +
 "    list      - will list the items in stock, 'list armours' and 'list\n" +
@@ -568,82 +634,83 @@ do_read(string str)
 /*
  * Function name: sell_it
  * Description:   Try to let the player sell the item array
- * Arguments:     ob - the object array
- *                check - wheather check for worn or wielded stuff
- *                str - string describing how the money should be paid
+ * Arguments:     object *items - the object array
+ *                string str - string describing how the money should be paid
+ *                int check - wheather check for worn or wielded stuff
  * Returns:	  An array with the objects sold
  */
 object *
-sell_it(object *ob, string str, int check) 
+sell_it(object *items, string str, int check) 
 {
-    int price, i, j, k, *tmp_arr, *null, *value_arr, *null_arr, err;
-    object *sold;
+    int price, k, *tmp_arr, *null, *value_arr, *null_arr, err;
+    object *sold = ({ });
     object store_object = get_store_object();
     mixed tmp;
 
     value_arr = allocate(sizeof(query_money_types()));
     null_arr = value_arr + ({});
-    sold = allocate(sizeof(ob));
 
-    for (i = 0; i < sizeof(ob); i++)
+    foreach(object item: items)
     {
-	if (!shop_hook_allow_sell(ob[i]))
+	if (!shop_hook_allow_sell(item))
 	    continue;
 
-        if (ob[i]->query_prop(OBJ_I_VALUE) == 0)
+        if (!query_object_value(item))
 	{
-	    shop_hook_sell_no_value(ob[i]);
+	    shop_hook_sell_no_value(item);
 	    continue;
         }
 
-	if (check && (ob[i]->query_worn() ||
-		      ob[i]->query_wielded()))
+	if (check && (item->query_worn() || item->query_wielded() || item->query_held()))
 	{
-	    shop_hook_sell_worn_or_wielded(ob[i]);
+	    shop_hook_sell_worn_or_wielded(item);
 	    continue;
         }
-    
-	if (tmp = ob[i]->query_prop(OBJ_M_NO_SELL))
+
+        if (check && IS_CONTAINER_OBJECT(item) && sizeof(all_inventory(item)))
+        {
+            shop_hook_sell_filled_container(item);
+            continue;
+        }
+
+        if (check && IS_TORCH_OBJECT(item) && item->query_lit())
+        {
+            shop_hook_sell_lit_torch(item);
+            continue;
+        }
+
+	if (tmp = item->query_prop(OBJ_M_NO_SELL))
 	{
-	    shop_hook_sell_no_sell(ob[i], tmp);
+	    shop_hook_sell_no_sell(item, tmp);
 	    continue;
 	}
 
 	/* Save price if ob destructed in move */
-	price = query_sell_price(ob[i]);
-
+	price = query_sell_price(item);
         if (price <= 0)
 	{
-	    shop_hook_sell_no_value(ob[i]);
+	    shop_hook_sell_no_value(item);
 	    continue;
         }
 
-        if (err = ob[i]->move(store_object))
+        if (err = item->move(store_object))
     	{
-	    shop_hook_sell_object_stuck(ob[i], err);
+	    shop_hook_sell_object_stuck(item, err);
 	    continue;
     	}
 
-        if (price > 0)
-	{
-            tmp_arr = calc_change(price, null, str);
-            for (k = 0; k < sizeof(value_arr); k++)
-                value_arr[k] += tmp_arr[k];
+        tmp_arr = calc_change(price, null, str);
+        for (k = 0; k < sizeof(value_arr); k++)
+            value_arr[k] += tmp_arr[k];
 
-	    sold[j] = ob[i];
-            j++;
-	    if (j >= 20)
-        	break;
-    /*
-     * Only let people sell 20 objects at once and hopefully we wont get
-     * those too long evaluation problems.
-     */
-	}
+        /* Only let people sell 20 objects at once and hopefully we wont
+         * get those too long evaluation problems. */
+        sold += ({ item });
+	if (sizeof(sold) >= query_max_sell())
+            break;
     }
 
-    sold = sold - ({ 0 });
-
-    if (sizeof(sold) > 0)
+    if (sizeof(sold))
     {
         change_money(null_arr + value_arr, this_player());
 	shop_hook_sell_get_money(text(value_arr));
@@ -663,11 +730,11 @@ sell_it(object *ob, string str, int check)
 int
 do_sell(string str)
 {
-    object *item;
+    object *items;
     int value, check;
     string str1, str2;
 
-    if (!str || str =="")
+    if (!strlen(str))
     {
 	notify_fail("Sell what?\n");
 	return 0;
@@ -680,26 +747,24 @@ do_sell(string str)
 	str2 = "";
     }
 
-    if (str1 == "all!")
+    /* Add an exclamation mark to force selling. It's a bit messy. The "check"
+     * variable will be TRUE if we check for wielded/worn/full items.
+     */
+    if (!(check = (str1[-1..] != "!")))
     {
-	str1 = "all";
-        check = 0; /* Sell worn or wielded objects. */
-    }
-    else
-    {
-	check = 1; /* Don't sell worn or wielded objects. */
+        str1 = str1[..-2];
     }
 
-    item = FIND_STR_IN_OBJECT(str1, this_player());
-    if (!sizeof(item))
+    items = FIND_STR_IN_OBJECT(str1, this_player());
+    if (!sizeof(items))
     {
 	return shop_hook_sell_no_match(str1);
     }
 
-    item = sell_it(item, str2, check);
-    if (sizeof(item))
+    items = sell_it(items, str2, check);
+    if (sizeof(items))
     {
-        return shop_hook_sold_items(item);
+        return shop_hook_sold_items(items);
     }
 
     if (str1 == "all")
@@ -719,29 +784,28 @@ do_sell(string str)
  * Returns:       1 on sucess
  */
 object *
-buy_it(object *ob, string str2, string str3) 
+buy_it(object *items, string str2, string str3) 
 {
-    int price, i, j, k, *value_arr, *arr, error, num, err;
-    object *bought;
+    int price, k, *value_arr, *arr, error, num, err;
+    object *bought = ({ });
     object store_object = get_store_object();
     mixed tmp;
 
     num = sizeof(query_money_types());
     value_arr = allocate(2 * num);
-    bought = allocate(sizeof(ob));
 
-    for (i = 0; i < sizeof(ob); i++)
+    foreach(object item: items)
     {
-	if (!shop_hook_allow_buy(ob[i]))
+	if (!shop_hook_allow_buy(item))
 	    continue;
 
-        if (tmp = ob[i]->query_prop(OBJ_M_NO_BUY))
+        if (tmp = item->query_prop(OBJ_M_NO_BUY))
         {
-            shop_hook_buy_no_buy(ob[i], tmp);
+            shop_hook_buy_no_buy(item, tmp);
             continue;
         }
 
-	price = query_buy_price(ob[i]);
+	price = query_buy_price(item);
 
         /* be sure they can pay before we try to move ob to player,
          * because if ob is a heap and the move succeeds and the player
@@ -751,21 +815,21 @@ buy_it(object *ob, string str2, string str3)
          */
         if (sizeof(arr = pay(price, this_player(), str2, 1, 0, str3)) == 1)
         {
-            shop_hook_buy_cant_pay(ob[i], arr);
+            shop_hook_buy_cant_pay(item, arr);
             continue;
         }
 
 	/* If you don't feel greedy you can shorten the calculation above. */
-	if (err = ob[i]->move(this_player()))
+	if (err = item->move(this_player()))
 	{
-	    shop_hook_buy_cant_carry(ob[i], err);
+	    shop_hook_buy_cant_carry(item, err);
 	    continue;
 	}
 
 	if (sizeof(arr = pay(price, this_player(), str2, 0, 0, str3)) == 1)
 	{
-	    ob[i]->move(store_object, 1);
-	    shop_hook_buy_cant_pay(ob[i], arr);
+	    item->move(store_object, 1);
+	    shop_hook_buy_cant_pay(item, arr);
             continue;  /* pay() can handle notify_fail() call */
 	}
 
@@ -774,9 +838,9 @@ buy_it(object *ob, string str2, string str3)
 	{
 	    if (error < -1)
 	    {
-	    /* Couldn't take the money from player, the coins were stuck */
-	        shop_hook_buy_magic_money(ob[i]);
-	        ob[i]->move(store_object, 1);
+	        /* Couldn't take the money from player, the coins were stuck */
+	        shop_hook_buy_magic_money(item);
+	        item->move(store_object, 1);
 		continue;
 	    }
 	    /* We don't want the money so no move error to us, if there was one
@@ -787,20 +851,33 @@ buy_it(object *ob, string str2, string str3)
         for (k = 0; k < 2 * num; k++)
             value_arr[k] += arr[k];
 
-	bought[j] = ob[i];
-        j++;
-	if (j >= 1)
-       	    break;
 	/* Well, we don't want to let a player accidentily buy too much :) */
+	bought += ({ item });
+	if (sizeof(bought) >= query_max_buy())
+       	    break;
     }
 
-    bought = bought - ({ 0 });
-
-    if (sizeof(bought) > 0)
+    if (sizeof(bought))
+    {
 	shop_hook_buy_pay_money(
-		text(arr[0 .. num - 1]), text(arr[num .. 2 * num - 1]));
+		text(value_arr[0 .. num - 1]), text(value_arr[num .. 2 * num - 1]));
+    }
 
     return bought;
+}
+
+/*
+ * Function name: find_str_in_object
+ * Description:   Maskable function that by default calls the macro
+ *                FIND_STR_IN_OBJECT. Allows a shop to define its own
+ *                mechanism for how to get objects from the storeroom.
+ */
+public object *
+find_str_in_object(string str, object obj)
+{
+    object * items;
+    items = FIND_STR_IN_OBJECT(str, obj);
+    return items;
 }
 
 /*
@@ -812,23 +889,31 @@ buy_it(object *ob, string str2, string str3)
 int
 do_buy(string str)
 {
-    object *item;
+    object *items;
     object store_object;
     string str1, str2, str3;
 
-    if (!str || str =="")
+    if (!strlen(str))
     {
 	notify_fail("Buy what?\n");
 	return 0;
     }
- 
-    /*  Did the player specify payment and change? */
-    if (sscanf(str, "%s for %s and get %s", str1, str2, str3) != 3)
+
+    /*  Did the player specify and change? */
+    if (sscanf(str, "%s and get %s", str1, str3) == 2)
     {
-    /* Well, maybe player has defined how payment will be done atleast? */
-        str3 = "";
-        if (sscanf(str, "%s for %s", str1, str2) != 2)
-        {
+	str = str1;
+    }
+    else
+    {
+	str3 = "";
+    }
+
+    /* Maybe player has defined how payment will be done atleast? */
+    if (sscanf(str, "%s for %s", str1, str2) != 2)
+    {
+        if (sscanf(str, "%s with %s", str1, str2) != 2)
+	{
             str2 = "";
             str1 = str;
         }
@@ -836,17 +921,17 @@ do_buy(string str)
 
     ASSIGN_AND_VALIDATE_STORE_OBJECT(store_object);
 
-    item = FIND_STR_IN_OBJECT(str1, store_object);
+    items = find_str_in_object(str1, store_object);
 
-    if (!sizeof(item))
+    if (!sizeof(items))
     {
 	return shop_hook_buy_no_match(str1);
     }
 
-    item = buy_it(item, str2, str3);
-    if (sizeof(item))
+    items = buy_it(items, str2, str3);
+    if (sizeof(items))
     {
-	return shop_hook_bought_items(item);
+	return shop_hook_bought_items(items);
     }
 
     return 0; /* Player tried to sell a non sellable object. */
@@ -860,9 +945,9 @@ do_buy(string str)
 int
 do_value(string str)
 {
-    object *item;
+    object *items;
     object store_object;
-    int *arr, price, i, j, num, no_inv;
+    int *arr, price, j, num, no_inv;
 
     if (!strlen(str))
     {
@@ -871,46 +956,46 @@ do_value(string str)
     }
 
     num = sizeof(query_money_types());
-    item = FIND_STR_IN_OBJECT(str, this_player());
-    if (!sizeof(item))
+    items = FIND_STR_IN_OBJECT(str, this_player());
+    if (!sizeof(items))
     {
 	no_inv = 1;
     }
 
-    for (i = 0; i < sizeof(item); i++)
+    foreach(object item: items)
     {
-	if (!shop_hook_allow_sell(item[i]) ||
-	    !item[i]->query_prop(OBJ_I_VALUE) ||
-	    item[i]->query_prop(OBJ_M_NO_SELL)) 
+	if (!shop_hook_allow_sell(item) ||
+	    !query_object_value(item) ||
+	    item->query_prop(OBJ_M_NO_SELL)) 
 	{
-	    shop_hook_value_not_interesting(item[i]);
+	    shop_hook_value_not_interesting(item);
 	    continue;
 	}
 
-	price = query_sell_price(item[i]);
+	price = query_sell_price(item);
         arr = give(price, this_player(), "", 1);
-	shop_hook_value_held(item[i], text(arr[num .. 2 * num - 1]));
+	shop_hook_value_held(item, text(arr[num .. 2 * num - 1]));
 	j++;
     }
 
-    ASSIGN_AND_VALIDATE_STORE_OBJECT(store_object)
+    ASSIGN_AND_VALIDATE_STORE_OBJECT(store_object);
 
-    item = FIND_STR_IN_OBJECT(str, store_object);
-    if (!sizeof(item) && no_inv)
+    items = find_str_in_object(str, store_object);
+    if (!sizeof(items) && no_inv)
     {
 	return shop_hook_value_no_match(str);
     }
 
-    for (i = 0; i < sizeof(item); i++)
+    foreach(object item: items)
     {
-	price = query_buy_price(item[i]);
+	price = query_buy_price(item);
 	arr = split_values(price); /* A price with few coins possible */
-	shop_hook_value_store(item[i], text(arr));
+	shop_hook_value_store(item, text(arr));
 	j++;
     }	
 
     shop_hook_value_asking(str);
-    if (j > 0)
+    if (j)
     {
 	return 1;
     }
@@ -928,15 +1013,15 @@ do_value(string str)
 int
 do_list(string str)
 {
-    object *item_arr;
+    object *items;
     object store_object;
     int i, max, price, *arr;
 
     ASSIGN_AND_VALIDATE_STORE_OBJECT(store_object);
 
-    item_arr = all_inventory(store_object);
+    items = all_inventory(store_object);
 
-    if (!sizeof(item_arr))
+    if (!sizeof(items))
     {
 	shop_hook_list_empty_store(str);
 	return 0;
@@ -944,28 +1029,28 @@ do_list(string str)
 
     if (str == "weapons")
     {
-        item_arr = filter(item_arr, weapon_filter);
+        items = filter(items, weapon_filter);
     }
     else if (str == "armours")
     {
-        item_arr = filter(item_arr, armour_filter);
+        items = filter(items, armour_filter);
     }
     else if (str)
     {
-	item_arr = FIND_STR_IN_ARR(str, item_arr);
+	items = FIND_STR_IN_ARR(str, items);
     }
 
-    if (sizeof(item_arr) < 1)
+    if (sizeof(items) < 1)
 	return shop_hook_list_no_match(str);
  
-    max = MIN(MAXLIST, sizeof(item_arr));
+    max = MIN(MAXLIST, sizeof(items));
     for (i = 0; i < max; i++)
     {
-	price = query_buy_price(item_arr[i]);
-	shop_hook_list_object(item_arr[i], price);
+	price = query_buy_price(items[i]);
+	shop_hook_list_object(items[i], price);
     }
 
-    if (max < sizeof(item_arr))
+    if (max < sizeof(items))
     {
 	write("Truncated...\n");
     }
@@ -982,29 +1067,28 @@ do_list(string str)
 int
 do_show(string str)
 {
-    object *item_arr;
+    object *items;
     object store_object;
-    int i, *arr;
 
     ASSIGN_AND_VALIDATE_STORE_OBJECT(store_object);
 
-    item_arr = all_inventory(store_object);
+    items = all_inventory(store_object);
 
-    if (!sizeof(item_arr))
+    if (!sizeof(items))
     {
 	shop_hook_list_empty_store(str);
 	return 0;
     }
 
-    item_arr = FIND_STR_IN_ARR(str, item_arr);
+    items = FIND_STR_IN_ARR(str, items);
 
-    if (sizeof(item_arr) < 1)
+    if (sizeof(items) < 1)
     {
 	return shop_hook_list_no_match(str);
     }
 
-    shop_hook_appraise_object(item_arr[0]);
-    item_arr[0]->appraise_object();
+    shop_hook_appraise_object(items[0]);
+    items[0]->appraise_object();
 
     return 1;
 }

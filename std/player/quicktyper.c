@@ -9,8 +9,12 @@
 #include <std.h>
 #include <options.h>
 
-#define ALIAS_LENGTH (query_wiz_level() ? 45 : 30)
-#define NICK_LENGTH  (query_wiz_level() ? 30 : 30)
+#define ALIAS_LENGTH (query_wiz_level() ? 75 : 50)
+#define NICK_LENGTH  (query_wiz_level() ? 45 : 30)
+
+#define DEFAULT_ALIASES ([ "dc":"deposit coins", "ha":"health all", \
+    "hp":"health", "im":"introduce me", "r":"read" ])
+#define NO_ALIAS ({ "alias", "unalias", "save", "quit" })
 
 /*
  * Global variables, all static, i.e. non-savable.
@@ -199,6 +203,12 @@ alias(string str)
 	    write(sprintf("%-8s: %s\n", list[index], a_list[list[index]]));
 
 	return 1;
+    }
+
+    if (IN_ARRAY(a, NO_ALIAS))
+    {
+	notify_fail("You should not redefine the command \"" + a + "\".\n");
+	return 0;
     }
 
     /* Replace the alias if is already exists.*/

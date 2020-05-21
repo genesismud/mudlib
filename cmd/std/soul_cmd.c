@@ -58,6 +58,7 @@ query_cmdlist()
 {
     return ([
              "ack":"ack",
+	     "acknowledge":"acknowledge",
              "admire":"admire",
              "agree":"agree",
              "apologize":"apologize",
@@ -78,6 +79,7 @@ query_cmdlist()
              "boggle":"boggle",
              "bounce":"bounce",
              "bow":"bow",
+	     "breathe":"breathe",
              "brighten":"brighten",
              "brood":"brood",
              "burp":"burp",
@@ -119,6 +121,7 @@ query_cmdlist()
              "explode":"explodes",
              "eyebrow":"eyebrow",
 
+             "facepalm":"facepalm",
              "fart":"fart",
              "fawn":"fawn",
              "feign":"feign",
@@ -143,8 +146,8 @@ query_cmdlist()
              "greet":"greet",
              "grimace":"grimace",
              "grin":"grin",
+	     "grit":"grit",
              "groan":"groan",
-             "grope":"grope",
              "grovel":"grovel",
              "growl":"growl",
              "grumble":"grumble",
@@ -153,6 +156,7 @@ query_cmdlist()
              "hiccup":"hiccup",
              "hmm":"hmm",
              "hold":"hold",
+             "howl":"howl",
              "hug":"hug",
              "hum":"hum",
 
@@ -166,6 +170,7 @@ query_cmdlist()
              "kneel":"kneel",
 
              "laugh":"laugh",
+             "lean":"lean",
              "leer":"leer",
              "lick":"lick",
              "listen":"listen",
@@ -176,6 +181,7 @@ query_cmdlist()
              "mourn":"mourn",
              "mumble":"mumble",
 
+	     "narrow":"narrow",
              "nibble":"nibble",
              "nod":"nod",
              "nudge":"nudge",
@@ -196,10 +202,12 @@ query_cmdlist()
              "ponder":"ponder",
              "pounce":"pounce",
              "pout":"pout",
+	     "protest":"protest",
              "puke":"puke",
              "purr":"purr",
 
-             "rolleyes":"rolleyes",
+             "raise":"raise",
+	     "rolleyes":"rolleyes",
              "roar":"roar",
              "ruffle":"ruffle",
 
@@ -225,12 +233,14 @@ query_cmdlist()
              "snicker":"snicker",
              "sniff":"sniff",
              "snore":"snore",
+             "snort":"snort",
              "snuggle":"snuggle",
              "sob":"sob",
              "spank":"spank",
              "spit":"spit",
              "squeeze":"squeeze",
              "squirm":"squirm",
+	     "stagger":"stagger",
              "stare":"stare",
              "startle":"startle",
              "steam":"steam",
@@ -278,6 +288,7 @@ query_cmdlist()
              "wring":"wring",
 
              "yawn":"yawn",
+	     "yell":"yell",
              "yodel":"yodel"
          ]);
 }
@@ -455,6 +466,33 @@ ack(string str)
 }
 
 int
+acknowledge(string str)
+{
+    object *oblist;
+    string *how;
+
+    how = parse_adverb_with_space(str, BLANK_ADVERB, 0);
+
+    oblist = parse_this(how[0], "[the] [presence] [of] [the] %l", ACTION_OTHER);
+
+    if (!sizeof(oblist))
+    {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
+        notify_fail("Acknowledge [how] the presence of whom?\n");
+        return 0;
+    }
+
+    actor("You" + how[1] + " acknowledge the presence of", oblist);
+    all2actbb(how[1] + " acknowledge the presence of", oblist, 0, how[1], ACTION_OTHER);
+    targetbb(how[1] + " acknowledges your presence.", oblist, how[1], ACTION_OTHER);
+    return 1;
+}
+
+int
 admire(string str)
 {
     object *oblist;
@@ -468,7 +506,6 @@ admire(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Admire whom?\n");
         return 0;
     }
@@ -505,7 +542,6 @@ agree(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Agree [how] with whom?\n");
         return 0;
     }
@@ -540,7 +576,6 @@ apologize(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Apologize [how] to whom?\n");
         return 0;
     }
@@ -587,7 +622,6 @@ applaud(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Applaud [how] to whom?\n");
         return 0;
     }
@@ -630,7 +664,6 @@ avert(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Avert your eyes from whom/what?\n");
         return 0;
     }
@@ -648,19 +681,18 @@ back(string str)
 {
     object *oblist;
     string *how;
+    int attrs = ACTION_MACTIVITY | ACTION_VISUAL;
 
     how = parse_adverb_with_space(str, "slowly", 0);
 
     if (!stringp(how[0]))
     {
         write("You back away" + how[1] + ".\n");
-        all(" begins to back away" + how[1] + ".", how[1],
-	    ACTION_MACTIVITY | ACTION_VISUAL);
+        all(" begins to back away" + how[1] + ".", how[1], attrs);
         return 1;
     }
 
-    oblist = parse_this(how[0], "[away] [from] [the] %l",
-        ACTION_MACTIVITY | ACTION_VISUAL);
+    oblist = parse_this(how[0], "[away] [from] [the] %l", attrs);
 
     if (!sizeof(oblist))
     {
@@ -669,16 +701,13 @@ back(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Back [how] away from whom?\n");
         return 0;
     }
 
     actor("You back away" + how[1] + " from", oblist);
-    all2actbb(" backs away" + how[1] + " from", oblist, 0, how[1],
-        ACTION_MACTIVITY | ACTION_VISUAL);
-    targetbb(" begins to back" + how[1] + " away from you.", oblist, how[1],
-        ACTION_MACTIVITY | ACTION_VISUAL);
+    all2actbb(" backs away" + how[1] + " from", oblist, 0, how[1], attrs);
+    targetbb(" begins to back" + how[1] + " away from you.", oblist, how[1], attrs);
     return 1;
 }
 
@@ -707,7 +736,6 @@ bat(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Bat your eyelashes [how] at whom?\n");
         return 0;
     }
@@ -740,6 +768,11 @@ beam(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Beam [how] at whom/what?\n");
         return 0;
     }
@@ -756,18 +789,18 @@ beckon(string str)
 {
     object *oblist;
     string *how;
+    int attrs = ACTION_VISUAL | ACTION_LACTIVITY;
 
     how = parse_adverb_with_space(str, "endearingly", 1);
 
     if (!stringp(how[0]))
     {
         write("You beckon everyone" + how[1] + ".\n");
-        allbb(" beckons everyone" + how[1] + ".", how[1],
-	      ACTION_VISUAL | ACTION_LACTIVITY);
+        allbb(" beckons everyone" + how[1] + ".", how[1], attrs);
         return 1;
     }
 
-    oblist = parse_this(how[0], "[the] %l", ACTION_VISUAL | ACTION_LACTIVITY);
+    oblist = parse_this(how[0], "[the] %l", attrs);
 
     if (!sizeof(oblist))
     {
@@ -776,16 +809,13 @@ beckon(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Beckon whom [how]?\n");
         return 0;
     }
 
     actor("You beckon", oblist, how[1] + ".");
-    all2actbb(" beckons", oblist, how[1] + ".", how[1],
-        ACTION_VISUAL | ACTION_LACTIVITY);
-    targetbb(" beckons you" + how[1] + ".", oblist, how[1],
-        ACTION_VISUAL | ACTION_LACTIVITY);
+    all2actbb(" beckons", oblist, how[1] + ".", how[1], attrs);
+    targetbb(" beckons you" + how[1] + ".", oblist, how[1], attrs);
     return 1;
 }
 
@@ -793,6 +823,7 @@ int
 beg(string str)
 {
     object *oblist;
+    int attrs = ACTION_AURAL | ACTION_VISUAL;
 
     oblist = parse_this(str, "[the] %l [for] 'forgiveness'");
 
@@ -802,16 +833,14 @@ beg(string str)
             (sizeof(oblist) > 1 ? " each of" : ""), oblist,
             " for forgiveness.");
         all2act(" falls on " + this_player()->query_possessive() +
-            "knees and begs", oblist, " for forgiveness.", "",
-	    ACTION_AURAL | ACTION_VISUAL);
+            "knees and begs", oblist, " for forgiveness.", "", attrs);
         target(" falls on " + this_player()->query_possessive() +
-            " knees and begs you for forgiveness.", oblist, "",
-	    ACTION_AURAL | ACTION_VISUAL);
+            " knees and begs you for forgiveness.", oblist, "", attrs);
         return 1;
     }
 
-    oblist = parse_this(str, "[the] %l [pardon]",
-        ACTION_AURAL | ACTION_INGRATIATORY);
+    attrs = ACTION_AURAL | ACTION_INGRATIATORY;
+    oblist = parse_this(str, "[the] %l [pardon]", attrs);
 
     if (!sizeof(oblist))
     {
@@ -820,16 +849,13 @@ beg(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Beg whose pardon?\n");
         return 0;
     }
 
     actor("You beg", oblist, "'s pardon.");
-    all2act(" begs", oblist, "'s pardon.", "",
-        ACTION_AURAL | ACTION_INGRATIATORY);
-    target(" begs your pardon.", oblist, "",
-        ACTION_AURAL | ACTION_INGRATIATORY);
+    all2act(" begs", oblist, "'s pardon.", "", attrs);
+    target(" begs your pardon.", oblist, "", attrs);
     return 1;
 }
 
@@ -873,7 +899,6 @@ blanch(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Blanch [how] at the sight of who/what?\n");
         return 0;
     }
@@ -953,7 +978,6 @@ blow(string str)
                 write(parse_msg);
                 return 1;
             }
-
             notify_fail("Blow [how] in whose ear or " +
                 "blow a kiss [how] to whom?\n");
             return 0;
@@ -987,7 +1011,6 @@ blow(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Blow [how] in whose ear or blow a kiss [how] to whom?\n");
         return 0;
     }
@@ -1026,7 +1049,6 @@ blush(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Blush [how] at whose words?\n");
         return 0;
     }
@@ -1080,7 +1102,6 @@ bounce(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Bounce [how] into whom/what?\n");
         return 0;
     }
@@ -1121,7 +1142,6 @@ bow(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Bow [how] to whom/what?\n");
         return 0;
     }
@@ -1131,6 +1151,23 @@ bow(string str)
         ACTION_PROXIMATE | ACTION_VISUAL | ACTION_MACTIVITY);
     targetbb(" bows" + how[1] + " before you.", oblist, how[1],
         ACTION_PROXIMATE | ACTION_VISUAL | ACTION_MACTIVITY);
+    return 1;
+}
+
+int
+breathe(string str)
+{
+    str = check_adverb_with_space(str, "deeply");
+
+    if (str == NO_ADVERB_WITH_SPACE)
+    {
+        notify_fail("Breathe how?\n");
+        return 0;
+    }
+
+    SOULDESC("breathing" + str);
+    write("You breathe" + str + ".\n");
+    all(" breathes" + str + ".", str);
     return 1;
 }
 
@@ -1221,7 +1258,6 @@ caress(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Caress whom/what [how]?\n");
         return 0;
     }
@@ -1269,7 +1305,6 @@ cheer(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Cheer [how] at whom/what?\n");
         return 0;
     }
@@ -1340,7 +1375,6 @@ chuckle(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Chuckle [how] at whom/what?\n");
         return 0;
     }
@@ -1377,7 +1411,6 @@ clap(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Clap [how] for whom/what?\n");
         return 0;
     }
@@ -1419,7 +1452,6 @@ comfort(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Comfort whom?\n");
         return 0;
     }
@@ -1452,7 +1484,6 @@ complain(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Complain to whom/what?\n");
         return 0;
     }
@@ -1478,7 +1509,6 @@ compliment(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Compliment whom/what?\n");
         return 0;
     }
@@ -1511,6 +1541,11 @@ confuse(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Confuse whom? Yourself or someone else?\n");
         return 0;
     }
@@ -1554,6 +1589,11 @@ confused(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Look confused at whom/what?\n");
         return 0;
     }
@@ -1575,6 +1615,11 @@ congratulate(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Congratulate whom?\n");
         return 0;
     }
@@ -1632,43 +1677,63 @@ int
 cringe(string str)
 {
     object *oblist;
+    string *how;
 
-    if (!stringp(str))
+    how = parse_adverb_with_space(str, "in terror", 0);
+
+    if (!stringp(how[0]))
     {
-        SOULDESC("cringing in terror");
-        write("You cringe in terror.\n");
-        allbb(" cringes in terror.");
+        SOULDESC("cringing" + how[1]);
+        write("You cringe" + how[1] + ".\n");
+        allbb(" cringes" + how[1] + ".", how[1]);
         return 1;
     }
 
-    oblist = parse_this(str, "[to] [the] %i");
+    oblist = parse_this(how[0], "[to] [the] [feet] [of] %l");
 
     if (!sizeof(oblist))
     {
-        notify_fail("Cringe to whom/what?\n");
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
+        notify_fail("Cringe [how] at whom?\n");
         return 0;
     }
 
-    SOULDESC("cringing in terror");
-    actor("You cringe in terror from", oblist);
-    all2act(" cringes in terror at the feet of", oblist);
-    target(" cringes in terror at your feet.", oblist);
-    return 1;
+    SOULDESC("cringing" + how[1]);
+    actor("You cringe" + how[1] + " at", oblist, "'s feet.");
+    all2actbb(" cringes" + how[1] + " at the feet of", oblist, 0, how[1],
+        ACTION_PROXIMATE | ACTION_VISUAL | ACTION_MACTIVITY);
+    targetbb(" cringes" + how[1] + " at your feet.", oblist, how[1],
+        ACTION_PROXIMATE | ACTION_VISUAL | ACTION_MACTIVITY);
 }
 
 int
 cross(string str)
 {
-    if (str != "fingers")
+    switch(lower_case(str))
     {
-        notify_fail("Cross what? Your fingers?\n");
-        return 0;
+    case "ankles":
+        write("You cross your ankles in relaxation.\n");
+        all(" crosses " + this_player()->query_possessive() +
+            " ankles in relaxation.");
+        return 1;
+    case "arms":
+        write("You cross your arms in contemplation.\n");
+        all(" crosses " + this_player()->query_possessive() +
+            " arms in contemplation.");
+        return 1;
+    case "fingers":
+        write("You cross your fingers for good luck.\n");
+        all(" crosses " + this_player()->query_possessive() +
+            " fingers for good luck.");
+        return 1;
     }
 
-    write("You cross your fingers for good luck.\n");
-    all(" crosses " + this_player()->query_possessive() +
-        " fingers for good luck.");
-    return 1;
+    notify_fail("Cross what? Your fingers, arms, ankles?\n");
+    return 0;
 }
 
 int
@@ -1699,6 +1764,11 @@ cry(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Cry [on] whom?\n");
         return 0;
     }
@@ -1731,7 +1801,6 @@ cuddle(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Cuddle whom/what [how]?\n");
         return 0;
     }
@@ -1756,6 +1825,11 @@ curl(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Curl in whose lap [how]?\n");
         return 0;
     }
@@ -1788,6 +1862,11 @@ curse(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Curse [how] at whom/what?\n");
         return 0;
     }
@@ -1820,6 +1899,11 @@ curtsey(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Curtsey [how] to whom/what?\n");
         return 0;
     }
@@ -1851,7 +1935,6 @@ dance(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Dance with whom/what?\n");
         return 0;
     }
@@ -1897,6 +1980,11 @@ disagree(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Disagree [how] with whom?\n");
         return 0;
     }
@@ -1941,6 +2029,11 @@ duh(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Duh at whom?\n");
         return 0;
     }
@@ -1989,6 +2082,11 @@ excuse(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Excuse whom [how]?\n");
         return 0;
     }
@@ -2032,6 +2130,11 @@ explodes(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Explode at whom/what?\n");
         return 0;
     }
@@ -2063,6 +2166,11 @@ eyebrow(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Raise your eyebrow [how] at whom/what?\n");
         return 0;
     }
@@ -2072,6 +2180,24 @@ eyebrow(string str)
         " eyebrow" + how[1] + " at", oblist, 0, how[1]);
     targetbb(" raises " + this_player()->query_possessive() + " eyebrow" +
         how[1] + " at you.", oblist, how[1]);
+    return 1;
+}
+
+int
+facepalm(string str)
+{
+    str = check_adverb_with_space(str, "in disbelief");
+
+    if (str == NO_ADVERB_WITH_SPACE)
+    {
+        notify_fail("Bury your face in your palm how?\n");
+        return 0;
+    }
+
+    write("You bury your face in the palm of your hand" + str + ".\n");
+    all(" buries " + this_player()->query_possessive() +
+        " face in the palm of " + this_player()->query_possessive() +
+        " hand" + str + ".", str);
     return 1;
 }
 
@@ -2098,6 +2224,11 @@ fawn(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Fawn over whom/what?\n");
         return 0;
     }
@@ -2132,6 +2263,11 @@ ffinger(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Show finger to whom/what?\n");
         return 0;
     }
@@ -2216,6 +2352,11 @@ flirt(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Flirt [how] with whom/what?\n");
         return 0;
     }
@@ -2246,7 +2387,6 @@ fondle(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Fondle whom/what [how]?\n");
         return 0;
     }
@@ -2280,6 +2420,11 @@ forgive(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Forgive whom [how]?\n");
         return 0;
     }
@@ -2313,7 +2458,6 @@ french(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("French whom?\n");
         return 0;
     }
@@ -2367,6 +2511,11 @@ frown(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Frown [how] at whom/what?\n");
         return 0;
     }
@@ -2398,6 +2547,11 @@ fume(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Fume [how] at whom/what?\n");
         return 0;
     }
@@ -2475,6 +2629,11 @@ gesture(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Gesture [how] at whom/what?\n");
         return 0;
     }
@@ -2505,6 +2664,11 @@ glare(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Glare [how] at whom/what?\n");
         return 0;
     }
@@ -2525,6 +2689,11 @@ greet(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Greet whom/what?\n");
         return 0;
     }
@@ -2560,6 +2729,11 @@ grimace(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Grimace [how] [at whom/what]?\n");
         return 0;
     }
@@ -2603,6 +2777,11 @@ grin(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Grin [how] at whom/what?\n");
         return 0;
     }
@@ -2611,6 +2790,20 @@ grin(string str)
     actor("You grin" + how[1] + " at", oblist);
     all2act(" grins" + how[1] + " at", oblist, 0, how[1]);
     targetbb(" grins" + how[1] + " at you.", oblist, how[1]);
+    return 1;
+}
+
+int
+grit(string str)
+{
+    if (str != "teeth")
+    {
+        notify_fail("Grit what? Your teeth?\n");
+        return 0;
+    }
+
+    write("You grit your teeth.\n");
+    all(" grits " + this_player()->query_possessive() + " teeth.");
     return 1;
 }
 
@@ -2632,33 +2825,6 @@ groan(string str)
 }
 
 int
-grope(string str)
-{
-    object *oblist;
-
-    oblist = parse_this(str, "[the] %i", ACTION_CONTACT | ACTION_INTIMATE);
-
-    if (!sizeof(oblist))
-    {
-        if (strlen(parse_msg))
-        {
-            write(parse_msg);
-            return 1;
-        }
-
-        notify_fail("Grope whom/what?\n");
-        return 0;
-    }
-
-    actor("You grope", oblist, " in an unskilled manner.");
-    all2act(" gropes", oblist, " in an unskilled manner.", "",
-        ACTION_CONTACT | ACTION_INTIMATE);
-    target(" gropes you in an unskilled manner.", oblist, "",
-        ACTION_CONTACT | ACTION_INTIMATE);
-    return 1;
-}
-
-int
 grovel(string str)
 {
     object *oblist;
@@ -2672,7 +2838,6 @@ grovel(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Grovel in front of whom/what?\n");
         return 0;
     }
@@ -2705,6 +2870,11 @@ growl(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Growl [how] at whom/what?\n");
         return 0;
     }
@@ -2738,6 +2908,11 @@ grumble(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Grumble [how] at whom/what?\n");
         return 0;
     }
@@ -2794,6 +2969,11 @@ hmm(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Go hmm at whom/what?\n");
         return 0;
     }
@@ -2847,6 +3027,23 @@ hold(string str)
 }
 
 int
+howl(string str)
+{
+    str = check_adverb_with_space(str, "at the moon");
+
+    if (str == NO_ADVERB_WITH_SPACE)
+    {
+        notify_fail("Howl how?\n");
+        return 0;
+    }
+
+    SOULDESC("howling" + str);
+    write("You howl" + str + ".\n");
+    all(" howls" + str + ".", str);
+    return 1;
+}
+
+int
 hug(string str)
 {
     object *oblist;
@@ -2865,7 +3062,6 @@ hug(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Hug whom/what [how]?\n");
         return 0;
     }
@@ -2916,6 +3112,11 @@ ignore(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Ignore whom/what?\n");
         return 0;
     }
@@ -2958,7 +3159,6 @@ jump(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Jump how [over whom/what]?\n");
         return 0;
     }
@@ -2994,7 +3194,6 @@ kick(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Kick whom/what [how]?\n");
         return 0;
     }
@@ -3055,7 +3254,6 @@ kiss(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Kiss whom [how/where]?\n");
         return 0;
     }
@@ -3099,7 +3297,6 @@ knee(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Knee whom?\n");
         return 0;
     }
@@ -3117,8 +3314,7 @@ knee(string str)
     oblist -= femlist;
     if (sizeof(oblist))
     {
-        actor("You hit", oblist, " with your knee, sending " +
-            ((sizeof(oblist) > 1) ? "them" : "him") +
+        actor("You hit", oblist, " with your knee, sending them" +
             " to the ground, writhing in pain!");
         all2act(" suddenly raises " + this_player()->query_possessive() +
             " knee, sending", oblist, " to the floor, writhing in pain!", "",
@@ -3158,7 +3354,6 @@ kneel(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Kneel [how] before whom/what?\n");
         return 0;
     }
@@ -3199,6 +3394,11 @@ laugh(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Laugh how [at whom/what]?\n");
         return 0;
     }
@@ -3216,6 +3416,35 @@ laugh(string str)
     actor("You laugh" + how[1] + " at", oblist, ".");
     all2act(" laughs" + how[1] + " at", oblist, 0, how[1]);
     target(" laughs" + how[1] + " at you.", oblist, how[1]);
+    return 1;
+}
+
+int
+lean(string str)
+{
+    object *oblist;
+    string *how;
+
+    how = parse_adverb_with_space(str, "tiredly", 0);
+
+    oblist = parse_this(how[0], "[on] [against] [the] %i", ACTION_CONTACT | ACTION_MACTIVITY);
+
+    if (!sizeof(oblist))
+    {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
+        notify_fail("Lean [how] on whom/what?\n");
+        return 0;
+    }
+
+    actor("You lean" + how[1] + " on", oblist);
+    all2actbb(" leans" + how[1] + " on", oblist, "", how[1],
+        ACTION_CONTACT | ACTION_MACTIVITY);
+    targetbb(" leans" + how[1] + " on you.", oblist, how[1],
+        ACTION_CONTACT | ACTION_MACTIVITY);
     return 1;
 }
 
@@ -3239,6 +3468,11 @@ leer(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Leer [how] at whom/what?\n");
         return 0;
     }
@@ -3280,7 +3514,6 @@ lick(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Lick whom/what [how]?\n");
         return 0;
     }
@@ -3318,6 +3551,11 @@ listen(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Listen [how] to whom/what?\n");
         return 0;
     }
@@ -3343,7 +3581,6 @@ love(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Love whom/what?\n");
         return 0;
     }
@@ -3371,7 +3608,6 @@ melt(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Melt in whose arms?\n");
         return 0;
     }
@@ -3397,8 +3633,8 @@ moan(string str)
     }
 
     SOULDESC("moaning" + str);
-    write("You start to moan" + str + ".\n");
-    all(" starts to moan" + str + ".", str);
+    write("You " + (str == NO_ADVERB ? "start to " : "") + "moan" + str + ".\n");
+    all((str == NO_ADVERB ? " starts to moan" : " moans") + str + ".", str);
     return 1;
 }
 
@@ -3422,6 +3658,11 @@ mourn(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Mourn [how] for whom/what?\n");
         return 0;
     }
@@ -3459,6 +3700,11 @@ mumble(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         SOULDESC("mumbling about something");
         write("You mumble " + str + "\n");
         all(" mumbles " + str);
@@ -3475,6 +3721,43 @@ mumble(string str)
 }
 
 int
+narrow(string str)
+{
+    object *oblist;
+    string *how;
+
+    how = parse_adverb_with_space(str, "suspiciously", 0);
+
+    if (!stringp(how[0]))
+    {
+        write("You narrow your eyes" + how[1] + ".\n");
+        allbb(" narrows " + this_player()->query_possessive() +
+	    " eyes" + how[1] + ".", how[1]);
+        return 1;
+    }
+
+    oblist = parse_this(how[0], "[my] [eyes] [at] [the] %l");
+
+    if (!sizeof(oblist))
+    {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
+        notify_fail("Narrow [eyes] [how] at whom/what?\n");
+        return 0;
+    }
+
+    actor("You narrow your eyes" + how[1] + " at", oblist);
+    all2actbb(" narrows " + this_player()->query_possessive() + " eyes" +
+        how[1] + " at", oblist, 0, how[1]);
+    targetbb(" narrows " + this_player()->query_possessive() + " eyes" +
+        how[1] + " at you.", oblist, how[1]);
+    return 1;
+}
+
+int
 nibble(string str)
 {
     object *oblist;
@@ -3488,7 +3771,6 @@ nibble(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Nibble on whose ear?\n");
         return 0;
     }
@@ -3521,6 +3803,11 @@ nod(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Nod [how] at whom/what?\n");
         return 0;
     }
@@ -3536,8 +3823,11 @@ int
 nudge(string str)
 {
     object *oblist;
+    string *how;
 
-    oblist = parse_this(str, "[the] %i", ACTION_CONTACT | ACTION_VISUAL);
+    how = parse_adverb_with_space(str, BLANK_ADVERB, 1);
+
+    oblist = parse_this(how[0], "[the] %i", ACTION_CONTACT | ACTION_VISUAL);
 
     if (!sizeof(oblist))
     {
@@ -3546,14 +3836,15 @@ nudge(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Nudge whom/what?\n");
         return 0;
     }
 
-    actor("You nudge", oblist);
-    all2act(" nudges", oblist, "", ACTION_CONTACT | ACTION_VISUAL);
-    target(" nudges you.", oblist, "", ACTION_CONTACT | ACTION_VISUAL);
+    actor("You nudge", oblist, how[1] + ".");
+    all2act(" nudges", oblist, how[1] + ".", how[1],
+        ACTION_CONTACT | ACTION_VISUAL);
+    target(" nudges you" + how[1] + ".", oblist, how[1],
+	ACTION_CONTACT | ACTION_VISUAL);
     return 1;
 }
 
@@ -3576,7 +3867,6 @@ nuzzle(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Nuzzle whom [how]?\n");
         return 0;
     }
@@ -3718,7 +4008,6 @@ pat(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Pat [whom] [where]?\n");
         return 0;
     }
@@ -3753,6 +4042,11 @@ peer(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Peer [how] at whom/what?\n");
         return 0;
     }
@@ -3787,7 +4081,6 @@ pet(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Pet whom [how]?\n");
         return 0;
     }
@@ -3842,7 +4135,6 @@ pinch(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Pinch [whom] [where]?\n");
         return 0;
     }
@@ -3962,7 +4254,6 @@ poke(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Poke [whom] [where]?\n");
         return 0;
     }
@@ -4000,6 +4291,12 @@ ponder(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
+
         SOULDESC("pondering about something");
         write("You ponder " + str + "\n");
         all(" ponders " + str);
@@ -4029,7 +4326,6 @@ pounce(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Pounce on whom?\n");
         return 0;
     }
@@ -4063,6 +4359,40 @@ pout(string str)
 }
 
 int
+protest(string str)
+{
+    object *oblist;
+    string *how;
+
+    how = parse_adverb_with_space(str, "vehemently", 0);
+
+    if (!stringp(how[0]))
+    {
+        write("You protest" + how[1] + ".\n");
+        allbb(" protests" + how[1] + ".", how[1]);
+        return 1;
+    }
+
+    oblist = parse_this(how[0], "[against] [the] %l");
+
+    if (!sizeof(oblist))
+    {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
+        notify_fail("Protest [how] against whom/what?\n");
+        return 0;
+    }
+
+    actor("You protest" + how[1] + " against", oblist);
+    all2actbb(" protests" + how[1] + " against", oblist, 0, how[1]);
+    targetbb(" protests" + how[1] + " against you.", oblist, how[1]);
+    return 1;
+}
+
+int
 puke(string str)
 {
     object *oblist;
@@ -4084,7 +4414,6 @@ puke(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Puke on whom/what?\n");
         return 0;
     }
@@ -4132,6 +4461,64 @@ roar(string str)
 }
 
 int
+raise(string str)
+{
+    object *oblist;
+    string *how;
+    int attrs = ACTION_VISUAL | ACTION_LACTIVITY;
+
+    how = parse_adverb_with_space(str, NO_DEFAULT_ADVERB, 1);
+
+    if (!stringp(how[0]) || (str == "hand"))
+    {
+        if (how[1] == NO_DEFAULT_ADVERB_WITH_SPACE)
+	{
+	    how[1] = NO_ADVERB;
+	}
+
+        write("You raise your hand" + how[1] + ".\n");
+        allbb(" raises " + this_player()->query_possessive() +
+	     " hand" + how[1] + ".", how[1], attrs);
+        return 1;
+    }
+
+    oblist = parse_this(how[0], "[the] %i", attrs);
+
+    if (!sizeof(oblist))
+    {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
+        notify_fail("Raise what [how]?\n");
+        return 0;
+    }
+
+    /* Don't allow livings to be raised. */
+    if (living(oblist[0]))
+    {
+        notify_fail("You cannot raise " +
+	    oblist[0]->query_the_name(this_player()) + ".\n");
+	return 0;
+    }
+    if (environment(oblist[0]) != this_player())
+    {
+        notify_fail("You must carry something to raise it.\n");
+	return 0;
+    }
+
+    if (how[1] == NO_DEFAULT_ADVERB_WITH_SPACE)
+    {
+        how[1] = ADD_SPACE_TO_ADVERB("triumphantly");
+    }
+
+    actor("You raise", oblist, how[1] + ".");
+    all2actbb(" raises", oblist, how[1] + ".", how[1], attrs);
+    return 1;
+}
+
+int
 rolleyes(string str)
 {
     str = check_adverb_with_space(str, "in exasperation");
@@ -4165,7 +4552,6 @@ ruffle(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Ruffle whom [how]?\n");
         return 0;
     }
@@ -4194,6 +4580,11 @@ scold(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Scold the hell out of whom/what?\n");
         return 0;
     }
@@ -4226,6 +4617,11 @@ scowl(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Scowl [how] at whom/what?\n");
         return 0;
     }
@@ -4246,7 +4642,7 @@ scratch(string str)
     string location;
     int    size;
 
-    zones = ({ "head", "chin", "back", "behind", "nose", "ear" });
+    zones = ({ "head", "chin", "back", "behind", "neck", "nose", "ear" });
 
     str = (strlen(str) ? lower_case(str) : "head");
     if (member_array(str, zones) != -1)
@@ -4276,6 +4672,11 @@ scratch(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Scratch [whom] [where]?\n");
         return 0;
     }
@@ -4290,8 +4691,6 @@ int
 scream(string str)
 {
     object *rooms, troom;
-    int    index;
-    int    size;
 
     if (stringp(str))
     {
@@ -4304,13 +4703,10 @@ scream(string str)
         return 0;
     }
 
-    rooms = find_neighbour( ({ }), ({ troom }), DEPTH) - ({ troom });
-
-    index = -1;
-    size = sizeof(rooms);
-    while(++index < size)
+    rooms = FIND_NEIGHBOURS(troom, DEPTH);
+    foreach(object room: rooms)
     {
-        tell_room(rooms[index], "@@shout_name:" + CMD_LIVE_SPEECH +
+        tell_room(room, "@@shout_name:" + CMD_LIVE_SPEECH +
             "@@ screams loudly!\n", this_player());
     }
 
@@ -4360,7 +4756,6 @@ shake(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Shake hands with whom?\n");
         return 0;
     }
@@ -4461,7 +4856,6 @@ show(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Show the " + obj->short() +
             (covertly ? " covertly" : "") + " to whom?\n");
         return 0;
@@ -4574,7 +4968,6 @@ slap(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Slap whom/what?\n");
         return 0;
     }
@@ -4586,9 +4979,12 @@ slap(string str)
         return 1;
     }
 
-    actor("You slap", oblist);
-    all2act(" slaps", oblist, "", attrs);
-    target(" slaps you!", oblist, "", attrs);
+    str = ((sizeof(oblist) == 1) ?
+        (oblist[0]->query_possessive() + " face.") : "their faces.");
+
+    actor("You slap", oblist, " in " + str);
+    all2act(" slaps", oblist, " in " + str, attrs);
+    target(" slaps you in your face!", oblist, "", attrs);
     return 1;
 }
 
@@ -4660,6 +5056,11 @@ smile(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Smile [how] at whom/what?\n");
         return 0;
     }
@@ -4691,6 +5092,11 @@ smirk(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Smirk [how] at whom/what?\n");
         return 0;
     }
@@ -4727,6 +5133,11 @@ snarl(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Snarl [how] at whom/what?\n");
         return 0;
     }
@@ -4758,12 +5169,17 @@ sneer(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Sneer [how] at whom/what?\n");
         return 0;
     }
 
     SOULDESC("sneering" + how[1]);
-    actor("You sneer" + how[1] + " at", oblist,".");
+    actor("You sneer" + how[1] + " at", oblist, ".");
     all2actbb(" sneers" + how[1] + " at", oblist, 0, how[1]);
     targetbb(" sneers" + how[1] + " at you.", oblist, how[1]);
     return 1;
@@ -4833,6 +5249,42 @@ snore(string str)
 }
 
 int
+snort(string str)
+{
+    object *oblist;
+    string *how;
+
+    how = parse_adverb_with_space(str, "disdainfully", 0);
+
+    if (!stringp(how[0]))
+    {
+        SOULDESC("snorting" + how[1]);
+        write("You snort" + how[1] + ".\n");
+        allbb(" snorts" + how[1] + ".", how[1]);
+        return 1;
+    }
+
+    oblist = parse_this(how[0], "[at] [the] %i");
+
+    if (!sizeof(oblist))
+    {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
+        notify_fail("Snort [how] at whom/what?\n");
+        return 0;
+    }
+
+    SOULDESC("snorting" + how[1]);
+    actor("You snort" + how[1] + " at", oblist);
+    all2actbb(" snorts" + how[1] + " at", oblist, 0, how[1]);
+    targetbb(" snorts" + how[1] + " at you.", oblist, how[1]);
+    return 1;
+}
+
+int
 snuggle(string str)
 {
     object *oblist;
@@ -4847,7 +5299,6 @@ snuggle(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Snuggle up to whom/what?\n");
         return 0;
     }
@@ -4887,6 +5338,11 @@ spank(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Spank whom/what [how]?\n");
         return 0;
     }
@@ -4921,7 +5377,6 @@ spit(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Spit at whom/what?\n");
         return 0;
     }
@@ -4950,7 +5405,6 @@ squeeze(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Squeeze whom/what [how]?\n");
         return 0;
     }
@@ -4978,6 +5432,22 @@ squirm(string str)
 }
 
 int
+stagger(string str)
+{
+    str = check_adverb_with_space(str, "dizzily");
+
+    if (str == NO_ADVERB_WITH_SPACE)
+    {
+        notify_fail("Stagger how?\n");
+        return 0;
+    }
+
+    write("You stagger" + str + ".\n");
+    all(" staggers" + str + ".", str);
+    return 1;
+}
+
+int
 stare(string str)
 {
     object *oblist;
@@ -4997,6 +5467,11 @@ stare(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Stare at whom/what?\n");
         return 0;
     }
@@ -5017,6 +5492,11 @@ startle(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Startle whom?\n");
         return 0;
     }
@@ -5063,6 +5543,11 @@ stick(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Stick your tongue out [how] at whom/what?\n");
         return 0;
     }
@@ -5109,7 +5594,6 @@ strangle(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Strangle whom/what [how]?\n");
         return 0;
     }
@@ -5250,6 +5734,11 @@ swoon(string str)
     oblist = parse_this(how[0], "[over] [the] %l", ACTION_CONTACT );
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Swoon [how] [over whom]?\n");
         return 0;
     }
@@ -5276,7 +5765,6 @@ tackle(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Tackle whom?\n");
         return 0;
     }
@@ -5340,7 +5828,6 @@ tap(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Tap [whom] [how]?\n");
         return 0;
     }
@@ -5376,6 +5863,11 @@ tease(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Tease whom/what" + how[1] + "?\n");
         return 0;
     }
@@ -5398,6 +5890,11 @@ thank(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Thank whom/what [how]?\n");
         return 0;
     }
@@ -5474,7 +5971,6 @@ threaten(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Threaten whom/what [how]?\n");
         return 0;
     }
@@ -5527,6 +6023,11 @@ thumb(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Hold your thumb " + direction + " at whom?\n");
         return 0;
     }
@@ -5594,12 +6095,15 @@ tickle(string str)
             return 1;
 
         default:
-            notify_fail("Tickle whom [where / how]? Rather... this should " +
-                "not happen. Please make a sysbugreport about this.\n");
-            return 0;
+            /* Intentional fallthrough in case it is a special parse name.*/
+            if (!IN_ARRAY(str, PARSE_SPECIAL_NAMES))
+            {
+                write("Tickle whom [where / how]? Rather... this should " +
+                    "not happen. Please make a sysbugreport about this.\n");
+                return 1;
+            }
         }
-
-        return 1;
+        /* No return 1 for the fallthrough. */
     }
 
     if (strlen(parse_msg))
@@ -5619,7 +6123,6 @@ tickle(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Tickle whom [how / where]?\n");
         return 0;
     }
@@ -5649,8 +6152,11 @@ public int
 touch(string str)
 {
     object *oblist;
+    string *how;
 
-    oblist = parse_this(str, "[the] %i", ACTION_CONTACT | ACTION_LACTIVITY);
+    how = parse_adverb_with_space(str, BLANK_ADVERB, 1);
+
+    oblist = parse_this(how[0], "[the] %i", ACTION_CONTACT | ACTION_LACTIVITY);
 
     if (!sizeof(oblist))
     {
@@ -5659,16 +6165,22 @@ touch(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Touch whom/what?\n");
         return 0;
     }
 
-    actor("You touch", oblist, ".");
-    all2act(" touches", oblist, ".", 0, ACTION_CONTACT | ACTION_LACTIVITY);
-    target(" touches you.", oblist, 0, ACTION_CONTACT | ACTION_LACTIVITY);
+    actor("You touch", oblist, how[1] + ".");
+    all2act(" touches", oblist, how[1] + ".", how[1],
+        ACTION_CONTACT | ACTION_LACTIVITY);
+    target(" touches you" + how[1] + ".", oblist, how[1],
+	ACTION_CONTACT | ACTION_LACTIVITY);
     return 1;
 }
+
+
+
+
+
 
 int
 tremble(string str)
@@ -5677,7 +6189,7 @@ tremble(string str)
 
     if (str == NO_ADVERB_WITH_SPACE)
     {
-        notify_fail("Whimper how?\n");
+        notify_fail("Tremble how?\n");
         return 0;
     }
 
@@ -5713,7 +6225,6 @@ trust(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Trust whom/what [how]?\n");
         return 0;
     }
@@ -5805,6 +6316,11 @@ wait(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Wait [how] for whom/what?\n");
         return 0;
     }
@@ -5839,6 +6355,11 @@ wave(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Wave [how] to whom/what?\n");
         return 0;
     }
@@ -5905,6 +6426,11 @@ whine(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Whine [how] at whom/what?\n");
         return 0;
     }
@@ -5935,6 +6461,11 @@ whistle(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Whistle [how] at whom/what?\n");
         return 0;
     }
@@ -5948,6 +6479,49 @@ whistle(string str)
 int
 wiggle(string str)
 {
+    int attrs = ACTION_VISUAL | ACTION_LACTIVITY;
+    string *how;
+    object *oblist;
+
+    if ((str == "finger") || wildmatch("finger *", str))
+    {
+        str = str[7..];
+        how = parse_adverb_with_space(str, BLANK_ADVERB, 0);
+
+        if (!stringp(how[0]))
+        {
+            write("You wiggle your finger" + how[1] + ".\n");
+            allbb(" wiggles " +  this_player()->query_possessive() +
+                " finger" + how[1] + ".", how[1]);
+            return 1;
+        }
+
+        oblist = parse_this(how[0], "[at] [the] %i", attrs);
+
+        if (!sizeof(oblist))
+        {
+            if (strlen(parse_msg))
+            {
+                write(parse_msg);
+                return 1;
+            }
+            notify_fail("Wiggle your finger at whom/what?\n");
+            return 0;
+        }
+
+        actor("You wiggle your finger" + how[1] + " at", oblist);
+        all2act(" wiggles " + this_player()->query_possessive() +
+            " finger" + how[1] + " at", oblist, "", "", attrs);
+        target(" wiggles " + this_player()->query_possessive() +
+            " finger" + how[1] + " at you.", oblist, "", attrs);
+        return 1;
+    }
+
+    if ((str == "bottom") || wildmatch("bottom *", str))
+    {
+        str = str[7..];
+    }
+
     str = check_adverb_with_space(str, BLANK_ADVERB);
 
     if (str == NO_ADVERB_WITH_SPACE)
@@ -5996,6 +6570,11 @@ wink(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Wink [how] at whom/what?\n");
         return 0;
     }
@@ -6052,6 +6631,11 @@ worry(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Worry about whom/what?\n");
         return 0;
     }
@@ -6077,7 +6661,6 @@ worship(string str)
             write(parse_msg);
             return 1;
         }
-
         notify_fail("Worship whom/what?\n");
         return 0;
     }
@@ -6127,6 +6710,11 @@ yawn(string str)
 
     if (!sizeof(oblist))
     {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
         notify_fail("Yawn at whom/what?\n");
         return 0;
     }
@@ -6142,6 +6730,34 @@ yawn(string str)
         "they are") + ".");
     targetbb(" yawns at you. You must be boring to " +
         this_player()->query_objective() + ".", oblist);
+    return 1;
+}
+
+int
+yell(string str)
+{
+    object *oblist;
+    string *how;
+
+    how = parse_adverb_with_space(str, "angrily", 0);
+
+    oblist = parse_this(how[0], "[at] [the] %l");
+
+    if (!sizeof(oblist))
+    {
+        if (strlen(parse_msg))
+        {
+            write(parse_msg);
+            return 1;
+        }
+        notify_fail("Yell [how] at whom/what?\n");
+        return 0;
+    }
+
+    SOULDESC("yelling" + how[1]);
+    actor("You yell" + how[1] + " at", oblist);
+    all2actbb(" yells" + how[1] + " at", oblist, 0, how[1]);
+    targetbb(" yells" + how[1] + " at you.", oblist, how[1]);
     return 1;
 }
 

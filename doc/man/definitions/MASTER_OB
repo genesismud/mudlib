@@ -1,4 +1,9 @@
-*Defined in /sys/macros.h
+Definition : (string) MASTER_OB(object obj)
 
-MASTER_OB(ob)	Returns the master object to a cloned copy
+Defined in : <macros.h>
 
+Description: Returns the file name (without .c) of the object 'obj'.
+
+Example    : "/d/Domain/area/obj/sword"
+
+See also   : MASTER

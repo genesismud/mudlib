@@ -30,9 +30,16 @@ create_workroom()
 {
     set_short(NAME_WIZ + "'s workroom");
     set_long("This is " + NAME_WIZ + "'s workroom.\n");
-    add_exit("@@goto_start", "startloc", 0);
+    add_exit("@@goto_start@@", "startloc", 0);
+    add_exit("/d/Genesis/wiz/lounge", "lounge");
+
+    string domain = SECURITY->query_wiz_dom(creator(this_object()));
+    if (domain && strlen(domain) > 0 && domain != "Wiz")
+        add_exit("/d/" + domain + "/workroom", lower_case(domain));
+
     if (SECURITY->query_domain_number(creator(this_object()))>=0)
 	load_board();
+
     add_prop(ROOM_I_INSIDE, 1);
 }    
 

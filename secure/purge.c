@@ -22,18 +22,30 @@
 inherit "/std/object";
 
 #include <formulas.h>
+#include <macros.h>
 #include <mail.h>
+#include <options.h>
 #include <std.h>
+#include <time.h>
 
 #define MAX_PURGE       (50)
-#define PURGE_LOG       ("/syslog/log/PURGE")
-#define SECS_PER_DAY    (86400)   /* seconds          */
-#define ONE_DAY         (43200)   /* heartbeats       */
-#define ONE_HOUR        (1800)    /* heartbeats       */
-#define ONE_MINUTE      (30)      /* heartbeats       */
-#define MINIMUM_LIMIT   (100 * SECS_PER_DAY)
-#define ALPHABET        ("abcdefghijklmnopqrstuvwxyz")
-#define PLAYER_FILES(c) ("/players/" + (c) + "/*")
+#define PURGE_LOG       ("/syslog/log/purge/PURGE")
+#define PLAYER_FILES(c) (PLAYER_FILE_DIR + (c) + "/*")
+/* One year of idleness for each day of playing age. */
+#define AGE_PLAY_FACTOR (365)
+
+#define LOGIN_365_DAYS  (31536000) /* seconds */
+#define LOGIN_180_DAYS  (15552000) /* seconds */
+#define LOGIN_90_DAYS   (7776000)  /* seconds */
+#define LOGIN_60_DAYS   (5184000)  /* seconds */
+#define LOGIN_30_DAYS   (2592000)  /* seconds */
+#define SECS_PER_DAY    (86400)    /* seconds */
+#define AGE_TEN_DAYS    (432000)   /* heartbeats */
+#define AGE_ONE_DAY     (43200)    /* heartbeats */
+#define AGE_SIX_HOURS   (10800)    /* heartbeats */
+#define AGE_ONE_HOUR    (1800)     /* heartbeats */
+#define AGE_TEN_MINUTES (300)      /* heartbeats */
+#define AGE_ONE_MINUTE  (30)       /* heartbeats */
 
 /*
  * Static global variables.
@@ -44,11 +56,15 @@ inherit "/std/object";
 private static object  purger;
 private static string *purge_files;
 private static string  purged_wizards;
+private static string  notpurged;
 private static string  purged_mortals;
 private static string  strange_files;
+private static string  purge_log;
 private static int     num_wizards;
+private static int     num_notpurged;
 private static int     num_mortals;
 private static int     num_strange;
+private static int     num_deleted;
 private static int     purge_index;
 private static int     tested_files;
 
@@ -62,7 +78,7 @@ private string  name;       /* the name of the player             */
 private int     login_time; /* the last time the player logged in */
 private int     age_heart;  /* the of the player in heartbeats    */
 private int    *acc_exp;    /* the acc-experience of the player   */
-private int     restricted; /* suspended or self-restricted       */
+private mapping m_vars;     /* suspended or self-restricted       */
 private mapping m_seconds;  /* registered seconds of the player   */
 
 /*
@@ -74,7 +90,10 @@ create_object()
 {
     set_short("another hole in the donut");
 
-    seteuid(ROOT_UID);
+    purge_log = PURGE_LOG + "-" + TIME2FORMAT(time(), "yyyymmdd");
+
+    setuid();
+    seteuid(getuid());
 }
 
 /*
@@ -88,43 +107,91 @@ report_purge_done()
 {
     if (strlen(purged_wizards))
     {
-        write_file(PURGE_LOG, "Found " + num_wizards + " wizard(s) that " +
+        write_file(purge_log, "Found " + num_wizards + " wizard(s) that " +
             "have been idle too long.\nThey have not been purged. You shall " +
             "have to demote them manually:\n\n" + purged_wizards + "\n");
     }
     else
     {
-        write_file(PURGE_LOG, "No overly idle wizards found this time.\n\n");
+        write_file(purge_log, "No overly idle wizards found this time.\n\n");
+    }
+
+    if (strlen(notpurged))
+    {
+        write_file(purge_log, "Found " + num_notpurged + " experienced/aged " +
+	    "mortal(s) that have have been idle too long.\nThey have NOT " +
+	    "been purged:\n\n" +
+            notpurged + "\n");
+    }
+    else
+    {
+        write_file(purge_log,
+            "No overly idle experienced/aged mortal players found this time.\n\n");
     }
 
     if (strlen(purged_mortals))
     {
-        write_file(PURGE_LOG, "Found " + num_mortals + " mortal(s) that " +
+        write_file(purge_log, "Found " + num_mortals + " mortal(s) that " +
             "have have been idle too long.\nThey have been purged:\n\n" +
             purged_mortals + "\n");
     }
     else
     {
-        write_file(PURGE_LOG,
+        write_file(purge_log,
             "No overly idle mortal players found this time.\n\n");
+    }
+
+    if (num_deleted)
+    {
+        write_file(purge_log, "Cleaned up " + num_deleted +
+            " old deleted player files.\n\n");
     }
 
     if (strlen(strange_files))
     {
-        write_file(PURGE_LOG, "In addition, we have found " + num_strange +
-            " files that are no normal playerfiles:\n\n" + strange_files);
+        write_file(purge_log, "In addition, we have found " + num_strange +
+            " files that are no normal playerfiles:\n\n" + strange_files +
+            "\n");
     }
 
     if (objectp(purger))
     {
-        tell_object(purger, "PURGER >> Done testing " + tested_files +
-            " files.\nPURGER >> Purged " + num_mortals + " mortal " +
-            "player(s).\nPURGER >> Found " + num_wizards + " overly idle " +
-            "wizard(s).\nPURGER >> The wizards have not been purged. Demote " +
-            "them first.\n");
+        tell_object(purger, "Purge done. Tested " + tested_files +
+	    " files and purged " + num_mortals + " mortal " +
+            "player(s).\nNot purged " + num_notpurged +
+	    " idle aged/experienced player(s).\nFound " + num_wizards +
+	    " overly idle wizard(s).\nThe wizards have not been purged. " +
+            "Demote them first.\nCleaned up " + num_deleted +
+            " deleted players.\n");
     }
 
     remove_object();
+}
+
+/*
+ * Function name: purge_deleted_files
+ * Description  : Removes all files of deleted players a while after their
+ *                deletion.
+ */
+nomask void
+purge_deleted_files()
+{
+    string *letters = explode(ALPHABET, "");
+    string *files;
+
+    foreach(string letter: letters)
+    {
+        files = get_dir(DELETED_FILE(letter) + "*.o");
+        foreach(string filename: files)
+        {
+            if (file_time(DELETED_FILE(filename)) + LOGIN_365_DAYS < time())
+            {
+                rm(DELETED_FILE(filename));
+                num_deleted++;
+            }
+        }
+    }
+    report_purge_done();
 }
 
 /*
@@ -150,20 +217,7 @@ last_date(int last_time)
 static nomask string
 player_age()
 {
-    /* measure in days. */
-    if (age_heart > ONE_DAY)
-    {
-        return ((age_heart / ONE_DAY) + " d");
-    }
-
-    /* measure in hours. */
-    if (age_heart > ONE_HOUR)
-    {
-        return ((age_heart / ONE_HOUR) + " h");
-    }
-
-    /* measure in minutes */
-    return ((age_heart / ONE_MINUTE) + " m");
+    return TIME2STR(age_heart * F_SECONDS_PER_BEAT, 1);
 }
 
 /*
@@ -191,24 +245,9 @@ purge_one(string filename)
     string  my_name;
     string *seconds;
     int     level;
-    int     index;
-
-    /* Not a playerfile. */
-    if (extract(filename, -2) != ".o")
-    {
-        if ((extract(filename, -6) == ".o.org") &&
-            ((time() - file_time(PLAYER_FILE(filename))) > MINIMUM_LIMIT ))
-        {
-            rm(PLAYER_FILE(filename));
-            num_wizards++;
-            purged_wizards += sprintf("%-11s %-13s\n", capitalize(filename),
-                last_date(file_time(PLAYER_FILE(filename))));
-        }
-
-        strange_files += (filename + "\n");
-        num_strange++;
-        return;
-    }
+    int     last_login;
+    int     high_limit;
+    int     junior;
 
     /* Reset the information we use. */
     name = 0;
@@ -235,66 +274,105 @@ purge_one(string filename)
         return;
     }
 
-    /* Player has been logged in recently, so hands off. */
-    if ((time() - login_time) < MINIMUM_LIMIT)
+    if (!login_time)
     {
+        rm(PLAYER_FILE(filename));
+        purged_mortals += sprintf("%-11s %-13s (unfinished ghost)\n",
+            capitalize(name), last_date(login_time));
+        num_mortals++;
         return;
     }
+
+    /* How long ago was their last login. */
+    last_login = time() - login_time;
 
     /* Don't hurt players that are suspended by the administration or that have
      * restricted themselves.
      */
-    if (restricted)
+    if (mappingp(m_vars) && m_vars[SAVEVAR_RESTRICT])
     {
         return;
     }
+    junior = (extract(name, -2) == "jr");
 
     /* If the player is a wizard, report him but don't hurt him. */
     if ((level = SECURITY->query_wiz_rank(name)) ||
-        ((extract(name, -2) == "jr") &&
-         (level = SECURITY->query_wiz_rank(extract(name, 0, -3)))))
+        (junior && (level = SECURITY->query_wiz_rank(extract(name, 0, -3)))))
     {
-        purged_wizards += sprintf("%-11s %-10s %-13s\n", capitalize(name),
-            WIZ_RANK_NAME(level), last_date(login_time));
-        num_wizards++;
+        if ((last_login > LOGIN_365_DAYS) && !junior)
+        {
+            purged_wizards += sprintf("%-11s %-13s = %6s | %-10s\n",
+                capitalize(name), last_date(login_time), TIME2STR(last_login, 1),
+                WIZ_RANK_NAME(level));
+            num_wizards++;
+        }
         return;
     }
 
-    /* If a player is old or has a lot of experience, he can be idle just
-     * a little longer than other people.
+    /* If a player is old or has a lot of experience, he can be idle a bit
+     * longer than other people.
      */
     level = player_average();
-    if ((time() - login_time) < (MINIMUM_LIMIT +
-            (((level / 3) + (age_heart / ONE_DAY)) * SECS_PER_DAY)))
+
+    /* Player has been logged in recently or is old/big enough, so hands off.
+    high_limit = LOGIN_365_DAYS + (((level / 3) + (age_heart / AGE_ONE_DAY)) * SECS_PER_DAY);
+    if ((age_heart > AGE_ONE_DAY) && (last_login < high_limit))
+     */
+
+    /* Age related checks. */
+    if ((age_heart > AGE_ONE_DAY) && (last_login < LOGIN_365_DAYS))
     {
+	return;
+    }
+    if ((age_heart > AGE_SIX_HOURS) && (last_login < LOGIN_180_DAYS))
+    {
+        return;
+    }
+    if ((age_heart > AGE_ONE_HOUR) && (last_login < LOGIN_90_DAYS))
+    {
+        return;
+    }
+    if ((age_heart > AGE_TEN_MINUTES) && (last_login < LOGIN_30_DAYS))
+    {
+        return;
+    }
+
+    /* Play for a day ... idle for a year. */
+    if (last_login < (age_heart * F_SECONDS_PER_BEAT * AGE_PLAY_FACTOR))
+    {
+        notpurged += sprintf("%-11s %-13s = %6s | %3d stat | %5s age | NoPurge Age\n",
+            capitalize(name), last_date(login_time), TIME2STR(last_login, 1),
+            level, player_age());
+        num_notpurged++;
         return;
     }
 
     /* Find out if he's a wizard second. */
-    seconds = m_indices(m_seconds);
-    for (index = 0; index < sizeof(seconds); index++)
+    seconds = SECURITY->query_seconds(name);
+    foreach(string second: seconds)
     {
-        if (SECURITY->query_wiz_rank(seconds[index]))
+        /* Advise the wizard, but registered jr's pass unnoticed. */
+        if (SECURITY->query_wiz_rank(second) && !junior)
         {
             /* Mail the confirmation. Subject, author, to, cc, body. */
             CREATE_MAIL(("Non-purging of " + capitalize(name)), "root",
-                seconds[index], "", "Your second " + capitalize(name) +
+                second, "", "Your second " + capitalize(name) +
                 " was up for purging. However, since you are a wizard, the " +
                 "deities have once again shown their benevolence.\n\n" +
                 "Last login: " + last_date(login_time) + "\n");
-            purged_mortals += sprintf("%-11s %-13s %3d %5s (%s)\n",
-                capitalize(name), last_date(login_time), level, player_age(),
-		"Second of " + capitalize(seconds[index]));
+            purged_mortals += sprintf("%-11s %-13s = %6s | %3d stat | %5s age | NoPurge second of %s\n",
+                capitalize(name), last_date(login_time), TIME2STR(last_login, 1),
+                level, player_age(), capitalize(second));
             num_mortals++;
             return;
         }
     }
 
     /* Oke.. Player has been idle too long. Lets purge him/her */
-    rm(PLAYER_FILE(filename));
-
-    purged_mortals += sprintf("%-11s %-13s %3d %5s\n", capitalize(name),
-        last_date(login_time), level, player_age());
+    SECURITY->remove_playerfile(name, "Purge", 1);
+    purged_mortals += sprintf("%-11s %-13s = %6s | %3d stat | %5s age\n",
+        capitalize(name), last_date(login_time), TIME2STR(last_login, 1),
+	level, player_age());
     num_mortals++;
 }
 
@@ -306,7 +384,7 @@ purge_one(string filename)
 static nomask void
 delayed_purge()
 {
-    int index = -1;
+    string letter;
     int limit;
 
     /* No files left to purge. Lets check the next character. */
@@ -314,28 +392,29 @@ delayed_purge()
     {
         if (++purge_index >= strlen(ALPHABET))
         {
-            report_purge_done();
+            set_alarm(2.0,0.0, purge_deleted_files);
             return;
         }
 
-        tell_object(purger, "Purging next letter (" +
-            extract(ALPHABET, purge_index, purge_index) + ").\n");
-        purge_files = get_dir(PLAYER_FILES(extract(ALPHABET, purge_index,
-            purge_index))) - ({ ".", ".." });
+        letter = extract(ALPHABET, purge_index, purge_index);
+        tell_object(purger, "Purge: " + num_mortals + " mortals, " +
+            num_wizards + " wizards. Purging letter " + capitalize(letter) + ".\n");
+        purge_files = get_dir(PLAYER_FILES(letter) + "*.o");
+        /* Don't bother about the predeath files. */
+        purge_files = filter(purge_files, &operator(!=)(".predeath.o", ) @ &extract(, -11));
     }
 
-    limit = ((sizeof(purge_files) > MAX_PURGE) ?
-        MAX_PURGE : sizeof(purge_files));
+    limit = ((sizeof(purge_files) > MAX_PURGE) ? MAX_PURGE : sizeof(purge_files));
     tested_files += limit;
 
-    while(++index < limit)
+    foreach(string filename: purge_files[..(limit-1)])
     {
-        purge_one(purge_files[index]);
+        purge_one(filename);
     }
 
     purge_files = purge_files[limit..];
 
-    set_alarm(2.0, 0.0, "delayed_purge");
+    set_alarm(2.0, 0.0, delayed_purge);
 }
 
 /*
@@ -345,44 +424,44 @@ delayed_purge()
  *                purge command or you may find your own character purged.
  * Arguments    : string str - the command line argument.
  */
-public nomask void
+public nomask int
 purge(string str)
 {
-    if ((this_interactive() != this_player()) ||
-        (SECURITY->query_wiz_rank(this_player()->query_real_name()) <
-            WIZ_ARCH))
+    if (!CALL_BY(WIZ_CMD_ARCH))
     {
         write("You are not allowed to use this command.\n");
+        return 1;
     }
 
     if (str != "players")
     {
         write("Syntax: 'purge players'.\n");
-        return;
+        return 1;
     }
 
-    if (file_size(PURGE_LOG) > 0)
+    if (file_size(purge_log) > 0)
     {
-        rename(PURGE_LOG, (PURGE_LOG + ".old"));
+        rename(purge_log, (purge_log + ".old"));
     }
 
     purger         = this_player();
     purge_files    = ({ });
     num_wizards    = 0;
     num_mortals    = 0;
+    num_notpurged  = 0;
     num_strange    = 0;
     tested_files   = 0;
     purge_index    = -1;
     purged_wizards = "";
     purged_mortals = "";
+    notpurged      = "";
     strange_files  = "";
 
-    write("Oke. Purge started. You shall be notified when the purge is " +
-        "done. There may be a little lag since we have to use alarms.\n");
-
-    write_file(PURGE_LOG, "Purge executed by " +
+    write("Purge started. You shall be notified when the purge is done.\n");
+    write_file(purge_log, "Purge executed by " +
         capitalize(purger->query_real_name()) + ".\nDate: " +
         ctime(time()) + ".\n\n");
 
     delayed_purge();
+    return 1;
 }

@@ -13,6 +13,8 @@ inherit "/std/object";
 
 //	Prototypes
 public void stop_res();
+public string query_res_type();
+public string query_subloc_description(object on, object for_obj);
 
 //	Global variables
 mixed	Res_Type;	/* The type of resistance */
@@ -33,6 +35,12 @@ create_resistance()
     add_prop(OBJ_I_VOLUME, 0);
     add_prop(OBJ_I_VALUE, 0);
     set_no_show();
+}
+
+string
+query_subloc_name() 
+{
+    return "_subloc_resistance" + query_res_type();
 }
 
 /*
@@ -65,6 +73,35 @@ enter_env(object to, object from)
     }
 
     ::enter_env(to, from);
+
+    if (interactive(to))
+    {
+        to->add_subloc(query_subloc_name(), this_object());        
+    }
+}
+
+public void
+move_subloc_owner(object player, object current_subloc_owner)
+{
+    object * others = filter(all_inventory(player), &operator(!=)(0) @ &->query_magic_protection(query_res_type(), player)) - ({ current_subloc_owner });
+    int bMovedSublocOwner = 0;
+    if (sizeof(others) > 0) 
+    {
+        foreach (object other : others)
+        {
+            if (strlen(other->show_subloc(query_subloc_name(), player, player)))
+            {
+                // We re-assign the subloc to another resistance object of the same type
+                player->add_subloc(query_subloc_name(), other);
+                bMovedSublocOwner = 1;
+                break;
+            }
+        }
+    } 
+    if (!bMovedSublocOwner)
+    {
+        player->remove_subloc(query_subloc_name());
+    }
 }
 
 /*
@@ -80,6 +117,15 @@ leave_env(object from, object to)
       	from->remove_magic_effect(this_object());
     
     ::leave_env(from, to);
+
+    if (interactive(from))
+    {
+        object subloc_obj = from->query_subloc_obj(query_subloc_name());
+        if (subloc_obj == this_object())
+        {
+            move_subloc_owner(from, subloc_obj);            
+        }
+    }
 }
 
 /*
@@ -175,9 +221,90 @@ query_magic_protection(string prop, object what)
     return 0;
 }
 
+public string
+show_subloc(string subloc, object on, object for_obj)
+{
+    string data;
+
+    if (on->query_prop(TEMP_SUBLOC_SHOW_ONLY_THINGS))
+        return "";
+
+    if (subloc != query_subloc_name())
+    {
+        return "";
+    }
+    
+    return query_subloc_description(on, for_obj);
+}
+
 /*
- * Function name:
- * Description:
- * Arguments:
- * Returns:
+ * Function name: query_subloc_description
+ * Description:   Each resistance type is associated with a descriptive
+ *                effect. This function captures just the strings
+ *                descriptions. It can be used by the actual subloc
+ *                function.
  */
+public string
+query_resistance_description(string resistance_type)
+{
+    string subloc;
+    switch(resistance_type)
+    {
+    case MAGIC_I_RES_ACID:
+        subloc = "skin is covered with a glossy substance.\n";
+        break;
+    case MAGIC_I_RES_AIR:
+        subloc = "aura is of calm and stillness.\n";
+        break;
+    case MAGIC_I_RES_COLD:
+        subloc = "flesh is radiating a strange heat.\n";
+        break;
+    case MAGIC_I_RES_DEATH:
+        subloc = "countenance exhudes a mystical sense of well-being.\n";
+        break;
+    case MAGIC_I_RES_EARTH:
+        subloc = "body is unnaturally stiff and rigid.\n";
+        break;
+    case MAGIC_I_RES_ELECTRICITY:
+        subloc = "skin is coated with a smooth springy substance.\n";
+        break;
+    case MAGIC_I_RES_FIRE:
+        subloc = "flesh is covered with tiny ice crystals.\n";
+        break;
+    case MAGIC_I_RES_ILLUSION:
+        subloc = "eyes vibrate strangely.\n";
+        break;
+    case MAGIC_I_RES_LIFE:
+        subloc = "body is cast in a dark pall of gloom.\n";
+        break;
+    case MAGIC_I_RES_MAGIC:
+        subloc = "aura is utterly silent.\n";
+        break;
+    case MAGIC_I_RES_POISON:
+        subloc = "veins pulse with unnatural verve.\n";
+        break;
+    case MAGIC_I_RES_WATER:
+        subloc = "skin has taken on an unusual texture.\n";
+        break;
+    default:
+        subloc = "appearance seems somehow strange.\n";
+    }
+    return subloc;
+}
+
+/*
+ * Function:    query_subloc_description
+ * Description: When someone examines a person with this spell effect,
+ *              they will see whatever is returned by this function.
+ */
+public string
+query_subloc_description(object on, object for_obj)
+{
+    string subloc = query_resistance_description(query_res_type());
+    if (for_obj == on) {
+        subloc = "Your " + subloc;
+    } else {
+        subloc = capitalize(on->query_possessive()) + " " + subloc;
+    }
+    return subloc;
+}

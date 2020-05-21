@@ -4,7 +4,6 @@
  * This object holds the mage wizards commands.
  * The following commands are supported:
  *
- * - snort
  */
 
 #pragma no_clone
@@ -48,9 +47,7 @@ get_soul_id()
 nomask mapping
 query_cmdlist()
 {
-    return ([
-	     "snort"  : "snort"
-	     ]);
+    return ([ ]);
 }
 
 /* **************************************************************************
@@ -58,58 +55,3 @@ query_cmdlist()
  * same order as in the function name list.
  * **************************************************************************/
 
-/* **************************************************************************
- * snort - snort at peasants
- */
-nomask int
-snort(string name)
-{
-    object *snortees;
-
-    CHECK_SO_MAGE;
-
-    if (WIZ_CHECK != WIZ_MAGE)
-    {
-	notify_fail("No one can snort like a Mage. " +
-		    "You would only look ridiculous if you tried.\n");
-	return 0;
-    }
-
-    if (!stringp(name))
-    {
-	notify_fail("Snort at who?\n");
-	return 0;
-    }
-
-    snortees = parse_this(name, "[the] %l");
-    if (!sizeof(snortees))
-    {
-	notify_fail("Snort at who?\n");
-	return 0;
-    }
-
-    if (sizeof(snortees) > 1)
-    {
-	notify_fail("Snorting takes a lot of concentration. You can only " +
-	    "snort at one person at a time.\n");
-	return 0;
-    }
-
-    if (SECURITY->query_wiz_rank(snortees[0]->query_real_name()) < WIZ_MAGE)
-    {
-	say(QCTNAME(this_player()) + " snorts disdainfully at " +
-	    QTNAME(snortees[0]) + ".\n", ({ this_player(), snortees[0] }) );
-	tell_object(snortees[0], this_player()->query_The_name(snortees[0]) +
-	    " snorts disdainfully at you.\n");
-	write("You snort disdainfully at " +
-	    snortees[0]->query_the_name(this_player()) + ".\n");
-    }
-    else
-    {
-	write(snortees[0]->query_The_name(this_player()) +
-	    " looks quite respectable and does not deserve that kind of " +
-	    "treatment.\n");
-    }
-
-    return 1;
-}

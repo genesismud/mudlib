@@ -82,6 +82,15 @@
  *            int    range - the range of the number [ 0 .. (range - 1) ]
  */
 #define NAME_TO_RANDOM(name, seed, range) \
-    (int)call_other(MATH_FILE, "name_to_random", (name), (seed), (range))
+    ((int)MATH_FILE->name_to_random((name), (seed), (range)))
+
+/*
+ * RANDOM_STRING
+ *
+ * This will create a random string of 'length' characters using upper
+ * and lower case letters and numbers. Example: 8 -> "a8To0PlX"
+ */
+#define RANDOM_STRING(length) \
+    ((string)MATH_FILE->random_string(length))
 
 #endif MATH_DEF

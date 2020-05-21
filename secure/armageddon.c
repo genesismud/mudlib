@@ -21,16 +21,23 @@ inherit "/std/creature";
 #include <stdproperties.h>
 #include <time.h>
 
-#define PASS_ARMAGEDDON 300 /* 5 minutes*/
+#define PASS_ARMAGEDDON          300 /*  5 minutes */
+#define SHUTDOWN_TELL_HOME_LIMIT 900 /* 15 minutes */
 
 /*
  * Global variables.
  */
 static private string shutdown_shutter;
 static private string shutdown_reason;
-static private int    shutdown_delay;
+static private int    shutdown_delay; /* time left in minutes */
 static private int    shutdown_alarm;
 static private int    shutdown_manual;
+
+/*
+ * Prototypes.
+ */
+public nomask int shutdown_active();
+
 
 #define TELLALL(x) WIZ_CMD_NORMAL->tellall(x)
 
@@ -120,7 +127,6 @@ shutdown_now()
  * Function name: shutdown_dodelay
  * Description  : This function counts down the minutes until the game
  *                is finally shut down.
- * Arguments    : int delay - the minutes left on the clock.
  */
 private nomask void
 shutdown_dodelay()
@@ -204,6 +210,8 @@ shutdown_started()
 public nomask void
 start_shutdown(string reason, int delay, string shutter)
 {
+    mixed *alarm;
+
     if (previous_object() != find_object(SECURITY))
     {
 	return;
@@ -212,12 +220,37 @@ start_shutdown(string reason, int delay, string shutter)
     /* When shutdown is started, we destruct the queue and tell the people
      * to get back later.
      */
-    QUEUE->tell_queue("\nThe game is about to reboot in a few minutes.\n" +
+    QUEUE->tell_queue("\nThe game is going to reboot.\n" +
 	"Please reconnect when the game is back up.\n" +
 	"It will take about ten minutes to reboot the game.\n\n");
     (QUEUE->queue_list(0))->remove_object();
 
     set_this_player(this_object());
+
+    /* If we're already shutting down, check to advance the time. */
+    if (shutdown_active())
+    {
+        alarm = get_alarm(shutdown_alarm);
+        if (delay < ftoi(alarm[2] / 60.0))
+        {
+            shutdown_delay = delay;
+
+            if (shutter == ROOT_UID)
+            {
+                TELLALL("The shutdown is advanced to " +
+                    (delay ? CONVTIME(shutdown_delay * 60) : " NOW") + ".\n");
+            }
+            else
+            {
+                TELLALL(capitalize(shutter) +
+                    " asked me advance the shutdown to " +
+                    (delay ? CONVTIME(shutdown_delay * 60) : " NOW") + ".\n");
+            }
+            remove_alarm(shutdown_alarm);
+            shutdown_dodelay();
+        }
+        return;
+    }
 
     if (shutter == ROOT_UID)
     {
@@ -388,7 +421,7 @@ shutdown_active()
  * Function name: shutdown_time
  * Description  : This function returns how long it will take before the
  *                game is shut down.
- * Returns      : int - the remaining time in minutes.
+ * Returns      : int - the remaining time in seconds.
  */
 public nomask int
 shutdown_time()
@@ -430,6 +463,14 @@ catch_tell(string str)
     {
 	tell_object(this_player(), "Armageddon tells you: " +
 	    "Tell me 'home' and I will send you there.\n");
+	return;
+    }
+
+    if (shutdown_time() > SHUTDOWN_TELL_HOME_LIMIT)
+    {
+	tell_object(this_player(),
+	    "Armageddon tells you: No reason to teleport you home since " +
+	    "there is enough time still before the shutdown.\n");
 	return;
     }
 

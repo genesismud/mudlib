@@ -16,7 +16,10 @@
 #ifndef SYS_ADVERBS_DEFINITIONS
 #define SYS_ADVERBS_DEFINITIONS
 
+/* Need this since it's also used in <living_desc.h> */
+#ifndef ADVERBS_FILE
 #define ADVERBS_FILE "/sys/global/adverbs.c"
+#endif
 
 /*
  * FULL_ADVERB(string pattern)
@@ -108,22 +111,21 @@
     (strlen(s) ? (((s)[0] == " ") ? ((s)[1..] : (s)) : "")
 
 /*
- * ADVERB_SAVE_FILE
+ * ADVERB_SAVE_FILE - This is the file with all adverbs known to the game.
+ * The file contains a sorted list with every adverb on a new line.
  *
- * This is the file with all adverbs known to the game. The file contains
- * a sorted list with every adverb on a new line.
- */
-#define ADVERB_SAVE_FILE ("/sys/global/ADVERBS")
-
-/*
- * ADVERB_SPECIAL_SAVE_FILE
+ * ADVERB_REPLACEMENT_FILE - contains a table with the exceptions to the
+ * normal adverbs, i.e. make someone "smile in a friendly manner" rather
+ * than "smile friendly". The file contains on each line the adverb and
+ * the replacement, separated by a colon, i.e. "friendly:in a friendly manner"
  *
- * This file contains a table with the exceptions to the normal adverbs,
- * i.e. "smile in a friendly manner" rather than "smile friendly". The
- * file contains on each line the adverb and the replacement, separated
- * by a colon, i.e. "friendly:in a friendly manner"
+ * ATTRIBUTES_FILE - contains the attributes people can select for their
+ * character. The file has categories in caps with two = in front of it
+ * "==EYES" and then each attribute within that category on a single line.
  */
-#define ADVERB_REPLACEMENT_SAVE_FILE ("/sys/global/ADVERB_REPLACEMENTS")
+#define ADVERB_FILE             ("/sys/data/ADVERBS")
+#define ADVERB_REPLACEMENT_FILE ("/sys/data/ADVERB_REPLACEMENTS")
+#define ATTRIBUTES_FILE         ("/sys/data/ATTRIBUTES")
 
 /* No definitions beyond this line. */
 #endif SYS_ADVERBS_DEFINITIONS

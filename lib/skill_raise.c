@@ -13,18 +13,12 @@
 #pragma save_binary
 #pragma strict_types
 
-#include <macros.h>
-#include <ss_types.h>
-#include <money.h>
+#include <files.h>
 #include <language.h>
-
-
-/*
- * Prototypes
- */
-int sk_improve(string str);
-public varargs int sk_hook_allow_train_skill(object who, string skill,
-                                             int level);
+#include <macros.h>
+#include <money.h>
+#include <ss_types.h>
+#include <state_desc.h>
 
 static mapping sk_trains,     /* The available skills to train */
                sk_default,    /* The default basic skills */
@@ -98,7 +92,7 @@ sk_query_sub_levels()
 /*
  * Function name: sk_add_train
  * Description:   Add a skill that can be trained.
- * Arguments:     snum: Skill number
+ * Arguments:     skillnum: Skill number
  *                desc: Text written when raising the skill, ({ str1, str2 })
  *                              str1: what player sees
  *                              str2: what all other see
@@ -117,7 +111,7 @@ sk_query_sub_levels()
  *                              weight * stat / 100
  */
 public varargs void
-sk_add_train(mixed snum, mixed desc, string name, int costf, 
+sk_add_train(mixed skillnum, mixed desc, string name, int costf, 
     int maxskill, int stat, int weight)
 {
     int il;
@@ -133,16 +127,16 @@ sk_add_train(mixed snum, mixed desc, string name, int costf,
         return 0;
     }
 
-    if (pointerp(snum))
+    if (pointerp(skillnum))
     {
-        for (il = 0; il < sizeof(snum); il++)
+        for (il = 0; il < sizeof(skillnum); il++)
         {
-            sk_add_train(snum[il], desc, name, costf, maxskill);
+            sk_add_train(skillnum[il], desc, name, costf, maxskill);
         }
         return;
     }
 
-    if (!intp(snum))
+    if (!intp(skillnum))
     {
         return;
     }
@@ -152,26 +146,26 @@ sk_add_train(mixed snum, mixed desc, string name, int costf,
         stat = -1;
         weight = 100;
     }
-    skval = sk_default[snum];
+    skval = sk_default[skillnum];
     
 #ifdef STAT_LIMITED_SKILLS
     if (pointerp(skval))
     {
-         sk_trains[snum] = ({ skval[0], skval[1], maxskill, 
+         sk_trains[skillnum] = ({ skval[0], skval[1], maxskill, 
             skval[2], skval[3] });
     }
     else
     {
-        sk_trains[snum] = ({ name, costf, maxskill, stat, weight });
+        sk_trains[skillnum] = ({ name, costf, maxskill, stat, weight });
     }
 #else
     if (pointerp(skval))
     {
-        sk_trains[snum] = ({ skval[0], skval[1], maxskill });
+        sk_trains[skillnum] = ({ skval[0], skval[1], maxskill });
     }
     else
     {
-        sk_trains[snum] = ({ name, costf, maxskill});
+        sk_trains[skillnum] = ({ name, costf, maxskill});
     }
 #endif STAT_LIMITED_SKILLS
 
@@ -179,71 +173,60 @@ sk_add_train(mixed snum, mixed desc, string name, int costf,
     {
         if (sizeof(desc) > 1)
         {
-            sk_tdesc[snum] = desc;
+            sk_tdesc[skillnum] = desc;
         }
         else
         {
-            sk_tdesc[snum] = ({ desc[0], desc[0] });
+            sk_tdesc[skillnum] = ({ desc[0], desc[0] });
         }
     }
     else
     {
-        sk_tdesc[snum] = ({ desc, desc });
+        sk_tdesc[skillnum] = ({ desc, desc });
     }
 }
 
 /*
  * Function name: sk_do_train
  * Description:   Let a player train a skill a certain number of levels
- * Arguments:     snum:   Skill number
- *                pl:     Player to train
- *                to_lev: To which level to train the player in the skill
+ * Arguments:     int skillnum - Skill number
+ *                object pl - Player to train
+ *                int to_lev: To which level to train the player in the skill
  * Returns:       True if success
  */
 public int
-sk_do_train(int snum, object pl, int to_lev)
+sk_do_train(int skillnum, object pl, int to_lev)
 {
-    mixed skval;
-
     if (!mappingp(sk_default) ||
         !living(pl))
     {
         return 0;
     }
 
-    skval = sk_trains[snum];
-    if (!sizeof(skval))
+    if (!sizeof(sk_trains[skillnum]))
     {
         return 0;
     }
  
-    if ((to_lev > skval[2]) ||
+    if ((to_lev > sk_trains[skillnum][2]) ||
         (to_lev < 0))
     {
         return 0;
     }
-    
-#ifdef STAT_LIMITED_SKILLS
-    if ((skval[3] >= 0) && (skval[4] > 0) && 
-        ((skval[4] * pl->query_stat(skval[3]) / 100) < to_lev))
-    {
-        return 0;
-    }
-#endif
 
-    pl->set_skill(snum, to_lev);
+    pl->set_skill(skillnum, to_lev);
     return 1;
 }
 
 /*
  * Function name: sk_query_max
  * Description  : Give the max skill we can teach to for a skill.
- * Arguments    : int snum - the skill-number to check.
+ * Arguments    : int skillnum - the skill-number to check.
  *                int silent - don't tell anything to the player if true.
  * Returns      : int - the maximum you can train the skill to.
  */
 public varargs int 
-sk_query_max(int snum, int silent)
+sk_query_max(int skillnum, int silent)
 {
     mixed skval;
 
@@ -252,7 +235,7 @@ sk_query_max(int snum, int silent)
         return 0;
     }
 
-    skval = sk_trains[snum];
+    skval = sk_trains[skillnum];
     if (sizeof(skval) > 2)
     {
         return skval[2];
@@ -264,15 +247,15 @@ sk_query_max(int snum, int silent)
 /*
  * Function name: sk_cost
  * Description:   Give the cost for raising in a specific skill
- * Arguments:     snum: skill
+ * Arguments:     skillnum: skill
  *                fr:   From level
  *                to:   To level
  * Returns:       Cost or 0 if it can not be tought or if fr == to.
  */
 public int
-sk_cost(int snum, int fr, int to)
+sk_cost(int skillnum, int fr, int to)
 {
-    int cf, c_old, c_new;
+    int cost, c_old, c_new;
     mixed skval;
 
     if (!mappingp(sk_default))
@@ -280,7 +263,7 @@ sk_cost(int snum, int fr, int to)
         return 0;
     }
 
-    skval = sk_trains[snum];
+    skval = sk_trains[skillnum];
     if (!sizeof(skval) ||
         (fr == to))
     {
@@ -292,36 +275,32 @@ sk_cost(int snum, int fr, int to)
     {
         return sk_cost(snum, fr, 90) + sk_cost(snum, 90, to);
     }
-
-    if (to <= 90)
-    {
-        c_old = (fr * fr * fr * skval[1]) / 100;
-        c_new = (to * to * to * skval[1]) / 100;
-    }
-    else
-    {
-        c_old = (fr * fr * fr * (skval[1] * 2)) / 100;
-        c_new = (to * to * to * (skval[1] * 2)) / 100;
-    }
-#else
+#endif
     c_old = (fr * fr * fr * skval[1]) / 100;
     c_new = (to * to * to * skval[1]) / 100;
+
+#ifdef SKILL_DOUBLE_COST_FACTOR
+    if (to > 90)
+    {
+         c_old *= 2;
+         c_new *= 2;
+    }
 #endif
 
-    cf = (c_new ? c_new : 1) - (c_old ? c_old : 1);
+    cost = (c_new ? c_new : 1) - (c_old ? c_old : 1);
 
-/*
- * Newbie Cost Protection..  If your Avg Stat is <= 20 and you are training
- * <= 10 steps, cut the cost in half.
- * This is to make life easier on beginning characters.
- */
+    /* Newbie Cost Protection..  If your Avg Stat is <= 20 and you are training
+     * <= 10 steps, cut the cost in half.
+     * This is to make life easier on beginning characters.
+     */
     if ((this_player()->query_average_stat() <= 20) &&
-        ((to - fr) <= 10 ))
+        ((to - fr) <= 10))
     {
-        cf /= 2;
+        cost /= 2;
     }
 
-    return (cf > 0 ? cf : 1);
+    /* Allow to untrain at 1 copper a step. */
+    return (cost > 0 ? cost : 1);
 }
 
 /*
@@ -422,98 +401,79 @@ sk_find_skill(string skname)
 }
     
 /*
- * Function name: init_skill_raise
- * Description:   Call this to add standard skill raising commands
+ * Function name: sk_hook_allow_train_skill
+ * Description:   Checks to see if a specific person can learn a
+ *                a specific skill ( to a specific level ).
+ *                ( Default is:  yes )
+ * Arguments:     object - The player trying to learn
+ *                skill  - The skill trying to train
+ *                level  - The level trying to learn to
+ * Returns:       1 - yes (default) / 0 - no
  */
-public void
-init_skill_raise()
+public varargs int
+sk_hook_allow_train_skill(object who, string skill, int level)
 {
-    add_action(sk_improve, "improve");
-    add_action(sk_improve, "learn");
+    return 1;
 }
 
 /*
  * Function name: sk_fix_cost
- * Description:   Fix each line in the improve/learn list
- * Arguments:     snum  - The skill to check
+ * Description:   Fix each line in the learn list
+ * Arguments:     skillnum  - The skill to check
  *                steps - How many steps player wants to raise
  * Returns:       A formatted string
  */
 varargs string
-sk_fix_cost(int snum, int steps)
+sk_fix_cost(int skillnum, int steps = 1)
 {
-    int this_level, next_level, max;
-    string next_rank, max_rank, cost;
+    int this_level, next_level, maximum;
+    string next_rank, cost;
 
-    this_level = this_player()->query_base_skill(snum);
-    next_level = steps ? this_level + steps : this_level + 1;
+    this_level = this_player()->query_base_skill(skillnum);
+    maximum = sk_query_max(skillnum, 1);
+    next_level = min(this_level + steps, maximum);
 
-    if (next_level > (max = sk_query_max(snum)))
+    if (this_level >= next_level)
     {
-        cost = "---";
+        if (steps == 1)
+            return "";
+
+        cost = "---     ";
+        next_rank = "---";
     }
     else
     {
-        cost = sk_cost(snum, this_level, next_level) + " copper";
+        cost = MONEY_MCOL_TEXT(MONEY_SPLIT(sk_cost(skillnum, this_level, next_level)), 2, 1);
+        next_rank = sk_rank(next_level);
     }
 
-    next_rank = ((this_level >= 100) ? "maxed" : sk_rank(next_level));
-    max_rank = sk_rank(max);
-
-    if (!sk_hook_allow_train_skill(this_player(), sk_trains[snum][0], 
-            next_level))
+    if (!sk_hook_allow_train_skill(this_player(), sk_trains[skillnum][0], next_level))
     {
         return "";
     }
 
-    return sprintf("  %-17s %13s  %-21s %-20s\n", sk_trains[snum][0],
-        cost, next_rank, max_rank);
+    return sprintf("%-16s %19s  %-20s %s\n", capitalize(sk_trains[skillnum][0]),
+        cost, next_rank, sk_rank(maximum));
 }
 
 /*
  * Function name: sk_hook_unknown_skill
- * Description  : Player tries to improve or learn an unknown skill.
+ * Description  : Player tries to learn an unknown skill.
  * Arguments    : string skill - The skill he sought for.
- *                string verb  - 'learn' or 'improve'.
+ *                string verb  - 'learn'
  * Returns      : int 0 - as always with notify_fail.
  */
 int
 sk_hook_unknown_skill(string skill, string verb)
 {
-    notify_fail("There is no skill named '" + skill + "' to " + verb + ".\n");
-    return 0;
-}
-
-/*
- * Function name: sk_hook_improve_unknown
- * Description  : Player wants to improve a skill he has never learned.
- * Arguments    : string skill - the skill the player tried to improve.
- * Returns      : int 0 - as always with notify_fail.
- */
-int
-sk_hook_improve_unknown(string skill)
-{
-    notify_fail("You must learn a skill before you can improve it.\n");
-    return 0;
-}
-
-/*
- * Function name: sk_hook_learn_known
- * Description  : Player wants to learn an already known skill.
- * Arguments    : string skill - the skill the player tried to learn.
- * Returns      : int 0 - as always with notify_fail.
- */
-int
-sk_hook_learn_known(string skill)
-{
-    notify_fail("You already know that skill, try to improve it.\n");
+    notify_fail("There is no skill named '" + skill + "' to learn.\n");
     return 0;
 }
 
 /*
  * Function name: sk_hook_cant_train
  * Description  : Player can't train that skill that high for some reason.
- * Arguments    : string skill - the skill the player tries to improve.
+ * Arguments    : string skill - the skill the player tries to learn.
  *                int to_lev - the level to wich the player wanted training.
  * Returns      : int 0 - as always with notify_fail.
  */
@@ -525,9 +485,23 @@ sk_hook_cant_train(string skill, int to_lev)
 }
 
 /*
+ * Function name: sk_hook_stat_limited
+ * Description  : Player lacks the stat(s) to learn the skill.
+ * Arguments    : int skillnum - the skill the player tries to learn.
+ * Returns      : int 0 - as always with notify_fail.
+ */
+int
+sk_hook_stat_limited(int skillnum)
+{
+    notify_fail("You need more " + SD_LONG_STAT_DESC[sk_trains[skillnum][3]] +
+        " to improve your ability to " + sk_tdesc[skillnum][0] + ".\n");
+    return 0;
+}
+
+/*
  * Function name: sk_hook_cant_pay
  * Description  : Player cannot pay for session. (Kill him?)
- * Arguments    : string skill  - the skill the player tries to improve.
+ * Arguments    : string skill  - the skill the player tries to learn.
  *                int to_lev - the level to wich the player wanted training.
  *                int cost - the price that is required, in coppers.
  * Returns      : int 0 - as always with notify_fail.
@@ -542,44 +516,37 @@ sk_hook_cant_pay(string skill, int to_lev, int cost)
 /*
  * Function name: sk_hook_raise_rank
  * Description  : The player trains and pays, write something.
- * Arguments    : int snum  - the number of the skill trained.
+ * Arguments    : int skillnum  - the number of the skill trained.
  *                int to_lev - the level reached.
  *                int cost - the price paid, in coppers.
  */
 void
-sk_hook_raise_rank(int snum, int to_lev, int cost)
+sk_hook_raise_rank(int skillnum, int to_lev, int cost)
 {
     string rank;
 
     rank = sk_rank(to_lev);
 
     this_player()->catch_msg("You improve your ability to " +
-        sk_tdesc[snum][0] + ".\n");
-    write("You achieve the rank of " + rank + ".\n");
+        sk_tdesc[skillnum][0] + " and achieve the rank of " + rank + ".\n");
     say(QCTNAME(this_player()) + " improves " +
         this_player()->query_possessive() + " ability to " +
-        sk_tdesc[snum][1] + " and receives the" + " rank of " + rank +
-        ".\n");
+        sk_tdesc[skillnum][1] + " and receives the" + " rank of " + rank + ".\n");
+
+    ACHIEVEMENTS->trigger_event_skill_train(this_player(), skillnum, to_lev);
 }
 
 /*
  * Function name: sk_hook_write_header
- * Description  : Write the header to the improve or learn list.
+ * Description  : Write the header to the learn list.
  * Arguments    : int steps - the number of steps to train.
  */
-void
-sk_hook_write_header(int steps)
+varargs void
+sk_hook_write_header(int steps = 1)
 {
-    if (!steps)
-    {
-        steps = 1;
-    }
-    write("These are the skills you are able to " + query_verb() + " " +
-        LANG_WNUM(steps) + ((steps == 1) ? " step" : " steps") + " here.\n");
-    write("  Skill:                Cost:      "+
-        "Next level:           Max level:\n"+
-        "--------------------------------------"+
-        "--------------------------------------\n");
+    write("These are the skills you are able to learn here.\n");
+    write("Skill:                 Cost:          Next level:          Maximum level:\n"+
+          "---------------------------------------------------------------------------\n");
 }
 
 /*
@@ -592,26 +559,8 @@ sk_hook_skillisting()
 {
     write("Here follows all skills we teach, and your next level in " +
           "those skills:\n");
-    write("  Skill:                Cost:      "+
-          "Next level:          Max level:\n"+
-          "--------------------------------------"+
-          "--------------------------------------\n");
-}
-
-/*
- * Function name: sk_hook_also_learn
- * Description  : This hook is called when there are skills to be learnt when
- *                the player asks about skills to improve.
- * Arguments    : int num - the number of skills to be learnt.
- */
-void
-sk_hook_also_learn(int num)
-{
-    if (num == 1)
-        write("There is one new skill that you can learn here.\n");
-    else
-        write("There are " + LANG_WNUM(num) +
-            " new skills that you can learn here.\n");
+    write("Skill:                 Cost:          Next level:          Maximum level:\n"+
+          "---------------------------------------------------------------------------\n");
 }
 
 /*
@@ -623,23 +572,8 @@ sk_hook_also_learn(int num)
 int
 sk_hook_no_list_learn()
 {
-    write("For you there are no unknown skills in this guild. You might " +
-        "try to improve some or seek out new guilds elsewhere.\n");
-    return 1;
-}
-
-/*
- * Function name: sk_hook_no_list_improve
- * Description  : This hook is called when there are no more skills the
- *                player can improve here.
- * Returns      : int 1 - as always after a command succeeds.
- */
-int
-sk_hook_no_list_improve()
-{
-    write("There are no skills you can improve in this guild. Perhaps you " +
-        "would feel like learning some new skills, or try to find a new " +
-        "guild elsewhere?\n");
+    write("There is nothing for you to learn here. You have to seek " +
+        "knowledge elsewhere.\n");
     return 1;
 }
 
@@ -659,10 +593,10 @@ sk_hook_improved_max(string skill)
 
 /*
  * Function name: sk_hook_allow_train
- * Description:   Function called when player tries to do the improve command
+ * Description:   Function called when player tries to do the learn command
  *                Will determine if a player can train skills here.
  *                ( Default is:  yes )
- * Arguments:     object - The player trying to improve/learn
+ * Arguments:     object - The player trying to learn
  *                string - The string from sk_improve
  *                verb   - improve or learn typically
  * Returns:       1 - yes (default) / 0 - no
@@ -686,27 +620,11 @@ sk_hook_not_allow_train()
 }
 
 /*
- * Function name: sk_hook_allow_train_skill
- * Description:   Checks to see if a specific person can learn a
- *                a specific skill ( to a specific level ).
- *                ( Default is:  yes )
- * Arguments:     object - The player trying to improve/learn
- *                skill  - The skill trying to train
- *                level  - The level trying to learn to
- * Returns:       1 - yes (default) / 0 - no
- */
-public varargs int
-sk_hook_allow_train_skill(object who, string skill, int level)
-{
-    return 1;
-}
-
-/*
  * Function name: sk_hook_not_allow_train_skill
  * Description:   Message to print if you are not allowed to train
  *                a particular skill
  * Arguments:     skill  -- the skill we can't train (optional)
- * Returns:       string -- fail message
+ * Returns:       int 1/0 (write/notify_fail)
  */
 public varargs int
 sk_hook_not_allow_train_skill(string skill)
@@ -718,34 +636,43 @@ sk_hook_not_allow_train_skill(string skill)
 }
 
 /*
+ * Function name: sk_train_sufficient_stat
+ * Description  : Checks if the player has enough stat to learn the skill.
+ * Arguments    : int skill - the skill
+ *                int to_level - the new level.
+ * Returns      : int 1/0 - if true, the player has enough stat.
+ */
+public int
+sk_train_sufficient_stat(int skill, int to_lev)
+{
+    /* Always allow low levels to be taught. */
+    if (to_lev <= STAT_LIM_MIN_SKILL)
+    {
+	return 1;
+    }
+
+#ifdef STAT_LIMITED_SKILLS
+    if ((sk_trains[skill][3] >= 0) &&
+        (sk_trains[skill][4] > 0) && 
+        ((sk_trains[skill][4] * this_player()->query_stat(sk_trains[skill][3])) < (to_lev * 100)))
+    {
+        return 0;
+    }
+#endif STAT_LIMITED_SKILLS
+    return 1;
+}
+
+/*
  * Function name: sk_filter_learn
- * Description:   Filter out what skills this player can learn
- * Arguments:     sk    - The skill
- *                steps - The number of steps play wants to learn
- * Returns:       1 if play can learn skill
+ * Description  : Filter out what skills this player can learn
+ * Arguments    : int sk    - The skill
+ *                int steps - The number of steps play wants to learn
+ * Returns      : int 1 if play can learn skill
  */
 int
 sk_filter_learn(int sk, int steps)
 {
-    return ((this_player()->query_base_skill(sk) == 0) &&
-        (steps <= sk_query_max(sk)));
-}
-
-/*
- * Function name: sk_filter_improve
- * Description:   Filter out what skills this player can improve
- * Arguments:     sk    - The skill
- *                steps - The number of steps player wants to improve
- * Returns:       1 if play can improve skill
- */
-int
-sk_filter_improve(int sk, int steps)
-{
-    int skill;
-
-    skill = this_player()->query_base_skill(sk);
-    return ((skill > 0) &&
-        ((skill + steps) <= sk_query_max(sk)));
+    return (this_player()->query_base_skill(sk) < sk_query_max(sk, 1));
 }
 
 /*
@@ -757,7 +684,7 @@ sk_filter_improve(int sk, int steps)
 int
 sk_list(int steps)
 {
-    int i, *all_sk, *guild_sk, learn;
+    int *all_sk, *guild_sk, learn;
 
     all_sk = sk_query_train();
     if (!steps)
@@ -770,32 +697,26 @@ sk_list(int steps)
         guild_sk = all_sk;
         steps = 1;
     }
-    else if (query_verb() == "learn")
-    {
-        guild_sk = filter(all_sk, &sk_filter_learn(, steps));
-        if (!sizeof(guild_sk))
-            return sk_hook_no_list_learn();
-        sk_hook_write_header(steps);
-    }
     else
     {
-        guild_sk = filter(all_sk, &sk_filter_improve(, steps));
-        if (!sizeof(guild_sk))
-            return sk_hook_no_list_improve();
+        guild_sk = filter(all_sk, &sk_filter_learn(, steps));
+	if (!sizeof(guild_sk))
+	{
+	    if (this_object()->sk_hook_no_list_improve())
+	    {
+	    	return 1;
+	    }
+	    else
+	    {
+            	return sk_hook_no_list_learn();
+ 	    }
+	}
         sk_hook_write_header(steps);
     }
 
-    for (i = 0; i < sizeof(guild_sk); i++)
+    foreach(int skill: guild_sk)
     {
-        write(sk_fix_cost(guild_sk[i], steps));
-    }
-
-    /* When trying to improve, see if there are skills to be learnt. */
-    if (query_verb() == "improve")
-    {
-        guild_sk = filter(all_sk, &sk_filter_learn(, 1));
-        if (sizeof(guild_sk))
-            sk_hook_also_learn(sizeof(guild_sk));
+        write(sk_fix_cost(skill, steps));
     }
 
     return 1;
@@ -803,32 +724,48 @@ sk_list(int steps)
 
 /*
  * Function name: sk_improve
- * Description:   Function called when player tries to do the improve command
+ * Description:   Function called when player tries to do the learn command
  * Arguments:     str - The rest of the command player made
  * Returns:       1/0
  */
 int
 sk_improve(string str)
 {
-    int steps, *guild_sk, *known_sk, snum, level, cost;
+    int steps = 1, *known_sk, skillnum, level, cost, money, maxlevel;
     string skill, verb, *tmp;
 
     if (!sk_hook_allow_train(this_player(), str, query_verb()))
+    {
         return sk_hook_not_allow_train();
+    }
+
+    /* Simple way to let Max mean maxing out the skill. */
+    if (str == "max")
+    {
+	str = MAX_SKILL_LEVEL + "";
+    }
 
     if (!str || sscanf(str, "%d", steps))
+    {
         return sk_list(steps);
+    }
 
-    tmp = explode(str, " ");
-    if (sscanf(tmp[sizeof(tmp) - 1], "%d", steps) == 1 && sizeof(tmp) > 1)
-        skill = implode(tmp[0 .. sizeof(tmp) - 2], " ");
+    tmp = explode(lower_case(str), " ");
+    if (tmp[-1] == "max")
+    {
+        skill = implode(tmp[0..-2], " ");
+        steps = 0;
+        cost = -1;
+    }
+    else if (sscanf(tmp[-1], "%d", steps) == 1)
+    {
+        skill = implode(tmp[0..-2], " ");
+    }
     else
     {
         skill = str;
-        steps = 1;
     }
 
-    guild_sk = sk_query_train();
     known_sk = this_player()->query_all_skill_types();
     if (!known_sk)
     {
@@ -836,31 +773,68 @@ sk_improve(string str)
     }
 
     verb = query_verb();
-    if ((snum = sk_find_skill(skill)) < 0)
+    if ((skillnum = sk_find_skill(skill)) < 0)
+    {
         return sk_hook_unknown_skill(skill, verb);
+    }
 
-    level = this_player()->query_base_skill(snum);
+    level = this_player()->query_base_skill(skillnum);
+
+    /* Player wants to improve to the maximum of his money. */
+    if (cost == -1)
+    {
+        money = TOTAL_MONEY(this_player());
+        maxlevel = sk_query_max(skillnum, 1);
+        while((cost < money) && ((level + steps + 1) <= maxlevel))
+        {
+            steps++;
+            cost = sk_cost(skillnum, level, level + steps + 1);
+        }
+    }
 
     if (!sk_hook_allow_train_skill(this_player(), skill, level + steps))
+    {
         return sk_hook_not_allow_train_skill(skill);
-    if (!level && verb == "improve")
-        return sk_hook_improve_unknown(skill);
-    if (level && verb == "learn")
-        return sk_hook_learn_known(skill);
-    if (level + steps > sk_query_max(snum))
-        return sk_hook_improved_max(skill);
-    if (!sk_do_train(snum, this_player(), level + steps))
+    }
+    if (level + steps > (maxlevel = sk_query_max(skillnum, 1)))
+    {
+        steps = maxlevel - level;
+        if (steps <= 0)
+        {
+            return sk_hook_improved_max(skill);
+        }
+    }
+#ifdef STAT_LIMITED_SKILLS
+    if (!sk_train_sufficient_stat(skillnum, level + steps))
+    {
+	return sk_hook_stat_limited(skillnum);
+    }
+#endif STAT_LIMITED_SKILLS
+    if (!sk_do_train(skillnum, this_player(), level + steps))
+    {
         return sk_hook_cant_train(skill, level + steps);
+    }
 
-    cost = sk_cost(snum, level, level + steps);
+    cost = sk_cost(skillnum, level, level + steps);
     if (!MONEY_ADD(this_player(), -cost))
     {
         /* Set the skill back to what it was before. */
-        this_player()->set_skill(snum, level);
+        this_player()->set_skill(skillnum, level);
         return sk_hook_cant_pay(skill, level + steps, cost);
     }
 
-    sk_hook_raise_rank(snum, level + steps, cost);
+    sk_hook_raise_rank(skillnum, level + steps, cost);
     return 1;
 }
 
+/*
+ * Function name: init_skill_raise
+ * Description  : Call this to add standard skill raising commands. They now
+ *                give exactly the same result.
+ */
+public void
+init_skill_raise()
+{
+    add_action(sk_improve, "improve");
+    add_action(sk_improve, "learn");
+}

@@ -21,15 +21,15 @@ DESCRIPTION
 OPTIONS
 	[none]	- shows your current settings.
 
-	O / off	- Turn the notifier off.
-	A	- Get message from all login/logouts.
-	W	- Only notify about wizards loggin on and off.
+	A	- Get message from all login/logouts, wizards and mortals.
+	W	- Only notify about wizards.
 	D	- Notify when wizards of the same domain as you log on.
 	L	- Only notify about Lords (and higher) loggin on and off.
 	I	- Get ip written of login too (if you have the right).
 	X	- Don't bother about Link Dead folks loggin on and off.
 	B	- Block, try to avoid getting notified when loggin on.
 		  Higher level wizards and Arches will see you though.
+	O / off	- Turn the notifier off.
 
 	add	- Add personal notification for player <name>.
 	remove	- Remove personal notification for player <name>.

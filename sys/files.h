@@ -28,8 +28,9 @@
 #define WIZ_CMD_APPRENTICE ("/cmd/wiz/apprentice")
 #define WIZ_CMD_PILGRIM    ("/cmd/wiz/pilgrim")
 #define WIZ_CMD_RETIRED    ("/cmd/wiz/retired")
-#define WIZ_CMD_NORMAL     ("/cmd/wiz/normal")
 #define WIZ_CMD_HELPER     ("/cmd/wiz/helper")
+#define WIZ_CMD_WIZARD     ("/cmd/wiz/wizard")
+#define WIZ_CMD_NORMAL     WIZ_CMD_WIZARD
 #define WIZ_CMD_MAGE       ("/cmd/wiz/mage")
 #define WIZ_CMD_LORD       ("/cmd/wiz/lord")
 #define WIZ_CMD_ARCH       ("/cmd/wiz/arch")
@@ -52,15 +53,18 @@
 #define SHOP_LIBRARY       ("/lib/shop")
 #define SKILL_LIBRARY      ("/lib/skill_raise")
 #define STORE_LIBRARY      ("/lib/store_support")
-#define TRADE_LIBRARY      ("/lib/trades")
+#define TRADE_LIBRARY      ("/lib/trade")
 #define WEARABLE_LIBRARY   ("/lib/wearable_item")
 
 /* The section /obj */
 
+#define DATA_EDITOR_OBJECT ("/obj/data_edit")
 #define EDITOR_OBJECT      ("/obj/edit")
 #define NAMETAG_OBJECT     ("/obj/know_me")
 #define POSSESSION_OBJECT  ("/obj/possob")
+#define POTION_VIAL_OBJECT ("/obj/potion_vial")
 #define REMOTE_NPC_OBJECT  ("/obj/remote_npc")
+#define VOID_OBJECT        ("/obj/void")
 
 /* The section /secure */
 
@@ -70,13 +74,17 @@
 #define EDITOR_SECURITY    ("/secure/editor")
 #define FINGER_PLAYER      ("/secure/finger_player")
 #define GAMEINFO_OBJECT    ("/secure/gameinfo_player")
-#define GARBAGE_COLLECTOR  ("/secure/master/mail_gc")
+#define GOG_ACCOUNTS       ("/secure/gog_accounts")
 #define LOGIN_OBJECT       ("/secure/login")
 #define MAIL_CHECKER       ("/secure/mail_checker")
 #define MAIL_READER        ("/secure/mail_reader")
+#define MAP_CENTRAL        ("/secure/map_central")
+#define MSSP               ("/secure/mssp")
 #define PLAYER_TOOL        ("/secure/player_tool")
-#define PURGE_OBJECT       ("/secure/master/purge")
+#define PURGE_OBJECT       ("/secure/purge")
 #define QUEUE              ("/secure/queue")
+#define REPORT_CENTRAL     ("/secure/report_central")
+#define SECURE_AUTO        ("/secure/auto")
 #define SECURITY           ("/secure/master")
 #define SIMUL_EFUN         ("/secure/simul_efun")
 #define SRCMAN             ("/secure/srcman")
@@ -89,6 +97,7 @@
 #define BOARD_OBJECT       ("/std/board")
 #define BOOK_OBJECT        ("/std/book")
 #define BOW_OBJECT         ("/std/bow")
+#define BOWSTRING_OBJECT   ("/std/bowstring")
 #define CHUMLOCK_OBJECT    ("/std/combat/chumlock")
 #define COINS_OBJECT       ("/std/coins")
 #define CONTAINER_OBJECT   ("/std/container")
@@ -104,12 +113,16 @@
 #define LAUNCH_OBJECT      ("/std/launch_weapon")
 #define LEFTOVER_OBJECT    ("/std/leftover")
 #define LIVING_OBJECT      ("/std/living")
+#define MESSAGE_OBJECT     ("/std/message")
+#define MESSENGER_OBJECT   ("/std/messenger")
 #define MOBILE_OBJECT      ("/std/mobile")
 #define MONSTER_OBJECT     ("/std/monster")
+#define NPC_OBJECT         ("/std/npc")
 #define OBJECT_OBJECT      ("/std/object")
 #define PARALYZE_OBJECT    ("/std/paralyze")
-#define PLAYER_PUB_OBJECT  ("/std/player_pub")
-#define PLAYER_SEC_OBJECT  ("/std/player_sec")
+#define PLAYER_OBJECT      ("/std/player")
+#define PLAYER_PUB_OBJECT  (PLAYER_OBJECT)
+#define PLAYER_SEC_OBJECT  (PLAYER_OBJECT)
 #define POISON_OBJECT      ("/std/poison_effect")
 #define POTION_OBJECT      ("/std/potion")
 #define PROJECTILE_OBJECT  ("/std/projectile")
@@ -126,7 +139,11 @@
 
 /* The section /sys */
 #define MANCTRL            ("/sys/global/manpath")
-
+#define FPATH_FILENAME     ("/sys/global/filepath")
+#define LISTENER_CENTRAL   ("/sys/global/listeners")
+#define ACHIEVEMENTS       ("/d/Genesis/specials/achievements/achievement_master")
+#define WEBSTATS_CENTRAL   ("/d/Web/stats/webstats")
+#define MAGIC_MAP_ID       ("_sparkle_magic_map")
 
 /* Determine the type of an object based on its constructors. */
 #define IS_CREATE_SOME(ob, func, file) (function_exists((func), (ob)) == (file))
@@ -147,7 +164,7 @@
 #define IS_DRINK_OBJECT(ob)      IS_CREATE_HEAP((ob), DRINK_OBJECT)
 #define IS_FOOD_OBJECT(ob)       IS_CREATE_HEAP((ob), FOOD_OBJECT)
 #define IS_HEAP_OBJECT(ob)       IS_CREATE_OBJECT((ob), HEAP_OBJECT)
-#define IS_HERB_OBJECT(ob)       IS_CREATE_OBJECT((ob), HERB_OBJECT)
+#define IS_HERB_OBJECT(ob)       IS_CREATE_HEAP((ob), HERB_OBJECT)
 #define IS_HOLDABLE_OBJECT(ob)   (ob)->query_holdable_item()
 #define IS_KEY_OBJECT(ob)        IS_CREATE_OBJECT((ob), KEY_OBJECT)
 #define IS_LAUNCH_OBJECT(ob)     IS_CREATE_SOME((ob), "create_weapon", LAUNCH_OBJECT)
@@ -155,11 +172,12 @@
 #define IS_LIVING_OBJECT(ob)     IS_CREATE_CONTAINER((ob), LIVING_OBJECT)
 #define IS_MOBILE_OBJECT(ob)     IS_CREATE_SOME((ob), "create_living", MOBILE_OBJECT)
 #define IS_MONSTER_OBJECT(ob)    IS_CREATE_SOME((ob), "create_npc", MONSTER_OBJECT)
+#define IS_NPC_OBJECT(ob)        IS_CREATE_SOME((ob), "create_creature", NPC_OBJECT)
 #define IS_OBJECT_OBJECT(ob)     IS_CREATE_SOME((ob), "create", OBJECT_OBJECT)
 #define IS_PARALYZE_OBJECT(ob)   IS_CREATE_OBJECT((ob), PARALYZE_OBJECT)
-#define IS_PLAYER_OBJECT(ob)     IS_CREATE_SOME((ob), "create_living", PLAYER_SEC_OBJECT)
+#define IS_PLAYER_OBJECT(ob)     IS_CREATE_SOME((ob), "create_living", PLAYER_OBJECT)
 #define IS_POISON_OBJECT(ob)     IS_CREATE_OBJECT((ob), POISON_OBJECT)
-#define IS_POTION_OBJECT(ob)     IS_CREATE_OBJECT((ob), POTION_OBJECT)
+#define IS_POTION_OBJECT(ob)     IS_CREATE_HEAP((ob), POTION_OBJECT)
 #define IS_PROJECTILE_OBJECT(ob) IS_CREATE_HEAP((ob), PROJECTILE_OBJECT)
 #define IS_RECEPTACLE_OBJECT(ob) IS_CREATE_CONTAINER((ob), RECEPTACLE_OBJECT)
 #define IS_RESISTANCE_OBJECT(ob) IS_CREATE_OBJECT((ob), RESISTANCE_OBJECT)
@@ -191,7 +209,7 @@
 #define FILTER_DRINK_OBJECTS(obs)      FILTER_CREATE_HEAP((obs), DRINK_OBJECT)
 #define FILTER_FOOD_OBJECTS(obs)       FILTER_CREATE_HEAP((obs), FOOD_OBJECT)
 #define FILTER_HEAP_OBJECTS(obs)       FILTER_CREATE_OBJECT((obs), HEAP_OBJECT)
-#define FILTER_HERB_OBJECTS(obs)       FILTER_CREATE_OBJECT((obs), HERB_OBJECT)
+#define FILTER_HERB_OBJECTS(obs)       FILTER_CREATE_HEAP((obs), HERB_OBJECT)
 #define FILTER_HOLDABLE_OBJECTS(obs)   filter((obs), &->query_holdable_item())
 #define FILTER_KEY_OBJECTS(obs)        FILTER_CREATE_OBJECT((obs), KEY_OBJECT)
 #define FILTER_LAUNCH_OBJECTS(obs)     FILTER_CREATE_SOME((obs), "create_weapon", LAUNCH_OBJECT)
@@ -201,9 +219,9 @@
 #define FILTER_MONSTER_OBJECTS(obs)    FILTER_CREATE_SOME((obs), "create_npc", MONSTER_OBJECT)
 #define FILTER_OBJECT_OBJECTS(obs)     FILTER_CREATE_SOME((obs), "create", OBJECT_OBJECT)
 #define FILTER_PARALYZE_OBJECTS(obs)   FILTER_CREATE_OBJECT((obs), PARALYZE_OBJECT)
-#define FILTER_PLAYER_OBJECTS(obs)     FILTER_CREATE_SOME((obs), "create_living", PLAYER_SEC_OBJECT)
+#define FILTER_PLAYER_OBJECTS(obs)     FILTER_CREATE_SOME((obs), "create_living", PLAYER_OBJECT)
 #define FILTER_POISON_OBJECTS(obs)     FILTER_CREATE_OBJECT((obs), POISON_OBJECT)
-#define FILTER_POTION_OBJECTS(obs)     FILTER_CREATE_OBJECT((obs), POTION_OBJECT)
+#define FILTER_POTION_OBJECTS(obs)     FILTER_CREATE_HEAP((obs), POTION_OBJECT)
 #define FILTER_PROJECTILE_OBJECTS(obs) FILTER_CREATE_HEAP((obs), PROJECTILE_OBJECT)
 #define FILTER_RECEPTACLE_OBJECTS(obs) FILTER_CREATE_CONTAINER((obs), RECEPTACLE_OBJECT)
 #define FILTER_RESISTANCE_OBJECTS(obs) FILTER_CREATE_OBJECT((obs), RESISTANCE_OBJECT)
@@ -215,6 +233,78 @@
 #define FILTER_WEAPON_OBJECTS(obs)     FILTER_CREATE_OBJECT((obs), WEAPON_OBJECT)
 #define FILTER_WEARABLE_OBJECTS(obs)   filter((obs), &->query_wearable_item())
 #define FILTER_WORKROOM_OBJECTS(obs)   FILTER_CREATE_SOME((obs), "create_room", WORKROOM_OBJECT)
+
+/*
+ * Gives a composite path from a default and a given pathname
+ *
+ * If name starts with '/' then path is ignored.
+ * 
+ * Example: path = "/d/Genesis/wiz", name = "below/eastend.c"
+ *          => "/d/Genesis/wiz/below/eastend.c"
+ */
+#define FPATH(path, name) ((string)FPATH_FILENAME->fix_path((path), (name)))
+
+/*
+ * Gives a full path from a tildepath, with '~/' interpreted as the homedir
+ * of the wizard 'name'
+ */
+#define TPATH(name, tilde) ((string)FPATH_FILENAME->get_tilde_path((name), (tilde)))
+
+/*
+ * Combines FPATH and TPATH, this_player() is assumed to be the wizard '~/'
+ */
+#define FTPATH(path, name) FPATH((path), TPATH(this_player()->query_real_name(), (name)))
+
+/*
+ * Reduces a path to its tilde counterpart
+ */
+#define RPATH(path) ((string)FPATH_FILENAME->reduce_to_tilde_path(path))
+
+/*
+ * FILE_PATH(path)
+ *
+ * Get the path part of a file name, including the trailing /.
+ * Example: /d/Domain/dir/foo.c -> /d/Domain/dir/
+ */
+#define FILE_PATH(path) (implode(explode((path), "/")[..-2], "/") + "/")
+
+/*
+ * FILE_NAME(path)
+ *
+ * Get the name part of a file name.
+ * Example: /d/Domain/dir/foo.c -> foo.c
+ */
+#define FILE_NAME(path) (explode((path), "/")[-1..][0])
+
+/*
+ * VALID_DEF_START_LOCATION(string path)
+ * VALID_TEMP_START_LOCATION(string path)
+ *
+ * Find out if a path (without .c) is a valid default/temporary start location.
+ */
+#define VALID_DEF_START_LOCATION(path)  ((int)FPATH_FILENAME->valid_def_start_location(path))
+#define VALID_TEMP_START_LOCATION(path) ((int)FPATH_FILENAME->valid_temp_start_location(path))
+
+/*
+ * LISTENER_ADD(obj)    - add an object as listener.
+ * LISTENER_REMOVE(obj) - remove an object as listener.
+ *
+ * Each listener will be called to notify it of each new object that is
+ * cloned and instructed to introduce itself to the listeners. Use them
+ * sparingly!
+ *
+ * The listeners will be called with the following call:
+ *
+ * (void) notify_new_object(object obj)
+ */
+#define LISTENER_ADD(obj)    (LISTENER_CENTRAL->register_listener(obj))
+#define LISTENER_REMOVE(obj) (LISTENER_CENTRAL->unregister_listener(obj))
+
+/*
+ * LISTENER_NOTIFY(obj) - called by each clone of objects that are instructed
+ * to introduce themselves. This call is then relayed to all listeners.
+ */
+#define LISTENER_NOTIFY(obj) (LISTENER_CENTRAL->register_new_object(obj))
 
 /* No definitions beyond this line. */
 #endif FILES_DEFINED

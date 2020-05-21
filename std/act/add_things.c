@@ -2,34 +2,105 @@
  *
  * This is a file inherited into monster.c that enables the player to
  * add weapons and armour to the monster in a very convinient way. The
- * monster will automaticly wield/wear the things. 
+ * monster will automaticly wield/wear the things.
  *
- * just do add_armour(string filename);        or
- *         add_weapon(string filename); 
- * 
- * and the monster will clone, move and wield/wear the things.
- *      (The functions return the objects)
- *
- *     Dimitri, the mighty Avatar !
- *
- * We thank PaderMUD for this File
  */
-
 #pragma save_binary
 #pragma strict_types
 
+#include <files.h>
 #include <macros.h>
-#include <stdproperties.h>
 
-void
-move_and_wield(object weapon)
+static int
+wield_wear_item(object ob)
 {
-    if (weapon->move(this_object()))
+    if (IS_WEAPON_OBJECT(ob))
     {
-	weapon->remove_object();
+        ob->command_wield();
+        return 0;
     }
-    this_object()->seq_addlast("add_weapon",
-		({ "wield " + weapon->query_name() }) );
+
+    if (IS_WEARABLE_OBJECT(ob))
+    {
+        ob->command_wear();
+        return 0;
+    }
+
+    if (IS_HOLDABLE_OBJECT(ob))
+    {
+        ob->command_hold();
+        return 0;
+    }
+    return 0;
+}
+
+static object
+equip_clone(mixed item)
+{
+    if (stringp(item)) 
+    {
+        item = FPATH(FILE_PATH(file_name()), item);
+        item = clone_object(item);
+    }
+
+    return item;
+}
+
+/*
+ * Function name:  equip
+ * Description:    clones weapons, armour or other objects and makes
+ *                 the npc wield and wear all.
+ * Arguments:      equipment: string, or array of strings with the
+ *                            filenames of the equipment to clone
+ *                            Relative paths are accepted
+ *                 dont_wield: if this flag is set the npc will
+ *                       not attempt to wield or wear any of the
+ *                       equipment cloned. [optional]
+ *                 init_call: this function will be called with the items
+ *                            as argument. [optional]
+ * Note:           It doesn't hurt to leave off the dont_wield flag even
+ *                 when the things you are cloning are not weapons and
+ *                 armour. The npc only attempts to wield or wear legit
+ *                 weapons and armour. The only use for the flag is when
+ *                 you for some reason want the npc to have some weapon
+ *                 or armour in his inv. but not worn/wielded.
+ * Returns:
+ */
+public varargs object *
+equip(mixed equiplist, int dont_wield = 0, function init_call = 0)
+{
+    object otp;
+
+    setuid();
+    seteuid(getuid());
+
+    otp = this_player();
+    set_this_player(this_object());
+
+    if (!pointerp(equiplist))
+        equiplist = ({ equiplist });
+
+    equiplist = map(equiplist, equip_clone);
+    equiplist->move(this_object(), 1);
+
+    if (!dont_wield)
+        filter(equiplist, wield_wear_item);
+
+    if (functionp(init_call))
+        map(equiplist, init_call);
+
+    set_this_player(otp);
+    return equiplist;
+}
+
+static object
+equip_one_thing(string file)
+{
+    object *items = equip(file);
+    if (sizeof(items))
+        return items[0];
+
+    return 0;
 }
 
 /*
@@ -41,33 +112,7 @@ move_and_wield(object weapon)
 public object
 add_weapon(string file)
 {
-    object weapon;
-
-    if (!file)
-    	return 0;
-
-    if (!this_object()->seq_query("add_weapon"))
-        this_object()->seq_new("add_weapon");
-
-    seteuid(getuid(this_object()));
-    weapon = clone_object(file);
-    if (!weapon)
-    	return 0;
-
-    set_alarm(1.0, 0.0, &move_and_wield(weapon));
-    return weapon;
-}
-
-
-void
-move_and_wear(object armour)
-{
-    if (armour->move(this_object()))
-    {
-	armour->remove_object();
-    }
-    this_object()->seq_addlast("add_armour",
-	({ "wear " + armour->query_name() }) );
+    return equip_one_thing(file);
 }
 
 /*
@@ -79,19 +124,5 @@ move_and_wear(object armour)
 public object
 add_armour(string file)
 {
-    object armour;
-  
-    if (!file)
-    	return 0;
-
-    if (!this_object()->seq_query("add_armour"))
-	this_object()->seq_new("add_armour");
-
-    seteuid(getuid(this_object()));
-    armour = clone_object(file);
-    if (!armour)
-    	return 0;
-
-    set_alarm(1.0, 0.0, &move_and_wear(armour));
-    return armour;
+    return equip_one_thing(file);
 }

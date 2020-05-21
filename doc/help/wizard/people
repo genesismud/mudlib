@@ -2,7 +2,7 @@ NAME
 	people - list player status
 
 SYNOPSIS
-	people -[aAbBdDfhHilLmMnNrRsSVw] [<guild>] [<domain>]
+	people -[abBCdDfhHilLmMnNrRsSVw] [<guild>] [<domain>]
 
 DESCRIPTION
 	The command displays information about the number of logged in
@@ -12,14 +12,16 @@ DESCRIPTION
 	given.
 
 OPTIONS
-	[none]	- default as "people -ALirRdal".
+	[none]	- default as "people -LirRdal".
 	-a	- age abbreviated to highest denomination.
-	-A	- sort players in alfabetic order.
 	-b	- busy status (see 'help busy' for details).
 	-B	- add siteban information to ip number/name (requires -n|-N).
+	-C	- display the GMCP client version.
 	-d	- domain the player is a member of (the abbreviated name).
 	-D	- non-met description.
 	-f	- work with the 's' flag and exclude all but the snooped.
+	-g	- alignment of the player.
+	-G	- sort players on their alignment.
 	-h	- sort players on their ip number (ascending).
 	-H	- sort players on their ip name (ascending).
 	-i	- idle status (I = idle for more than five minutes).
@@ -31,9 +33,7 @@ OPTIONS
 	-N	- the player ip name, reverts to number if there is no name.
 	-r	- rank title.
 	-R	- rank level.
-	-s	- if 'S', snooped. Works only if you have right priviliges.
-		  This only listes the people who are actually snooped and
-		  those that are snooping them.
+	-s	- 'S' for snooped. Works only if you have right priviliges.
 	-S	- species (abbreciated to only three letters).
 	-V	- aVerage stat of player.
         -w	- show only wizards on the list.
@@ -42,13 +42,7 @@ OPTIONS
 	<guild>  - display only those people that are a member of this guild.
 
 NOTE
-        The options -A and -L can be combined to give a list that is sorted
-        on level and people with the same level sorted on name too.
-
-	The options -A and -h or -H can be combined to give a list that is
-	sorted on the ip number (name) and people with the same ip number
-	(name) are sorted on name too.
-
+	The option -A is depreciated. Sorting by name is default behaviour.
         The options -w and -m are mutually exclusive, meaning that only
         one of them will be used. (-w wins in this case.)
 

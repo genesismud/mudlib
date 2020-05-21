@@ -114,6 +114,34 @@ slots_free()
 }
 
 /*
+ * Function name: force_quit_idler
+ * Description  : This routine is called through an alarm from should_queue()
+ *                to prevent eval-cost errors on large inventories.
+ * Arguments    : object player - the player to quit.
+ */
+public void
+force_quit_idler(object player)
+{
+    SECURITY->log_syslog("IDLE", sprintf("%s %-11s after %s\n", ctime(time()),
+        capitalize(player->query_real_name()), CONVTIME(query_idle(player))));
+    tell_object(player,
+	"You have been idle too long. You are logged out.\n");
+
+    set_this_player(player);
+    player->quit();
+
+    /* This may happen if the person is idling while in combat, but it should
+     * not happen practically (very long combat while idling ?!?).
+     */
+    if (objectp(player))
+    {
+        player->add_prop("_mark_quit_idle");
+	player->save_character();
+	player->remove_object();
+    }
+}
+
+/*
  * Function name: should_queue
  * Description  : Call this function to see whether the player should queue.
  *                It does not queue the player yet.
@@ -125,8 +153,6 @@ public int
 should_queue(string name)
 {
     object *list;
-    int index;
-    int size;
 
     /* If not called from the login object, return the queue size. */
     if (MASTER_OB(previous_object()) != LOGIN_OBJECT)
@@ -160,33 +186,17 @@ should_queue(string name)
     list = filter(list, objectp);
     list = filter(list, interactive);
 
-    size = sizeof(list);
-    index = -1;
-    while(++index < size)
+    foreach(object player: list)
     {
 #ifdef NO_WIZARD_IDLE_CHECK
-        if (!SECURITY->query_wiz_rank(list[index]->query_real_name()) &&
-            query_idle(list[index]) > MAX_IDLE_TIME)
+        if (!SECURITY->query_wiz_rank(player->query_real_name()) &&
+            query_idle(player) > MAX_IDLE_TIME)
 #else
-	if (query_idle(list[index]) > (MAX_IDLE_TIME * (1 +
-	    SECURITY->query_wiz_rank(list[index]->query_real_name()))))
+	if (query_idle(player) > (MAX_IDLE_TIME * (1 +
+	    SECURITY->query_wiz_rank(player->query_real_name()))))
 #endif NO_WIZARD_IDLE_CHECK
 	{
-            SECURITY->log_syslog("IDLE", sprintf("%s %-11s after %s.\n",
-                ctime(time()), capitalize(list[index]->query_real_name()),
-                CONVTIME(query_idle(list[index]))));
-	    tell_object(list[index],
-		"You have been idle too long. You are logged out.\n");
-            list[index]->quit();
-
-	    /* This may happen if the person is idling while in combat, but
-	     * it should never happen practically.
-	     */
-	    if (objectp(list[index]))
-	    {
-		list[index]->save_character();
-		list[index]->remove_object();
-	    }
+            set_alarm(0.0, 0.0, &force_quit_idler(player));
 	}
     }
 

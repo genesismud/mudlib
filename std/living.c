@@ -27,6 +27,7 @@
 #pragma strict_types
 
 inherit "/std/container";
+inherit "/lib/hooks";
 
 #include <formulas.h>
 #include <language.h>
@@ -42,7 +43,6 @@ inherit "/std/container";
 #include "/std/living/combat.c"
 #include "/std/living/gender.c"
 #include "/std/living/stats.c"
-#include "/std/living/carry.c"
 #include "/std/living/heart_beat.c"
 #include "/std/living/drink_eat.c"
 #include "/std/living/cmdhooks.c"
@@ -53,10 +53,7 @@ inherit "/std/container";
 #include "/std/living/spells.c"
 #include "/std/living/possess.c"
 #include "/std/living/notify_meet.c"
-#include "/std/living/tool.c"
-#include "/std/living/hold.c"
-#include "/std/living/wear.c"
-#include "/std/living/wield.c"
+#include "/std/living/inventory.c"
 #include "/std/living/width_height.c"
 
 static int tell_active_flag;      /* Flag to check in catch_vbfc() */
@@ -98,12 +95,12 @@ create_container()
     add_prop(CONT_I_REDUCE_VOLUME, 200);
 
     set_random_size_descs();
+    ss_reset(); 
     save_vars_reset();
     skill_extra_map_reset();
     notify_meet_reset();
     gender_reset();
     spells_reset();
-    ss_reset(); 
     carry_reset();
     drink_eat_reset();
     move_reset(); 
@@ -114,9 +111,7 @@ create_container()
 
     enable_commands();
     cmdhooks_reset();
-
     create_living();
-
     combat_reload();
 
     /* An NPC has full hitpoints, full mana and full fatigue by default.
@@ -183,7 +178,7 @@ encounter(object obj)
  * Function name: command
  * Description  : Makes the living object execute a command, as if it was typed
  *                on the command line. For players, this function is redefined
- *                in /std/player_sec.c.
+ *                in /std/player.c.
  * Arguments    : string cmd - the command with arguments to perform. For players
  *                    this should always be prefixed with a "$".
  * Returns      : int - the amount of eval-cost ticks if the command was
@@ -267,13 +262,13 @@ catch_msg(mixed str, object from_player = 0)
  * Function name: remove_object
  * Description:   Destruct this object, but check for possessed first
  */
-public int
+public void
 remove_object()
 {
     possessed_remove();
     if (query_combat_object())
 	catch(query_combat_object()->remove_object());
-    return ::remove_object();
+    ::remove_object();
 }
 
 /*
@@ -297,6 +292,19 @@ nomask string *
 local_cmd()
 {
     return get_localcmd();
+}
+
+/*
+ * Function name: query_option
+ * Description  : Livings by default have no options.
+ * Arguments    : int opt - the option to query.
+ *                int setting - if true, use the unmodified setting.
+ * Returns      : int - 0
+ */
+varargs int
+query_option(int opt, int setting)
+{
+    return 0;
 }
 
 /*

@@ -15,10 +15,11 @@ DESCRIPTION
 	E.g., "cmdsoul /d/Genesis/cmd/soul_cmd_human".
 
 	By later giving the same command you remove that soul from
-	your list of command souls.
+	your list of command souls. New commands become active upon
+        login or when using newhooks.
 
 	If you want to write a soul of your own, study the manual entry
 	"souls".
 
 SEE ALSO
-	allcmd, cmdsoul
+	allcmd, cmdsoul, newhooks

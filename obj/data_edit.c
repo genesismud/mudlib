@@ -13,7 +13,7 @@
 inherit "/std/object";
 
 #include <composite.h>
-#include <filepath.h>
+#include <files.h>
 #include <macros.h>
 #include <options.h>
 #include <std.h>
@@ -21,7 +21,6 @@ inherit "/std/object";
 
 #define DATA_EDIT_EXEC    "data_exec.c"
 #define DATA_EDIT_PROMPT  "DataEdit> "
-#define DATA_EDIT_VERSION "1.1"
 
 /*
  * Global variables. They are not saved.
@@ -48,11 +47,11 @@ create_object()
     set_short("data editor");
     set_pshort("data editors");
 
-    set_long(break_string("With this data editor it is possible to list " +
-	"and manipulate LPC-datafiles. One command, data_edit, is linked to " +
-	"this editor. There is a general help-page on the command. Also, " +
-	"within the editor, you can get help by typing ? or h[elp]. The " +
-	"syntax for data_edit is 'data_edit <filename>'.", 75) + "\n");
+    set_long("With this data editor it is possible to list and manipulate " +
+        "LPC-datafiles. One command, dataedit, is linked to this editor. " +
+	"There is a general help-page on the command. Also, within the " +
+	"editor, you can get help by typing ? or h[elp]. The syntax for " +
+	"dataedit is 'dataedit <filename>'.\n");
 
     remove_prop(OBJ_I_VALUE);
     remove_prop(OBJ_I_VOLUME);
@@ -62,21 +61,6 @@ create_object()
     add_prop(OBJ_I_NO_TELEPORT, 1);
     add_prop(OBJ_S_WIZINFO,
 	"Just examine the data editor for information. /Mercade\n");
-}
-
-int data_edit(string str);
-
-/*
- * Function name: init
- * Description  : When a wizard 'comes close' to this object, the commands
- *                of this object are linked to the player.
- */
-public nomask void
-init()
-{
-    ::init();
-
-    add_action(data_edit,   "data_edit");
 }
 
 /*
@@ -94,7 +78,7 @@ data_edit(string str)
 
     if (this_player() != this_interactive())
     {
-	notify_fail("Illegal interactive player. data_edit refused.\n");
+	notify_fail("Illegal interactive player. dataedit refused.\n");
 	return 0;
     }
 
@@ -114,7 +98,7 @@ data_edit(string str)
     {
         if (!strlen(filename))
         {
-	    notify_fail("Syntax: data_edit [<filename>]\n" +
+	    notify_fail("Syntax: dataedit [<filename>]\n" +
 	        "No previous filename edited this session.\n");
 	    return 0;
 	}
@@ -136,11 +120,20 @@ data_edit(string str)
 	return 0;
     }
 
-    /* Expand the filename to the complete path and strip the possible
-     * trailing extension ".o".
-     */
-    filename = FTPATH(this_interactive()->query_path(), str);
-    sscanf(filename, "%s.o", filename);
+    /* If it's a player name, get the playerfile; arches++ only. */
+    if (SECURITY->exist_player(str) &&
+        (SECURITY->query_wiz_rank(name) >= WIZ_ARCH))
+    {
+	filename = PLAYER_FILE(str);
+    }
+    else
+    {
+	/* Expand the filename to the complete path and strip the possible
+         * trailing extension ".o".
+         */
+        filename = FTPATH(this_interactive()->query_path(), str);
+        sscanf(filename, "%s.o", filename);
+    }
 
     seteuid(getuid());
 
@@ -158,15 +151,27 @@ data_edit(string str)
     {
 	write("No such file: " + filename + ".o\n");
 	write("A new datafile will be created.\n");
-
 	data = ([ ]);
     }
 
-    write("Data editor version " + DATA_EDIT_VERSION + ".\n");
+    write("Data edit on: " + filename + ".o\n");
     write(DATA_EDIT_PROMPT);
     input_to("edit");
 
     return 1;
+}
+
+/*
+ * Function name: init
+ * Description  : When a wizard 'comes close' to this object, the commands
+ *                of this object are linked to the player.
+ */
+public nomask void
+init()
+{
+    ::init();
+
+    add_action(data_edit,   "dataedit");
 }
 
 /*
@@ -390,11 +395,14 @@ element_type(mixed element)
     if (floatp(element))
 	return "float";
 
+    if (objectp(element))
+	return "object";
+
     if (pointerp(element))
 	return sprintf("array   (%2d)", sizeof(element));
 
     if (mappingp(element))
-	return sprintf("mapping (%2d)", m_sizeof(element));
+	return sprintf("mapping [%2d]", m_sizeof(element));
 
     return "unknown";
 }
@@ -412,7 +420,6 @@ static nomask void
 data_list(string str)
 {
     string *vars;
-    string *data_vars;
     int    index;
     int    size;
 
@@ -425,52 +432,50 @@ data_list(string str)
     /* No arguments indicates the wizard only wants to see which variables
      * the datafile has.
      */
-    data_vars = m_indices(data);
-    if (!strlen(str))
+    vars = m_indices(data);
+
+    /* Display contents of one variable. */
+    if (IN_ARRAY(str, vars))
     {
-	index = -1;
-	size = sizeof(data_vars);
-	data_vars = sort_array(data_vars);
-	while(++index < size)
-	{
-	    data_vars[index] = sprintf("%-16s %-1s", data_vars[index],
-		element_type(data[data_vars[index]]));
-	}
-
-	index = this_interactive()->query_option(OPT_SCREEN_WIDTH);
-	if (index ==  0)
-	    index = 80;
-
-	write("The datafile contains " + size + " variables:\n" +
-	    sprintf("%-*#s\n", (index - 4), implode(data_vars, "\n")));
+	write("Contents of variable: " + str + "\n");
+	dump_array(data[str]);
+	write("\n");
 	return;
     }
 
-    /* 'list *' lists all variables. */
-    if (str == "*")
-	vars = data_vars;
-    else
+    size = sizeof(vars);
+    if (strlen(str))
     {
-	str = implode(explode(str, ","), " ");
-	vars = explode(str, " ") - ({ "" });
-
-	if (sizeof(vars - data_vars))
-	{
-	    write("Not in the datafile as variable: " +
-		COMPOSITE_WORDS(vars - data_vars) + ".\n");
-	    return;
-	}
+	vars = filter(vars, &wildmatch(str, ));
     }
 
-    size = sizeof(vars);
+    /* Just a single variable. List the contents instead. */
+    if (sizeof(vars) == 1)
+    {
+	data_list(vars[0]);
+	return;
+    }
+
+    write("The datafile contains " + size + " variables");
+    if (sizeof(vars) < size)
+    {
+	write(" (filtered = " + sizeof(vars) + ")");
+    }
+    write(":\n");
     index = -1;
+    size = sizeof(vars);
+    vars = sort_array(vars);
     while(++index < size)
     {
-	write(sprintf("%2d: %-20s ", (index + 1), vars[index]));
-	dump_array(data[vars[index]]);
-	write("\n");
+	vars[index] = sprintf("%-20s %s", vars[index],
+	    element_type(data[vars[index]]));
     }
 
+    index = this_interactive()->query_option(OPT_SCREEN_WIDTH);
+    if (index == 0)
+	index = 80;
+
+    write(sprintf("%-*#s\n", (index - 2), implode(vars, "\n")));
     return;
 }
 

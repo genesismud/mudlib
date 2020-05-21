@@ -118,6 +118,7 @@ public void
 done_reporting(string str)
 {
     int type = this_player()->query_prop(PLAYER_I_LOG_TYPE);
+    object target = this_player()->query_prop(PLAYER_O_LOG_OBJECT);
 
     if (!strlen(str))
     {
@@ -125,9 +126,14 @@ done_reporting(string str)
 	return;
     }
 
+    /* When making a log about an object, add the room the player is in. */
+    if (!target->query_prop(ROOM_I_IS) && environment(this_player()))
+    {
+        str = "Environment: " + file_name(environment(this_player())) + "\n" + str;
+    }
+
     /* Log the note, thank the player and then clean up after ourselves. */
-    SECURITY->note_something(str, type,
-        this_player()->query_prop(PLAYER_O_LOG_OBJECT));
+    SECURITY->note_something(str, type, target);
     write(LOG_THANK_MSG(LOG_MSG(type)));
 
     this_player()->remove_prop(PLAYER_I_LOG_TYPE);
@@ -151,15 +157,15 @@ date()
     write("Start time    : " + ctime(SECURITY->query_start_time()) + "\n");
     write("Up time       : " + CONVTIME(time() -
 	SECURITY->query_start_time()) + "\n");
-    write("Memory usage  : " + SECURITY->query_memory_percentage() + "%\n");
 #ifdef REGULAR_REBOOT
     write("Regular reboot: " + "Every day after " + REGULAR_REBOOT + ":00\n");
 #endif REGULAR_REBOOT
 
-#ifdef REGULAR_UPTIME
-    delay = SECURITY->query_irregular_uptime() +
-        SECURITY->query_start_time() - time();
-#endif REGULAR_UPTIME
+    /* Calculate the delay if there's an uptime limit ... */
+    if (delay = SECURITY->query_uptime_limit())
+    {
+        delay += (SECURITY->query_start_time() - time());
+    }
 
     /* Information about the reboot status. */
     if (ARMAGEDDON->shutdown_active())
@@ -168,7 +174,7 @@ date()
 	     CONVTIME(ARMAGEDDON->shutdown_time()) + ".\n");
 	write("Shutdown by   : " + capitalize(ARMAGEDDON->query_shutter()) +
 	     ".\n");
-	write("Reason        : " + ARMAGEDDON->query_reason() + "\n");
+	write(HANGING_INDENT("Reason        : " + ARMAGEDDON->query_reason(), 16, 0));
     }
 #ifdef REGULAR_UPTIME
     else if (delay <= 0)
@@ -177,7 +183,9 @@ date()
     }
     else if (this_player()->query_wiz_level())
     {
-        write("Regular reboot: " + CONVTIME(delay) + " to go.\n");
+        write("Regular reboot: " + ctime(SECURITY->query_uptime_limit() +
+            SECURITY->query_start_time()) + "\n                " +
+            CONVTIME(delay) + " to go.\n");
     }
     else
     {
@@ -206,6 +214,8 @@ date()
     }
 #endif REGULAR_UPTIME
 
+    write("Memory usage  : " + SECURITY->query_memory_percentage() + "%\n");
+
     /* Tell wizards some system data. */
     if (this_player()->query_wiz_level())
     {
@@ -215,10 +225,18 @@ date()
                 " (and higher).\n");
         }
 
+        write("Gamedriver    : " + SECURITY->do_debug("version") + "\n");
+//	write("Mudlib version: " + SECURITY->get_mudlib_version() + "\n");
 	write(HANGING_INDENT("System data   : " +
 	    SECURITY->do_debug("load_average"), 16, 0) + "\n");
     }
 
+    /* Just a little warning if people are using an old crypt version on
+     * their password. */
+    if (!this_player()->query_latest_crypt())
+    {
+        write("Password      : Your password uses an old security method. Please change it.\n");   
+    }
     return 1;
 }
 
@@ -226,40 +244,92 @@ date()
  * help - Get help on a subject
  */
 int
-help(string what)
+help(string topic)
 {
-    string dir = "general/";
+    string category;
+    string *parts;
 
-    if (!stringp(what))
+    if (!strlen(topic))
     {
-        what = "help";
+        topic = "help";
+    }
+    parts = explode(topic, " ");
+    switch(sizeof(parts))
+    {
+    case 1:
+        break;
+    case 2:
+        category = parts[0];
+        topic = parts[1];
+        break;
+    default:
+        notify_fail("Syntax: help [g/w/category] <topic>\n");
+        return 0;
     }
 
-    /* Wizards get to see the wizard help pages by default. */
-    if ((this_player()->query_wiz_level()) &&
-    	(this_player() == this_interactive()))
+    /* Try to process global help if no category was given, or if one of our
+     * categories was given. */
+    if (!category || IN_ARRAY(category, ({ "g", "w" }) ))
     {
-	/* ... unless they want to see the general page. */
-	if (wildmatch("g *", what))
-	{
-	    what = extract(what, 2);
-	}
-	else if (file_size("/doc/help/wizard/" + what) > 0)
-	{
-	    dir = "wizard/";
-	}
+        setuid();
+        seteuid(getuid()); 
+
+        /* Wizards try to see the wizard help, unless they don't want to. */
+        if (this_player()->query_wiz_level() && (category != "g"))
+        {
+            if (file_size(LOCAL_HELP_PATH + "wizard/" + topic) > 0)
+            {
+                this_player()->more(read_file(LOCAL_HELP_PATH + "wizard/" + topic));
+	        return 1;
+            }
+            if (file_size("/doc/help/wizard/" + topic) > 0)
+            {
+	        this_player()->more(read_file("/doc/help/wizard/" + topic));
+	        return 1;
+            }
+        }
+        /* All players see the mortal files, unless they don't want to. */
+        if (category != "w")
+        {
+            if (file_size(LOCAL_HELP_PATH + "general/" + topic) > 0)
+            {
+	        this_player()->more(read_file(LOCAL_HELP_PATH + "general/" + topic));
+	        return 1;
+            }
+            if (file_size("/doc/help/general/" + topic) > 0)
+            {
+	        this_player()->more(read_file("/doc/help/general/" + topic));
+	        return 1;
+            }
+        }
     }
 
-    if (file_size("/doc/help/" + dir + what) > 0)
+    /* Check for a help hook in the room the player is in. */
+    if (environment(this_player())->process_help(category, topic))
     {
-    	setuid();
-    	seteuid(getuid());
-
-	this_player()->more(("/doc/help/" + dir + what), 1);
-	return 1;
+        return 1;
+    }
+    /* Check all the objects in the environment of the player. As a side effect
+     * this also check this_player() itself, and thus allows the help to exist
+     * in a shadow. */
+    foreach(object obj: all_inventory(environment(this_player())))
+    {
+        if (obj->process_help(category, topic))
+        {
+            return 1;
+        }
+    }
+    /* Check the inventory of the player. */
+    foreach(object obj: all_inventory(this_player()))
+    {
+        if (obj->process_help(category, topic))
+        {
+            return 1;
+        }
     }
 
-    notify_fail("No help on \"" + what + "\" available.\n");
+    notify_fail("No help on \"" + topic + "\" available " +
+        (category ? " in category \"" + category + "\"": "") + ".\n");
     return 0;
 }
 
@@ -286,11 +356,8 @@ report(string str)
     /* Player may describe the object to make a report about. */
     if (stringp(str))
     {
-	/* If there is an argument to the 'done' or 'sys..' commands, take
-         * it as the message.
-         */
-	if ((type >= LOG_SYSBUG_ID) ||
-	    (type == LOG_DONE_ID))
+	/* If there is an argument to the 'done', take it as the message. */
+	if (type == LOG_DONE_ID)
 	{
 	    this_player()->add_prop(PLAYER_I_LOG_TYPE, type);
             this_player()->add_prop(PLAYER_O_LOG_OBJECT,
@@ -301,8 +368,7 @@ report(string str)
 	}
 
 	/* Find the target. */
-	if (!parse_command(str, environment(this_player()), "[the] %i",
-			   oblist) ||
+	if (!parse_command(str, environment(this_player()), "[the] %i", oblist) ||
 	    (!sizeof(oblist = NORMAL_ACCESS(oblist, 0, 0))))
 	{
 	    notify_fail("Make a " + query_verb() + " report about what?\n");

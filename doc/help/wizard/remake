@@ -5,9 +5,7 @@ SYNOPSIS
 	remake <file>
 
 DESCRIPTION
-	This command updates the objects in the specified object's
-	inheritance list.  Only objects which are newer than the specified
-	object will be updated.
+	This has been replaced by: update -r <file>
 
 SEE ALSO
 	update

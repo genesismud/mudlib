@@ -4,6 +4,7 @@ NAME
 SYNOPSIS
 	msecond <mortal>
 	msecond a[dd] <name> to <mortal>
+	msecond f[irst] <name>
 	msecond r[emove] <name> from <mortal>
 
 DESCRIPTION
@@ -17,6 +18,7 @@ DESCRIPTION
 ARGUMENTS
 	<none> - List the registered seconds.
 	add    - Add a second to the list.
+	first  - Mark a second as the first.
 	remove - Remove a second from the list.
 	<name> - The name of the second to add.
 

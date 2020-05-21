@@ -42,9 +42,11 @@
 #pragma strict_types
 
 inherit "/std/object";
+inherit "/lib/keep";
 inherit "/lib/wearable_item";
 
 #include <cmdparse.h>
+#include <files.h>
 #include <formulas.h>
 #include <macros.h>
 #include <stdproperties.h>
@@ -70,7 +72,6 @@ static int      arm_ac,         /* Armour class */
                 likely_break,   /* How likely the armour is to break */
                 likely_cond,    /* Likely cond of armour will worsen */
                 repair;         /* How much of this has been repaired */
-static private int      will_not_recover;       /* True if it won't recover */
 
 /*
  * Function name: create_armour
@@ -95,7 +96,7 @@ public nomask void
 create_object()
 {
     set_slots(F_ARMOUR_DEFAULT_AT);
-    arm_mods = allocate(W_NO_DT);
+    arm_mods = allocate(W_NUM_DT);
     likely_break = 2;
     likely_cond = 3;
     set_name("armour");
@@ -116,6 +117,16 @@ create_object()
     create_armour();
 
     update_prop_settings();
+
+    if (IS_CLONE)
+    {
+        LISTENER_NOTIFY(this_object());
+
+        if (!function_exists("query_auto_load", this_object()))
+        {
+            set_item_expiration();
+        }
+    }
 }
 
 /*
@@ -437,6 +448,7 @@ remove_broken(int silent = 0)
      * information by adding the property and the adjective.
      */
     wearer->remove_arm(this_object());
+    this_object()->remove_expiration_combat_hook(wearer);
     add_prop(OBJ_I_BROKEN, 1);
     remove_adj("worn");
     add_adj("unworn");
@@ -575,12 +587,12 @@ query_af()
  * Function name: got_hit
  * Description:   Notes that the defender has been hit. It can be used
  *                to reduce the ac for this hitlocation for each hit.
- * Arguments:     hid:   The hitloc id, ie the bodypart hit.
- *                ph:    The %hurt
- *                att:   Attacker
- *                aid:   The attack id
- *                dt:    The damagetype
- *                dam:   The damage done to us in hit points
+ * Arguments:     int hid:    The hitloc id, ie the bodypart hit.
+ *                int ph:     The %hurt
+ *                object att: the attacker
+ *                int aid:    The attack id
+ *                int dt:     The damagetype
+ *                int dam:    The damage done to us in hit points
  */
 varargs int
 got_hit(int hid, int ph, object att, int dt, int dam)
@@ -593,6 +605,10 @@ got_hit(int hid, int ph, object att, int dt, int dam)
     {
         hits = 0;
         set_condition(query_condition() + 1);
+
+        tell_object(wearer, "The " + short(wearer) + " took the full " +
+            one_of_list( ({ "brunt", "force", "impact" }) ) + 
+            " of that last hit and looks a bit more damaged than before.\n");
     }
 
     return 0;
@@ -632,7 +648,6 @@ set_default_armour(int ac, int at, int *am, object af)
     if (am) set_am(am);
     else set_am(A_NAKED_MOD);
 
-    
     /* Sets the name of the object that contains the function
        to call for extra defined wear_arm() and remove_arm()
        functions. */
@@ -831,43 +846,6 @@ appraise_object(int num)
 }
 
 /*
- * Function name: may_not_recover
- * Description  : This function will be true if the weapon may not recover.
- * Returns      : 1 - no recovery, 0 - recovery.
- */
-nomask int
-may_not_recover()
-{
-    return will_not_recover;
-}
-
-/*
- * Function name: may_recover
- * Description  : In some situations it is undesirable to have an armour 
- *                not recover. This function may then be used to force the
- *                armour to be recoverable.
- *
- *                This function may _only_ be called when a craftsman sells
- *                in armour he created to a player! It may expressly not be
- *                called in armours that are to be looted from NPC's!
- */
-nomask void
-may_recover()
-{
-    will_not_recover = 0;
-}
-
-/*
- * Function name: set_may_not_recover
- * Description  : Call this to force the armour to be non-recoverable.
- */
-nomask void
-set_may_not_recover()
-{
-    will_not_recover = 1;
-}
-
-/*
  * Function name: query_arm_recover
  * Description:   Return the recover strings for changing armour variables.
  * Returns:       Part of the recoder string
@@ -876,7 +854,7 @@ string
 query_arm_recover()
 {
     return "#ARM#" + hits + "#" + condition + "#" + repair + "#" +
-        query_prop(OBJ_I_BROKEN) + "#";
+        query_prop(OBJ_I_BROKEN) + "#" + query_item_expiration_recover();
 }
 
 /*
@@ -889,6 +867,8 @@ init_arm_recover(string arg)
 {
     string foobar;
     int    broken;
+    
+    init_item_expiration_recover(arg);
 
     sscanf(arg, "%s#ARM#%d#%d#%d#%d#%s", foobar,
         hits, condition, repair, broken, foobar);

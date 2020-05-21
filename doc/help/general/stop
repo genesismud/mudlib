@@ -16,7 +16,7 @@ DESCRIPTION
 
 OPTIONS
         [none]   - Stop without argument stops counting coins or other items.
-        fighting - Without argument, offer to stop fighting your current enemy.
+        fighting - Offer to stop fighting your current enemy.
         <target> - The target you want to offer to cease hostilities.
 
 SEE ALSO

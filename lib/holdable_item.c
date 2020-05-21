@@ -40,6 +40,7 @@
 #include <language.h>
 #include <macros.h>
 #include <wa_types.h>
+#include <hooks.h>
 
 /*
  * Global variables.
@@ -114,6 +115,11 @@ query_slots()
 public mixed
 hold()
 {
+    if (this_object()->query_prop(OBJ_I_BROKEN))
+    {
+        return -1;
+    }
+
     return 0;
 }
 
@@ -228,6 +234,11 @@ command_hold()
             " to be able to hold it.\n";
     }
 
+    if (this_object()->query_prop(OBJ_I_BROKEN))
+    {
+        return "It is broken and can't he held!\n";
+    }
+
     if (slots == W_ANYH)
     {
         if (this_player()->query_tool(TS_RWEAPON))
@@ -279,7 +290,7 @@ command_hold()
 
     this_object()->set_adj("held");
     this_object()->remove_adj("unheld");
-
+    this_object()->add_expiration_combat_hook(holder);
     return 1;
 }
 
@@ -322,9 +333,9 @@ command_release()
 
     this_player()->release(this_object());
 
+    this_object()->remove_expiration_combat_hook(holder);
     holder = 0;
     held_in_hand = 0;
-
     this_object()->remove_adj("held");
     this_object()->add_adj("unheld");
 
@@ -374,7 +385,24 @@ query_holdable_item()
 public void
 holdable_item_leave_env(object env, object to)
 {
-    command_release();
+    mixed hret;
+
+    if (!holder)
+    {
+        return;
+    }
+
+    if (!(hret = this_object()->release()))
+    {
+        tell_object(holder, "You release the " + this_object()->short() + ".\n");
+    }
+
+    this_player()->release(this_object());
+    this_object()->remove_expiration_combat_hook(holder);
+    this_object()->remove_adj("held");
+    this_object()->add_adj("unheld");
+    holder = 0;
+    held_in_hand = 0;
 }
 
 #if 0

@@ -8,6 +8,7 @@
 
 #include "/sys/composite.h"
 #include "/sys/const.h"
+#include "/sys/options.h"
 
 /*
  * These global variables are stored in the KEEPERSAVE.
@@ -109,6 +110,11 @@ private mapping m_teams;        /* The arch team mapping */
 #define FOB_WIZ_MENTOR    6
 #define FOB_WIZ_STUDENTS  7
 
+
+/* Arrays in the teams mapping */
+#define FOB_TEAM_LEADER   0
+#define FOB_TEAM_MEMBERS  1
+
 /*
  * Function name: load_fob_defaults
  * Description  : This function is called from master.c when the KEEPERAVE
@@ -181,6 +187,25 @@ query_domain_number(string dname)
         return -1;
 
     return m_domains[dname][FOB_DOM_NUM];
+}
+
+/*
+ * Function name: query_domain_long
+ * Description  : Find the long name of the domain.
+ * Arguments    : string sname - the short name of the domain.
+ * Returns      : string - the long name if found, "" otherwise.
+ */
+string
+query_domain_long(string sname)
+{
+    string *arr = m_indices(filter(m_domains,
+	    &operator(==)(lower_case(sname)) @
+	    &operator([])(,FOB_DOM_SHORT)));
+
+    if (!sizeof(arr))
+	return "";
+
+    return arr[0];
 }
 
 /*
@@ -562,7 +587,7 @@ transform_mortal_into_wizard(string wname, string cmder)
 
     if (objectp(wizard = find_player(wname)))
     {
-        if (catch(scroll = clone_object(APPRENTICE_SCROLL_FILE)))
+        if (catch(scroll = clone_object(WIZ_APPRENTICE_SCROLL)))
         {
             write("Error cloning the apprentice scroll.\n");
             tell_object(wizard, "Error cloning the apprentice scroll.\n");
@@ -576,6 +601,7 @@ transform_mortal_into_wizard(string wname, string cmder)
         }
 
         wizard->set_default_start_location(WIZ_ROOM);
+	wizard->set_notify(2); /* Wizard notifications only 'W' */
         wizard->save_me(1);        
     }
     else
@@ -587,6 +613,7 @@ transform_mortal_into_wizard(string wname, string cmder)
 
         playerfile["auto_load"] += ({ APPRENTICE_SCROLL_FILE });
         playerfile["default_start_location"] = WIZ_ROOM;
+	playerfile[SAVEVAR_VARS][SAVEVAR_NOTIFY] = 2;
 
         save_map(playerfile, PLAYER_FILE(wname));
 
@@ -785,7 +812,7 @@ draft_wizard_to_domain(string dname, string wname)
 int
 expel_wizard_from_domain(string wname)
 {
-    string cmder;
+    string cmder, dname;
 
     /* May only be called from the Lord soul. */
     if (!CALL_BY(WIZ_CMD_LORD))
@@ -804,7 +831,8 @@ expel_wizard_from_domain(string wname)
         return 0;
     }
 
-    if (!strlen(m_wizards[wname][FOB_WIZ_DOM]))
+    dname = m_wizards[wname][FOB_WIZ_DOM];
+    if (!strlen(dname))
     {
         notify_fail(capitalize(wname) + " is not a member of any domain.\n");
         return 0;
@@ -815,10 +843,11 @@ expel_wizard_from_domain(string wname)
      */
     cmder = getwho();
     if ((m_wizards[cmder][FOB_WIZ_RANK] <= WIZ_LORD) &&
-        (m_wizards[wname][FOB_WIZ_DOM] != m_wizards[cmder][FOB_WIZ_DOM]))
+	((m_domains[dname][FOB_DOM_LORD] != cmder) &&
+	 (m_wizards[cmder][FOB_WIZ_DOM] != dname)))
     {
-        write(capitalize(wname) + " is not a member of your domain " +
-              m_wizards[wname][FOB_WIZ_DOM] + ".\n");
+        write(capitalize(wname) + " is not a member of your domain(s) " +
+              dname + ".\n");
         return 1;
     }
 
@@ -921,7 +950,21 @@ rename_wizard(string oldname, string newname)
             break;
 
         case WIZ_LORD:
-            m_domains[dname][FOB_DOM_LORD] = newname;
+	case WIZ_ARCH:
+	    foreach(string dom, mixed *data: m_domains)
+	    {
+		if (data[FOB_DOM_LORD] != oldname)
+		    continue;
+
+		if (dname != dom)
+		{
+		    data[FOB_DOM_MEMBERS] -= ({ oldname });
+		    data[FOB_DOM_MEMBERS] += ({ newname });
+		}
+
+		data[FOB_DOM_LORD] = newname;
+		write("Domain Lordship of " + dom + " also updated.\n");
+	    }
             break;
         }
 
@@ -938,6 +981,111 @@ rename_wizard(string oldname, string newname)
         capitalize(oldname),
         capitalize(newname),
         capitalize(this_interactive()->query_real_name())));
+}
+
+int
+lordship(string wname, string dname)
+{
+    int rank, removed;
+
+    /* May only be called from the arch wizards soul. */
+    if (!CALL_BY(WIZ_CMD_ARCH))
+        return 0;
+
+    if (!strlen(wname) || !strlen(dname))
+    {
+	notify_fail("Syntax: lordship <name> <domain>\n");
+	return 0;
+    }
+
+    /* Check validity of the wizard name. */
+    wname = lower_case(wname);
+    if (!pointerp(m_wizards[wname]))
+    {
+        notify_fail("There is no wizard named " + capitalize(wname) + ".\n");
+        return 0;
+    }
+
+    /* Check validity of the domain name. */
+    dname = capitalize(dname);
+    if (!pointerp(m_domains[dname]))
+    {
+        notify_fail("There is no domain named " + dname + ".\n");
+        return 0;
+    }
+
+    if (dname == WIZARD_DOMAIN)
+    {
+	notify_fail("Lordship may not be granted to the " +
+	    WIZARD_DOMAIN + " domain.\n");
+	return 0;
+    }
+
+    rank = m_wizards[wname][FOB_WIZ_RANK];
+    if (rank < WIZ_LORD)
+    {
+	write("Lordships may only be granted to existing lieges or arches.\n");
+	return 1;
+    }
+
+    if (strlen(m_domains[dname][FOB_DOM_LORD]))
+    {
+	if (m_domains[dname][FOB_DOM_LORD] != wname)
+	{
+	    write("The domain " + dname + " already has a Liege.\n" +
+		"You need to demote or unassign them first.\n");
+	    return 1;
+	}
+
+	if (m_wizards[wname][FOB_WIZ_DOM] != dname)
+	{
+	    /* Only pull membership of non-primary domains. */
+	    m_domains[dname][FOB_DOM_MEMBERS] -= ({ wname });
+	}
+	else if (rank == WIZ_LORD)
+	{
+	    write("You may not revoke lordship to a Liege's "+
+		"primary domain. Use 'demote' instead.\n");
+	    return 1;
+	}
+
+	/* Remove them from the domain-list. */
+	removed = 1;
+	m_domains[dname][FOB_DOM_LORD] = "";
+
+	write("You have revoked lordship of " + dname +
+	    " from " + capitalize(wname) + ".\n");
+    }
+    else
+    {
+	/* Only update membership if non-primary domain. */
+	if (m_wizards[wname][FOB_WIZ_DOM] != dname)
+	    m_domains[dname][FOB_DOM_MEMBERS] += ({ wname });
+
+	/* Add them to the domain-list. */
+	m_domains[dname][FOB_DOM_LORD] = wname;
+	write("You have granted lordship of " + dname +
+	    " to " + capitalize(wname) + ".\n");
+    }
+
+    save_master();
+
+    /* Log the assignment. */
+    log_file("LEVEL",
+        sprintf("%s %-11s: %s Liegedom of %s by %s.\n",
+        ctime(time()),
+        capitalize(wname),
+	(removed ? "Revoked" : "Granted"),
+        dname,
+        capitalize(getwho())));
+
+    tell_domain(dname, wname,
+	("You are " + (removed ? "no longer" : "now") +
+	    " the liege of " + dname + ".\n"),
+	(capitalize(wname) + " is " + (removed ? "no longer" : "made") +
+	    " the liege of " + dname + ".\n"));
+
+    return 1;
 }
 
 /************************************************************************
@@ -1044,12 +1192,12 @@ apply_to_domain(string dname)
  * Function name: accept_application
  * Description  : A lord accepts an application. 
  * Arguments    : string wname - the wizard to accept.
+ * 		  string dname - the domain name, if given.
  * Returns      : int 1/0 - success/failure.
  */
 int
-accept_application(string wname)
+accept_application(string wname, string dname)
 {
-    string dname;
     string cmder;
 
     /* May only be called from the Lord soul. */
@@ -1063,14 +1211,28 @@ accept_application(string wname)
     }
 
     cmder = getwho();
-    if (m_wizards[cmder][FOB_WIZ_RANK] > WIZ_LORD)
-    {
-        write("You are not the liege or steward of any domain!\n");
-        return 1;
-    }
-
     wname = lower_case(wname);
-    dname = m_wizards[cmder][FOB_WIZ_DOM];
+
+    if (strlen(dname))
+    {
+	dname = capitalize(dname);
+	if (!pointerp(m_domains[dname]))
+	{
+	    notify_fail("No such domain '" + dname + "'.\n");
+	    return 0;
+	}
+
+	if ((m_wizards[cmder][FOB_WIZ_RANK] >= WIZ_LORD) &&
+	    (m_domains[dname][FOB_DOM_LORD] != cmder))
+	{
+	    notify_fail("You are not the liege of " + dname + ".\n");
+	    return 0;
+	}
+    }
+    else
+    {
+	dname = m_wizards[cmder][FOB_WIZ_DOM];
+    }
 
     if (sizeof(m_domains[dname][FOB_DOM_MEMBERS]) >=
         m_domains[dname][FOB_DOM_MAXSIZE])
@@ -1081,12 +1243,12 @@ accept_application(string wname)
 
     if (!pointerp(m_applications[dname]))
     {
-        write("Nobody has asked to join your domain.\n");
+        write("Nobody has asked to join " + dname + ".\n");
         return 1;
     }
     else if (member_array(wname, m_applications[dname]) == -1)
     {
-        write(capitalize(wname) + " has not asked to join your domain.\n");
+        write(capitalize(wname) + " has not asked to join " + dname + ".\n");
         return 1;
     }
 
@@ -1113,12 +1275,12 @@ accept_application(string wname)
  * Function name: deny_application
  * Description  : The lord denies an application of a wizard.
  * Arguments    : string wname - the wizard name.
+ * 		  string dname - the domain name, if given.
  * Returns      : int 1/0 - success/failure.
  */
 int
-deny_application(string wname)
+deny_application(string wname, string dname)
 {
-    string dname;
     string cmder;
     object wiz;
 
@@ -1127,18 +1289,32 @@ deny_application(string wname)
         return 0;
     
     cmder = getwho();
-    if (m_wizards[cmder][FOB_WIZ_RANK] > WIZ_LORD)
-    {
-        notify_fail("You are not the liege or steward of any domain!\n");
-        return 0;
-    }
-
     wname = lower_case(wname);
-    dname = m_wizards[cmder][FOB_WIZ_DOM];
+
+    if (strlen(dname))
+    {
+	dname = capitalize(dname);
+	if (!pointerp(m_domains[dname]))
+	{
+	    notify_fail("No such domain '" + dname + "'.\n");
+	    return 0;
+	}
+
+	if ((m_wizards[cmder][FOB_WIZ_RANK] >= WIZ_LORD) &&
+	    (m_domains[dname][FOB_DOM_LORD] != cmder))
+	{
+	    notify_fail("You are not the liege of " + dname + ".\n");
+	    return 0;
+	}
+    }
+    else
+    {
+	dname = m_wizards[cmder][FOB_WIZ_DOM];
+    }
 
     if (!pointerp(m_applications[dname]))
     {
-        write("Nobody has asked to join your domain.\n");
+        write("Nobody has asked to join " + dname + ".\n");
         return 1;
     }
     else if (member_array(wname, m_applications[dname]) == -1)
@@ -1360,14 +1536,34 @@ list_applications(string str)
         return 1;
     }
 
+    /* Lieges need to see applications in all their domains. */
+    if (rank == WIZ_LORD)
+    {
+        if (strlen(str))
+	    return list_applications_by_wizard(str, 0);
+
+	foreach(string word: m_indices(m_applications))
+	{
+	    if (m_domains[word][FOB_DOM_LORD] != cmder)
+		continue;
+
+	    if (!size++)
+		write("Domain      Applications\n----------- ------------\n");
+
+	    write(FORMAT_NAME(word) + " " +
+		COMPOSITE_WORDS(sort_array(map(m_applications[word],
+			    capitalize))) + "\n");
+	}
+
+	if (!size)
+	    write("No wizards have applied to your domain(s).\n");
+	return 1;
+    }
+
     /* People in a domain may list the applications to their domain. */
     if ((rank >= WIZ_NORMAL) &&
         (m_wizards[cmder][FOB_WIZ_DOM] != WIZARD_DOMAIN))
     {
-        if (strlen(str) &&
-            (rank == WIZ_LORD))
-            return list_applications_by_wizard(str, 0);
-
         if (!sizeof(m_applications[m_wizards[cmder][FOB_WIZ_DOM]]))
         {
             write("No wizards have applied to your domain.\n");
@@ -1789,6 +1985,24 @@ query_wiz_dom(string wname)
 }
 
 /*
+ * Function name: query_lord_domains
+ * Description  : Return the domains a wizard is lord over.
+ * Arguments    : string wname - the wizard.
+ * Returns      : string array - the domains, else an empty array.
+ */
+string *
+query_lord_domains(string wname)
+{
+    wname = lower_case(wname);
+
+    if (!sizeof(m_wizards[wname]))
+        return ({ });
+
+    return m_indices(filter(m_domains,
+	    &operator(==)(wname) @ &operator([])(,FOB_DOM_LORD)));
+}
+
+/*
  * Function name: query_wiz_chd
  * Description  : Return the name of the domain changer.
  * Arguments    : string wname - the wizard.
@@ -1874,17 +2088,26 @@ do_change_rank(string wname, int rank, string cmder)
 #endif USE_WIZ_LEVELS
         capitalize(cmder)));
 
-    /* If the person was Liege, inform the domain. */
-    if (m_wizards[wname][FOB_WIZ_RANK] == WIZ_LORD)
+    /* If the person was Lord over any domain, inform them. */
+    if (m_wizards[wname][FOB_WIZ_RANK] >= WIZ_LORD)
     {
-        tell_domain(m_wizards[wname][FOB_WIZ_DOM],
-            m_domains[m_wizards[wname][FOB_WIZ_DOM]][FOB_DOM_LORD],
-            ("You are no longer the liege of " +
-            m_wizards[wname][FOB_WIZ_DOM] + ".\n"),
-            (capitalize(wname) + " no longer is the liege of " +
-            m_wizards[wname][FOB_WIZ_DOM] + ".\n"));
+	/* We need to inform all domains they were a Lord
+	 * of, as well as cleaning up memberships.
+	 */
+	foreach(string dom, mixed *data: m_domains)
+	{
+	    if (data[FOB_DOM_LORD] != wname)
+		continue;
 
-        m_domains[m_wizards[wname][FOB_WIZ_DOM]][FOB_DOM_LORD] = "";
+	    tell_domain(dom, wname,
+		("You are no longer the liege of " + dom + ".\n"),
+		(capitalize(wname) + " is no longer the liege of " +
+		    dom + ".\n"));
+
+	    data[FOB_DOM_LORD] = "";
+	    if (m_wizards[wname][FOB_WIZ_DOM] != dom)
+		data[FOB_DOM_MEMBERS] -= ({ wname });
+	}
     }
 
     /* If the person was steward, inform the domain. */
@@ -1905,12 +2128,22 @@ do_change_rank(string wname, int rank, string cmder)
      */
     if (rank == WIZ_LORD)
     {
+	string dlord;
         /* If there already is a Lord, demote the old one. This must be
          * done before the new one is marked as such.
          */
         dname = m_wizards[wname][FOB_WIZ_DOM];
-        if (strlen(m_domains[dname][FOB_DOM_LORD]))
-            do_change_rank(m_domains[dname][FOB_DOM_LORD], WIZ_NORMAL, cmder);
+	dlord = m_domains[dname][FOB_DOM_LORD];
+        if (strlen(dlord))
+	{
+	    /* If this is the Lord's primary domain, demote as normal.
+	     * Otherwise, remove them as a member and continue.
+	     */
+	    if (m_wizards[dlord][FOB_WIZ_DOM] == dname)
+		do_change_rank(dlord, WIZ_NORMAL, cmder);
+	    else
+		m_domains[dname][FOB_DOM_MEMBERS] -= ({ dlord });
+	}
 
         m_domains[dname][FOB_DOM_LORD] = wname;
 
@@ -1975,6 +2208,7 @@ wizard_change_rank(string wname, int rank)
     int    old_rank;
     string dname;
     object wizard;
+    string *seconds;
 
     /* May only be called from the Lord soul. */
     if (!CALL_BY(WIZ_CMD_LORD))
@@ -2012,9 +2246,9 @@ wizard_change_rank(string wname, int rank)
     }
     else if (m_wizards[cmder][FOB_WIZ_RANK] == WIZ_LORD)
     {
-        if (m_wizards[cmder][FOB_WIZ_DOM] != m_wizards[wname][FOB_WIZ_DOM])
+        if (m_domains[dname][FOB_DOM_LORD] != cmder)
         {
-            write("You may only handle people in your own domain.\n");
+            write("You may only handle people in your own domain(s).\n");
             return 1;
         }
 
@@ -2050,6 +2284,20 @@ wizard_change_rank(string wname, int rank)
         write("It is not possible to " +
             ((rank > old_rank) ? "promote" : "demote") + " someone from " +
             WIZ_RANK_NAME(old_rank) + " to " + WIZ_RANK_NAME(rank) + ".\n");
+	switch(rank)
+	{
+	case WIZ_NORMAL:
+	    write("Wizards are drafted, or they apply to a domain.\n");
+	    break;
+	case WIZ_MAGE:
+	case WIZ_STEWARD:
+	case WIZ_LORD:
+	    write("Lieges, Stewards and Mages have to join a domain first as wizard.\n");
+	    break;
+	case WIZ_KEEPER:
+	    write("Keepers are made through the \"keeper\" command.\n");
+	    break;
+	}
         return 1;
     }
 
@@ -2074,12 +2322,27 @@ wizard_change_rank(string wname, int rank)
         m_delkey(m_wizards, wname);
         remove_all_sanctions(wname);
 
+        /* Delete the Jr, if any. */
+        if (this_object()->remove_playerfile(wname + "jr",
+            "Wizard " + capitalize(wname) + " demoted."))
+        {
+            write("Automatically deleted " + capitalize(wname) + "jr.\n");
+        }
+        /* Banish the wizard just for good measure. */
+        write("Consider if the name " + capitalize(wname) + " should be banished.\n");
+
+        if (sizeof(seconds = this_object()->query_seconds(wname)))
+        {
+            write("Listed second" + ((sizeof(seconds) == 1) ? "" : "s")+ ": " +
+                COMPOSITE_WORDS(sort_array(map(seconds, capitalize))) + "\n");
+        }
+
         /* Tell him/her the bad news and boot him. */
         if (objectp(wizard = find_player(wname)))
         {
             tell_object(wizard, "You are being reverted back to mortal by " +
                 capitalize(cmder) + ". This means that you have to " +
-                "create a new character again to continu playing.\n");
+                "create a new character again to continue playing.\n");
 
             /* ... and ... POOF! ;-) */
             wizard->quit();
@@ -2794,15 +3057,15 @@ update_teams(void)
     foreach(string team: m_indices(m_teams))
     {
         /* Remove non-wizards. */
-        foreach(string wname: m_teams[team])
+        foreach(string wname: m_teams[team][FOB_TEAM_MEMBERS])
         {
             if (m_wizards[wname][FOB_WIZ_RANK] < WIZ_NORMAL)
             {
-                m_teams[team] -= ({ wname });
+                m_teams[team][FOB_TEAM_MEMBERS] -= ({ wname });
             }
         }
         /* Remove empty teams. */
-        if (!sizeof(m_teams[team]))
+        if (!sizeof(m_teams[team][FOB_TEAM_MEMBERS]))
         {
             m_delkey(m_teams, team);
         }
@@ -2834,11 +3097,9 @@ add_team_member(string team, string member)
 
     /* Make sure he only ends up there once. */
     if (!pointerp(m_teams[team]))
-        m_teams[team] = ({ member });
-    else
-    {
-        m_teams[team] |= ({ member });
-    }
+        m_teams[team] = ({ member, ({ member }) });
+    else 
+        m_teams[team][FOB_TEAM_MEMBERS] |= ({ member });
 
     save_master();
 
@@ -2863,9 +3124,54 @@ remove_team_member(string team, string member)
     if (pointerp(m_teams[team]))
     {
         member = lower_case(member);
-        m_teams[team] -= ({ member });
+        m_teams[team][FOB_TEAM_MEMBERS] -= ({ member });
+
+        if (m_teams[team][FOB_TEAM_LEADER] == member)
+            m_teams[team][FOB_TEAM_LEADER] = 0;
+
         update_teams();
     }
+
+    return 1;
+}
+
+/* Function name: query_team_leader
+ * Description  :  Get the team leader
+ * Arguments    : string team - the team
+ * Returns      : string - the leader
+ */
+string
+query_team_leader(string team)
+{
+    team = lower_case(team);
+    if (!pointerp(m_teams[team]))
+        return 0;
+
+    return m_teams[team][FOB_TEAM_LEADER];
+}
+
+/* 
+ * Function name: set_team_leader
+ * Description  : Sets the leader of a team
+ * Arguments    : string team - the team
+ *              : string leader - the new leader
+ * Returns      : 1/0 - success / failure
+ */
+int
+set_team_leader(string team, string leader)
+{
+    /* Only arches can do this. */
+    if (!CALL_BY(WIZ_CMD_ARCH))
+        return 0;
+
+    team = lower_case(team);
+    if (!pointerp(m_teams[team]))
+        return 0;
+
+    if (IN_ARRAY(leader, m_teams[team][FOB_TEAM_MEMBERS]))
+        m_teams[team][FOB_TEAM_LEADER] = leader;
+
+    save_master();
 
     return 1;
 }
@@ -2883,7 +3189,7 @@ query_team_list(string team)
     if (!pointerp(m_teams[team]))
        return ({ });
 
-    return secure_var(m_teams[team]);
+    return secure_var(m_teams[team][FOB_TEAM_MEMBERS]);
 }
 
 /*
@@ -2901,7 +3207,7 @@ query_team_member(string team, string member)
         return 0;
 
     member = lower_case(member);
-    return (member_array(member, m_teams[team]) >= 0);
+    return (member_array(member, m_teams[team][FOB_TEAM_MEMBERS]) >= 0);
 }
 
 /*
@@ -2928,7 +3234,7 @@ query_team_membership(string wname)
     wname = lower_case(wname);
     foreach(string team: m_indices(m_teams))
     {
-        if (IN_ARRAY(wname, m_teams[team]))
+        if (IN_ARRAY(wname, m_teams[team][FOB_TEAM_MEMBERS]))
         {
             rlist += ({ team });
         }

@@ -9,6 +9,10 @@
 #ifndef LOG_DEF
 #define LOG_DEF
 
+/* Some definitions to measure log sizes. */
+#define LOG_SIZE_100K  100000
+#define LOG_SIZE_1M   1000000
+
 /*
  * Define this flag if you want to log when a player is killed, and by what.
  *
@@ -29,7 +33,7 @@
  * Define this flag if you want to have a separate log made of all attacks from
  * players to players.
  *
- * Used in: /std/players/pcombat.c
+ * Used in: /std/player/pcombat.c
  */
 #define LOG_PLAYERATTACKS "PATTACKS"
 
@@ -64,6 +68,13 @@
 #define LOG_SHUTDOWN "SHUTDOWN"
 
 /*
+ * Log of the saved recovery string when a player (auto)saves.
+ *
+ * Used in: /std/player/cmd_sec.c
+ */
+#define LOG_RECOVER_LIST "RECOVER_LIST"
+
+/*
  * Define this flag if you want to log when a players hitpoints are
  * reduced.
  *
@@ -84,6 +95,13 @@
  * Used in: /cmd/wiz/normal.c
  */
 #define LOG_ECHO "ECHO"
+
+/*
+ * Define this flag if pinfo actions should be logged.
+ *
+ * Used in: /cmd/wiz/apprentice.c and helper.c
+ */
+#define LOG_PINFO "PINFO"
 
 /*
  * Define this flag if you want to have a log of all wizards registering
@@ -139,13 +157,11 @@
  *
  * Used in: /secure/mail_reader.c
  */
-#define LOG_GENERATED_MAIL "/syslog/log/GENERATED_MAIL"
+#define LOG_GENERATED_MAIL "GENERATED_MAIL"
 
 /*
- * LOG_BOOKKEEP
- *
- * If defined, the file where all xp given by domains to mortals are logged
- * if bigger then a certain limit.
+ * LOG_BOOKKEEP - If defined, the file where all xp given by domains to mortals
+ * are logged if bigger then a certain limit.
  *
  * Used in: /secure/master/fob.c
  */
@@ -156,52 +172,50 @@
 #define LOG_BOOKKEEP_ROTATE "domain_xp/XP"
 
 /*
- * LOG_BOOKKEEP_ERR
- *
- * If defined, the file where all exp that cannot be put on the account of
- * domains is put. For instance if the function add_exp is called into a
- * mortal directly.
+ * LOG_BOOKKEEP_ERR - If defined, the file where all exp that cannot be put
+ * on the account of domains is put. For instance if the function add_exp is
+ * called into a mortal directly.
  *
  * Used in: /secure/master/fob.c
  */
 #define LOG_BOOKKEEP_ERR "STRANGE_XP"
 
 /*
- * LOG_SUSPENDED
- *
- * If defined, it will log when players have been suspended by the
- * administration.
+ * LOG_SUSPENDED - If defined, it will log when players have been suspended by
+ * the administration.
  *
  * Used in /cmd/wiz/arch.c
  */
 #define LOG_SUSPENDED "SUSPENDED"
 
 /*
- * LOG_RESTRICTED
- *
- * If defined, it will log when players impose a playing restriction on
- * themselves or when the administration imposes a restriction on the player
+ * LOG_RESTRICTED - If defined, it will log when players impose a playing
+ * restriction on themselves or when the administration imposes a
+ * restriction on the player
  *
  * Used in /std/player/savevars_sec.c
  */
 #define LOG_RESTRICTED "RESTRICTED"
 
 /*
- * LOG_ENTER
+ * LOG_FAILED_RECOVERY - Logs failed recovery / autoload entries
  *
- * If defined, it will log whenever a player logs in, quits, linkdies,
- * revives from linkdeath or refreshes his/her link.
+ * Used in: /std/player.c
+ */
+#define LOG_FAILED_RECOVERY "FAILED_RECOVERY"
+
+/*
+ * LOG_ENTER - If defined, it will log whenever a player logs in, quits,
+ * linkdies, revives from linkdeath or refreshes his/her link.
  *
  * Used in /secure/master/notify.c
  */
 #define LOG_ENTER "enter/ENTER"
 
 /*
- * LOG_STRANGE_LOGIN
- * LOG_SECOND_LOGIN
- *
- * If defined, it will log whenever a login is suspicious, and why.
- * The SECOND_LOGIN depends on STRANGE_LOGIN being defined.
+ * LOG_STRANGE_LOGIN / LOG_SECOND_LOGIN - If defined, it will log whenever a
+ * login is suspicious, and why. The SECOND_LOGIN depends on STRANGE_LOGIN
+ * being defined.
  *
  * Used in /secure/login.c
  */
@@ -209,13 +223,41 @@
 #define LOG_SECOND_LOGIN  "SECOND_LOGIN"
 
 /*
- * STEAL_EXP
- *
- * If defined, it will log the experience awareded for the theft.
+ * STEAL_EXP - If defined, it will log the experience awareded for the theft.
  *
  * Used in /cmd/live/thief.c
  */
 #define STEAL_EXP_LOG "STEAL_EXP"
+
+/*
+ * LOG_GMCP - Logs any activity on the Generic MUD Communication Protocol.
+ *
+ * Used in: /secure/master.c
+ */
+#define LOG_GMCP "GMCP"
+
+/*
+ * AOP_TEAM_LOGS
+ *
+ * This definition contains a list of logs in /syslog/log that should
+ * be visible to members of the AoP team.
+ */
+#define AOP_TEAM_LOGS ({ "enter",       \
+                         "BADNAME",     \
+                         "BANISHED",    \
+                         "CRITICAL",    \
+                         "CHANGE_STAT", \
+                         "DELETED",     \
+                         "KILLS",       \
+                         "MONEY_LOG",   \
+                         "PATTACKS",    \
+                         "REDUCE_HP",   \
+                         "RESTRICTED",  \
+                         "PKILLS",      \
+                         "STEAL_LOG",   \
+                         "SUSPENDED",   \
+                         "FAILED_RECOVERY" \
+                      })
 
 /*
  * The standard names and messages of some logfiles.
@@ -247,12 +289,12 @@
 
 #define LOG_MSG(t) ( ({ "this special message",      \
 			"your bug report",           \
-			"noticing the typo",         \
+			"reporting the typo",         \
 			"sharing your ideas",        \
 			"your compliments",          \
 			"having done something",     \
 			"your system bug report",    \
-			"noticing the global typo",  \
+			"reporting the global typo",  \
 			"sharing your global ideas", \
 			"your global compliments" })[(t)])
 
@@ -266,8 +308,6 @@
 			"TYPOS",   \
 			"IDEAS",   \
 			"PRAISE" })[(t)])
-
-#include "/config/sys/log2.h"
 
 /* No definitions beyond this line. */
 #endif LOG_DEF

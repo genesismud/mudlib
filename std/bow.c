@@ -13,6 +13,7 @@
 inherit "/std/launch_weapon";
 inherit "/lib/keep";
 
+#include <files.h>
 #include <filter_funs.h>
 #include <formulas.h>
 #include <language.h>
@@ -20,7 +21,6 @@ inherit "/lib/keep";
 #include <options.h>
 #include <stdproperties.h>
 #include <wa_types.h>
-#define ENV(x) environment(x)
 
 
 // Variables
@@ -29,15 +29,9 @@ int    stringed;     /* A flag that is set when bow is stringed.           */
 
 
 // Prototypes
-public string query_damage_desc(object archer, object target,
-				object projectile, int phurt);
-
-public nomask void snap_string();
-
+public string query_damage_desc(object archer, object target, object projectile, int phurt);
 public nomask void unstring_bow();
-
 public nomask int parse_string(string args);
-
 public nomask int parse_unstring(string args);
 
 
@@ -84,52 +78,10 @@ init()
 }
 
 /*
- * Function name: did_parry
- * Description:   Called when this weapon was used to parry an attack. It can
- *                be used to wear down a weapon. Note that his method is called
- *                before the combat messages are printed out.
- * Arguments:     att:   Attacker
- *                aid:   The attack id
- *                dt:    The damagetype
- */
-public varargs void
-did_parry(object att, int aid, int dt)
-{
-    if (stringed && !random(F_BOWSTRING_SNAP_CHANCE))
-    {
-	snap_string();
-    }
-}
-
-/*
  * Function name: snap_string
- * Description:   Called when the bowstring of this bow snaps. It
- *                is responsible for giving the messages to all
- *                involved parties and calling unstring_bow()
- *                to get the internal state updated.
+ * Description:   Depreciated. Kept for backward compatiblity.
  */
-public nomask void
-snap_string()
-{
-    object archer = query_wielded();
-    object *bystanders = FILTER_LIVE(all_inventory(environment(archer))) -
-	({ archer });
-	
-    bystanders =
-	filter(FILTER_IS_SEEN(archer, bystanders), &->can_see_in_room());
-
-    tell_object(query_wielded(), "The bowstring of your " +
-                                 short() + " snaps!\n");
-    if (sizeof(bystanders))
-    {
-	bystanders->catch_msg("The bowstring of " +
-			      LANG_POSS(QTNAME(archer)) + " " +
-			      short() + " breaks!\n");
-    }
-
-    unstring_bow();
-    bowstring = 0;
-}
+public nomask void snap_string() { }
 
 /*
  * Function name: string_string
@@ -192,43 +144,41 @@ parse_string(string args)
     
     if (environment(this_object()) != archer)
     {
-	return 0;
+        return 0;
     }
 
     if (!args || !parse_command(args, ({ this_object() }), " %o ", dummy))
     {
-	notify_fail("String what? The " + short() + "?\n");
-	return 0;
+        notify_fail("String what? The " + short() + "?\n");
+        return 0;
     }
 
     if (stringed)
     {
-	write("The " + short() + " is already strung.\n");
-	return 1;
+        write("The " + short() + " is already strung.\n");
+        return 1;
     }
 
     strings = filter(all_inventory(archer), &->is_bowstring());
 
     if (!sizeof(strings))
     {
-	write("You don't have any bowstrings.\n");
-	return 1;
+        write("You don't have any bowstrings.\n");
+        return 1;
     }
 
     string_bow(MASTER_OB(strings[0]));
     
     write("You string your " + short() + " with " +
-	  LANG_ADDART(strings[0]->short()) + ".\n");
+          LANG_ADDART(strings[0]->short()) + ".\n");
 
     bystanders = FILTER_LIVE(all_inventory(environment(archer))) - ({archer});
-    bystanders = filter(FILTER_IS_SEEN(archer, bystanders),
-			&->can_see_in_room());
+    bystanders = filter(FILTER_IS_SEEN(archer, bystanders), &->can_see_in_room());
 
     if (sizeof(bystanders))
     {
-	bystanders->catch_msg(QCTNAME(archer) + " strings " +
-			      archer->query_possessive() + " " +
-			      short() + ".\n");
+        bystanders->catch_msg(QCTNAME(archer) + " strings " +
+            archer->query_possessive() + " " + short() + ".\n");
     }
     
     strings[0]->remove_object();
@@ -253,30 +203,30 @@ parse_unstring(string args)
     
     if (environment(this_object()) != archer)
     {
-	return 0;
+        return 0;
     }
 
     if (!args || !parse_command(args, ({ this_object() }), " %o ", dummy))
     {
-	notify_fail("Unstring what? The " + short() + "?\n");
-	return 0;
+        notify_fail("Unstring what? The " + short() + "?\n");
+        return 0;
     }
 
     if (!stringed)
     {
-	write("The " + short() + " has no string.\n");
-	return 1;
+        write("The " + short() + " has no string.\n");
+        return 1;
     }
 
     /* Must have an EUID to clone. */
     setuid(); seteuid(getuid());
     if (bowstring)
     {
-	clone_object(bowstring)->move(archer, 1);
+        clone_object(bowstring)->move(archer, 1);
     }
     else
     {
-	clone_object("/std/bowstring")->move(archer, 1);
+        clone_object(BOWSTRING_OBJECT)->move(archer, 1);
     }
 
     unstring_bow();
@@ -284,14 +234,12 @@ parse_unstring(string args)
     write("You unstring your " + short() + ".\n");
     
     bystanders = FILTER_LIVE(all_inventory(environment(archer))) - ({archer});
-    bystanders = filter(FILTER_IS_SEEN(archer, bystanders),
-			&->can_see_in_room());
+    bystanders = filter(FILTER_IS_SEEN(archer, bystanders), &->can_see_in_room());
 
     if (sizeof(bystanders))
     {
-	bystanders->catch_msg(QCTNAME(archer) + " unstrings " +
-			      archer->query_possessive() + " " +
-			      short() + ".\n");
+        bystanders->catch_msg(QCTNAME(archer) + " unstrings " +
+            archer->query_possessive() + " " + short() + ".\n");
     }
     
     return 1;
@@ -309,11 +257,11 @@ query_hit()
 {
     if (stringed)
     {
-	return ::query_hit();
+        return ::query_hit();
     }
     else
     {
-	return 10;
+        return 10;
     }
 }
 
@@ -329,11 +277,11 @@ query_pen()
 {
     if (stringed)
     {
-	return ::query_pen();
+        return ::query_pen();
     }
     else
     {
-	return 10;
+        return 10;
     }
 }
 
@@ -349,11 +297,11 @@ try_hit(object target)
 {
     if (stringed)
     {
-	return ::try_hit(target);
+        return ::try_hit(target);
     }
     else
     {
-	return 1;
+        return 1;
     }
 }
 
@@ -366,15 +314,15 @@ try_hit(object target)
  */
 public varargs int
 did_hit(int aid, string hdesc, int phurt,
-	object enemy,	int dt, int phit, int dam)
+        object enemy,   int dt, int phit, int dam)
 {
     if (stringed)
     {
-	return ::did_hit(aid, hdesc, phurt, enemy, dt, phit, dam);
+        return ::did_hit(aid, hdesc, phurt, enemy, dt, phit, dam);
     }
     else
     {
-	return 0;
+        return 0;
     }
 }
 
@@ -394,12 +342,12 @@ extra_sanity_checks(string action, string args)
 {
     if (stringed)
     {
-	return 1;
+        return 1;
     }
     else
     {
-	write("Your bow is not strung.\n");
-	return 0;
+        write("Your bow is not strung.\n");
+        return 0;
     }
 }
 
@@ -415,7 +363,7 @@ public string
 load_desc()
 {
     return (query_projectile() ? "It has been drawn and loaded with " +
-	    LANG_ADDART(query_projectile()->singular_short()) + "\n": "");
+            LANG_ADDART(query_projectile()->singular_short()) + "\n": "");
 }
 
 /*
@@ -442,7 +390,7 @@ public void
 tell_archer_fatigue_unload(object archer, object target, object projectile)
 {
     tell_object(archer, "You are too tired to keep the " + short() + 
-		" drawn. You unload your " + short() + ".\n");
+                " drawn. You unload your " + short() + ".\n");
 }
 
 /*
@@ -458,7 +406,7 @@ public void
 tell_archer_unload(object archer, object target, object projectile)
 {
     tell_object(archer, "You relax your grip on the " + short() +
-		" and unload the " + projectile->singular_short() + ".\n");
+                " and unload the " + projectile->singular_short() + ".\n");
 }
 
 /*
@@ -476,14 +424,13 @@ tell_others_unload(object archer, object target, object projectile)
 {
     object *bystanders;
 
-    bystanders = all_inventory(ENV(archer)) - ({ archer });
+    bystanders = all_inventory(environment(archer)) - ({ archer });
     bystanders = FILTER_IS_SEEN(archer, FILTER_LIVE(bystanders));
     bystanders = filter(bystanders, &->can_see_in_room());
     
     bystanders->catch_msg(QCTNAME(archer) + " relaxes " +
-			  archer->query_possessive() +
-			  " grip on the " + short() + " and unloads the " +
-			  projectile->singular_short() + ".\n");
+        archer->query_possessive() + " grip on the " + short() +
+        " and unloads the " + projectile->singular_short() + ".\n");
 }
 
 /*
@@ -499,24 +446,21 @@ tell_others_unload(object archer, object target, object projectile)
  */
 public void 
 tell_archer_load(object archer, object target,
-		 object projectile, string adj_desc)
+                 object projectile, string adj_desc)
 {
     // You nock a white-feathered arrow and draw your elven longbow, 
     // aiming carefully at the black orc.
-
-    if (ENV(archer) == ENV(target))
+    if (environment(archer) == environment(target))
     {
-        tell_object(archer, "You nock " +
-		    LANG_ADDART(projectile->singular_short()) +
-		    " and draw your " + short() + ", aiming carefully at " + 
-		    target->query_the_name(archer) + ".\n");
+        tell_object(archer, "You nock " + LANG_ADDART(projectile->singular_short()) +
+            " and draw your " + short() + ", aiming carefully at " + 
+            target->query_the_name(archer) + ".\n");
     }
     else
     {
-        tell_object(archer, "You nock " +
-		    LANG_ADDART(projectile->singular_short()) +
-		    " and draw your " + short() + ", aiming carefully at " + 
-		    target->query_the_name(archer) + " " + adj_desc + ".\n");
+        tell_object(archer, "You nock " + LANG_ADDART(projectile->singular_short()) +
+            " and draw your " + short() + ", aiming carefully at " + 
+            target->query_the_name(archer) + " " + adj_desc + ".\n");
     }
 }
 
@@ -533,43 +477,31 @@ tell_archer_load(object archer, object target,
  */
 public void 
 tell_others_load(object archer, object target,
-		 object projectile, string adj_desc)
+                 object projectile, string adj_desc)
 {
-    if (ENV(archer) == ENV(target))
+    if (environment(archer) == environment(target))
     {
         tell_bystanders_miss(QCTNAME(archer) + " nocks " +
-			     LANG_ADDART(projectile->singular_short()) +
-			     " and draws " + archer->query_possessive() +
-			     " " + short() + ", aiming carefully at " +
-			     QTNAME(target) + ".\n",
-
-			     QCTNAME(archer) + " nocks " +
-			     LANG_ADDART(projectile->singular_short()) +
-			     " and draws " + archer->query_possessive() +
-			     " " + short() +
-			     ", aiming at something.\n",
-
-			     0, 0, archer, target, ENV(archer));
+            LANG_ADDART(projectile->singular_short()) + " and draws " +
+            archer->query_possessive() + " " + short() + ", aiming carefully at " +
+            QTNAME(target) + ".\n",
+            QCTNAME(archer) + " nocks " + LANG_ADDART(projectile->singular_short()) +
+            " and draws " + archer->query_possessive() + " " + short() +
+            ", aiming at something.\n",
+            0, 0, archer, target, environment(archer));
     }
     else
     {
         tell_bystanders_miss(QCTNAME(archer) + " nocks " +
-			     LANG_ADDART(projectile->singular_short()) +
-			     " and draws " + archer->query_possessive() +
-			     " " + short() +
-			     ", aiming carefully at " + QTNAME(target) +
-			     " " + adj_desc + ".\n",
-			     
-			     QCTNAME(archer) + " nocks " +
-			     LANG_ADDART(projectile->singular_short()) +
-			     " and draws " + archer->query_possessive() +
-			     " " + short() +
-			     ", aiming carefully at something " +
-			     adj_desc + ".\n",
-			     
-			     0, 0, archer, target, ENV(archer));
+            LANG_ADDART(projectile->singular_short()) + " and draws " +
+            archer->query_possessive() + " " + short() + ", aiming carefully at " +
+            QTNAME(target) + " " + adj_desc + ".\n",
+            QCTNAME(archer) + " nocks " + LANG_ADDART(projectile->singular_short()) +
+            " and draws " + archer->query_possessive() + " " + short() +
+            ", aiming carefully at something " + adj_desc + ".\n",
+            0, 0, archer, target, environment(archer));
     }
-}		     
+}                    
 
 
 /*
@@ -584,13 +516,13 @@ tell_others_load(object archer, object target,
 public void
 tell_target_load(object archer, object target, object projectile)
 {
-    if (ENV(archer) == ENV(target) &&
-	CAN_SEE(target, archer) && CAN_SEE_IN_ROOM(target))
+    if (environment(archer) == environment(target) &&
+        CAN_SEE(target, archer) && CAN_SEE_IN_ROOM(target))
     {
         tell_object(target, archer->query_The_name(target) + " nocks " +
-		    LANG_ADDART(projectile->singular_short()) + 
-		    " and draws " + archer->query_possessive() + " " +
-		    short() + ", aiming carefully at you.\n");
+                    LANG_ADDART(projectile->singular_short()) + 
+                    " and draws " + archer->query_possessive() + " " +
+                    short() + ", aiming carefully at you.\n");
     }
 }
 
@@ -608,67 +540,64 @@ tell_target_load(object archer, object target, object projectile)
  */
 public void
 tell_archer_miss(object archer, object target, object projectile,
-		 string adj_room_desc)
+                 string adj_room_desc)
 {
     if (archer->query_npc() || archer->query_option(OPT_GAG_MISSES))
     {
         return;
     }
  
-    if (ENV(archer) == ENV(target))
+    if (environment(archer) == environment(target))
     {
         if (CAN_SEE(archer, target) && CAN_SEE_IN_ROOM(archer))
-	{
-	  /*
-	   * You shoot an arrow at the black orc, but miss.
-	   */
-	    
-	  tell_object(archer, "You shoot an arrow at " +
-		      target->query_the_name(archer) + ", but miss.\n");
-	}
-	else
-	{
+        {
+          /*
+           * You shoot an arrow at the black orc, but miss.
+           */
+            
+          tell_object(archer, "You shoot an arrow at " +
+                      target->query_the_name(archer) + ", but miss.\n");
+        }
+        else
+        {
             // You shoot blindly at the orc.
-	    
-	    if (archer->query_met(target))
-	    {
-		tell_object(archer, "You shoot blindly at " +
-			    target->query_met_name() + ".\n");
-	    }
-	    else
-	    {
-		tell_object(archer, "You shoot blindly at the " +
-			    target->query_race_name() + ".\n");
-	    }
-	}
+            if (archer->query_met(target))
+            {
+                tell_object(archer, "You shoot blindly at " +
+                            target->query_met_name() + ".\n");
+            }
+            else
+            {
+                tell_object(archer, "You shoot blindly at the " +
+                            target->query_race_name() + ".\n");
+            }
+        }
     }
     else
     {
         if (check_remote_seen(archer, target))
-	{
-	    // You shoot an arrow at the black orc on the courtyard, but miss.
-	    
-	    tell_object(archer, "You shoot an arrow at " +
-			target->query_the_name(archer) + " " +
-			adj_room_desc + ", but miss.\n");
-	} 
-	else
-	{
-	    // You shoot blindly at the orc on the courtyard.
-
-	    if (archer->query_met(target))
-	    {
-		tell_object(archer, "You shoot blindly at " +
-			    target->query_met_name() + " " +
-			    adj_room_desc + ".\n");
-	    }
-	    else
-	    {
-		tell_object(archer, "You shoot blindly at the " +
-			    target->query_race_name() + " " +
-			    adj_room_desc + ".\n");
-	    }
-	}
+        {
+            // You shoot an arrow at the black orc on the courtyard, but miss.
+            tell_object(archer, "You shoot an arrow at " +
+                        target->query_the_name(archer) + " " +
+                        adj_room_desc + ", but miss.\n");
+        } 
+        else
+        {
+            // You shoot blindly at the orc on the courtyard.
+            if (archer->query_met(target))
+            {
+                tell_object(archer, "You shoot blindly at " +
+                            target->query_met_name() + " " +
+                            adj_room_desc + ".\n");
+            }
+            else
+            {
+                tell_object(archer, "You shoot blindly at the " +
+                            target->query_race_name() + " " +
+                            adj_room_desc + ".\n");
+            }
+        }
     }
 }
 
@@ -688,51 +617,49 @@ tell_archer_miss(object archer, object target, object projectile,
  */
 public void
 tell_target_miss(object archer, object target, object projectile,
-		 string adj_room_desc, string org_room_desc)
+                 string adj_room_desc, string org_room_desc)
 {
     if (target->query_npc() || target->query_option(OPT_GAG_MISSES))
     {
         return;
     }
     
-    if (ENV(archer) == ENV(target))
+    if (environment(archer) == environment(target))
     {
         if (CAN_SEE(target, archer) && CAN_SEE_IN_ROOM(archer))
-	{
-	    // The tall green-clad elf shoots an arrow at you, but misses.
-
-	    tell_object(target, archer->query_The_name(target) + 
-			" shoots an arrow at you, but misses.\n");
-	}
-	else
-	{
-	    tell_object(target, "You hear the hiss of an arrow " +
-			"flying past.\n");
-	} 
+        {
+            // The tall green-clad elf shoots an arrow at you, but misses.
+            tell_object(target, archer->query_The_name(target) + 
+                        " shoots an arrow at you, but misses.\n");
+        }
+        else
+        {
+            tell_object(target, "You hear the hiss of an arrow " +
+                        "flying past.\n");
+        } 
     }
     else
     {
         if (check_remote_seen(target, archer))
-	{
-	    /*
-	     * The tall green-clad elf shoots an arrow at you from
-	     * the battlement, but misses.
-	     */
-	    
+        {
+            /*
+             * The tall green-clad elf shoots an arrow at you from
+             * the battlement, but misses.
+             */
             tell_object(target, archer->query_The_name(target) +
-			" shoots an arrow at you from " +
-			org_room_desc + ", but misses.\n");
-	}
-	else if (CAN_SEE_IN_ROOM(target))
-	{
-	    tell_object(target, "Someone shoots an arrow at you," +
-			" but misses.\n");
-	}
-	else
-	{
-	    tell_object(target, "You hear the hiss of an arrow " +
-			"flying past.\n");
-	}
+                        " shoots an arrow at you from " +
+                        org_room_desc + ", but misses.\n");
+        }
+        else if (CAN_SEE_IN_ROOM(target))
+        {
+            tell_object(target, "Someone shoots an arrow at you," +
+                        " but misses.\n");
+        }
+        else
+        {
+            tell_object(target, "You hear the hiss of an arrow " +
+                        "flying past.\n");
+        }
     }
 }
 
@@ -752,78 +679,52 @@ tell_target_miss(object archer, object target, object projectile,
  */
 public void
 tell_others_miss(object archer, object target, object projectile,
-		 string adj_room_desc, string org_room_desc)
+                 string adj_room_desc, string org_room_desc)
 {
-    if (ENV(archer) == ENV(target))
+    if (environment(archer) == environment(target))
     {
-	
-	/*
-	 * The tall green-clad elf shoots an arrow at the black orc,
-	 * but misses.
-	 */
-
-	tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
-			     QTNAME(target) + ", but misses.\n",
-
-			     QCTNAME(archer) +
-			     " shoots an arrow at something.\n",
-
-			     "An arrow flies past " + QTNAME(target) + ".\n",
-
-			     "You hear the hiss of an arrow flying through " +
-			     "the air.\n",
-
-			     archer, target, ENV(archer));
+        /*
+         * The tall green-clad elf shoots an arrow at the black orc,
+         * but misses.
+         */
+        tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
+            QTNAME(target) + ", but misses.\n",
+            QCTNAME(archer) + " shoots an arrow at something.\n",
+            "An arrow flies past " + QTNAME(target) + ".\n",
+            "You hear the hiss of an arrow flying through the air.\n",
+            archer, target, environment(archer));
     }
     
     else
     {
-	
-	/*
-	 * Archer shooting to adjecent room. Archer room:
-	 *
-	 * The tall green-clad elf shoots an arrow at the black orc on
-	 * the courtyard, but misses.	 
-	 */
+        /*
+         * Archer shooting to adjecent room. Archer room:
+         *
+         * The tall green-clad elf shoots an arrow at the black orc on
+         * the courtyard, but misses.    
+         */
+        tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
+            QTNAME(target) + " " + adj_room_desc + ", but misses.\n",
+            QCTNAME(archer) + " shoots an arrow at something " +
+            adj_room_desc + ".\n",
+            "Someone shoots an arrow at " + QTNAME(target) + " " +
+            adj_room_desc + ", but misses.\n",
+            "You hear the hiss of an arrow flying through the air.\n",
+            archer, target, environment(archer));
 
-	tell_bystanders_miss(QCTNAME(archer) +
-			     " shoots an arrow at " + QTNAME(target) +
-			     " " + adj_room_desc + ", but misses.\n",
-
-			     QCTNAME(archer) +
-			     " shoots an arrow at something " +
-			     adj_room_desc + ".\n",
-
-			     "Someone shoots an arrow at " + QTNAME(target) +
-			     " " + adj_room_desc + ", but misses.\n",
-			     
-			     "You hear the hiss of an arrow flying through " +
-			     "the air.\n",
-
-			     archer, target, ENV(archer));
-
-	/*
-	 * Archer shooting to adjecent room. Target room:
-	 *
-	 * The tall green-clad elf shoots an arrow at the black orc
-	 * from the battlements, but misses.
-	 *
-	 */
-
-	tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
-			     QTNAME(target) + " from " + org_room_desc +
-			     ", but misses.\n",
-
-			     QCTNAME(archer) + " shoots an arrow " +
-			     " at something.\n",
-
-			     "Someone shoots an arrow at " +
-			     QTNAME(target) + ", but misses.\n",
-			     
-			     "You hear the hiss of an arrow flying through " +
-			     "the air.\n",
-
-			     archer, target, ENV(target));
+        /*
+         * Archer shooting to adjecent room. Target room:
+         *
+         * The tall green-clad elf shoots an arrow at the black orc
+         * from the battlements, but misses.
+         *
+         */
+        tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
+            QTNAME(target) + " from " + org_room_desc + ", but misses.\n",
+            QCTNAME(archer) + " shoots an arrow at something.\n",
+            "Someone shoots an arrow at " + QTNAME(target) + ", but misses.\n",
+            "You hear the hiss of an arrow flying through the air.\n",
+            archer, target, environment(target));
     }
 
     return;
@@ -847,7 +748,7 @@ tell_others_miss(object archer, object target, object projectile,
  */
 public void 
 tell_archer_bounce_armour(object archer, object target, object projectile,
-			  string adj_room_desc, object armour)
+                          string adj_room_desc, object armour)
 {
     string armour_desc;
     
@@ -858,70 +759,69 @@ tell_archer_bounce_armour(object archer, object target, object projectile,
 
     if (armour)
     {
-	armour_desc = ", but the arrow glances off " +
-	    target->query_possessive() + " " + armour->short() + ".\n";
+        armour_desc = ", but the arrow glances off " +
+            target->query_possessive() + " " + armour->short() + ".\n";
     }
     else
     {
-	armour_desc = ", but the arrow glances off " +
-	    target->query_objective() + " harmlessly.\n";
+        armour_desc = ", but the arrow glances off " +
+            target->query_objective() + " harmlessly.\n";
     }
     
-	
-    if (ENV(archer) == ENV(target))
+        
+    if (environment(archer) == environment(target))
     {
         if (CAN_SEE(archer, target) && CAN_SEE_IN_ROOM(archer))
-	{
-	    // You shoot an arrow at the black orc, but the arrow glances off
-	    // his helm.
-
-	  tell_object(archer, "You shoot an arrow at " +
-		      target->query_the_name(archer) + armour_desc);
-	}
-	else
-	{
+        {
+            // You shoot an arrow at the black orc, but the arrow glances off
+            // his helm.
+            tell_object(archer, "You shoot an arrow at " +
+                      target->query_the_name(archer) + armour_desc);
+        }
+        else
+        {
             // You shoot blindly at the orc.
-	    if (archer->query_met(target))
-	    {
-		tell_object(archer, "You shoot blindly at " +
-			    target->query_met_name() + ".\n");
-	    }
-	    else
-	    {
-		tell_object(archer, "You shoot blindly at the " +
-			    target->query_race_name() + ".\n");
-	    }
-	}
+            if (archer->query_met(target))
+            {
+                tell_object(archer, "You shoot blindly at " +
+                            target->query_met_name() + ".\n");
+            }
+            else
+            {
+                tell_object(archer, "You shoot blindly at the " +
+                            target->query_race_name() + ".\n");
+            }
+        }
     }
     else
     {
         if (check_remote_seen(archer, target))
-	{
-	    /*
-	     * You shoot an arrow at the black orc on the courtyard,
-	     * but the arrow glances off his helm. 
-	     */
-	    tell_object(archer, "You shoot an arrow at " +
-			target->query_the_name(archer) + " " +
-			adj_room_desc + armour_desc);
+        {
+            /*
+             * You shoot an arrow at the black orc on the courtyard,
+             * but the arrow glances off his helm. 
+             */
+            tell_object(archer, "You shoot an arrow at " +
+                        target->query_the_name(archer) + " " +
+                        adj_room_desc + armour_desc);
 
-	} 
-	else
-	{
-	    // You shoot blindly at the orc on the courtyard.
-	    if (archer->query_met(target))
-	    {
-		tell_object(archer, "You shoot blindly at " +
-			    target->query_met_name() + " " +
-			    adj_room_desc + ".\n");
-	    }
-	    else
-	    {
-		tell_object(archer, "You shoot blindly at the " +
-			    target->query_race_name() + " " +
-			    adj_room_desc + ".\n");
-	    }
-	}
+        } 
+        else
+        {
+            // You shoot blindly at the orc on the courtyard.
+            if (archer->query_met(target))
+            {
+                tell_object(archer, "You shoot blindly at " +
+                            target->query_met_name() + " " +
+                            adj_room_desc + ".\n");
+            }
+            else
+            {
+                tell_object(archer, "You shoot blindly at the " +
+                            target->query_race_name() + " " +
+                            adj_room_desc + ".\n");
+            }
+        }
     }
 }
 
@@ -943,8 +843,8 @@ tell_archer_bounce_armour(object archer, object target, object projectile,
  */
 public void 
 tell_target_bounce_armour(object archer, object target, object projectile,
-			  string adj_room_desc, string org_room_desc,
-			  object armour)
+                          string adj_room_desc, string org_room_desc,
+                          object armour)
 {
     string armour_desc;
     
@@ -955,59 +855,58 @@ tell_target_bounce_armour(object archer, object target, object projectile,
 
     if (armour)
     {
-	armour_desc = ", but the arrow glances off your "
-	    + armour->short() + ".\n";
+        armour_desc = ", but the arrow glances off your "
+            + armour->short() + ".\n";
     }
     else
     {
-	armour_desc = ", but the arrow glances off harmlessly.\n";
+        armour_desc = ", but the arrow glances off harmlessly.\n";
     }
 
-    if (ENV(archer) == ENV(target))
+    if (environment(archer) == environment(target))
     {
         if (CAN_SEE(target, archer) && CAN_SEE_IN_ROOM(archer))
-	{
-	    /*
-	     * The tall green-clad elf shoots an arrow
-	     * at you, but the arrow glances off your helm.
-	     */
+        {
+            /*
+             * The tall green-clad elf shoots an arrow
+             * at you, but the arrow glances off your helm.
+             */
+            tell_object(target, archer->query_The_name(target) + 
+                        " shoots an arrow at you" + armour_desc);
+        }
 
-	    tell_object(target, archer->query_The_name(target) + 
-			" shoots an arrow at you" + armour_desc);
-	}
-
-	else
-	{
-	    tell_object(target, "An arrow from out of nowhere hits you, " +
-			"but harmlessly glances off" +
-			(armour ? " your " + armour->short() + ".\n"
-			 : " you.\n"));
-	} 
+        else
+        {
+            tell_object(target, "An arrow from out of nowhere hits you, " +
+                        "but harmlessly glances off" +
+                        (armour ? " your " + armour->short() + ".\n"
+                         : " you.\n"));
+        } 
     }
     else
     {
         if (check_remote_seen(target, archer))
-	{
-	    /*
-	     * The tall green-clad elf shoots an arrow at you
-	     * from the battlements, but the arrow glances off your helm.
-	     */
-	    
+        {
+            /*
+             * The tall green-clad elf shoots an arrow at you
+             * from the battlements, but the arrow glances off your helm.
+             */
+            
             tell_object(target, archer->query_The_name(target) + 
-			" shoots an arrow at you" + armour_desc);
-	}
-	else if (CAN_SEE_IN_ROOM(target))
-	{
-	    tell_object(target, "Someone shoots an arrow at you from " +
-			org_room_desc + armour_desc);
-	}
-	else
-	{
-	    tell_object(target, "An arrow from out of nowhere hits you, " +
-			"but harmlessly glances off" +
-			(armour ? " your " + armour->short() + ".\n"
-			 : " you.\n"));
-	}
+                        " shoots an arrow at you" + armour_desc);
+        }
+        else if (CAN_SEE_IN_ROOM(target))
+        {
+            tell_object(target, "Someone shoots an arrow at you from " +
+                        org_room_desc + armour_desc);
+        }
+        else
+        {
+            tell_object(target, "An arrow from out of nowhere hits you, " +
+                        "but harmlessly glances off" +
+                        (armour ? " your " + armour->short() + ".\n"
+                         : " you.\n"));
+        }
     }
 }
 
@@ -1030,95 +929,93 @@ tell_target_bounce_armour(object archer, object target, object projectile,
  */
 public void 
 tell_others_bounce_armour(object archer, object target, object projectile,
-			  string adj_room_desc, string org_room_desc,
-			  object armour)
+                          string adj_room_desc, string org_room_desc,
+                          object armour)
 {
     string armour_desc;
 
     if (armour)
     {
-	armour_desc = ", but the arrow glances off " +
-	    target->query_possessive() + " " + armour->short() + ".\n";
+        armour_desc = ", but the arrow glances off " +
+            target->query_possessive() + " " + armour->short() + ".\n";
     }
     else
     {
-	armour_desc = ", but the arrow glances off " +
-	    target->query_objective() + " harmlessly.\n";
+        armour_desc = ", but the arrow glances off " +
+            target->query_objective() + " harmlessly.\n";
     }
     
-    if (ENV(archer) == ENV(target))
+    if (environment(archer) == environment(target))
     {
-	
-	/*
-	 * The tall green-clad elf shoots an arrow at the
-	 * black orc, but the arrow glances off his chainmail.
-	 *
-	 */
+        /*
+         * The tall green-clad elf shoots an arrow at the
+         * black orc, but the arrow glances off his chainmail.
+         *
+         */
+        tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
+                             QTNAME(target) + armour_desc,
 
-	tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
-			     QTNAME(target) + armour_desc,
+                             QCTNAME(archer) + " shoots an arrow at " +
+                             "something. You hear a thud as the arrow " +
+                             "hits something.\n",
 
-			     QCTNAME(archer) + " shoots an arrow at " +
-			     "something. You hear a thud as the arrow " +
-			     "hits something.\n",
+                             "An arrow hits " + QTNAME(target) + armour_desc,
 
-			     "An arrow hits " + QTNAME(target) + armour_desc,
+                             "You hear the hiss of an arrow flying through " +
+                             "the air and a thud as it hits something.\n",
 
-			     "You hear the hiss of an arrow flying through " +
-			     "the air and a thud as it hits something.\n",
-
-			     archer, target, ENV(archer));
+                             archer, target, environment(archer));
     }
     
     else
     {
-	
-	/*
-	 * Archer shooting to adjecent room. Archer room:
-	 *
-	 * The tall green-clad elf shoots an arrow at the black orc on
-	 * the courtyard, but the arrow glances off his chainmail.
-	 */
+        
+        /*
+         * Archer shooting to adjecent room. Archer room:
+         *
+         * The tall green-clad elf shoots an arrow at the black orc on
+         * the courtyard, but the arrow glances off his chainmail.
+         */
 
-	tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
-			     QTNAME(target) + " " + adj_room_desc +
-			     armour_desc,
-			     
-			     QCTNAME(archer) +
-			     " shoots an arrow at something" +
-			     adj_room_desc + ".\n",
+        tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
+                             QTNAME(target) + " " + adj_room_desc +
+                             armour_desc,
+                             
+                             QCTNAME(archer) +
+                             " shoots an arrow at something" +
+                             adj_room_desc + ".\n",
 
-			     "Someone shoots an arrow at " + QTNAME(target) +
-			     " " + adj_room_desc + armour_desc,
-			     
-			     "You hear the hiss of an arrow flying through " +
-			     "the air.\n",
+                             "Someone shoots an arrow at " + QTNAME(target) +
+                             " " + adj_room_desc + armour_desc,
+                             
+                             "You hear the hiss of an arrow flying through " +
+                             "the air.\n",
 
-			     archer, target, ENV(archer));
+                             archer, target, environment(archer));
 
-	/*
-	 * Archer shooting to adjecent room. Target room:
-	 *
-	 * The tall green-clad elf shoots an arrow at the black orc
-	 * from the battlements, but the arrow glances off his chainmail.
-	 */
+        /*
+         * Archer shooting to adjecent room. Target room:
+         *
+         * The tall green-clad elf shoots an arrow at the black orc
+         * from the battlements, but the arrow glances off his chainmail.
+         */
 
-	tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
-			     QTNAME(target) + " from " + org_room_desc +
-			     armour_desc,
-			     
-			     QCTNAME(archer) + " shoots an arrow at " +
-			     "something. " +
-			     "You hear a thud as the arrow hits something.\n",
+        tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
+                             QTNAME(target) + " from " + org_room_desc +
+                             armour_desc,
+                             
+                             QCTNAME(archer) + " shoots an arrow at " +
+                             "something. " +
+                             "You hear a thud as the arrow hits something.\n",
 
-			     "Someone shoots an arrow at " +
-			     QTNAME(target) + " from " + org_room_desc +
-			     armour_desc,
-			     
-			     "You hear the hiss of an arrow flying through " +
-			     "the air and a thud as it hits something.\n",
+                             "Someone shoots an arrow at " +
+                             QTNAME(target) + " from " + org_room_desc +
+                             armour_desc,
+                             
+                             "You hear the hiss of an arrow flying through " +
+                             "the air and a thud as it hits something.\n",
 
-			     archer, target, ENV(target));
+                             archer, target, environment(target));
     }
     return;
 }
@@ -1144,8 +1041,8 @@ tell_others_bounce_armour(object archer, object target, object projectile,
  */
 public void 
 tell_archer_hit(object archer, object target,
-		object projectile, string adj_room_desc,
-		string hdesc, int dt, int phurt, int dam, int hid)
+                object projectile, string adj_room_desc,
+                string hdesc, int dt, int phurt, int dam, int hid)
 {
     string damage_desc = query_damage_desc(archer, target, projectile, phurt);
     
@@ -1154,68 +1051,68 @@ tell_archer_hit(object archer, object target,
         return;
     }
 
-    if (ENV(archer) == ENV(target))
+    if (environment(archer) == environment(target))
     {
-	if (CAN_SEE(archer, target) && CAN_SEE_IN_ROOM(archer))
-	{
-	    /*
-	     * You shoot an arrow at the black orc.
-	     * The arrows strikes into his legs.
-	     */
+        if (CAN_SEE(archer, target) && CAN_SEE_IN_ROOM(archer))
+        {
+            /*
+             * You shoot an arrow at the black orc.
+             * The arrows strikes into his legs.
+             */
 
-	    tell_object(archer, "You shoot an arrow at " +
-			target->query_the_name(archer) +
-			". The arrow" + damage_desc +
-			target->query_the_possessive_name(archer) +
-			" " + hdesc + ".\n");
-	}
-	else
-	{
+            tell_object(archer, "You shoot an arrow at " +
+                        target->query_the_name(archer) +
+                        ". The arrow" + damage_desc +
+                        target->query_the_possessive_name(archer) +
+                        " " + hdesc + ".\n");
+        }
+        else
+        {
             // You shoot blindly at the orc.
-	    if (archer->query_met(target))
-	    {
-		tell_object(archer, "You shoot blindly at " +
-			    target->query_met_name() +
-			    ". You hear a thud as the arrow hits.\n");
-	    }
-	    else
-	    {
-		tell_object(archer, "You shoot blindly at the " +
-			    target->query_race_name() +
-			    ". You hear a thud as the arrow hits.\n");
-	    }
-	}
+            if (archer->query_met(target))
+            {
+                tell_object(archer, "You shoot blindly at " +
+                            target->query_met_name() +
+                            ". You hear a thud as the arrow hits.\n");
+            }
+            else
+            {
+                tell_object(archer, "You shoot blindly at the " +
+                            target->query_race_name() +
+                            ". You hear a thud as the arrow hits.\n");
+            }
+        }
     }
     else
     {
         if (check_remote_seen(archer, target))
-	{
-	    /*
-	     * You shoot an arrow at the black orc on the courtyard.
-	     * The arrow hits him in the legs.
-	     */
-	    	
-	    tell_object(archer, "You shoot an arrow at " +
-			target->query_the_name(archer) + " " +
-			adj_room_desc + ". The arrow" +	damage_desc +
-			target->query_the_possessive_name(archer) +
-			" " + hdesc + ".\n");
-	} 
-	else
-	{
-	    if (archer->query_met(target))
-	    {
-		tell_object(archer, "You shoot blindly at " +
-			    target->query_met_name() + " " +
-			    adj_room_desc + ".\n");
-	    }
-	    else
-	    {
-		tell_object(archer, "You shoot blindly at the " +
-			    target->query_race_name() + " " +
-			    adj_room_desc + ".\n");
-	    }
-	}
+        {
+            /*
+             * You shoot an arrow at the black orc on the courtyard.
+             * The arrow hits him in the legs.
+             */
+                
+            tell_object(archer, "You shoot an arrow at " +
+                        target->query_the_name(archer) + " " +
+                        adj_room_desc + ". The arrow" + damage_desc +
+                        target->query_the_possessive_name(archer) +
+                        " " + hdesc + ".\n");
+        } 
+        else
+        {
+            if (archer->query_met(target))
+            {
+                tell_object(archer, "You shoot blindly at " +
+                            target->query_met_name() + " " +
+                            adj_room_desc + ".\n");
+            }
+            else
+            {
+                tell_object(archer, "You shoot blindly at the " +
+                            target->query_race_name() + " " +
+                            adj_room_desc + ".\n");
+            }
+        }
     }
 }
 
@@ -1240,8 +1137,8 @@ tell_archer_hit(object archer, object target,
  */
 public void
 tell_target_hit(object archer, object target, object projectile,
-		string adj_room_desc, string org_room_desc, string hdesc,
-		int dt, int phurt, int dam, int hid)
+                string adj_room_desc, string org_room_desc, string hdesc,
+                int dt, int phurt, int dam, int hid)
 {
     string damage_desc = query_damage_desc(archer, target, projectile, phurt);
 
@@ -1250,40 +1147,40 @@ tell_target_hit(object archer, object target, object projectile,
         return;
     }
 
-    if (ENV(archer) == ENV(target))
+    if (environment(archer) == environment(target))
     {
-	if (CAN_SEE(target, archer) && CAN_SEE_IN_ROOM(archer))
-	{
-	    tell_object(target, archer->query_The_name(target) +
-			" shoots an arrow at you. The arrow" +	damage_desc +
-			"your " + hdesc + ".\n");
-	}
-	else
-	{
-	    tell_object(target, "An arrow from out of nowhere" + damage_desc +
-			"your " + hdesc + ".\n");
-	}
-	
+        if (CAN_SEE(target, archer) && CAN_SEE_IN_ROOM(archer))
+        {
+            tell_object(target, archer->query_The_name(target) +
+                        " shoots an arrow at you. The arrow" +  damage_desc +
+                        "your " + hdesc + ".\n");
+        }
+        else
+        {
+            tell_object(target, "An arrow from out of nowhere" + damage_desc +
+                        "your " + hdesc + ".\n");
+        }
+        
     }
     else
     {
-	if (check_remote_seen(target, archer))
-	{
-	    tell_object(target, archer->query_The_name(target) +
-			" shoots an arrow at you from " + org_room_desc +
-			". The arrow" + damage_desc + "your " + hdesc + ".\n");
-	}
-	else if (CAN_SEE_IN_ROOM(target))
-	{
-	    tell_object(target, "Someone shoots an arrow at you from " +
-			org_room_desc + ". The arrow" + damage_desc + "your " +
-			hdesc + ".\n");
-	}
-	else
-	{
-	    tell_object(target, "An arrow from out of nowhere" + damage_desc +
-			"your " + hdesc + ".\n");
-	}
+        if (check_remote_seen(target, archer))
+        {
+            tell_object(target, archer->query_The_name(target) +
+                        " shoots an arrow at you from " + org_room_desc +
+                        ". The arrow" + damage_desc + "your " + hdesc + ".\n");
+        }
+        else if (CAN_SEE_IN_ROOM(target))
+        {
+            tell_object(target, "Someone shoots an arrow at you from " +
+                        org_room_desc + ". The arrow" + damage_desc + "your " +
+                        hdesc + ".\n");
+        }
+        else
+        {
+            tell_object(target, "An arrow from out of nowhere" + damage_desc +
+                        "your " + hdesc + ".\n");
+        }
     }
 }
 
@@ -1309,97 +1206,97 @@ tell_target_hit(object archer, object target, object projectile,
  */
 public void
 tell_others_hit(object archer, object target, object projectile,
-		string adj_room_desc, string org_room_desc, string hdesc,
-		int dt, int phurt, int dam, int hid)
+                string adj_room_desc, string org_room_desc, string hdesc,
+                int dt, int phurt, int dam, int hid)
 {
     
     string damage_desc = query_damage_desc(archer, target, projectile, phurt);
 
-        if (ENV(archer) == ENV(target))
+        if (environment(archer) == environment(target))
     {
-	
-	/*
-	 * Typical message:
-	 *
-	 * The tall green-clad elf shoots an arrow at the black orc.
-	 * The arrows strikes deeply into the orc's legs.
-	 */
+        
+        /*
+         * Typical message:
+         *
+         * The tall green-clad elf shoots an arrow at the black orc.
+         * The arrows strikes deeply into the orc's legs.
+         */
 
-	tell_bystanders_hit(QCTNAME(archer) + " shoots an arrow at " +
-			    QTNAME(target) + ". The arrow" +
-			    damage_desc + QTPNAME(target) + " " +
-			    hdesc + ".\n",
+        tell_bystanders_hit(QCTNAME(archer) + " shoots an arrow at " +
+                            QTNAME(target) + ". The arrow" +
+                            damage_desc + QTPNAME(target) + " " +
+                            hdesc + ".\n",
 
-			    QCTNAME(archer) +
-			    " shoots an arrow at something. " +
-			    "You hear a thud as the arrow hits something.\n",
+                            QCTNAME(archer) +
+                            " shoots an arrow at something. " +
+                            "You hear a thud as the arrow hits something.\n",
 
-			    "An arrow hits " + QTNAME(target) + ". The arrow" +
-			    damage_desc + QTPNAME(target) +
-			    " " + hdesc + ".\n",
+                            "An arrow hits " + QTNAME(target) + ". The arrow" +
+                            damage_desc + QTPNAME(target) +
+                            " " + hdesc + ".\n",
 
-			    "You hear the hiss of an arrow flying through " +
-			    "the air and a thud as it hits something.\n",
-			    
-			    archer, target, ENV(archer));
+                            "You hear the hiss of an arrow flying through " +
+                            "the air and a thud as it hits something.\n",
+                            
+                            archer, target, environment(archer));
     }
     
     else
     {
-	
-	/*
-	 * Archer shooting to adjecent room. Archer room:
-	 *
-	 * The tall green-clad elf shoots an arrow at the black orc
-	 * on the courtyard. The arrow strikes soundly into the orc's legs.
-	 *
-	 */
+        
+        /*
+         * Archer shooting to adjecent room. Archer room:
+         *
+         * The tall green-clad elf shoots an arrow at the black orc
+         * on the courtyard. The arrow strikes soundly into the orc's legs.
+         *
+         */
 
-	tell_bystanders_hit(QCTNAME(archer) + " shoots an arrow at " +
-			    QTNAME(target) + " " + adj_room_desc +
-			    ". The arrow" + damage_desc + QTPNAME(target) +
-			    " " + hdesc + ".\n",
-			    
-			    QCTNAME(archer) +
-			    " shoots an arrow at something " +
-			    adj_room_desc + ".\n",
-			    
-			    "Someone shoots an arrow at " +
-			    QTNAME(target) + " " + adj_room_desc +
-			    ". The arrow" + damage_desc + QTPNAME(target) +
-			    " " + hdesc + ".\n",
-			     
-			    "You hear the hiss of an arrow flying through " +
-			    "the air.\n",
-			    
-			    archer, target, ENV(archer));
+        tell_bystanders_hit(QCTNAME(archer) + " shoots an arrow at " +
+                            QTNAME(target) + " " + adj_room_desc +
+                            ". The arrow" + damage_desc + QTPNAME(target) +
+                            " " + hdesc + ".\n",
+                            
+                            QCTNAME(archer) +
+                            " shoots an arrow at something " +
+                            adj_room_desc + ".\n",
+                            
+                            "Someone shoots an arrow at " +
+                            QTNAME(target) + " " + adj_room_desc +
+                            ". The arrow" + damage_desc + QTPNAME(target) +
+                            " " + hdesc + ".\n",
+                             
+                            "You hear the hiss of an arrow flying through " +
+                            "the air.\n",
+                            
+                            archer, target, environment(archer));
 
-	/*
-	 * Archer shooting to adjecent room. Target room:
-	 *
-	 * The tall green-clad elf shoots an arrow at the black orc from the
-	 * battlements. The arrow strikes soundly into the orc's legs.
-	 *
-	 */
+        /*
+         * Archer shooting to adjecent room. Target room:
+         *
+         * The tall green-clad elf shoots an arrow at the black orc from the
+         * battlements. The arrow strikes soundly into the orc's legs.
+         *
+         */
 
-	tell_bystanders_hit(QCTNAME(archer) + " shoots an arrow at " +
-			    QTNAME(target) + " from " + org_room_desc +
-			    ". The arrow" + damage_desc + QTPNAME(target) +
-			    " " + hdesc + ".\n",			     
+        tell_bystanders_hit(QCTNAME(archer) + " shoots an arrow at " +
+                            QTNAME(target) + " from " + org_room_desc +
+                            ". The arrow" + damage_desc + QTPNAME(target) +
+                            " " + hdesc + ".\n",                             
 
-			    QCTNAME(archer) +
-			    " shoots an arrow at something. " +
-			    "You hear a thud as the arrow hits something.\n",
+                            QCTNAME(archer) +
+                            " shoots an arrow at something. " +
+                            "You hear a thud as the arrow hits something.\n",
 
-			    "Someone shoots an arrow at " + QTNAME(target) +
-			    " from " + org_room_desc + ". The arrow" +
-			    damage_desc + QTPNAME(target) +
-			    " " + hdesc + ".\n",			     
-			     
-			    "You hear the hiss of an arrow flying through " +
-			    "the air and a thud as it hits something.\n",
-			    
-			    archer, target, ENV(target));
+                            "Someone shoots an arrow at " + QTNAME(target) +
+                            " from " + org_room_desc + ". The arrow" +
+                            damage_desc + QTPNAME(target) +
+                            " " + hdesc + ".\n",                             
+                             
+                            "You hear the hiss of an arrow flying through " +
+                            "the air and a thud as it hits something.\n",
+                            
+                            archer, target, environment(target));
     }
     return;
 }
@@ -1421,29 +1318,29 @@ query_damage_desc(object archer, object target, object projectile, int phurt)
     switch (phurt)
     {
       case 0..2:
-	return " merely glances off of ";
-	break;          
+        return " merely glances off of ";
+        break;          
       case 3..5:
-	return " grazes ";
-	break;
+        return " grazes ";
+        break;
       case 6..9:
-	return " hits ";
-	break;
+        return " hits ";
+        break;
       case 10..19:
-	return " strikes ";
-	break;
+        return " strikes ";
+        break;
       case 20..39:
-	return " hits soundly into ";
-	break;
+        return " hits soundly into ";
+        break;
       case 40..59:
-	return " strikes solidly into ";
-	break;
+        return " strikes solidly into ";
+        break;
       case 60..90:
-	return " drives deeply into ";
-	break;
+        return " drives deeply into ";
+        break;
       default:
-	return " strikes with devastating precision into ";
-	break;
+        return " strikes with devastating precision into ";
+        break;
     }
 }
 
@@ -1457,7 +1354,7 @@ string
 query_wep_recover()
 {
     return ::query_wep_recover() + "BOW#" + bowstring + "#" + stringed +
-	"#" + query_keep_recover() + "#";
+        "#" + query_keep_recover() + "#";
 }
 
 /*
@@ -1471,7 +1368,7 @@ init_wep_recover(string arg)
     string wep_str, recover_str, tail;
     
     sscanf(arg, "%sBOW#%s#%d#%s#%s",
-	   wep_str, bowstring, stringed, recover_str, tail);
+           wep_str, bowstring, stringed, recover_str, tail);
 
     init_keep_recover(recover_str);
     ::init_wep_recover(wep_str);

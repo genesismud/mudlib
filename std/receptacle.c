@@ -27,12 +27,12 @@
  *   void set_cf(object o) Set the object that defines open(), close(),
  *                         lock(), unlock(), pick() functions.
  *
- * The special functions should return 0 if there is no change to the
- * manipulation of the containers, 1 if they can be handled, but the message
- * is written inside the function and -1 if it is NOT possible to handle the
- * container and the default fail message will be displayed and finally -2 if
- * it is NOT possible to manipulate and a fail message will be printed inside
- * the function. Obviously, this_player() is known in those functions.
+ * The special functions should return the following:
+ * - 0 if there is no change to the manipulation of the containers
+ * - 1 if they can be handled, but the message is written inside the function
+ * - 2 if it is NOT possible to handle the container; display default message
+ * - 3 if it is NOT possible to handle; message is written in the function
+ * Obviously, this_player() is known in those functions.
  *
  * To handle the lock on the container there are some functions to use:
  *
@@ -278,7 +278,6 @@ do_default_open(string str)
 {
     object tp = this_player();
     object *items;
-    int    i;
     int    cres;
     int    succes = 0;
     string what;
@@ -290,28 +289,27 @@ do_default_open(string str)
         return 0;
     }
 
-    for (i = 0; i < sizeof(items); i++)
+    foreach(object item: items)
     {
-        what = (string)items[i]->real_short(tp);
+        what = (string)item->real_short(tp);
 
-        if (!(items[i]->query_prop(CONT_I_CLOSED)))
+        if (!(item->query_prop(CONT_I_CLOSED)))
         {
             gFail += "The " + what + " is already open.\n";
         }
-        else if (items[i]->query_prop(CONT_I_LOCK))
+        else if (item->query_prop(CONT_I_LOCK))
         {
             gFail += "The " + what + " is locked.\n";
         }
         else
         {
-            if (!objectp(items[i]->query_cf()))
+            if (!objectp(item->query_cf()))
             {
                 cres = 0;
             }
             else
             {
-                cres = (int)((items[i]->query_cf())->open(items[i]));
-
+                cres = (int)((item->query_cf())->open(item));
                 if (cres == 2)
                 {
                     gFail += "The " + what + " cannot be opened.\n";
@@ -321,13 +319,12 @@ do_default_open(string str)
             if (cres == 0)
             {
                 gSucces += "You open the " + what + ".\n";
-                say(QCTNAME(tp) + " opens the " + items[i]->real_short() +
-                    ".\n");
+                say(QCTNAME(tp) + " opens the " + item->real_short() + ".\n");
             }
             if (cres <= 1)
             {
                 succes = 1;
-                items[i]->remove_prop(CONT_I_CLOSED);
+                item->remove_prop(CONT_I_CLOSED);
             }
         }
     }
@@ -367,7 +364,6 @@ do_default_close(string str)
 {
     object tp = this_player();
     object *items;
-    int    i;
     int    cres;
     int    succes = 0;
     string what;
@@ -379,24 +375,23 @@ do_default_close(string str)
         return 0;
     }
 
-    for (i = 0; i < sizeof(items); i++)
+    foreach(object item: items)
     {
-        what = (string)items[i]->real_short(tp);
+        what = (string)item->real_short(tp);
 
-        if (items[i]->query_prop(CONT_I_CLOSED))
+        if (item->query_prop(CONT_I_CLOSED))
         {
             gFail += "The " + what + " is already closed.\n";
         }
         else
         {
-            if (!objectp(items[i]->query_cf()))
+            if (!objectp(item->query_cf()))
             {
                 cres = 0;
             }
             else
             {
-                cres = (int)((items[i]->query_cf())->close(items[i]));
-
+                cres = (int)((item->query_cf())->close(item));
                 if (cres == 2)
                 {
                     gFail += "The " + what + " cannot be closed.\n";
@@ -406,13 +401,13 @@ do_default_close(string str)
             if (cres == 0)
             {
                 gSucces += "You close the " + what + ".\n";
-                say(QCTNAME(tp) + " closes the " + items[i]->real_short() +
+                say(QCTNAME(tp) + " closes the " + item->real_short() +
                     ".\n");
             }
             if (cres <= 1)
             {
                 succes = 1;
-                items[i]->add_prop(CONT_I_CLOSED, 1);
+                item->add_prop(CONT_I_CLOSED, 1);
             }
         }
     }
@@ -690,9 +685,10 @@ do_default_pick(string str)
  *                open/close the container and 0 if it is oke to manipulate
  *                it.
  * Arguments    : object obj - the object specifying the code.
+ *                    Default to this_object() if omitted.
  */
-public void
-set_cf(object obj)
+public varargs void
+set_cf(object obj = this_object())
 {
     /* All changes to the object might have been ruled out. */
     if (query_lock())
@@ -849,11 +845,17 @@ normal_access(string str, string pattern, string fail_str)
 {
     object tp = this_player();
     object *items;
+    int    retry;
 
     /* No access on another container, so don't bother to check this one. */
-    if (tp->query_prop(TEMP_LIBCONTAINER_CHECKED))
+    if (retry = tp->query_prop(TEMP_LIBCONTAINER_CHECKED))
     {
-        return 0;
+        /* Auto-remove property when it's been too long. */
+        if (time() < retry)
+        {
+            return 0;
+        }
+        /* Intentional fallthrough. */
     }
 
     add_temp_libcontainer_checked(tp);
@@ -960,7 +962,8 @@ public nomask void
 add_temp_libcontainer_checked(object player)
 {
     set_alarm(1.0, 0.0, &player->remove_prop(TEMP_LIBCONTAINER_CHECKED));
-    player->add_prop(TEMP_LIBCONTAINER_CHECKED, 1);
+    /* Use two seconds grace in case the property isn't removed somehow. */
+    player->add_prop(TEMP_LIBCONTAINER_CHECKED, (time() + 2));
 }
 
 /*
@@ -1061,23 +1064,14 @@ appraise_object(int num)
         return;
     }
 
-    if (!num)
-    {
-	skill = (int)this_player()->query_skill(SS_APPR_OBJ);
-    }
-    else
-    {
-	skill = num;
-    }
-
+    skill = num ? num : (int)this_player()->query_skill(SS_APPR_OBJ);
     sscanf(OB_NUM(this_object()), "%d", seed);
     skill = random((1000 / (skill + 1)), seed);
     pick_level = (int)this_player()->query_skill(SS_OPEN_LOCK) -
         cut_sig_fig(pick_level + (skill % 2 ? -skill % 70 : skill) *
 	pick_level / 100);
 
-    write ("You appraise that its lock is " + get_pick_chance(pick_level) +
-        ".\n");
+    write ("You appraise that its lock is " + get_pick_chance(pick_level) + ".\n");
 }
 
 /*

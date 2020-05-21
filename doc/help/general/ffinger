@@ -8,7 +8,8 @@ OPTIONS
 	<target> - the target or targets you want to perform the emotion
 		   on. This may be a name or description of a living or
 		   livings, ie. Mercade, the dwarf wizard and dwarves are
-		   all valid targets.
+		   all valid targets (though not wise choices for this
+		   particular emote).
 
 SEE ALSO
 	emotions

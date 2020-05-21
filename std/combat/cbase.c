@@ -1,37 +1,38 @@
 /*
- /std/combat/cbase.c
-
- This is the externalized combat routines. 
-
- This object is cloned and linked to a specific individual when
- engaged in combat. The actual object resides in 'limbo'.
-
- Ver 2.0 JnA: 911220
-
-   This version uses an attack and defence table. Combat no longer has
-   a concept of weapons and armours. Only attacks and hitlocations.
-
-   This file is meant to be inherited by more advanced combat systems.
-
- Note that this is the implementation of the combat system in general. If
- you want to make an entirely different combat system, you are recommended
- to change the 'COMBAT_FILE' define in config.h
-*/
+ * /std/combat/cbase.c
+ *
+ * This is the externalized combat routines. 
+ *
+ * This object is cloned and linked to a specific individual when
+ * engaged in combat. The actual object resides in 'limbo'.
+ *
+ * Ver 2.0 JnA: 911220
+ *
+ * This version uses an attack and defence table. Combat no longer has
+ * a concept of weapons and armours. Only attacks and hitlocations.
+ *
+ * This file is meant to be inherited by more advanced combat systems.
+ *
+ * Added a call_hook to cb_update_combat_time to support weapon decay
+ * Arman, 23 Nov 2019
+ */
 
 #pragma save_binary
 #pragma strict_types
 
+#include <comb_mag.h>
+#include <composite.h>
+#include <filter_funs.h>
+#include <formulas.h>
+#include <hooks.h>
+#include <log.h>
+#include <macros.h>
+#include <math.h>
+#include <options.h>
+#include <ss_types.h>
 #include <std.h>
 #include <stdproperties.h>
-#include <filter_funs.h>
-#include <macros.h>
-#include <formulas.h>
-#include <composite.h>
-#include <ss_types.h>
 #include <wa_types.h>
-#include <math.h>
-#include <comb_mag.h>
-#include <options.h>
 #include "/std/combat/combat.h"
 
 /*
@@ -48,32 +49,33 @@ public mixed * query_attack(int id);
 public nomask void cb_update_enemies();
 public nomask mixed cb_query_attack();
 public nomask mixed cb_update_attack();
+public float cb_query_speed();
 
 /*
-    Format of each element in the attacks array:
-
-         ({ wchit, wcpen, dt, %use, skill })
-              wchit: Weapon class to hit
-              wcpen: Weapon class penetration
-              dt:    Damage type
-              %use:  Chance of use each turn
-              skill: The skill of this attack (defaults to wcpen)
-              m_pen: The modified pen used in combat
-
-         att_id:    Specific id, for humanoids W_NONE, W_RIGHT etc
-
-    Format of each element in the hitloc_ac array:
-
-         ({ *ac, %hit, desc })
-              ac:    The ac's for each damagetype for a given hitlocation
-              %hit:  The chance that a hit will hit this location
-              desc:  String describing this hitlocation, ie "head", "tail"
-              m_ac:  Modified ac to use in combat
-                       .......
-         Note that the sum of all %hit must be 100.
-
-         hit_id:    Specific id, for humanoids, A_TORSO, A_HEAD etc
-*/
+ * Format of each element in the attacks array:
+ *
+ *       ({ wchit, wcpen, dt, %use, skill })
+ *            wchit: Weapon class to hit
+ *            wcpen: Weapon class penetration
+ *            dt:    Damage type
+ *            %use:  Chance of use each turn
+ *            skill: The skill of this attack (defaults to wcpen)
+ *            m_pen: The modified pen used in combat
+ *
+ *       att_id:    Specific id, for humanoids W_NONE, W_RIGHT etc
+ *
+ * Format of each element in the hitloc_ac array:
+ *
+ *       ({ *ac, %hit, desc })
+ *            ac:    The ac's for each damagetype for a given hitlocation
+ *            %hit:  The chance that a hit will hit this location
+ *            desc:  String describing this hitlocation, ie "head", "tail"
+ *            m_ac:  Modified ac to use in combat
+ *                     .......
+ *       Note that the sum of all %hit must be 100.
+ *
+ *       hit_id:    Specific id, for humanoids, A_TORSO, A_HEAD etc
+ */
 
 static int    *att_id = ({}),    /* Id's for attacks */
               *hit_id = ({}),    /* Id's for hitlocations */
@@ -85,7 +87,7 @@ static int    *att_id = ({}),    /* Id's for attacks */
               combat_time,       /* The last time a hit was made. */
               tohit_mod;         /* Bonus/Minus to the tohit value */
 
-static float  speed = 0.0,       /* How often I hit */
+static float  speed = 5.0,       /* How often I hit */
               delay = 0.0;
 
 static mixed  *attacks = ({}),   /* Array of each attack */
@@ -95,16 +97,18 @@ static object me,                /* The living object concerned */
               *enemies = ({}),   /* Array holding all living I hunt */
               attack_ob;         /* Object to attack == Current enemy. */
 
+static mapping dam_by_dt = ([ ]); /* ([ int dt : int cumulative damage ]) */
+
 /*
- * Description: Give status information about the combat values
- *
+ * Function name: cb_status
+ * Description  : Give status information about the combat values.
  */
 public string
 cb_status()
 {
     string str;
-    int il, tmp, size;
-    mixed ac;
+    int tmp;
+    mixed ac, m_ac;
     object *valid_enemies;
 
     str = "Living object: " + file_name(me) + 
@@ -132,43 +136,57 @@ cb_status()
     str += sprintf("\nPanic: %3d, Attacks: %3d, Hitlocations: %3d\n",
                    cb_query_panic(), sizeof(att_id), sizeof(hit_id));
 
-    il = -1;
-    size = sizeof(att_id);
-    while(++il < size)
+    str += sprintf("\n%-20s %@|9s\n","  Attack",
+        ({ "wchit", "impale/slash/bludg ", "wcskill", "   %use" }));
+    
+    for (int i = 0; i < sizeof(att_id); i++)
     {
-        if (!il)
-            str += sprintf("\n%-20s %@|9s\n","  Attack",
-                           ({"wchit",
-                             "impale/slash/bludg ", "wcskill",
-                             "   %use" }));
-        ac = attacks[il][ATT_DAMT];
-        ac = ({ (ac & W_IMPALE ? attacks[il][ATT_WCPEN][0] + " " : "no "),
-                (ac & W_SLASH ? attacks[il][ATT_WCPEN][1] + " " : "no "), 
-                (ac & W_BLUDGEON ? attacks[il][ATT_WCPEN][2] + " " : "no ") });
+        int id = att_id[i];
+        mixed attack = attacks[i];
+        
+        ac = attack[ATT_DAMT];
+        ac = ({ (ac & W_IMPALE ? attack[ATT_WCPEN][0] + " " : "no "),
+                (ac & W_SLASH ? attack[ATT_WCPEN][1] + " " : "no "), 
+                (ac & W_BLUDGEON ? attack[ATT_WCPEN][2] + " " : "no ") });
         ac = implode(ac,"   ");
 
         str += sprintf("%-20s %|9d %-17s %|9d %|9d\n", 
-            this_player()->check_call(cb_attack_desc(att_id[il])) + ":",
-            attacks[il][ATT_WCHIT],
+            this_player()->check_call(cb_attack_desc(id)) + ":",
+            attack[ATT_WCHIT],
             ac,
-            attacks[il][ATT_SKILL],
-            attacks[il][ATT_PROCU]);
+            attack[ATT_SKILL],
+            attack[ATT_PROCU]);
     }
 
-    il = -1;
-    size = sizeof(hit_id);
-    while(++il < size)
+    str += sprintf("\n%-15s %@|13s\n","  Hit location",
+        ({"impale", "slash", "bludgeon", " %hit" }));
+
+    foreach (mixed hitloc: hitloc_ac)
     {
-        if (!il)
-            str += sprintf("\n%-15s %@|9s\n","  Hit location",
-                           ({"impale", "slash", "bludgeon", " %hit" }));
-        str += sprintf("%-15s", hitloc_ac[il][HIT_DESC] + ":") + " ";
-        ac = hitloc_ac[il][HIT_AC];
+        mixed ac_s, m_ac;
+        
+        str += sprintf("%-15s", hitloc[HIT_DESC] + ":") + " ";
+        ac = hitloc[HIT_AC];
+        m_ac = hitloc[HIT_M_AC];
+        ac_s = ({ });
+        
         if (!pointerp(ac))
+        {
             ac = ({ ac, ac, ac });
-        else 
+            m_ac = ({ m_ac, m_ac, m_ac });
+        }
+        else
+        {
             ac = ac[0..2];
-        str += sprintf("%@|9d %|9d\n", ac, hitloc_ac[il][HIT_PHIT]);
+            m_ac = m_ac[0..2];
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            ac_s += ({ sprintf("%2.2f%% (%d)", m_ac[i], ac[i]) });
+        }
+        
+        str += sprintf("%@|13s %|13d\n", ac_s, hitloc[HIT_PHIT]);
     }
 
     str += "\nParry: " + me->query_skill(SS_PARRY) + "  Defense: " + 
@@ -176,8 +194,8 @@ cb_status()
         (tmp = me->query_average_stat()) + "  Dex: " + me->query_stat(SS_DEX) +
         "  Enc: " + (me->query_encumberance_weight() +
             me->query_encumberance_volume() / 2) + "\nVol: " +
-        me->query_prop(CONT_I_VOLUME) + "  Speed: " +
-        me->query_prop(LIVE_I_QUICKNESS) + "  Exp at kill: " +
+        me->query_prop(CONT_I_VOLUME) +
+        sprintf("  Speed: %4.2f", cb_query_speed()) + "  Exp at kill: " +
             F_EXP_ON_KILL(tmp, tmp) +
        (me->query_npc() ? (" at " + me->query_exp_factor() + "%") : "") + "\n";
 
@@ -193,7 +211,8 @@ string
 cb_data()
 {
     string str;
-    int i, val, tmp, t2, ac, size;
+    int val, tmp, ac;
+    float fval;
     object *arr;
 
     str = "Living object: " + file_name(me) +
@@ -208,35 +227,31 @@ cb_data()
             me->query_encumberance_volume(), 60);
     
     tmp = 0;
-    i = -1;
-    size = sizeof(att_id);
-    while(++i < size)
+    foreach (mixed attack: attacks)
     {
-        tmp += attacks[i][ATT_WCHIT] * attacks[i][ATT_PROCU];
+        tmp += attack[ATT_WCHIT] * attack[ATT_PROCU];
     }
     tmp /= 100;
 
-    val += 4 * fixnorm(2 * tmp, 50);
 
-    str += sprintf("\n%-20s %5d\n", "Offensive tohit:", val);
+    val += 4 * fixnorm(2 * tmp, 50);
+    str += sprintf("\n%-30s %5d\n", "Offensive tohit:", val);
 
     val = 0;
-    i = -1;
-    size = sizeof(att_id);
-    while(++i < size)
+    foreach (mixed attack: attacks)
     {
-        ac = attacks[i][ATT_DAMT];
+        ac = attack[ATT_DAMT];
         if (ac & W_IMPALE)
-            tmp = attacks[i][ATT_M_PEN][0];
+            tmp = attack[ATT_M_PEN][0];
         else if (ac & W_SLASH)
-            tmp = attacks[i][ATT_M_PEN][1];
+            tmp = attack[ATT_M_PEN][1];
         else if (ac & W_BLUDGEON)
-            tmp = attacks[i][ATT_M_PEN][2];
-        val += tmp * attacks[i][ATT_PROCU];
+            tmp = attack[ATT_M_PEN][2];
+        val += tmp * attack[ATT_PROCU];
     }
     val /= 100;
 
-    str += sprintf("%-20s %5d\n", "Offensive pen:", val);
+    str += sprintf("%-30s %5d\n", "Offensive pen:", val);
 
     val = 2 * fixnorm(50, me->query_stat(SS_DEX)) -
         fixnorm(60, me->query_encumberance_weight() +
@@ -252,33 +267,57 @@ cb_data()
     }
 
     tmp += me->query_skill(SS_DEFENSE);
-
     val += 4 * fixnorm(70, tmp);
+    str += sprintf("%-30s %5d\n", "Defensive tohit:", val);
 
-    str += sprintf("%-20s %5d\n", "Defensive tohit:", val);
-
-    val = 0;
-    i = -1;
-    size = sizeof(hit_id);
-    while(++i < size)
+    fval = 0.0;
+    mapping armours = ([ ]);
+    foreach (mixed hitloc: hitloc_ac)
     {
-        val += hitloc_ac[i][HIT_M_AC][0] * hitloc_ac[i][HIT_PHIT];
-    }
-    val /= 100;
+        fval += hitloc[HIT_M_AC][0] * itof(hitloc[HIT_PHIT]);
 
-    str += sprintf("%-20s %5d\n", "Defensive ac:", val);
+        foreach (object ob: hitloc[HIT_ARMOURS]) {
+            if (!armours[ob])
+                armours[ob] = 0.0;
+            armours[ob] += F_AC_MOD(ob->query_ac()) * itof(hitloc[HIT_PHIT]) / 100.0;
+        }
+    }
+    fval /= 100.0;
+
+    str += sprintf("%-30s %5.2f%%\n\n", "Damage Reduction (armour):", fval);
+
+    if (m_sizeof(armours))
+    {
+        str += "Damage Reduction (by armour)\n";
+        foreach (object ob, float damage_reduction: armours) {
+            str += sprintf("  %-55s %5.2f%%\n", file_name(ob), damage_reduction);
+        }
+        str += "\n";
+    }
+
+    if (m_sizeof(me->query_speed_map()))
+    {
+        str += "Active speed effects:\n";
+
+        foreach (string file, int value : me->query_speed_map())
+        {
+            str += sprintf("  %55s: %+4.2f%%\n",
+                file, 100.0 / F_SPEED_MOD(value) - 100.0);
+        }
+        str += sprintf("  %55s: %+4.2f%%\n", "Total",
+            100.0 / me->query_speed(1) - 100.0);
+        
+    }
 
     str += "\nExp at kill: " + (F_KILL_GIVE_EXP(me->query_average_stat()) *
-         (me->query_npc() ? me->query_exp_factor() : 100) / 100) +
-         "  Speed: " + me->query_prop(LIVE_I_QUICKNESS);
-
-    arr = all_inventory(me);
-    i = -1;
-    size = sizeof(arr);
+        (me->query_npc() ? me->query_exp_factor() : 100) / 100) +
+        "  Round time: " + sprintf("%4.2f sec", cb_query_speed());
+    
     tmp = 0;
-    while(++i < size)
+    arr = all_inventory(me);
+    foreach(object ob: arr)
     {
-        tmp += arr[i]->query_prop(OBJ_I_VALUE);
+        tmp += ob->query_prop(OBJ_I_VALUE);
     }
     str += "  Carried value: " + tmp + " (" + sizeof(arr) + ") objects.\n";
 
@@ -447,25 +486,16 @@ cb_may_panic()
 }
 
 /*
- * Function name: cb_adjust_combat_on_intox
- * Description:   Called to let intoxication affect combat. This
- *                is used to do nasty drunk type things *laugh*
- * Arguments:     pintox: %intoxicated
+ * Function name: cb_damage_by_type
+ * Description  : Find out what types of damage were incurrect by this living.
+ *                It might give a hint as to cause of death (though it does)
+ *                not specifically register the killing blow.
+ * Returns      : mapping - ([ int damage type : int cumulative damage in hp ])
  */
-public void
-cb_adjust_combat_on_intox(int pintox)
+public mapping
+cb_damage_by_type()
 {
-    object *p;
-
-    if (pintox < 90)
-        return;
-
-    p = all_inventory(environment(me));
-
-    if (!sizeof(p))
-    {
-        /* Here we check for neat things to do */
-    }
+    return ([ ]) + dam_by_dt;
 }
 
 /*
@@ -542,7 +572,7 @@ public int
 cb_tohit(int aid, int wchit, object vic)
 {
     int tmp, whit;
-
+    
     /*
      * Four factors are normalized (-50, 50) in the 'to-hit'.
      * 1 - Weapon class 'to hit' <-> Defensive skill
@@ -689,17 +719,15 @@ cb_hitloc_desc(int hid)
 varargs void
 tell_watcher(string str, mixed enemy, mixed arr)
 {
-    object *ob;
-    int i, size;
+    object *objs;
 
-    ob = all_inventory(environment(me)) - ({ me });
-
+    objs = all_inventory(environment(me)) - ({ me });
     if (arr)
     {
         if (pointerp(arr))
-            ob -= arr;
+            objs -= arr;
         else
-            ob -= ({ arr });
+            objs -= ({ arr });
     }
 
     if (!pointerp(enemy))
@@ -707,20 +735,16 @@ tell_watcher(string str, mixed enemy, mixed arr)
         enemy = ({ enemy });
     }
 
-    ob -= enemy;
-
-    i = -1;
-    size = sizeof(ob);
-    while(++i < size)
+    objs -= enemy;
+    foreach(object ob: objs)
     {
-        if (!ob[i]->query_option(OPT_NO_FIGHTS) && CAN_SEE_IN_ROOM(ob[i]))
+        if (!ob->query_option(OPT_NO_FIGHTS) && CAN_SEE_IN_ROOM(ob))
         {
-            if (CAN_SEE(ob[i], me))
-                ob[i]->catch_msg(str);
+            if (CAN_SEE(ob, me))
+                ob->catch_msg(str);
             else
-            tell_object(ob[i], capitalize(FO_COMPOSITE_ALL_LIVE(enemy, ob[i])) +
-                (sizeof(enemy) == 1 ? " is " : " are ") +
-                "hit by someone.\n");
+            tell_object(ob, capitalize(FO_COMPOSITE_ALL_LIVE(enemy, ob)) +
+                (sizeof(enemy) == 1 ? " is " : " are ") + "hit by someone.\n");
         }
     }
 }
@@ -736,29 +760,25 @@ tell_watcher(string str, mixed enemy, mixed arr)
 varargs void
 tell_watcher_miss(string str, object enemy, mixed arr)
 {
-    object *ob;
-    int i, size;
+    object *objs;
 
-    ob = all_inventory(environment(me)) - ({ me, enemy });
-
+    objs = all_inventory(environment(me)) - ({ me, enemy });
     if (arr)
     {
         if (pointerp(arr))
-            ob -= arr;
+            objs -= arr;
         else
-            ob -= ({ arr });
+            objs -= ({ arr });
     }
 
-    i = -1;
-    size = sizeof(ob);
-    while(++i < size)
+    foreach(object ob: objs)
     {
-        if (!ob[i]->query_option(OPT_NO_FIGHTS) &&
-            !ob[i]->query_option(OPT_GAG_MISSES) &&
-            CAN_SEE_IN_ROOM(ob[i]) &&
-            CAN_SEE(ob[i], me))
+        if (!ob->query_option(OPT_NO_FIGHTS) &&
+            !ob->query_option(OPT_GAG_MISSES) &&
+            CAN_SEE_IN_ROOM(ob) &&
+            CAN_SEE(ob, me))
         {
-            ob[i]->catch_msg(str);
+            ob->catch_msg(str);
         }
     }
 }
@@ -1078,8 +1098,8 @@ cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
                     other_damage_desc = "viciously impales";
                     break;
                 default:
-                    damage_desc = "critcally wound";
-                    other_damage_desc = "critcally wounds";
+                    damage_desc = "critically wound";
+                    other_damage_desc = "critically wounds";
                     break;
             }
 
@@ -1165,8 +1185,8 @@ cb_add_enemy(object enemy, int force)
 public void 
 cb_adjust_combat_on_move(int leave)
 {
-    int i, pos, size;
-    object *inv, enemy, *all, *rest, *drag;
+    int pos;
+    object *inv, *all, *rest, *drag;
 
     if (!environment(me))
     {
@@ -1182,23 +1202,21 @@ cb_adjust_combat_on_move(int leave)
         {
             drag = ({ });
             rest = ({ });
-            i = -1;
-            size = sizeof(inv);
-            while(++i < size)
+            foreach(object enemy: inv)
             {
-                if (inv[i]->query_prop(LIVE_O_ENEMY_CLING) == me)
+                if (enemy->query_prop(LIVE_O_ENEMY_CLING) == me)
                 {
-                    drag += ({ inv[i] });
-                    tell_object(inv[i], "As " +
-                        me->query_the_name(inv[i]) + 
+                    drag += ({ enemy });
+                    tell_object(enemy, "As " + me->query_the_name(enemy) + 
                         " leaves, you are dragged along.\n");
                 }
                 else
                 {
-                    rest += ({ inv[i] });
-                    tell_object(inv[i], "You are now hunting " +
-                        me->query_the_name(inv[i]) + ".\n");
-                    inv[i]->notify_enemy_leaves(me);
+                    rest += ({ enemy });
+                    tell_object(enemy, "You are now hunting " +
+                        me->query_the_name(enemy) + ".\n");
+                    enemy->notify_enemy_leaves(me);
+                    enemy->call_hook(HOOK_LIVING_HUNTING, me);
                 }
             }
 
@@ -1213,10 +1231,14 @@ cb_adjust_combat_on_move(int leave)
                 me->add_prop(TEMP_DRAGGED_ENEMIES, drag);
             }
 
-            if (sizeof(rest) && i_am_real)
+            if (sizeof(rest))
             {
-                me->catch_tell("You are now hunted by " + 
-                    FO_COMPOSITE_ALL_LIVE(rest, me) + ".\n");
+                if (i_am_real)
+                {
+                    me->catch_tell("You are now hunted by " 
+                        + FO_COMPOSITE_ALL_LIVE(rest, me) + ".\n");
+                }
+                me->call_hook(HOOK_LIVING_HUNTED, rest);
             }
 
             /* Stop fighting all the enemies that don't follow us.
@@ -1230,21 +1252,20 @@ cb_adjust_combat_on_move(int leave)
     } 
     else 
     {
-        i = -1;
-        size = sizeof(inv);
-        while(++i < size)
+        foreach(object victim: inv)
         {
-            if (CAN_SEE(me, inv[i]) && CAN_SEE_IN_ROOM(me) &&
-                !NPATTACK(inv[i]))
+            if (CAN_SEE(me, victim) && CAN_SEE_IN_ROOM(me) &&
+                !NPATTACK(victim))
             {
-                me->attack_object(inv[i]);
-                cb_update_tohit_val(inv[i], 30); /* Give hunter bonus */
+                victim->notify_enemy_arrives(me);
+                me->attack_object(victim);
+                cb_update_tohit_val(victim, 30); /* Give hunter bonus */
                 tell_room(environment(me), QCTNAME(me) + " attacks " +
-                    QTNAME(inv[i]) + ".\n", ({ inv[i], me }));
-                tell_object(inv[i], me->query_The_name(inv[i]) +
+                    QTNAME(victim) + ".\n", ({ victim, me }));
+                tell_object(victim, me->query_The_name(victim) +
                     " attacks you!\n");
                 tell_object(me, "You attack " +
-                    inv[i]->query_the_name(me) + ".\n");
+                    victim->query_the_name(me) + ".\n");
             }
         }
     }
@@ -1447,11 +1468,7 @@ cb_query_armour(int which)
 public void
 cb_calc_speed()
 {
-    int i;
-    if (me)
-        i = me->query_prop(LIVE_I_QUICKNESS);
-
-    speed = MAX(2.0, 5.0 * F_SPEED_MOD(i));
+    speed = MAX(2.0, me->query_speed(5.0));
 }
 
 /*
@@ -1512,6 +1529,10 @@ stop_heart()
     me->remove_prop(LIVE_I_ATTACK_DELAY);
     remove_alarm(alarm_id);
     alarm_id = 0;
+
+    /* Garbage collection. */
+    if (!objectp(me))
+        remove_object();
 }
 
 /*
@@ -1541,6 +1562,8 @@ heart_beat()
     cb_update_enemies();
     cb_update_attack();
     
+    me->call_hook(HOOK_HEART_BEAT_IN_COMBAT, me, enemies, attack_ob, speed);
+    
     if (!cb_query_attack())
     {
         /* We don't stop the heart beat for another 30 seconds */
@@ -1551,6 +1574,8 @@ heart_beat()
         return;
     }
 
+    me->call_hook(HOOK_HEART_BEAT_IN_COMBAT, enemies, attack_ob);
+    
     /* First do some check if we actually attack. */
     if (pointerp(fail = me->query_prop(LIVE_AS_ATTACK_FUMBLE)) &&
         sizeof(fail))
@@ -1611,9 +1636,7 @@ heart_beat()
         if (!objectp(me))
             break;
         
-        /*
-         * Will we use this attack this round? (random(100) < %use)
-         */
+        /* Will we use this attack this round? (random(100) < %use) */
         if (random(100) < attacks[il][ATT_PROCU])
         {
             /*
@@ -1637,50 +1660,47 @@ heart_beat()
                 continue;
             }
 
+            if (!objectp(attack_ob))
+                break;
+
             hitsuc = cb_tohit(att_id[il], attacks[il][ATT_WCHIT], attack_ob);
 
             if (hitsuc > 0)
             {
                 /* Choose one damage type */
+                dt = attacks[il][ATT_DAMT];
+                dbits = ({ dt & W_IMPALE, dt & W_SLASH, dt & W_BLUDGEON }) - ({ 0 });
+                dt = sizeof(dbits) ? one_of_list(dbits) : W_BLUDGEON;
+
+                mixed pen = attacks[il][ATT_M_PEN];
+
+                /* Get the base pen */
+		if (sizeof(pen))
+		{
+		    tmp = MATH_FILE->quick_find_exp(dt);
+		    if (tmp < sizeof(pen))
+			pen = pen[tmp];
+		    else
+			pen = pen[0];
+		}
+
                 if (crit = (!random(10000)))
                 {
-                    // Critical hit!
-                    pen = attacks[il][ATT_M_PEN];
-                    if (sizeof(pen))
-		    {
-                        pen = pen[0];
-		    }
- 
                     pen *= 5;
                 }
-                else
-                {
-                    pen = attacks[il][ATT_M_PEN];
-
-                    if (sizeof(pen))
-                    {
-                        tmp = MATH_FILE->quick_find_exp(dt);
-                        if((tmp < sizeof(pen)))
-                            pen = pen[tmp];
-                        else
-                            pen = pen[0];
-                    }
-                }
-
-                dt = attacks[il][ATT_DAMT];
-                dbits = ({dt & W_IMPALE, dt & W_SLASH, dt & W_BLUDGEON }) - ({0});
-                dt = sizeof(dbits) ? one_of_list(dbits) : W_NO_DT;
 
                 hitresult = attack_ob->hit_me(pen, dt, me, att_id[il]);
 
                 if (crit)
-		{
-                   log_file("CRITICAL", sprintf("%s: %-11s on %-11s " +
-                                "(dam = %4d(%4d))\n\t%s on %s\n",
-                       ctime(time()), me->query_real_name(),
-                       attack_ob->query_real_name(), hitresult[3], pen,
-                       file_name(me), file_name(attack_ob)), -1);
-		}
+                {
+                    SECURITY->log_syslog("CRITICAL", sprintf("%s: %-11s on %-11s " +
+                        "(crit pen = %d; hp - dam = %d - %d%s)\n\t%s on %s\n",
+			ctime(time()),	capitalize(me->query_real_name()),
+			capitalize(attack_ob->query_real_name()), pen,
+			attack_ob->query_hp(), hitresult[3],
+			((attack_ob->query_hp() <= hitresult[3]) ? " LETHAL" : ""),
+			file_name(me), file_name(attack_ob)), LOG_SIZE_100K);
+                }
             }
             else
             {
@@ -1734,9 +1754,7 @@ heart_beat()
         return;
     }
     
-    /*
-     * Fighting is quite tiresome you know
-     */
+    /* Fighting is quite tiresome you know. */
     ftg = random(3) + 1;
     if (me->query_fatigue() >= ftg)
     {
@@ -1744,8 +1762,7 @@ heart_beat()
     }
     else
     {
-        tell_object(me,
-                "You are so tired that every move drains your health.\n");
+        tell_object(me, "You are so tired that every move drains your health.\n");
         me->set_fatigue(0);
         me->reduce_hit_point(ftg);
     }
@@ -1759,6 +1776,27 @@ heart_beat()
     return;
 }
 
+static void                                                                     
+log_hit(object attacker, int pen, int dt, int hp, int dam, string location, int aid)
+{                                                                               
+    string message = sprintf("%f %s", gettimeofday(), (dam > 0 ? "HIT" : "MISS"));
+    foreach (mixed value: ({ attacker, me, pen, dt, hp, dam, location, aid })) {
+        if (objectp(value)) {                                                   
+            message += "," + file_name(value) + ",\"" +                         
+                value->query_real_name() + "\"";                                
+        }                                                                       
+
+        if (intp(value)) {                                                      
+            message += "," + value;                                             
+        }                                                                       
+
+        if (stringp(value)) {                                                   
+            message += ",\"" + value + "\"";                                    
+        }                                                                       
+    }
+
+    SECURITY->log_syslog("COMBAT_LOG", message + "\n", LOG_SIZE_1M * 10);
+}
 
 /*
  * Function name: cb_hit_me
@@ -1771,18 +1809,29 @@ heart_beat()
  *                               unspecified or an invalid hitloc is
  *                               given, a random hitlocation will be
  *                               used.
- * Returns:       Result of hit: ({ proc_hurt, hitloc desc, phit, dam, hitloc id })
+ * Returns:       Array: ({ proc_hurt, hitloc desc, phit, dam, hitloc id })
+ *                int proc_hurt - 0-100, incurred damage as percentage of
+ *                     victim HP, or -1 = dodge, -2 = parry.
+ *                string hitloc desc - descr. of the location that was hit.
+ *                int phit - randomized value of the weapon penetration (wcpen)
+ *                int dam - incurrent damage in hitpoints
+ *                int hitloc ID - the ID of the location that was hit.
  */
 varargs public nomask mixed
 cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc = -1)
 {
     object      *my_weapons, my_weapon, attacker_weapon;
-    int         proc_hurt, hp,
-                tmp, dam, phit,
-                hloc,
+    int         proc_hurt, hp, proc_block,
+                tmp, dam, phit, element, hloc,
                 j, size;
     string      msg;
     mixed       ac, attack;
+
+    if (!intp(wcpen) || !intp(dt) || !intp(attack_id) || !intp(target_hitloc)) 
+    {
+        throw("Invalid arguments, expected int\n");
+    }
+
 
     if (!objectp(me))
     {
@@ -1839,29 +1888,28 @@ cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc =
         }
     }
 
-    ac = hitloc_ac[hloc][HIT_M_AC];
-
     if (wcpen > 0)
     {
         if (dt == MAGIC_DT)
 	{
             ac = 0;
-
+            
             /* MAGIC_DT damage has a base damage value of wcpen / 4 */
             phit = wcpen / 4;
             phit += random(phit) + random(phit) + random(phit);
 	}
         else
         {
-            tmp = (int)MATH_FILE->quick_find_exp(dt);
+            ac = hitloc_ac[hloc][HIT_M_AC];
+            tmp = MATH_FILE->quick_find_exp(dt);
 
             if (sizeof(ac) && (tmp < sizeof(ac)))
             {
-                ac = ac[tmp];
+                ac = ftoi(ac[tmp]);
             }
             else if (sizeof(ac))
             {
-                ac = ac[0];
+                ac = ftoi(ac[0]);
             }
             else if (!intp(ac))
             {
@@ -1870,11 +1918,11 @@ cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc =
 
             phit = wcpen / 4;
             phit = random(phit) + random(phit) + random(phit) + random(phit);
+            proc_block = random(100);
 
-            ac = random(ac);
         }
 
-        dam = max(0, F_DAMAGE(phit, ac));
+        dam = max(0, F_NEW_DAMAGE(phit, proc_block, ac));
     }
     else
     {
@@ -1952,6 +2000,8 @@ cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc =
         cb_add_panic(2 + proc_hurt / 5);
     }
 
+    log_hit(attacker, wcpen, dt, hp, dam, hitloc_ac[hloc][HIT_DESC], attack_id);
+
     /* Tell us where we were attacked and by which damagetype. */
     cb_got_hit(hit_id[hloc], proc_hurt, attacker, attack_id, dt, dam);
 
@@ -1962,6 +2012,13 @@ cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc =
         me->combat_reward(attacker, dam, 0);
 #endif
         me->interrupt_spell();
+
+	/* Tally the hurt by damage type. In case the living was called by a
+	 * spell, tally the elemnt instead. */
+	if (element = previous_object(-1)->query_spell_element())
+            dam_by_dt[element] += dam;
+	else
+            dam_by_dt[dt] += dam;
     }
 
     return ({ proc_hurt, hitloc_ac[hloc][HIT_DESC], phit, dam, hit_id[hloc] });
@@ -1982,7 +2039,14 @@ cb_attack(object victim)
 
     restart_heart();
 
-    if (victim == me || victim == attack_ob || victim->query_ghost())
+    /* Make sure the victim is attacked. */
+    if (victim == attack_ob)
+    {
+        victim->attacked_by(me);
+        return;
+    }
+
+    if (victim == me || victim->query_ghost())
     {
         return;
     }
@@ -2201,8 +2265,8 @@ add_attack(int wchit, mixed wcpen, int damtype, int prcuse, int id, int skill,
         return 0;
     }
 
-    pen = allocate(W_NO_DT);
-    m_pen = allocate(W_NO_DT);
+    pen = allocate(W_NUM_DT);
+    m_pen = allocate(W_NUM_DT);
 
     if (skill == 0)
     {
@@ -2214,11 +2278,11 @@ add_attack(int wchit, mixed wcpen, int damtype, int prcuse, int id, int skill,
     }
 
     pos = -1;
-    while(++pos < W_NO_DT)
+    while(++pos < W_NUM_DT)
     {
         if (!pointerp(wcpen))
         {
-            m_pen[pos] = F_PENMOD(wcpen, skill);
+            m_pen[pos] = F_PENMOD(wcpen, skill) * F_STR_FACTOR(me->query_stat(SS_STR)) / 100;
             pen[pos] = wcpen;
         }
         else if (pos >= sizeof(wcpen))
@@ -2228,11 +2292,11 @@ add_attack(int wchit, mixed wcpen, int damtype, int prcuse, int id, int skill,
         }
         else
         {
-            m_pen[pos] = F_PENMOD(wcpen[pos], skill);
+            m_pen[pos] = F_PENMOD(wcpen[pos], skill) * F_STR_FACTOR(me->query_stat(SS_STR)) / 100;
             pen[pos] = wcpen[pos];
         }
     }
-
+    
     if ((pos = member_array(id, att_id)) < 0)
     {
         att_id += ({ id });
@@ -2312,18 +2376,19 @@ query_attack(int id)
 static varargs int
 add_hitloc(mixed ac, int prchit, string desc, int id, object *armours)
 {
-    int pos, *act, *m_act;
-
+    int pos, *act;
+    float *m_act;
+    
     if (sizeof(hitloc_ac) >= MAX_HITLOC)
     {
         return 0;
     }
 
-    act = allocate(W_NO_DT);
-    m_act = allocate(W_NO_DT);
+    act = allocate(W_NUM_DT);
+    m_act = allocate(W_NUM_DT);
 
     pos = -1;
-    while(++pos < W_NO_DT)
+    while(++pos < W_NUM_DT)
     {
         if (!pointerp(ac))
         {
@@ -2333,7 +2398,7 @@ add_hitloc(mixed ac, int prchit, string desc, int id, object *armours)
         else if (pos >= sizeof(ac))
         {
             act[pos] = (pos ? act[0] : 0);
-            m_act[pos] = (pos ? F_AC_MOD(act[0]) : 0);
+            m_act[pos] = (pos ? F_AC_MOD(act[0]) : 0.0);
         }
         else
         {
@@ -2341,6 +2406,7 @@ add_hitloc(mixed ac, int prchit, string desc, int id, object *armours)
             act[pos] = ac[pos];
         }
     }
+    
     if ((pos = member_array(id, hit_id)) < 0)
     {
         hit_id += ({ id });
@@ -2414,3 +2480,4 @@ query_hitloc(int id)
 
     return 0;
 }
+

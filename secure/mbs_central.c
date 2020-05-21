@@ -304,7 +304,8 @@ list_admin(int admin)
 public nomask int
 add_board(string *data)
 {
-    object	board;
+    string name;
+    object board;
 
     if (CALL_CHECK)
 	return MBM_BAD_CALL;
@@ -358,18 +359,19 @@ add_board(string *data)
     }
 
     /* Are the priviliges right? */
-    if (!query_admin(TI->query_real_name()))
+    if (!query_admin(name = TI->query_real_name()))
     {
-	if (explode(data[2], "/")[2] !=
-	    SECURITY->query_wiz_dom(TI->query_real_name()) ||
-	    strlen(BASE_CAT[data[1]]))
+	string *doms, dname = explode(data[2], "/")[2];
+
+	if (!sizeof(doms = SECURITY->query_lord_domains(name)))
+	    doms = ({ SECURITY->query_wiz_dom(name) });
+
+	if (!IN_ARRAY(dname, doms) || strlen(BASE_CAT[data[1]]))
 	    return MBM_NO_AUTH;
 
-	if (sizeof(BbdMap[SECURITY->query_wiz_dom(TI->query_real_name())])
-	    >= MAX_NUM_BOARDS)
+	if (sizeof(BbdMap[dname]) >= MAX_NUM_BOARDS)
 	    return MBM_NUM_BOARDS;
     }
-
     /*
      * All demands are met, add it.
      */
@@ -377,8 +379,11 @@ add_board(string *data)
     BbpMap[data[2]][BBP_CAT] = data[1];
     BbpMap[data[2]][BBP_DESC] = data[3];
 
-    write("Added the board '" + data[0] + "' to the category '" + data[1] + "'.\n");
-    logit("Board add [" + UC(TI->query_real_name()) + "] " + data[0] + ":" + data[1] + ":" + data[3]);
+    write("Added the board '" + data[0] + "' to the category '" +
+	data[1] + "'.\n");
+    logit("Board add [" + UC(name) + "] " + data[0] +
+	":" + data[1] + ":" + data[3]);
+
     dosave();
     update_bbmaps();
     return MBM_NO_ERR;
@@ -417,9 +422,13 @@ remove_board(string board, string cath, int all)
     }
 
     /* Are the priviliges right? */
-    if (!query_admin((name = TI->query_real_name())))
+    if (!query_admin(name = TI->query_real_name())) 
     {
-	if (bdata[BBP_DOMAIN] != SECURITY->query_wiz_dom(name))
+	string *doms = SECURITY->query_lord_domains(name);
+	if (!sizeof(doms))
+	    doms = ({ SECURITY->query_wiz_dom(name) });
+
+	if (!IN_ARRAY(bdata[BBP_DOMAIN], doms))
 	    return MBM_NO_AUTH;
     }
 
@@ -447,9 +456,10 @@ remove_board(string board, string cath, int all)
 	m_delkey(UnusedMap, bdata[BBP_SPATH]);
 
     write("Removed the board '" + board + "' in the category '" + cath + "'.\n"); 
-    logit("Board delete [" + UC(TI->query_real_name()) + "] " + board + ":" + cath);
+    logit("Board delete [" + UC(name) + "] " + board + ":" + cath);
     if (all)
-	logit("Central entry delete [" + UC(TI->query_real_name()) + "] " + bdata[BBP_SPATH]);
+	logit("Central entry delete [" + UC(name) + "] " + bdata[BBP_SPATH]);
+
     GcTime = time();
     update_bbmaps();
     dosave();
@@ -485,9 +495,14 @@ remove_central_entry(string entry)
     }
 
     /* Are the priviliges right? */
-    if (!query_admin((name = TI->query_real_name())))
+    if (!query_admin(name = TI->query_real_name()))
     {
-	if (explode(entry, "/")[2] != SECURITY->query_wiz_dom(name))
+	string *doms, dname = explode(entry, "/")[2];
+
+	if (!sizeof(doms = SECURITY->query_lord_domains(name)))
+	    doms = ({ SECURITY->query_wiz_dom(name) });
+
+	if (!IN_ARRAY(dname, doms))
 	    return MBM_NO_AUTH;
     }
 
@@ -552,9 +567,13 @@ rename_board(string old, string cath, string new, string ndesc)
     }
 
     /* Are the priviliges right? */
-    if (!query_admin((name = TI->query_real_name())))
+    if (!query_admin(name = TI->query_real_name()))
     {
-	if (bdata[BBP_DOMAIN] != SECURITY->query_wiz_dom(name))
+	string *doms = SECURITY->query_lord_domains(name);
+	if (!sizeof(doms))
+	    doms = ({ SECURITY->query_wiz_dom(name) });
+
+	if (!IN_ARRAY(bdata[BBP_DOMAIN], doms))
 	    return MBM_NO_AUTH;
     }
 
@@ -562,9 +581,11 @@ rename_board(string old, string cath, string new, string ndesc)
 
     if (new != old)
     {
-	write("Renamed the board '" + old + "' in the category '" + cath + "' to '" + new + "'.\n");
+	write("Renamed the board '" + old + "' in the category '" + cath +
+	    "' to '" + new + "'.\n");
 	BbpMap[bdata[BBP_SPATH]][BBP_BOARD] = new;
-	logit("Board rename [" + UC(TI->query_real_name()) + "] " + old + "(" + cath + ") -> " + new);
+	logit("Board rename [" + UC(TI->query_real_name()) + "] " + old +
+	    "(" + cath + ") -> " + new);
 	GcTime = time();
     }
     if (strlen(ndesc))
@@ -576,7 +597,8 @@ rename_board(string old, string cath, string new, string ndesc)
 	}
 	else
 	{
-	    write("Changed the description of the board '" + old + "' in the category '" + cath + "' to '" + ndesc + "'.\n");
+	    write("Changed the description of the board '" + old +
+		"' in the category '" + cath + "' to '" + ndesc + "'.\n");
 	    BbpMap[bdata[BBP_SPATH]][BBP_DESC] = ndesc;
 	}
     }
@@ -596,8 +618,7 @@ public nomask varargs int
 list_new_boards(string dom = "")
 {
     mapping	boards, disc_map;
-    string	*remains, *discard;
-    string	name, domain;
+    string	name, *remains, *discard;
     mixed	discard_list;
 
     /*
@@ -608,9 +629,13 @@ list_new_boards(string dom = "")
     /*
      * Eliminate bogus and unused boards.
      */
+    disc_map = filter(boards, &try_load_board() @ &operator([])(, BBP_RPATH));
+/* There's no reason to remove slow boards anymore. Mercade */
+#if 0
     disc_map = filter(boards, &try_load_board() @ &operator([])(, BBP_RPATH)) +
 	filter(boards, &operator(<)(DTS(SCRAP_DELAY)) @ &tmfunc()
 	       @ &operator([])(, BBP_LNOTE));
+#endif
 
     if (m_sizeof(disc_map))
     {
@@ -630,11 +655,14 @@ list_new_boards(string dom = "")
     /*
      * Find out which boards are interesting.
      */
-    if (!query_admin((name = TI->query_real_name())))
+    if (!query_admin(name = TI->query_real_name()))
     {
-	domain = SECURITY->query_wiz_dom(name);
-	boards = filter(boards, &operator(==)(domain)
-			@ &operator([])(, BBP_DOMAIN));
+	string *doms = SECURITY->query_lord_domains(name);
+	if (!sizeof(doms))
+	    doms = ({ SECURITY->query_wiz_dom(name) });
+
+	boards = filter(boards, &operator(!=)(-1) @
+	    &member_array(, doms) @ &operator([])(, BBP_DOMAIN));
     }
     else if (strlen(dom))
     {
@@ -695,14 +723,30 @@ list_boards(int order, int admin, string spec)
 
     if (!admin)
     {
-	caths = sort_array(m_indexes(BbcMap));
-	boards = sort_array(BbdMap[SECURITY->query_wiz_dom(TI->query_real_name())], "sort_dom_boards");
-	write(sprintf("%-11s%-11s%-11s%-31s%s\n", "Board", "Category", "Domain", "Description & Savepath", "Access"));
-	write(sprintf("%-11s%-11s%-11s%-31s%s\n", "-----", "---------", "------", "----------------------", "------"));
-	for (i = 0, sz = sizeof(caths) ; i < sz ; i++)
+	string *doms, name = TI->query_real_name();
+
+	if (!sizeof(doms = SECURITY->query_lord_domains(name)))
+	    doms = ({ SECURITY->query_wiz_dom(name) });
+
+	boards = ({ });
+	foreach(string board, mixed data: BbdMap)
 	{
-	    bds2 = sort_array(filter(boards, &operator(==)(caths[i])
-				     @ &operator([])(, BBP_CAT)), "sort_cat_boards");
+	    if (IN_ARRAY(board, doms))
+		boards += sort_array(data, "sort_dom_boards");
+	}
+
+	write(sprintf("%-11s%-11s%-11s%-31s%s\n",
+		"Board", "Category", "Domain",
+		"Description & Savepath", "Access"));
+	write(sprintf("%-11s%-11s%-11s%-31s%s\n",
+		"-----", "---------", "------",
+		"----------------------", "------"));
+
+	foreach(string cat: sort_array(m_indexes(BbcMap)))
+	{
+	    bds2 = sort_array(filter(boards, &operator(==)(cat) @
+		    &operator([])(, BBP_CAT)), "sort_cat_boards");
+
 	    if (sizeof(bds2))
 	    {
 		map(bds2, print_board_info);
@@ -715,8 +759,12 @@ list_boards(int order, int admin, string spec)
 	if (!strlen(spec))
 	{
 	    caths = sort_array(m_indexes(BbcMap));
-	    write(sprintf("%-11s%-11s%-11s%-31s%s\n", "Board", "Category", "Domain", "Description & Savepath", "Access"));
-	    write(sprintf("%-11s%-11s%-11s%-31s%s\n", "-----", "---------", "------", "----------------------", "------"));
+	    write(sprintf("%-11s%-11s%-11s%-31s%s\n",
+		    "Board", "Category", "Domain",
+		    "Description & Savepath", "Access"));
+	    write(sprintf("%-11s%-11s%-11s%-31s%s\n",
+		    "-----", "---------", "------",
+		    "----------------------", "------"));
 	    for (i = 0, sz = sizeof(caths) ; i < sz ; i++)
 	    {
 		boards = sort_array(BbcMap[caths[i]], "sort_cath_boards");
@@ -735,8 +783,12 @@ list_boards(int order, int admin, string spec)
 		return MBM_NO_CAT;
 	    }
 
-	    write(sprintf("%-11s%-11s%-11s%-31s%s\n", "Board", "Category", "Domain", "Description & Savepath", "Access"));
-	    write(sprintf("%-11s%-11s%-11s%-31s%s\n", "-----", "---------", "------", "----------------------", "------"));
+	    write(sprintf("%-11s%-11s%-11s%-31s%s\n",
+		    "Board", "Category", "Domain",
+		    "Description & Savepath", "Access"));
+	    write(sprintf("%-11s%-11s%-11s%-31s%s\n",
+		    "-----", "---------", "------",
+		    "----------------------", "------"));
 	    boards = sort_array(BbcMap[spec], "sort_cath_boards");
 	    if (sizeof(boards))
 	    {
@@ -752,8 +804,12 @@ list_boards(int order, int admin, string spec)
 	if (!strlen(spec))
 	{
 	    doms = sort_array(m_indexes(BbdMap));
-	    write(sprintf("%-11s%-11s%-11s%-31s%s\n", "Board", "Category", "Domain", "Description & Savepath", "Access"));
-	    write(sprintf("%-11s%-11s%-11s%-31s%s\n", "-----", "---------", "------", "----------------------", "------"));
+	    write(sprintf("%-11s%-11s%-11s%-31s%s\n",
+		    "Board", "Category", "Domain",
+		    "Description & Savepath", "Access"));
+	    write(sprintf("%-11s%-11s%-11s%-31s%s\n",
+		    "-----", "---------", "------",
+		    "----------------------", "------"));
 	    for (i = 0, sz = sizeof(doms) ; i < sz ; i++)
 	    {
 		boards = sort_array(BbdMap[doms[i]], "sort_dom_boards");
@@ -771,8 +827,13 @@ list_boards(int order, int admin, string spec)
 		MBS->err_args(spec);
 		return MBM_NO_DOMAIN;
 	    }
-	    write(sprintf("%-11s%-11s%-11s%-31s%s\n", "Board", "Category", "Domain", "Description & Savepath", "Access"));
-	    write(sprintf("%-11s%-11s%-11s%-31s%s\n", "-----", "---------", "------", "----------------------", "------"));
+
+	    write(sprintf("%-11s%-11s%-11s%-31s%s\n",
+		    "Board", "Category", "Domain",
+		    "Description & Savepath", "Access"));
+	    write(sprintf("%-11s%-11s%-11s%-31s%s\n",
+		    "-----", "---------", "------",
+		    "----------------------", "------"));
 	    boards = sort_array(BbdMap[spec], "sort_dom_boards");
 	    if (sizeof(boards))
 	    {
@@ -938,17 +999,22 @@ list_categories(int admin)
 
     if (sizeof(caths))
     {
-	write((admin ? " " : "") + sprintf("%-15s%s", "Category", "Description") + "\n");
-	write((admin ? " " : "") + sprintf("%-15s%s", "---------", "-----------") + "\n");
+	write((admin ? " " : "") + sprintf("%-15s%s",
+		"Category", "Description") + "\n");
+	write((admin ? " " : "") + sprintf("%-15s%s",
+		"---------", "-----------") + "\n");
 	for (i = 0, sz = sizeof(caths) ; i < sz ; i++)
 	{
 	    if (admin && strlen(BASE_CAT[caths[i]]))
+	    {
 		write(sprintf("*%-15s%s", caths[i],
 			      CategoryMap[caths[i]]) + "\n");
+	    }
 	    else
-		write((admin ? " " : "") + sprintf("%-15s%s", caths[i],
-						   CategoryMap[caths[i]]) +
-		      "\n");
+	    {
+		write((admin ? " " : "") + sprintf("%-15s%s",
+			caths[i], CategoryMap[caths[i]]) + "\n");
+	    }
 	}
     }
     else
@@ -1003,15 +1069,19 @@ generate_report(int what)
     case 0:
     case 1:
         write("Report of usage activity since " + ctime(ReportTime) + ".\n");
-        write(sprintf("%-11s%-11s%-11s%-31s%-5s%-5s\n", "Board", "Category", "Domain", "Description", "Post", "Read"));
-        write(sprintf("%-11s%-11s%-11s%-31s%-5s%-5s\n", "-----", "---------", "------", "-----------", "----", "----"));
+        write(sprintf("%-11s%-11s%-11s%-31s%-5s%-5s\n",
+		"Board", "Category", "Domain", "Description", "Post", "Read"));
+        write(sprintf("%-11s%-11s%-11s%-31s%-5s%-5s\n",
+		"-----", "---------", "------", "-----------", "----", "----"));
         break;
 
     case 3:
     case 4:
         write("Report of usage since last reboot.\n");
-        write(sprintf("%-11s%-11s%-11s%-31s%-5s%-5s\n", "Board", "Category", "Domain", "Description", "Post", "Read"));
-        write(sprintf("%-11s%-11s%-11s%-31s%-5s%-5s\n", "-----", "---------", "------", "-----------", "----", "----"));
+        write(sprintf("%-11s%-11s%-11s%-31s%-5s%-5s\n",
+		"Board", "Category", "Domain", "Description", "Post", "Read"));
+        write(sprintf("%-11s%-11s%-11s%-31s%-5s%-5s\n",
+		"-----", "---------", "------", "-----------", "----", "----"));
         break;
 
     default:
@@ -1416,7 +1486,10 @@ read_item(string board, int item, int mread)
     if (item > sizeof(hds))
 	return ({ MBS_BAD_NNUM, "" });
 
-    write("Reading note " + item + " on the board '" + BbpMap[board][BBP_BOARD] + "' in the category '" + BbpMap[board][BBP_CAT] + "'.\n");
+    write("Reading note " + item + " on the board '" +
+	BbpMap[board][BBP_BOARD] + "' in the category '" +
+	BbpMap[board][BBP_CAT] + "'.\n");
+
     bd->read_msg("" + item, mread);
 
     return ({ MBS_NO_ERR, hds[item - 1][1] });
@@ -1537,7 +1610,9 @@ do_help(string cmd)
 
     if (IndexLine != 0)
     {
-	write("Automatic indexing of help file in progress... please try later.\n" + "Indexing at line " + IndexLine + " of the help file.\n");
+	write("Automatic indexing of help file in progress... "+
+	    "please try later.\n" + "Indexing at line " + IndexLine +
+	    " of the help file.\n");
 	return MBS_NO_ERR;
     }
 
@@ -1546,7 +1621,9 @@ do_help(string cmd)
 	if (IndexLine == 0)
 	{
 	    index_help(1);
-	    write("Automatic indexing of help file in progress... please try later.\n" + "Indexing at line " + IndexLine + " of the help file.\n");
+	    write("Automatic indexing of help file in progress... "+
+		"please try later.\n" + "Indexing at line " + IndexLine +
+		" of the help file.\n");
 	    return MBS_NO_ERR;
 	}
     }
@@ -1555,7 +1632,8 @@ do_help(string cmd)
     {
     	case 0:
     	case "":
-            TI->more(read_file(HELP_FILE, HelpMap["mbh"], HelpMap["mbh_len"]));
+            TI->more(read_file(HELP_FILE, HelpMap["mbh"],
+		    HelpMap["mbh_len"]));
 	    break;
     
     	case "list":
@@ -1590,8 +1668,10 @@ public nomask void
 new_note(string save_path, string last_note, string room_path)
 {
     if (!sizeof(BbpMap[save_path]))
+    {
 	BbpMap[save_path] = ({ "", "", explode(save_path, "/")[2], "",
 				save_path, room_path, last_note, 1, 0 });
+    }
     else
     {
 	BbpMap[save_path][BBP_LNOTE] = last_note;
@@ -2087,7 +2167,9 @@ print_board_info(string *data)
     else
 	st = "[???]";
 
-    write(sprintf("%-11s%-11s%-11s%-31s%s\n%24s%s\n", data[BBP_BOARD], data[BBP_CAT], data[BBP_DOMAIN], data[BBP_DESC], st, "", data[BBP_SPATH]));
+    write(sprintf("%-11s%-11s%-11s%-31s%s\n%24s%s\n",
+	    data[BBP_BOARD], data[BBP_CAT], data[BBP_DOMAIN],
+	    data[BBP_DESC], st, "", data[BBP_SPATH]));
 }
 
 /*
@@ -2098,7 +2180,9 @@ print_board_info(string *data)
 static nomask void
 print_usage_info(mixed data)
 {
-    write(sprintf("%-11s%-11s%-11s%-31s%-5d%-5d\n", data[BBP_BOARD], data[BBP_CAT], data[BBP_DOMAIN], data[BBP_DESC], data[BBP_PNOTE], data[BBP_RNOTE]));
+    write(sprintf("%-11s%-11s%-11s%-31s%-5d%-5d\n",
+	    data[BBP_BOARD], data[BBP_CAT], data[BBP_DOMAIN],
+	    data[BBP_DESC], data[BBP_PNOTE], data[BBP_RNOTE]));
 }
 
 /*
@@ -2129,7 +2213,9 @@ print_tusage_info(mixed data)
 
     st = bd->query_stats();
 
-    write(sprintf("%-11s%-11s%-11s%-31s%-5d%-5d\n", data[BBP_BOARD], data[BBP_CAT], data[BBP_DOMAIN], data[BBP_DESC], st[1], st[0]));
+    write(sprintf("%-11s%-11s%-11s%-31s%-5d%-5d\n",
+	    data[BBP_BOARD], data[BBP_CAT], data[BBP_DOMAIN],
+	    data[BBP_DESC], st[1], st[0]));
 }
 
 /*
@@ -2164,7 +2250,8 @@ load_all_boards(string *list)
 				   }));
 	    m_delkey(BrokenMap, list[0]);
 	    GcTime = time();
-	    logit("Board delete broken [Auto] " + BbpMap[list[0]][BBP_BOARD] + ":" + BbpMap[list[0]][BBP_CAT]);
+	    logit("Board delete broken [Auto] " +
+		BbpMap[list[0]][BBP_BOARD] + ":" + BbpMap[list[0]][BBP_CAT]);
 	    m_delkey(BbpMap, list[0]);
 	    dosave();
 	}
@@ -2176,6 +2263,8 @@ load_all_boards(string *list)
 	    m_delkey(BrokenMap, list[0]);
 	
 	/* Check if the board is badly used */
+/* There's no reason to remove slow boards anymore. Mercade */
+#if 0
 	if (tmfunc(BbpMap[list[0]][BBP_LNOTE]) > DTS(WARN_DELAY) &&
 	    !strlen(BASE_CAT[BbpMap[list[0]][BBP_CAT]]))
 	{
@@ -2202,6 +2291,8 @@ load_all_boards(string *list)
 	    }
 	}
 	else
+#endif 0
+/* End of removal of code related to deleting idle boards. Mercade */
 	{
 	    /* Make sure it's not on the unused list */
 	    if (UnusedMap[list[0]])

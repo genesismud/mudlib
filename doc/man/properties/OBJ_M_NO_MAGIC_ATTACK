@@ -1,3 +1,4 @@
-OBJ_M_NO_MAGIC_ATTACK   No magic attack alloed on the object.
-(OBJ_I_NO_MAGIC_ATTACK)
+Property:    OBJ_M_NO_MAGIC_ATTACK  (OBJ_I_NO_MAGIC_ATTACK)
+
+Description: This property is OBSOLETE. Use OBJ_M_NO_ATTACK instead.
 

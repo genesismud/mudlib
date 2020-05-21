@@ -1,5 +1,5 @@
 /*
- * leftover.c 
+ * /std/leftover.c 
  *
  * Base leftover code.
  *
@@ -38,7 +38,7 @@ create_leftover()
     simple_names = 1;
     add_name("leftover");
     add_pname("leftovers");
-    set_amount(1);
+    set_amount(10);
 }
 
 string
@@ -215,16 +215,14 @@ decay_fun()
 public void
 consume_them(object *arr)
 {
-    int il;
-    
-    for (il = 0; il < sizeof(arr); il++)
+    foreach(object obj: arr)
     {
-        if (arr[il]->query_race() == this_player()->query_race_name())
+        if (obj->query_race() == this_player()->query_race_name())
 	{
 	    write("You feel a bit uneasy doing this, but...\n");
 	    this_player()->add_prop("cannibal", 1);
 	}
-	arr[il]->delay_destruct();
+	obj->delay_destruct();
     }
 }
 
@@ -237,7 +235,8 @@ consume_them(object *arr)
 public string
 query_recover()
 {
-    return MASTER + ":" + num_heap() + query_prop(HEAP_S_UNIQUE_ID);
+    return MASTER + ":" + num_heap() + "|" + query_amount() +
+        query_prop(HEAP_S_UNIQUE_ID);
 }
 
 /*
@@ -254,7 +253,14 @@ init_recover(string arg)
     if (sizeof(args) == 4)
     {
         leftover_init(args[3], args[2]);
+
+        /* Backwards compatibility, only set weight if it exists. */
+        args = explode(args[0], "|");
         set_heap_size(atoi(args[0]));
+        if (sizeof(args) > 1)
+        {
+            set_amount(atoi(args[1]));
+        }
     }
     else
     {

@@ -3,14 +3,14 @@ NAME
 
 SYNOPSIS
 	kill <something>
+	kill <someone>!
 
 DESCRIPTION
-        Start hacking away with your weapons, or with feet and fists
-	if you don't have a weapon.
+        Start hacking away with your weapons, or with feet and fists if you
+	don't have a weapon on you.
 
-	If you try to kill someone you know, i.e., have been introduced
-	to and/or remember you will have to confirm your kill command
-	by typing it twice unless you use the persons name.
+	To kill another (interactive) player, add an exclamation mark at the
+	end of the command to indicate your determination.
 
 OPTIONS
         something  - a living being, or in some cases, a dead object

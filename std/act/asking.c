@@ -7,9 +7,20 @@
 #pragma save_binary
 #pragma strict_types
 
+#include <cmdparse.h>
 #include <macros.h>
 #include <stdproperties.h>
 
+/* Format of ask_arr:
+  [0] = array
+     [0] ({ "name1 of question1", "name2 of question1",... })
+     [1] "This is the answer of the question1."
+     [2] command (1 or 0)
+  [1] = array
+     [0] ({ "name1 of question2", "name2 of question2", ... })
+     [1] "This is the answer of the question2."
+     [2] command (1 or 0)
+ */
 static	mixed	ask_arr;		/* The triggers and answers */
 static	mixed	default_answer;		/* A default answer if you want. */
 static	int	default_answer_cmd;	/* The default answer is a command. */
@@ -68,6 +79,8 @@ ask_id(string str)
  *                the possible question(s) of the item. The second argument is
  *                the long description of the answer. add_ask can be repeatedly
  *                called with new questions.
+ *                add_ask also supports parse_command style questions, but only
+ *                    when using a single pattern: e.g. ({ "[the] 'house'" })
  * Arguments:     mixed questions - string or array of strings; the question(s)
  *                                  that lead to this answer.
  *                mixed answer    - the answer of the question, may be VBFC.
@@ -81,30 +94,19 @@ add_ask(mixed questions, mixed answer, int command)
     {
 	questions = ({ questions });
     }
-    if (ask_arr)
+    if (!pointerp(ask_arr))
     {
-	ask_arr = ask_arr + ({ ({ questions, answer, command }) });
+        ask_arr = ({ });
     }
-    else
-    {
-	ask_arr = ({ ({ questions, answer, command }) });
-    }
+
+    ask_arr += ({ ({ questions, answer, command }) });
 }
 
 /*
  * Function name: query_ask
  * Description:   Get the additional questions array.
- * Returns:       Question array, possibly containing VBFC, see below:
-
-  [0] = array
-     [0] ({ "name1 of question1", "name2 of question1",... })
-     [1] "This is the answer of the question1."
-     [2] command (1 or 0)
-  [1] = array
-     [0] ({ "name1 of question2", "name2 of question2", ... })
-     [1] "This is the answer of the question2."
-     [2] command (1 or 0)
-*/
+ * Returns:       Question array, possibly containing VBFC, header for format.
+ */
 public mixed
 query_ask()
 {
@@ -279,6 +281,7 @@ public void
 catch_question(string question)
 {
     int i;
+    string *words;
 
     if (dont_answer_unseen && (!this_player()->check_seen(this_object()) ||
 		!CAN_SEE_IN_ROOM(this_object())))
@@ -293,14 +296,28 @@ catch_question(string question)
         question = extract(question, 0, -2);
     }
 
+    /* Remember the original question, including capitalization. */
     posed_question = lower_case(question);
+    /* Filter out some common words. */
+    words = explode(posed_question, " ");
+    words -= QUESTION_FILTER;
+    question = implode(words, " ");
 
     for (i = 0; i < sizeof(ask_arr); i++)
     {
-	if (member_array(posed_question, ask_arr[i][0]) >= 0)
+	if (IN_ARRAY(question, ask_arr[i][0]))
 	{
 	    set_alarm(rnd() * 4.0, 0.0, &answer_question(ask_arr[i][1], ask_arr[i][2]));
-	    return ;
+	    return;
+	}
+	/* Must be only a single element to try parse_command and before using it,
+	 * check there is at least one ' for a mandatory word. */
+        if ((sizeof(ask_arr[i][0]) == 1) &&
+	    wildmatch("*'*", ask_arr[i][0][0]) &&
+	    parse_command(question, ({ }), ask_arr[i][0][0]))
+	{
+	    set_alarm(rnd() * 4.0, 0.0, &answer_question(ask_arr[i][1], ask_arr[i][2]));
+	    return;
 	}
     }
 

@@ -67,14 +67,14 @@
 */
 #pragma strict_types
 
-#define READ_CHUNK 100                 /* Lines / read when funcsearching */
+#define READ_CHUNK 1000                /* Lines / read when funcsearching */
 #define FIND_TRIES 10                  /* Number of tries to find funcs */
-#define WRITE_CHUNK 8                  /* Number of files to write / turn */
+#define WRITE_CHUNK 16                 /* Number of files to write / turn */
 #define MAX_FUNHEAD_LINES 4	       /* Max lines in a function head */ 
 
 #define DOC_TRIG "/*"
 
-#include <filepath.h>
+#include <files.h>
 #include <macros.h>
 #include <std.h>
 #include <stdproperties.h>
@@ -306,75 +306,50 @@ find_funcs(string file, function call_back_fun, string call_back_arg)
 void
 accumul_funcs(string file, function fun, int line, mixed arg)
 {
-    string 	*lines, data, *find, str, a, b;
-    int		i, lin, start, numtries, numleft;
-    object	player;
-    
     /* The docmaker has been reset, we assume the reset took care of
        starting up for the next file
     */
     if (!pointerp(acc_func))
 	return;
 
-    numtries = 0; start = line;
-    
-    while (numtries < FIND_TRIES)
+    /* Read the file */
+    string text = "";
+    int start = line;    
+    string data;
+    while (data = read_file(file, start, READ_CHUNK)) 
     {
-	data = read_file(file, start, READ_CHUNK);
-
-	start += READ_CHUNK;
-
-	/* If we are ready, tell the callback function 
-	 */
-	if (!data) 
-	{
-	    fun(acc_func, arg);
-	    return;
-	}
-
-	data = (sizeof(left_lines) ?
-		implode(left_lines, "\n") + "\n" : "") + data;
-	numleft = sizeof(left_lines);
-	left_lines = ({});
-
-	/*
-	    Handle #include .c files
-	 */
-	find = explode("dummy" + data + "dummy", "#include");
-	if (sizeof(find) > 1)
-	{
-	    for (lin = 0; lin < sizeof(find); lin++)
-	    {
-		if (sscanf(find[lin], "%s\"%s.c%s", a, str, b) == 3)
-		{
-		    files_left += ({ str + ".c" });
-		}
-	    }
-	}
-
-	find = explode(" " + data + " ", DOC_TRIG);
-	
-	if (sizeof(find) > 1)
-	    break;
-
-	numtries++;
+        text += data;
+        start += READ_CHUNK;
     }
 
-    set_alarm(1.0, 0.0, &accumul_funcs(file, fun, start, arg));
-	
-    if (numtries == FIND_TRIES)
-	return;
+    /*
+       Handle #include .c files
+     */
+    int lin;
+    string *find = explode("dummy" + text + "dummy", "#include");
+    if (sizeof(find) > 1)
+    {
+        string a, str, b;
+        for (lin = 0; lin < sizeof(find); lin++)
+        {
+            if (sscanf(find[lin], "%s\"%s.c%s", a, str, b) == 3)
+            {
+                files_left += ({ str + ".c" });
+            }
+        }
+    }
 
-    lines = explode(data, "\n");
+    string *lines = explode(text, "\n");
 
-    /* Search for functions after comments that start first on a line
-    */
+    /* Search for functions after comments that start first on a line */
     for (lin = 0; lin < sizeof(lines); lin++)
     {
 	if (extract(lines[lin], 0, 1) == "/*")
-	    lin = check_comment(lines, lin, 
-				start - READ_CHUNK - numleft, file);
+	    lin = check_comment(lines, lin, 0, file);
     }
+
+    /* If we are ready, tell the callback function */
+    fun(acc_func, arg);
     return;
 }
 
@@ -424,11 +399,13 @@ potential_func(string *lines, int flin, int clin,
     string str, a, b, c, d, *e;
     mixed *fund;
 
+
     if (flin >= sizeof(lines))
     {
 	left_lines = slice_array(lines, clin, sizeof(lines));
 	return sizeof(lines);
     }
+
 
     if (sscanf(lines[flin], "%s(%s)%s{%s", a, b, c, d) != 4)
     {
@@ -444,8 +421,7 @@ potential_func(string *lines, int flin, int clin,
 
 	if (max >= sizeof(lines))
 	{
-	    left_lines = slice_array(lines, clin, sizeof(lines));
-	    return sizeof(lines);
+            max = sizeof(lines) - 1;
 	}
 	str = implode(slice_array(lines, flin, max), " ");
     }
@@ -465,14 +441,17 @@ potential_func(string *lines, int flin, int clin,
 	    c = "untyped";
 
 	/* Add an entry to the accumulated functions on the form:
-	    ({ type, name, args, startlin in file, comment text, srcfile })
+	 *   ({ type, name, args, startlin in file, comment text, srcfile })
 	*/
+    
+        if (strlen(a)) 
+        {
+            acc_func += ({ ({ c, a, b, start + clin, cmt, src }) });
+            return max;
+        }
+    }
 
-	acc_func += ({ ({ c, a, b, start + clin, cmt, src }) });
-    } else
-	max--;
-
-    return max;
+    return --max;
 }    
 
 
@@ -512,13 +491,13 @@ doc_found(mixed *arr, string mainpath)
 	set_alarm(pause, 0.0, &doc_create(slice_array(arr, il, il + (WRITE_CHUNK-1)), mainpath,
 		    geteuid(this_object())));
 	il += WRITE_CHUNK;
-	pause+=1.0;
+	pause+=0.25;
     }
     
     for (il = 0, files = ({}); il < sizeof(arr); il++)
 	files += ({ arr[il][1] });
 
-    set_alarm(pause + 5.0, 0.0, &doc_clean_obsolete(files, mainpath, geteuid(this_object())));
+    set_alarm(pause + 1.0, 0.0, &doc_clean_obsolete(files, mainpath, geteuid(this_object())));
 
     for (il = 0; il < sizeof(who_told_us); il++)
     {
@@ -645,7 +624,7 @@ doc_create(mixed *arr, string path, string new_euid)
 void
 doc_clean_obsolete(string *functions, string path, string new_euid)
 {
-    string *mfiles, *dfiles, euid, msg;
+    string euid, msg;
     mixed *calls;
     int il;
     object player;
@@ -654,22 +633,29 @@ doc_clean_obsolete(string *functions, string path, string new_euid)
     set_alarm(1.0, 0.0, &reset_euid(euid));
     seteuid(new_euid);
 
-    dfiles = get_dir(path + "/*");
+    string *dfiles = get_dir(path + "/*"); 
+    string *mfiles = functions;
 
     if (pointerp(mfiles) && pointerp(dfiles))
     {
 	/* Get the obsolete files in dfiles
 	 */
+
+        dfiles -= ({ "..", ".", ".obsolete" });
 	dfiles -= mfiles;
+    
+
 	if (sizeof(dfiles))
 	{
+            object *players = map(who_told_us, find_player);
+            players->catch_tell("Docscribe tells you: Removing " + sizeof(dfiles) + " obsolete functions.\n");
+
 	    if (file_size(path + "/.obsolete") != -2)
 		mkdir(path + "/.obsolete");
 
 	    for (il = 0; il < sizeof(dfiles); il++)
 	    {
-		rename(path + "/" + dfiles[il], 
-		       path + "/.obsolete/" + dfiles[il]);
+		rename(path + "/" + dfiles[il], path + "/.obsolete/" + dfiles[il]);
 	    }
 	}
     }

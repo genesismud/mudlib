@@ -26,7 +26,7 @@
 private mapping guilds = ([ ]);
 
 /*
- * Global variables. These are NOT stores in the KEEPERSAVE.
+ * Global variables. These are NOT stored in the KEEPERSAVE.
  */
 static private string *club_names = ({ });
 static private string *guild_names = ({ });
@@ -514,9 +514,8 @@ guild_sort_styles(string guild1, string guild2)
 public int
 guild_command(string str)
 {
-    string *args;
-    string *names;
-    string wname, domain, guild;
+    string *args, *darr, *names;
+    string wname, domain, guild, gdomain;
     int    num_args, num_guilds;
     int    rank, index;
     int    type = 0;
@@ -539,6 +538,7 @@ guild_command(string str)
     wname = this_interactive()->query_real_name();
     rank = query_wiz_rank(wname);
     names = (club ? query_clubs() : query_guilds());
+    darr = query_lord_domains(wname);
 
     /* If no guilds are listed, all you can do is add. */
     if ((args[0] != "add") &&
@@ -573,8 +573,30 @@ guild_command(string str)
 		    "to the AoD for consideration.\n");
 		return 0;
 	    }
-	
-	    domain = query_wiz_dom(wname);
+
+	    if (!sizeof(darr))
+	    {
+		domain = capitalize(args[1]);
+
+		if (query_domain_number(domain) < 0)
+		{
+		    notify_fail("\"" + domain + "\" is not a valid domain name.\n");
+		    return 0;
+		}
+
+		if (query_domain_lord(domain) != wname)
+		{
+		    notify_fail("You are not the Liege of \"" + domain + "\".\n");
+		    return 0;
+		}
+
+		args = exclude_array(args, 1, 1);
+		num_args--;
+	    }
+	    else
+	    {
+		domain = query_wiz_dom(wname);
+	    }
 	    break;
 
 	case WIZ_ARCH:
@@ -646,7 +668,7 @@ guild_command(string str)
 	update_guild_cache();
 
 #ifdef GUILD_CMD_LOG
-        this_object()->log_syslog(GUILD_CMD_LOG, ctime(time()) +
+        log_file(GUILD_CMD_LOG, ctime(time()) +
 	    sprintf(" %-11s adds %s / %s.\n", capitalize(wname),
 	    capitalize(guild), query_guild_long_name(guild)));
 #endif GUILD_CMD_LOG
@@ -663,6 +685,7 @@ guild_command(string str)
 	{
 	case 2:
 	    guild = lower_case(args[1]);
+	    gdomain = query_guild_domain(guild);
 	    if ((member_array(guild, names) == -1) || !pointerp(guilds[guild]))
 	    {
 		notify_fail("There is no " + verb + " named \"" + capitalize(guild) +
@@ -670,7 +693,7 @@ guild_command(string str)
 		return 0;
 	    }
 
-	    write("Domain      : " + query_guild_domain(guild) + " (Phase: " +
+	    write("Domain      : " + gdomain + " (Phase: " +
 		capitalize(query_guild_phase(guild)) + ")\n");
 	    write("Short & Long: " + capitalize(guild) + "; " +
 		query_guild_long_name(guild) + "\n");
@@ -783,6 +806,7 @@ guild_command(string str)
 
 	case 4:
 	    guild = lower_case(args[1]);
+	    gdomain = query_guild_domain(guild);
 	    if ((member_array(guild, names) == -1) || !pointerp(guilds[guild]))
 	    {
 		notify_fail("There is no " + verb + " named \"" +
@@ -804,16 +828,25 @@ guild_command(string str)
 		/* Intentional fall through to next section. */
 
 	    case WIZ_STEWARD:
-	    case WIZ_LORD:
-		if (query_guild_domain(guild) != query_wiz_dom(wname))
+		if (gdomain != query_wiz_dom(wname))
 		{
 		    notify_fail("Your powers extend to " +
 			query_wiz_dom(wname) + " only, while the " +
 			capitalize(guild) + " is administered by " +
-			query_guild_domain(guild) + ".\n");
+			gdomain + ".\n");
 		    return 0;
 		}
+		break;
 
+	    case WIZ_LORD:
+		if (query_domain_lord(gdomain) != wname)
+		{
+		    notify_fail("Your powers extend to " +
+			COMPOSITE_WORDS(darr) + " only, while the " +
+			capitalize(guild) + " is administered by " +
+			gdomain + ".\n");
+		    return 0;
+		}
 		break;
 
 	    case WIZ_ARCH:
@@ -861,7 +894,7 @@ guild_command(string str)
 	    save_master();
 
 #ifdef GUILD_CMD_LOG
-           this_object()->log_syslog(GUILD_CMD_LOG, ctime(time()) +
+	    log_file(GUILD_CMD_LOG, ctime(time()) +
 		sprintf(" %-11s %ss %s to/from %s.\n", capitalize(wname),
 		args[2], capitalize(args[3]), capitalize(guild)));
 #endif GUILD_CMD_LOG
@@ -884,6 +917,7 @@ guild_command(string str)
 	{
 	case 3:
 	    guild = lower_case(args[1]);
+	    gdomain = query_guild_domain(guild);
 	    if ((member_array(guild, names) == -1) || !pointerp(guilds[guild]))
 	    {
 		notify_fail("There is no " + verb + " named \"" + capitalize(guild) +
@@ -903,9 +937,9 @@ guild_command(string str)
 
 	    case WIZ_STEWARD:
 	    case WIZ_LORD:
-		if (query_guild_domain(guild) == query_wiz_dom(wname))
+		if ((gdomain == query_wiz_dom(wname)) ||
+		    (query_domain_lord(gdomain) == wname))
 		    break;
-
 		/* Intentionally fall through to default case. */
 
 	    default:
@@ -949,7 +983,7 @@ guild_command(string str)
 	    save_master();
 
 #ifdef GUILD_CMD_LOG
-            this_object()->log_syslog(GUILD_CMD_LOG, ctime(time()) +
+            log_file(GUILD_CMD_LOG, ctime(time()) +
 		sprintf(" %-11s sets phase %s on %s.\n", capitalize(wname),
 		capitalize(args[2]), capitalize(guild)));
 #endif GUILD_CMD_LOG
@@ -974,6 +1008,7 @@ guild_command(string str)
 	{
 	case 2:
 	    guild = lower_case(args[1]);
+	    gdomain = query_guild_domain(guild);
 	    if (!pointerp(guilds[guild]))
 	    {
 		notify_fail("There is no guild or club named \"" +
@@ -984,13 +1019,25 @@ guild_command(string str)
 	    switch(rank)
 	    {
 	    case WIZ_STEWARD:
-	    case WIZ_LORD:
-		if (query_guild_domain(guild) != query_wiz_dom(wname))
+		if (gdomain != query_wiz_dom(wname))
 		{
 		    notify_fail("Your powers extend to " +
 			query_wiz_dom(wname) + " only, while the " +
 			capitalize(guild) + " is administered by " +
-			query_guild_domain(guild) + ".\n");
+			gdomain + ".\n");
+		    return 0;
+		}
+
+		/* Intentional fall through to admin section. */
+
+	    case WIZ_LORD:
+		if (sizeof(darr) &&
+		    (query_domain_lord(gdomain) != wname))
+		{
+		    notify_fail("Your powers extend to " +
+			COMPOSITE_WORDS(darr) + " only, while the " +
+			capitalize(guild) + " is administered by " +
+			gdomain + ".\n");
 		    return 0;
 		}
 
@@ -1004,7 +1051,7 @@ guild_command(string str)
                 update_guild_cache();
                 
 #ifdef GUILD_CMD_LOG
-                this_object()->log_syslog(GUILD_CMD_LOG, ctime(time()) +
+                log_file(GUILD_CMD_LOG, ctime(time()) +
 		    sprintf(" %-11s removes %s.\n", capitalize(wname),
 		    capitalize(guild)));
 #endif GUILD_CMD_LOG

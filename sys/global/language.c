@@ -8,13 +8,13 @@
 #pragma save_binary
 #pragma strict_types
 
+#include <const.h>
 #include <state_desc.h>
 #include <ss_types.h>
 #include <stdproperties.h>
 
 /* Global variables. */
 static string *nums, *numt, *numnt, *numo;
-static string *offensive;
 int    *stat_levels, *exp_levels;
 string *exp_titles;
 mixed  stat_strings;
@@ -34,10 +34,6 @@ create()
               "eighty", "ninety"});
     numnt = ({ "twent", "thirt", "fort", "fift", "sixt", "sevent", "eight",
 	       "ninet" });
-
-    offensive = ({ "*bitch*", "*clit*", "*cock*", "*cunt*", "*dick*", "*fag*",
-        "*fart*", "*fuck*", "*peck*", "*penis*", "*pussy*", "*rape*",
-        "*shit*", "*slut*", "*suck*" });
 
     stat_levels  = SD_STATLEVELS;
     stat_strings = ({ SD_STATLEV_STR, SD_STATLEV_DEX, SD_STATLEV_CON,
@@ -82,6 +78,16 @@ add_article(string str)
 
     s = article(str);
     return strlen(s) ? (s + " " + str) : str;
+}
+
+string
+strip_article(string str) 
+{
+    int len = strlen(str);
+
+    if ((len > 2) && (str[..1] == "a ")) return str[2..];
+    if ((len > 3) && (str[..2] == "an ")) return str[3..];
+    return str;
 }
 
 /*
@@ -167,7 +173,14 @@ word_ord_number(int num)
 string
 word_ord_ext(int num)
 {
-    switch(num % 10)
+    int test = num % 100;
+    /* 11th, 12th and 13th are not subject to first, second, third. */
+    if (test > 10 && test <= 13)
+    {
+        return num + "th";
+    }
+
+    switch(test % 10)
     {
     case 1:
         return num + "st";
@@ -243,6 +256,8 @@ plural_word(string str)
 	return "children";
     case "sheep":
 	return "sheep";
+    case "pants":
+        return "pants";
     case "dwarf":
 	return "dwarves";
     case "elf":
@@ -419,7 +434,7 @@ singular_form(string str)
     {
 	return str;
     }
-    if (two != "e" || three == "c")
+    if (two != "e" || three == "c" || three == "g")
     {
         return extract(str, 0, last - 2);
     }
@@ -508,36 +523,6 @@ lang_the_short(object ob)
 }
 
 /*
- * Function name: lang_is_offensive
- * Description  : This function will return true if one of the (sub)words is
- *                found in the list of offensive (sub)words. Before parsing,
- *                the argument string is converted to lower case.
- * Arguments    : string str - the text to parse.
- * Returns      : int 1/0 - if true, the term is called offensive.
- */
-int
-lang_is_offensive(string str)
-{
-    int index = sizeof(offensive);
-
-    if (!stringp(str))
-    {
-        return 0;
-    }
-
-    str = lower_case(str);
-    while(--index >= 0)
-    {
-        if (wildmatch(offensive[index], str))
-        {
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
-/*
  * Function name: get_num_desc
  * Description  : Spreads a value over a set of descriptions consisting of
  *                of main and (optionally) sub descriptions.
@@ -591,6 +576,109 @@ get_num_desc(int value, int maximum, string *maindescs, string *subdescs = 0, in
     return subdescs[subindex] + maindescs[mainindex];
 }
 
+/* 
+ * Function name: get_num_desc_centered
+ * Description  : A wrapper around get_num_desc which distributes the descriptions
+ *                around a center value. 
+ * Arguments    : value    - The value
+ *                maximum  - The max, the minimum will be calculated from this
+ *                center   - The value which correspons to the center desc. 
+ *                center_width - The range for the center:
+ *                               [center - center_width <-> center + center_width]
+ *                *descs   - The descriptions, must be odd sized.
+ */
+string 
+get_num_desc_centered(int value, int maximum, int center, int center_width, string *descs) 
+{
+    int center_desc = sizeof(descs) / 2;
+
+    if (value > (center + center_width))
+    {
+        return get_num_desc(value - (center + center_width), maximum - (center + center_width), descs[(center_desc + 1)..]);
+    }
+    
+    if (value < (center - center_width))
+    {
+        /* Remap values to 0-max, reverse descs */
+        value = abs(value - (center - center_width));
+        string *reversed = allocate(sizeof(descs) / 2 - 1);
+        for (int i = 0; i < sizeof(reversed); i++) {
+            reversed[i] = descs[center_desc - (1 + i)]; 
+        }
+        return get_num_desc(value - (center + center_width), maximum - (center + center_width), reversed);
+    }
+
+    return descs[center_desc];
+}
+
+/*
+ * Function name: get_num_desc_combos
+ * Description  : Finds all possible combinations of main and sub descriptions.
+ * Arguments    : string* maindescs - array of main descriptions.
+ *                string* subdescs - array of sub descriptions, or 0.
+ *                    Individual sub descriptions must end with a space.
+ *                int turnpoint - if nonzero, then every value in the maindesc
+ *                    array with an index LOWER than turnpoint will have the
+ *                    selections of the subdesc reversed. This to make it so
+ *                    that someone can be "extremely calm" as highest form of
+ *                    calm but also "extremely panicky" as worst form.
+ * Returns      : string * - the list of sub and main descriptions.
+ */
+string *
+get_num_desc_combos(string *maindescs, string *subdescs, int turnindex = 0)
+{
+    string *result = ({ });
+
+    int mainindex, subindex;
+
+    for (mainindex = 0; mainindex < sizeof(maindescs); mainindex++)
+    {
+        if (mainindex < turnindex)
+	{
+	    for (subindex = sizeof(subdescs) -1; subindex >= 0; subindex--)
+	    {
+		result += ({ subdescs[subindex] + maindescs[mainindex] });
+	    }
+	}
+	else
+	{
+	    for (subindex = 0; subindex < sizeof(subdescs); subindex++)
+	    {
+		result += ({ subdescs[subindex] + maindescs[mainindex] });
+	    }
+	}
+    }
+
+    return result;
+}
+
+
+/*
+ * Function name: get_num_level_index
+ * Description  : Find the index of a level in an array based on levels, rather
+ *                than spreading the levels uniformly over the range.
+ *                Simply put: value >= levels[i] returns i.
+ * Arguments    : int value - the value to transform to an index. If it
+ *                    is below the lowest level, the first index is returned.
+ *                int *levels - the levels in ascending order.
+ * Returns      : int - the index associated with the level.
+ */
+int
+get_num_level_index(int value, int *levels)
+{
+    int index = sizeof(levels);
+
+    while(--index >= 0)
+    {
+        if (value >= levels[index])
+        {
+            return index;
+        }
+    }
+
+    return 0;
+}
+
 /*
  * Function name: get_num_level_desc
  * Description  : Find a description in an array based on levels, rather than
@@ -608,17 +696,7 @@ get_num_desc(int value, int maximum, string *maindescs, string *subdescs = 0, in
 string
 get_num_level_desc(int value, int *levels, string *descs)
 {
-    int index = sizeof(levels);
-
-    while(--index >= 0)
-    {
-        if (value >= levels[index])
-        {
-            return descs[index];
-        }
-    }
-
-    return descs[0];
+    return descs[get_num_level_index(value, levels)];
 }
 
 /*
@@ -664,10 +742,25 @@ get_stat_index_desc(int stat, int index)
  *                stat. Basically put here just to use a single variable array
  *                declaration.
  * Arguments    : int level - the level to describe.
+ *                int gender - the gender of the player.
  * Returns      : string - the associated description.
  */
 string
-get_exp_level_desc(int level)
+get_exp_level_desc(int level, int gender)
 {
-    return get_num_level_desc(level, exp_levels, exp_titles);
+    string title = get_num_level_desc(level, exp_levels, exp_titles);
+
+    /* Bit of a cludge to transform hero into heroine. */
+    if ((gender == G_FEMALE) && (title[-4..] == "hero"))
+    {
+        title += "ine";
+    }
+
+    return title;
+}
+
+string
+april_fools_2009(string str)
+{
+    return str;
 }

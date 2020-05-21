@@ -23,7 +23,6 @@ inherit "/std/object";
 
 #include <cmdparse.h>
 #include <composite.h>
-#include <filepath.h>
 #include <files.h>
 #include <language.h>
 #include <macros.h>

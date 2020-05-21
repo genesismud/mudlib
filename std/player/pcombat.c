@@ -20,6 +20,17 @@ private static object   *team_invited;	/* Array of players invited to team */
 static nomask void linkdeath_remove_enemy(object enemy);
 
 /*
+ * Function name: query_combat_file
+ * Description  : Give the name of the file to use for combat.
+ * Returns      : string - the file to use.
+ */
+public string
+query_combat_file()
+{
+    return "/std/combat/chumlock";
+}
+
+/*
  * Function name:   team_invite
  * Description:     Invites a new member to my team. This does NOT join the
  *                  member to my team. It only makes it possible for the
@@ -98,12 +109,19 @@ attacked_by(object attacker)
 	    "be attacked by " +
 	    attacker->query_the_name(this_object()) + ".\n");
 	tell_object(attacker, "You are not allowed to attack " +
-	    this_object()->query_The_name(attacker) +
+	    this_object()->query_the_name(attacker) +
 	    " since " + query_pronoun() +
 	    " is not in touch with reality.\n");
 
 	set_alarm(0.5, 0.0, &linkdeath_remove_enemy(attacker));
 	return;
+    }
+
+    /* Check for sparring, and give the appropriate message if necessary. */
+    if (IN_ARRAY(attacker, query_prop(LIVE_AO_SPARRING)))
+    {
+        tell_object(this_object(), "You are sparring with " +
+            attacker->query_the_name(this_object()) + ".\n");
     }
 
     ::attacked_by(attacker);
@@ -142,7 +160,7 @@ attack_object(object victim)
         /* is reattacked from combat object) & when one of the parties  */
         /* is not a wizard                                              */
 
-        log_file(LOG_PLAYERATTACKS,
+        SECURITY->log_syslog(LOG_PLAYERATTACKS,
             sprintf("%s %-11s (%3d) attacks %-11s (%3d)\n in %s\n",
             ctime(time()), capitalize(query_real_name()),
             query_average_stat(), capitalize(victim->query_real_name()),

@@ -46,6 +46,10 @@ inherit "/cmd/std/command_driver";
  */
 varargs int say_text(string str, string adverb = "");
 public int say_to(string str, function display_speech);
+varargs int shout(string str, string adverb = NO_ADVERB);
+
+/* Global variable. */
+static string gShout_text;
 
 /*
  * Function name: create
@@ -84,6 +88,7 @@ query_cmdlist()
 {
     return ([
              "asay":"asay",
+	     "ashout":"ashout",
              "ask":"ask",
 
              "commune":"commune",
@@ -181,6 +186,37 @@ asay(string str)
 }
 
 /* **************************************************************************
+ * AShout - Shout something using an adverb.
+ */
+int
+ashout(string str)
+{
+    string *how;
+
+    if (!strlen(str))
+    {
+        notify_fail("Syntax: ashout <adverb> <text>\n");
+        return 0;
+    }
+
+    how = parse_adverb_with_space(str, NO_DEFAULT_ADVERB, 0);
+    if (how[1] == NO_DEFAULT_ADVERB_WITH_SPACE)
+    {
+        notify_fail("Cannot resolve \"" + explode(str, " ")[0] +
+            "\" to an adverb.\n");
+        return 0;
+    }
+
+    if (!strlen(how[0]))
+    {
+        notify_fail("Syntax: ashout <adverb> <text>\n");
+        return 0;
+    }
+
+    return shout(how[0], how[1]);
+}
+
+/* **************************************************************************
  * Ask - Ask someone something.
  */
 int
@@ -248,12 +284,14 @@ ask(string str)
     }
  
     if (this_player()->query_option(OPT_ECHO))
-        actor("You ask", oblist, ": " + msg);
+    {
+        actor("You ask", oblist, ": " + msg, "ask");
+    }
     else
         write("Ok.\n");
 
     this_player()->reveal_me(1);
-    all2act(" asks", oblist, " something.");
+    all2act(" asks", oblist, " something.", 0, 0, "ask");
 
     /* Give the message to all wizards, too. */
     livings = FILTER_OTHER_LIVE(all_inventory(environment(this_player()))) - oblist;
@@ -262,7 +300,7 @@ ask(string str)
         this_player()->query_possessive() + " question: " + msg + "\n");
     livings -= wizards;
 
-    target(" asks you: " + msg, oblist);
+    target(" asks you: " + msg, oblist, 0, 0, "ask");
     person->catch_question(msg);
     person->reveal_me(1);
 
@@ -282,11 +320,12 @@ int
 commune(string str)
 {
     object *wizards;
+    object *allcommune;
     object wizard;
     int flag = 0;
     string *names;
-    string cname;
-    string message;
+    string cname, pname, lname;
+    string message, text;
     string timestamp = ctime(time())[11..15] + " ";
 
     if (!query_interactive(this_player()))
@@ -313,7 +352,7 @@ commune(string str)
     if (!stringp(str))
     {
         write("Please do 'help commune' to see how this rite is performed. " +
-            "But Beware! Mortals will be stricken by the ultimate wrath of " +
+            "But Beware! Mortals may be stricken by the ultimate wrath of " +
             "the deities supreme if communing for insufficient reasons.\n");
         return 1;
     }
@@ -332,8 +371,8 @@ commune(string str)
     }
     
     cname = lower_case(names[0]);
-    str = capitalize(this_interactive()->query_real_name());
-    message = implode(names[1..], " ") + "\n";
+    pname = capitalize(this_interactive()->query_real_name());
+    message = implode(names[1..], " ");
 
     if (LANG_IS_OFFENSIVE(message))
     {
@@ -343,12 +382,15 @@ commune(string str)
             "commune' to read and heed the warning!\nIf, after having " +
             "received this warning, you still use abusive or offensive " +
             "language towards the wizards, you may find yourself deleted " +
-            "without further delay or hesitation.\n");
+            "without further hesitation.\n");
 
         /* Log the commune message in a public log. */
-        SECURITY->commune_log(("Offensive: " + cname + ": " + message), 1);
+        SECURITY->commune_log(("Offensive: " + cname + ": " + message + "\n"), 1);
         return 1;
     }
+
+    allcommune = FILTER_IS_WIZARD(users());
+    allcommune = filter(allcommune, &->query_option(OPT_ALL_COMMUNE));
 
     switch(cname)
     {
@@ -358,12 +400,15 @@ commune(string str)
         {
             if (!(wizard->query_prop(WIZARD_I_BUSY_LEVEL) & BUSY_C))
             {
-                tell_object(wizard,
-                    (wizard->query_option(OPT_TIMESTAMP) ? timestamp : "") +
-                    "COMMUNE anyone from " + str + ": " + message);
+                text = (wizard->query_option(OPT_TIMESTAMP) ? timestamp : "") +
+                    "COMMUNE anyone from " + pname + ": " + message;
+                wizard->catch_tell(text + "\n");
+                wizard->gmcp_comms("commune", pname, text);
                 flag = 1;
             }
         }
+        cname = "all available wizards";
+	lname = "ALL";
         break;
 
     case "here":
@@ -380,18 +425,22 @@ commune(string str)
             return 0;
         }
 
+        names |= allcommune->query_real_name();
         foreach(string name: names)
         {
             wizard = find_player(name);
             if (objectp(wizard) &&
                 !(wizard->query_prop(WIZARD_I_BUSY_LEVEL) & BUSY_C))
             {
-                tell_object(wizard,
-                    (wizard->query_option(OPT_TIMESTAMP) ? timestamp : "") +
-                    "COMMUNE " + cname + " from " + str + ": " + message);
+                text = (wizard->query_option(OPT_TIMESTAMP) ? timestamp : "") +
+                    "COMMUNE " + cname + " from " + pname + ": " + message;
+                wizard->catch_tell(text + "\n");
+                wizard->gmcp_comms("commune", pname, text);
                 flag = 1;
             }
         }
+	lname = cname;
+        cname = "the wizards handling your present location";
         break;
 
     default:
@@ -400,6 +449,7 @@ commune(string str)
             sizeof(names = SECURITY->query_domain_members(capitalize(cname))))
         {
             cname = capitalize(cname);
+            names |= allcommune->query_real_name();
             foreach(string name: names)
             {
                 if (!objectp(wizard = find_player(name)))
@@ -413,21 +463,37 @@ commune(string str)
                     continue;
                 }
 
-                tell_object(wizard,
-                    (wizard->query_option(OPT_TIMESTAMP) ? timestamp : "") +
-                    "COMMUNE to " + cname + " from " + str +  ": " + message);
+                text = (wizard->query_option(OPT_TIMESTAMP) ? timestamp : "") +
+                    "COMMUNE to " + cname + " from " + pname +  ": " + message;
+                wizard->catch_tell(text + "\n");
+                wizard->gmcp_comms("commune", pname, text);
 
                 if (!wizard->query_invis())
                 {
                     flag = 1;
                 }
             }
-
+	    lname = lname;
+            cname = "the " + cname + " team";
             break;
         }
 
         wizard = find_player(cname);
         cname = capitalize(cname);
+	lname = cname;
+
+        allcommune -= ({ wizard });
+        if (sizeof(allcommune))
+        {
+            /* This will not be counted as a successful commune. */
+            foreach(object wizard: allcommune)
+            {
+                text = (wizard->query_option(OPT_TIMESTAMP) ? timestamp : "") +
+                    "COMMUNE to " + cname + " from " + pname + ": " + message;
+                wizard->catch_tell(text + "\n");
+                wizard->gmcp_comms("commune", pname, text);
+            }
+        }
 
         if (!objectp(wizard) || 
             !wizard->query_wiz_level() ||
@@ -437,8 +503,7 @@ commune(string str)
             break;
         }
         
-        if (this_player()->query_mana() >=
-            this_player()->query_max_mana() / 10)
+        if (this_player()->query_mana() >= this_player()->query_max_mana() / 10)
         {
             this_player()->add_mana(-(this_player()->query_max_mana() / 10));
         }
@@ -448,18 +513,23 @@ commune(string str)
             return 1;
         }
 
-        tell_object(wizard,
-            (wizard->query_option(OPT_TIMESTAMP) ? timestamp : "") +
-            "COMMUNE to you from " + str + ": " + message);
+        text = (wizard->query_option(OPT_TIMESTAMP) ? timestamp : "") +
+            "COMMUNE to you from " + pname + ": " + message;
+        wizard->catch_tell(text + "\n");
+        wizard->gmcp_comms("commune", pname, text);
         flag = 1;
         break;
     }
 
     /* Log the commune message in a public log. */
-    SECURITY->commune_log(cname + ": " + message);
+    SECURITY->commune_log(lname + ": " + message + "\n");
 
     if (flag)
+    {
         write("You feel you have communed with the deities.\n");
+        this_player()->gmcp_comms("commune", 0,
+            "You commune to " + cname + ": " + message);
+    }
     else
         write("Your prayers remain unheard.\n");
     
@@ -493,8 +563,10 @@ converse_more(string str)
     }
  
     this_player()->set_say_string(str);
-    say(QCTNAME(this_player()) + " @@race_sound:" + file_name(this_player()) +
-        "@@: " + str + "\n");
+    say_gmcp("say", QCTNAME(this_player()) +
+        " @@race_sound:" + file_name(this_player()) + "@@: " + str + "\n");
+    this_player()->gmcp_comms("say", 0, "You " +
+        this_player()->actor_race_sound() + ": " + str);
 
     write("]");
     input_to(converse_more);
@@ -516,8 +588,9 @@ int
 reply(string str)
 {
     string *names;
-    string who;
+    string who, text;
     object target;
+    string timestamp = ctime(time())[11..15] + " ";
 
     /* Access failure. No command line argument. */
     if (!stringp(str))
@@ -527,9 +600,15 @@ reply(string str)
     }
 
     /* Wizard may block mortals from replying again. */
-    if (this_player()->query_wiz_level() &&
-        wildmatch("stop *", str))
+    if (this_player()->query_wiz_level())
     {
+        /* But wizards shouldn't use it. Use tell instead.*/
+        if (!wildmatch("stop *", str))
+        {
+            notify_fail("Wizards should use \"tell\" instead.\n");
+            return 0;
+        }
+
         sscanf(lower_case(str), "stop %s", str);
 
         if (!objectp(target = find_player(str)))
@@ -558,8 +637,7 @@ reply(string str)
             target->remove_prop(PLAYER_AS_REPLY_WIZARD);
         }
 
-        write("Removed your name from " + capitalize(str) +
-            "'s reply list.\n");
+        write("Removed your name from " + capitalize(str) + "'s reply list.\n");
         return 1;
     }
 
@@ -625,20 +703,26 @@ reply(string str)
         return 1;
     }
 
-    tell_object(target, (target->query_wiz_level() ?
-        capitalize(this_player()->query_real_name()) :
-        this_player()->query_The_name(target)) +
-        " replies: " + str + "\n");
-    if (this_player()->query_option(OPT_ECHO))
+    if (target->query_wiz_level())
     {
-        write("You replied to " + target->query_the_name(this_player()) +
-            ": " + str + "\n");
+        who = capitalize(this_player()->query_real_name());
+        text = (target->query_option(OPT_TIMESTAMP) ? timestamp : "") + who +
+            " replies: " + str;
+        target->catch_tell(text + "\n");
     }
     else
     {
-        write("You replied to " + target->query_the_name(this_player()) +
-            ".\n");
+        who = this_player()->query_The_name(target);
+        text = who + " replies: " + str;
+        target->catch_tell(text + "\n");
     }
+    target->gmcp_comms("reply", who, text);
+
+    text = "You replied to " + target->query_the_name(this_player()) +
+        (this_player()->query_option(OPT_ECHO) ? (": " + str) : ".");
+    write(text + "\n");
+    this_player()->gmcp_comms("reply", 0, text);
+
     return 1;
 }
 
@@ -711,24 +795,51 @@ race_text(string race, string text)
 void
 print_rsay_to(object *oblist, string str)
 {
-    string output;
+    string output, text;
+    string comp_live;
+
+    /* Store this variable for later use in QCOMPLIVE. */
+    comp_live = COMPOSITE_ALL_LIVE(oblist);
 
     if (this_player()->query_option(OPT_ECHO))
-        actor("You say to", oblist, " in your own tongue: " + str + "\n");
+    {
+        text = ("You say to " + comp_live + " in your own tongue: " + str);
+        write(text + "\n");
+        this_player()->gmcp_comms("rsay", 0, text);
+    }
     else
         write("Ok.\n");
 
     /* How much of this text is seen depends on the language skill */
     output = "@@race_text:" + file_name(this_object()) + "|" +
         this_player()->query_race_name() + "|" + str + "@@";
-    
-    say(QCTNAME(this_player()) + " says to " + COMPOSITE_ALL_LIVE(oblist) + " in " +
-        this_player()->query_possessive() + " own tongue: " + output + "\n",
-        (oblist + ({ this_player() }) ));
-    oblist->catch_msg(QCTNAME(this_player()) + " says to you in " +
-        this_player()->query_possessive() + " own tongue: " + output + "\n");
+
+    say_gmcp("rsay", QCTNAME(this_player()) + " says to " + QCOMPLIVE +
+        " in " + this_player()->query_possessive() + " own tongue: " +
+        output + "\n", oblist);
+    text = QCTNAME(this_player()) + " says to you in " +
+        this_player()->query_possessive() + " own tongue: " + output + "\n";
+    oblist->catch_msg(text);
+    oblist->gmcp_comms_vbfc("rsay", text);
 
     notify_speech("rsay", "", oblist, str);
+}
+
+/*
+ * Function name: remote_rsay_to
+ * Description  : Relay function from rsay redefinition to allow for the
+ *                functionpointer.
+ * Arguments    : string str - "[the] <target> <modified text>"
+ * Returns      : int 1/0 - success/failure.
+ */
+int
+remote_rsay_to(string str)
+{
+    if (say_to(str, &print_rsay_to()))
+    {
+        return 1;
+    }
+    return 0;
 }
 
 int
@@ -744,7 +855,7 @@ rsay(string str)
     string  *words;
     int     sentence_size;
     int     sentence_index;
-    string  to_print;
+    string  to_print, text;
 
     if (!objectp(environment(this_player())))
     {
@@ -772,11 +883,15 @@ rsay(string str)
     }
 
     if (this_player()->query_option(OPT_ECHO))
-        write("You say in your own tongue: " + str + "\n");
+    {
+        text = "You say in your own tongue: " + str;
+        write(text + "\n");
+        this_player()->gmcp_comms("rsay", 0, text);
+    }
     else
         write("Ok.\n");
 
-    say(QCTNAME(this_player()) + " says in " +
+    say_gmcp("rsay", QCTNAME(this_player()) + " says in " +
         this_player()->query_possessive() +
         " own tongue: @@race_text:" + file_name(this_object()) + "|" +
         this_player()->query_race_name() + "|" + str + "@@\n");
@@ -866,19 +981,28 @@ say_to(string str, function display_speech)
 void
 print_say_to(string adverb, object *oblist, string str)
 {
-    string r_sound;
+    string r_sound, text;
+    string comp_live;
+
+    /* Store this variable for later use in QCOMPLIVE. */
+    comp_live = COMPOSITE_ALL_LIVE(oblist);
 
     if (this_player()->query_option(OPT_ECHO))
-        actor("You" + adverb + " " + this_player()->actor_race_sound() + " to",
-            oblist, ": " + str);
+    {
+        text = "You" + adverb + " " + this_player()->actor_race_sound() +
+            " to " + comp_live + ": " + str;
+        write(text + "\n");
+        this_player()->gmcp_comms("say", 0, text);
+    }
     else
         write("Ok.\n");
 
     r_sound = (" @@race_sound:" + file_name(this_player()) + "@@ to ");
-    say(QCTNAME(this_player()) + adverb + r_sound + COMPOSITE_ALL_LIVE(oblist) + ": " +
-        str + "\n", (oblist + ({ this_player() }) ));
-    oblist->catch_msg(QCTNAME(this_player()) + adverb + r_sound + "you: " +
-        str + "\n");
+    say_gmcp("say", QCTNAME(this_player()) + adverb + r_sound + QCOMPLIVE +
+        ": " + str + "\n", oblist);
+    text = QCTNAME(this_player()) + adverb + r_sound + "you: " + str + "\n";
+    oblist->catch_msg(text);
+    oblist->gmcp_comms_vbfc("say", text);
 
     notify_speech("say", adverb, oblist, str);
 }
@@ -886,7 +1010,7 @@ print_say_to(string adverb, object *oblist, string str)
 varargs int
 say_text(string str, string adverb = "")
 {
-    mixed tmp;
+    mixed tmp, text;
 
     if (!strlen(str))
     {
@@ -928,17 +1052,18 @@ say_text(string str, string adverb = "")
     this_player()->set_say_string(str);
     if (this_player()->query_option(OPT_ECHO))
     {
-        write("You" + adverb + " " + this_player()->actor_race_sound() +
-            ": " + str + "\n");
+        text = "You" + adverb + " " + this_player()->actor_race_sound() + ": " + str;
+        write(text + "\n");
+        this_player()->gmcp_comms("say", 0, text);
     }
     else
     {
         write("Ok.\n");
     }
 
-    say(QCTNAME(this_player()) + adverb + " @@race_sound:" +
+    say_gmcp("say", QCTNAME(this_player()) + adverb + " @@race_sound:" +
         file_name(this_player()) + "@@: " + str + "\n");
-    notify_speech("say", adverb, ({ }), str);        
+    notify_speech("say", adverb, ({ }), str);
     return 1;
 }
 
@@ -956,26 +1081,36 @@ string
 shout_name()
 {
     object pobj = previous_object(); /* Reciever of message */
+    string name;
+
     if (file_name(pobj) == VBFC_OBJECT)
     {
         pobj = previous_object(-1);
     }
     if (pobj->query_met(this_player()))
     {
-        return this_player()->query_name();
+        name = this_player()->query_name();
     }
-    return capitalize(LANG_ADDART(this_player()->query_gender_string())) +
-        " " + this_player()->query_race_name() + " voice";
+    else
+    {
+	name = capitalize(LANG_ADDART(this_player()->query_gender_string())) +
+            " " + this_player()->query_race_name() + " voice";
+    }
+    /* Do test becasue this routing is also used for screaming. */
+    if (gShout_text)
+    {
+        pobj->gmcp_comms("shout", name, gShout_text);
+    }
+    return name;
 }
 
-int
-shout(string str)
+varargs int
+shout(string str, string adverb = NO_ADVERB)
 {
     object *rooms;
     object troom;
     object *oblist;
-    string *how;
-    string cap_str;
+    string cap_str, text;
     mixed  tmp;
     int    use_target = 0;
     int    index;
@@ -1012,8 +1147,7 @@ shout(string str)
         if (wildmatch("?? all *", str))
         {
             str = extract(str, 7);
-            oblist =
-                FILTER_OTHER_LIVE(all_inventory(environment(this_player())));
+            oblist = FILTER_OTHER_LIVE(all_inventory(environment(this_player())));
         }
         /* Shout to my team. */
         else if (wildmatch("?? team *", str))
@@ -1037,17 +1171,6 @@ shout(string str)
         return 0;
     }
 
-    how = parse_adverb_with_space(str, NO_DEFAULT_ADVERB, 0);
-    if (strlen(how[0]) &&
-        how[1] != NO_DEFAULT_ADVERB_WITH_SPACE)
-    {
-        str = how[0];
-    }
-    else
-    {
-        how[1] = NO_ADVERB;
-    }
-
     /* Sanity check. */
     if (!(troom = environment(this_player())))
     {
@@ -1055,35 +1178,43 @@ shout(string str)
     }
 
     /* For shouting, we don't want to find our own room. */
-    rooms = (object *)SOUL_CMD->find_neighbour( ({ }), ({ troom }), DEPTH) - ({ troom });
+    rooms = FIND_NEIGHBOURS(troom, DEPTH);
     foreach(object room: rooms)
     {
+	gShout_text = adverb + " shouts: " + str;
         tell_room(room, "@@shout_name:" + file_name(this_object()) +
-            "@@" + how[1] + " shouts: " + str + "\n", this_player());
+            "@@" + gShout_text + "\n", this_player());
+	gShout_text = 0;
     }
 
     if (sizeof(oblist))
     {
         if (this_player()->query_option(OPT_ECHO))
-            actor("You" + how[1] + " shout " + preposition, oblist, ": " + str);
+        {
+            actor("You" + adverb + " shout " + preposition, oblist, ": " + str, "shout");
+        }
         else
             write("Ok.\n");
 
-        all2act(how[1] + " shouts " + preposition, oblist, ": " + str);
-        target(how[1] + " shouts " + preposition + " you: " + str, oblist);
-        notify_speech("shout", how[1], oblist, str);
+        all2act(adverb + " shouts " + preposition, oblist, ": " + str, adverb, 0, "shout");
+        target(adverb + " shouts " + preposition + " you: " + str, oblist, adverb, 0, "shout");
+        notify_speech("shout", adverb, oblist, str);
     }
     else
     {
         if (this_player()->query_option(OPT_ECHO))
-            write("You" + how[1] + " shout: " + str + "\n");
+        {
+            text = "You" + adverb + " shout: " + str;
+            write(text + "\n");
+            this_player()->gmcp_comms("shout", 0, text);
+        }
         else
             write("Ok.\n");
 
-        all(how[1] + " shouts: " + str);
+        all(adverb + " shouts: " + str, adverb, 0, "shout");
     }
 
-    notify_speech("shout", how[1], oblist, str);
+    notify_speech("shout", adverb, oblist, str);
     return 1;
 }
 
@@ -1095,7 +1226,7 @@ tell(string str)
 {
     object ob;
     string who;
-    string msg;
+    string msg, text;
     int busy;
 
     /* For wizards, use the wizard "tell", and not this one. */
@@ -1107,7 +1238,7 @@ tell(string str)
     if (!(ARMAGEDDON->shutdown_active()))
     {
         notify_fail("This command is only valid when Armageddon is active in " +
-            "the realms.\n");
+            "the realms. Use \"say\" to speak with others.\n");
         return 0;
     }
 
@@ -1166,24 +1297,27 @@ tell(string str)
 
     busy = ob->query_prop(WIZARD_I_BUSY_LEVEL);
 
-    if (busy & (BUSY_P|BUSY_S|BUSY_F))
+    if (busy & (BUSY_P | BUSY_S | BUSY_F))
     {
 	write(capitalize(who) + " seems to be busy at the moment.\n");
 	return 1;
     }
 
-    tell_object(ob, this_player()->query_Art_name(ob) + " tells you: " +
-	msg + "\n");
-
     if (this_player()->query_option(OPT_ECHO))
     {
-	tell_object(this_player(), "You tell " + capitalize(who) + ": " +
-	    msg + "\n");
+	text = "You tell " + capitalize(who) + ": " + msg;
+	write(text + "\n");
+	this_player()->gmcp_comms("tell", 0, text);
     }
     else
     {
         write("Ok.\n");
     }
+
+    who = this_player()->query_Art_name(ob);
+    text = who + " tells you: " + msg;
+    ob->catch_tell(text + "\n");
+    ob->gmcp_comms("tell", who, text);
 
     return 1;
 }
@@ -1207,11 +1341,13 @@ print_whisper_to(string adverb, object *oblist, string str)
     object *wizards;
     
     if (this_player()->query_option(OPT_ECHO))
-        actor("You whisper" + adverb + " to", oblist, ": " + str);
+    {
+        actor("You whisper" + adverb + " to", oblist, ": " + str, "whisper");
+    }
     else
         write("Ok.\n");
 
-    all2act(adverb + " whispers something to", oblist);
+    all2act(adverb + " whispers something to", oblist, 0, adverb, 0, "whisper");
 
     /* Give the message to all wizards, too. */
     livings = FILTER_OTHER_LIVE(all_inventory(environment(this_player()))) - oblist;
@@ -1220,7 +1356,7 @@ print_whisper_to(string adverb, object *oblist, string str)
         this_player()->query_objective() + " whisper: " + str + "\n");
     livings -= wizards;
 
-    target(adverb + " whispers in your ear: " + str, oblist);
+    target(adverb + " whispers in your ear: " + str, oblist, adverb, 0, "whisper");
     oblist->catch_whisper(str);   
 
     /* Onlookers don't get what was being whispered. */

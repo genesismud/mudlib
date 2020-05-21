@@ -9,6 +9,7 @@
 
 inherit "/std/heap";
 
+#include <formulas.h>
 #include <macros.h>
 #include <money.h>
 #include <language.h>
@@ -119,77 +120,17 @@ init_arg(string arg)
 }
 
 /*
- * Function name: short
- * Description  : This function is called to get the short description of
- *                these coins. We make it dependant on the intelligence of
- *                the onlooker and have special cases for different numbers
- *                of coins.
- * Arguments    : object for_object - the object that wants to know.
- * Returns      : string - the short string.
- */
-public varargs string
-short(object for_object)
-{
-    string str = (strlen(coin_type) ? (coin_type + " ") : "") + "coin";
-
-    /* No elements in the heap == no show. */
-    if (num_heap() < 1)
-    {
-	return 0;
-    }
-
-    /* No identifier: BAD coins. Remove them. */
-    if (!strlen(query_prop(HEAP_S_UNIQUE_ID)))
-    {
-	set_alarm(0.0, 0.0, remove_object);
-	return "ghost coins";
-    }
-
-    /* One coin, singular, not really a heap. */
-    if (num_heap() < 2)
-    {
-	return LANG_ADDART(str);
-    }
-
-    /* Less than a dozen, we see the number as a word. */
-    if (num_heap() < 12)
-    {
-	return LANG_WNUM(num_heap()) + " " + str + "s";
-    }
-    if (num_heap() == 12)
-    {
-        return "a dozen " + str + "s";
-    }
-
-    /* No onlooker, default to this_player(). */
-    if (!objectp(for_object))
-    {
-	for_object = this_player();
-    }
-
-    /* If we are smart enough, we can see the number of coins. */
-    if (for_object->query_stat(SS_INT) / 2 > num_heap())
-    {
-	return num_heap() + " " + str + "s";
-    }
-
-    /* Else, default to 'many' or to a 'huge heap'. */
-    return (num_heap() < 1000 ? "many " : "a huge heap of ") + str + "s";
-}
-
-/*
  * Function name: long
- * Description  : This function will slip the short description into the
- *                long description. Money will always look like good
- *                money, but don't try to fool the shopkeepers with wooden
- *                coins ;-)
+ * Description  : This function will slip the short description into the long
+ *                description. Money will always look like good money, but
+ *                don't try to fool the shopkeepers with wooden coins ;-)
  * Returns      : string - the long description.
  */
 varargs public mixed
 long()
 {
-    if ((num_heap() < 2) ||
-	(num_heap() >= 1000))
+    if ((num_heap() == 1) ||
+	(num_heap() >= (500 + (heapdiff / 2))))
     {
 	return "It is " + short() + "; it looks like good money.\n";
     }
@@ -228,7 +169,6 @@ set_coin_type(string str)
     {
 	remove_adj(coin_type);
 	remove_name(coin_type + " coin");
-	remove_pname(coin_type);
     }
 
     /* Set the new coin type and set it as an adjective. Also, we update
@@ -238,7 +178,7 @@ set_coin_type(string str)
     add_prop(HEAP_S_UNIQUE_ID, MONEY_UNIQUE_NAME(coin_type));
     set_adj(coin_type);
     add_name(coin_type + " coin");
-    add_pname(coin_type);
+    set_short(coin_type + " coin");
 }
 
 /*
@@ -318,6 +258,16 @@ move(mixed dest, mixed subloc)
 	return 0;
     }
 
+    /* Not really nice to put this in the mudlib, but we need to stop the
+     * logging of the rich club purse movements of money for buying and
+     * selling. /Mercade.
+     */
+#define PURSE_ID  "rich_club_obj"
+    if (dest->id(PURSE_ID) && (env == environment(dest)))
+        return 0;
+    if (env->id(PURSE_ID) && (dest == environment(env)))
+        return 0;
+
     str = sprintf("%s: %4d %-8s ", ctime(time()), num_heap(), coin_type);
     str += (objectp(env) ? (interactive(env) ?
 	capitalize(env->query_real_name()) : file_name(env)) : "void");
@@ -326,7 +276,7 @@ move(mixed dest, mixed subloc)
 	file_name(dest));
 
     /* Log the transation. */
-    SECURITY->log_syslog("MONEY_LOG", (str + "\n"), 100000);
+    SECURITY->log_syslog("MONEY_LOG", (str + "\n"), 1000000);
 
     return 0;
 }

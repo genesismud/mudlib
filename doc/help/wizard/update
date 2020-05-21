@@ -2,14 +2,14 @@ NAME
 	update - remove an object from gamedriver memory
 
 SYNOPSIS
-	update
-        update <file>
-        update -d <files>
+        update [-r]
+        update [-r] <file>
+        update -d [-r] <files>
 
 DESCRIPTION
 	With this command you remove an object from the gamedriver memory.
-	In case of a clone or load command, the object will be reread from
-	the disk.
+	Use this when the code has been altered. In case of a subsequent
+	clone or load command, the object will be recompiled.
 
 OPTIONS
 	<none>	- update the room you are in. After reloading it, all
@@ -18,6 +18,8 @@ OPTIONS
 		  person is in the room.
 	<file>	- the path to the single file to update.
      -d <files>	- updates multiple files. <files> may contain wildcards.
+        -r	- when adding -r for recursive, it will update all the files
+		  in the inheritance chain of the file(s) being updated.
 
 SEE ALSO
-	clone, destruct, load, remake
+	clone, destruct, load

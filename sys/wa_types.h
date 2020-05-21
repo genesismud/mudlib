@@ -28,21 +28,21 @@
  * This defines the chance a recoverable weapon or armour has not to be
  * recovered. (/100)
  */
-#define PERCENTAGE_OF_RECOVERY_LOST 50
+#define PERCENTAGE_OF_RECOVERY_LOST     0 
 
-/* Damage types */
+/* Damage types
+ *
+ * The magic damage type MAGIC_DT is used to indicate that no ac will prevent
+ * this type of attack.
+ */
 
 #define W_IMPALE    1
 #define W_SLASH     2
 #define W_BLUDGEON  4
+#define MAGIC_DT    8 /* Not protected by armour. */
 
-#define W_NO_DT     3
-
-/*
- * The magic damage type is used to indicate that no ac will prevent
- * this type of attack.
- */
-#define MAGIC_DT    8
+/* Number of regular damage types. */
+#define W_NUM_DT    3
 
 #define W_HAND_HIT  10
 #define W_HAND_PEN  10
@@ -92,6 +92,7 @@
 #define TS_LSHOULDER    WA_BIT(27)
 #define TS_BROW         WA_BIT(28)
 #define TS_EYES         WA_BIT(29)
+#define TS_MOUTH        WA_BIT(30)
 
 #define TS_HBODY        (TS_TORSO | TS_LEGS | TS_RARM | TS_LARM | TS_HEAD)
 #define TS_TORSO        (TS_CHEST | TS_BACK)
@@ -108,8 +109,6 @@
 
 #define W_ANYH      0               /* These mark that any hand is possible */
 #define W_NONE      0
-
-#define W_NO_WH     6
 
 /*
  * Hitlocations for humanoids
@@ -173,6 +172,7 @@
 
 #define A_BROW          TS_BROW
 #define A_EYES          TS_EYES
+#define A_MOUTH         TS_MOUTH
 #define A_BACK          TS_BACK
 
 #define A_ROBE      	TS_ROBE
@@ -194,6 +194,41 @@
 #define A_MAX_AC    ({ 100, 100, 100, 100, 100, 100, 100, 100, \
 		       100, 100, 100, 100, 100, 100, 100, 100 })
 
-#include "/config/sys/wa_types2.h"
+
+/*
+ * Hitloc Damage propagation Table
+ */
+#define HITLOC_PROPAGATION  ([ \
+    A_TORSO:    (A_BODY | A_TORSO | A_R_HIP | A_L_HIP | A_BACK), \
+    A_HEAD:     (A_NECK | A_R_EAR | A_L_EAR | A_BROW | A_EYES | A_MOUTH), \
+    A_LEGS:     (A_WAIST | A_R_FOOT | A_L_FOOT | A_R_ANKLE | A_L_ANKLE), \
+    A_R_ARM:    (A_R_HAND| A_R_FINGER | A_R_WRIST | A_R_SHOULDER), \
+    A_L_ARM:    (A_L_HAND| A_L_FINGER | A_L_WRIST | A_L_SHOULDER) ])
+
+/* Weapon types */
+
+#define W_FIRST     0		/* The first weapon index */
+
+#define W_SWORD     W_FIRST + 0 
+#define W_POLEARM   W_FIRST + 1
+#define W_AXE	    W_FIRST + 2
+#define W_KNIFE     W_FIRST + 3
+#define W_CLUB	    W_FIRST + 4
+#define W_MISSILE   W_FIRST + 5
+#define W_JAVELIN   W_FIRST + 6
+#define W_NO_T      7		/* The number of weapons defined */
+
+/*
+ * Drawbacks are arrange for each weapon type ({ dull, corr, break })
+ * and types are ({ sword, polearm, axe, knife, club, missile, javelin })
+ */
+#define W_DRAWBACKS ({ ({ 4, 10, 4 }), ({ 7, 10, 10 }), ({ 5, 8, 6 }), \
+                        ({ 6, 6, 8 }), ({ 5, 0, 6 }), ({ 3, 1, 12 }), \
+                        ({ 8, 3, 10 }) })
+
+#define W_WEIGHTS_OFFSET ({ 1000, 3000, 2000,  200, 1000,  500, 1500 })
+#define W_WEIGHTS_FACTOR ({   40,   50,   50,   20,   25,   20,   30 })
+
+#define W_NAMES ({ "sword", "polearm", "axe", "knife", "club", "missile weapon", "javelin" })
 
 #endif

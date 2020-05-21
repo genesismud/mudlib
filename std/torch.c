@@ -13,7 +13,9 @@ inherit "/std/object";
 #include <composite.h>
 #include <files.h>
 #include <macros.h>
+#include <ss_types.h>
 #include <stdproperties.h>
+#include <time.h>
 
 #define DECAY_TIME (300.0)
  
@@ -95,6 +97,23 @@ reset_object()
 }
 
 /*
+ * Function name: query_time
+ * Description:	  Query how long time the torch can burn
+ * Argument:      flag: if true, then return the time until the
+ *                torch burns out if the torch is lit
+ * Returns:       int - the time left in seconds.
+ */
+public int
+query_time(int flag = 0)
+{
+    mixed alarm;
+
+    if (flag && Burn_Alarm && sizeof(alarm = get_alarm(Burn_Alarm)))
+	Time_Left = ftoi(alarm[2]);
+    return Time_Left;
+}
+
+/*
  * Function name: torch_value
  * Description:   A VBFC gets here when someone wants to know the value of
  *		  the value of this object, default setting
@@ -103,17 +122,10 @@ reset_object()
 public int
 torch_value()
 {
-    int v;
-
     if (!Max_Time)
     	return 0;
 
-    if (Burn_Alarm && sizeof(get_alarm(Burn_Alarm)))
-	v = ftoi(get_alarm(Burn_Alarm)[2]);
-    else
-	v = Time_Left;
-
-    return (v * (Torch_Value - 5)) / Max_Time + 5;
+    return (query_time() * (Torch_Value - 6)) / Max_Time + 6;
 }
  
 /*
@@ -213,23 +225,6 @@ query_max_time()
 }
 
 /*
- * Function name: query_time
- * Description:	  Query how long time the torch can burn
- * Argument:      flag: if true, then return the time until the
- *                torch burns out if the torch is lit
- * Returns:       int - the time left in seconds.
- */
-public int
-query_time(int flag = 0)
-{
-    mixed   alarm;
-
-    if (flag && Burn_Alarm && sizeof(alarm = get_alarm(Burn_Alarm)))
-	return ftoi(alarm[2]);
-    return Time_Left;
-}
-
-/*
  * Function name: query_lit
  * Description:   Query of the torch is lit.
  * Argument:      flag - if set, return id of the alarm to the function
@@ -326,6 +321,8 @@ light_me_after_delay()
     remove_prop(TEMP_STDTORCH_CHECKED);
     add_prop(OBJ_I_LIGHT, Light_Strength);
     add_prop(OBJ_I_HAS_FIRE, 1);
+    add_adj("lit");
+    add_adj("burning");
     Burn_Alarm = set_alarm(itof(Time_Left), 0.0, burned_out);
     return 1;
 }
@@ -420,6 +417,8 @@ extinguish_me()
     Burn_Alarm = 0;
     remove_prop(OBJ_I_LIGHT);
     remove_prop(OBJ_I_HAS_FIRE);
+    remove_adj("lit");
+    remove_adj("burning");
     return 1;
 }
 
@@ -499,6 +498,8 @@ burned_out()
 
     set_adj("out");
     set_adj("burnt");
+    remove_adj("lit");
+    remove_adj("burning");
 
     if (!objectp(env))
     {
@@ -620,4 +621,35 @@ public void
 init_recover(string arg)
 {
     init_torch_recover(arg);
+}
+
+/*
+ * Function name: appraise_object
+ * Description  : Someone tries to appraise the object. We add information
+ *                about the time left to burn.
+ * Arguments    : int num - a number based on the skill of the person.
+ */
+void
+appraise_object(int num)
+{
+    int value, skill;
+    string *words;
+    string duration;
+
+    ::appraise_object(num);
+
+    /* Torch is already burnt out. */
+    if (!Time_Left) return;
+
+    skill = (num ? num : this_player()->query_skill(SS_APPR_OBJ));
+    skill = random((1000 / (skill + 1)), atoi(OB_NUM(this_object())));
+    value = query_time(1);
+    value = cut_sig_fig(value + (skill % 2 ? -skill % 70 : skill) * value / 100);
+
+    /* A bit of a cludgy manner to make it to the significant time unit. */
+    words = explode(CONVTIME(value), " ");
+    duration = words[0] + " " + words[1];
+
+    write("The " + short() + " will burn for " +
+        ((Time_Left >= Max_Time) ? "" : "another ") + duration + ".\n");
 }

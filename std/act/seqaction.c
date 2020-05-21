@@ -32,7 +32,15 @@
 #pragma strict_types
 
 #include <macros.h>
-#include <seqaction.h>
+
+/* Local definitions. */
+#define SEQ_MAX	 10			/* Max limit of sequences / NPC */
+#define SEQ_SLOW 15.0			/* The slow factor */
+/* Seconds a stoppable sequence stays awake after the last meeting 
+   with an interactive player */
+#define SEQ_STAY_AWAKE 60			
+/* Sequence flags */
+#define SEQ_F_NONSTOP 1
 
 static  mixed   *seq_commands;          /* Array of arrays holding actions
                                            to do each heart_beat */
@@ -66,6 +74,10 @@ seq_heartbeat(int steps)
     mixed cmd;
     mixed cmdres;
     mixed *calls;
+
+    /* Something might have gone badly wrong */
+    if (!environment())
+        return;
 
     set_alarm(rnd() * SEQ_SLOW + SEQ_SLOW / 2.0, 0.0, &seq_heartbeat(1));
 

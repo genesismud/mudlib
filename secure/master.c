@@ -29,7 +29,6 @@
  * to the inclusion files. The reason for this is that the function that
  * contains the search-path for inclusion files is defined in this object.
  */
-#include "/sys/filepath.h"
 #include "/sys/files.h"
 #include "/sys/language.h"
 #include "/sys/living_desc.h"
@@ -41,9 +40,10 @@
 #include "/sys/time.h"
 #include "/sys/udp.h"
 
-#define SAVEFILE   ("/syslog/KEEPERSAVE")
+#define SAVEFILE   ("/data/KEEPERSAVE")
 #define GAME_START ("/GAME_START")
-#define DEBUG_RESTRICTED ( ({ "mudstatus", "swap", "shutdown", "send_udp" }) )
+#define DEBUG_RESTRICTED ( ({ "mudstatus", "swap", "shutdown", "send_udp", "update snoops", "dump_alarms", "dump_objects", "trace_calls" }) )
+#define DEBUG_BLOCKED    ( ({ }) )
 #define RESET_TIME (900.0) /* 15 minutes */
 
 /* All prototypes have been placed in /secure/master.h */
@@ -59,13 +59,12 @@
 #include "/secure/master/sanction.c"
 #include "/secure/master/guild.c"
 #include "/secure/master/mail_admin.c"
+#include "/secure/master/gmcp.c"
 
 /*
  * The global variables that are saved in the SAVEFILE.
  */
 private int     game_started;
-private string  *def_locations;
-private string  *temp_locations;
 private mapping known_muds;
 private int     runlevel;
 
@@ -77,7 +76,7 @@ private static int     memory_limit;
 private static mapping command_substitute;
 private static mapping move_opposites;
 private static string  udp_manager;
-private static int     irregular_uptime;
+private static int     uptime_limit;
 private static string  mudlib_version;
 
 /*
@@ -138,12 +137,24 @@ create()
 
     /* Compute the uptime for this reboot. */
 #ifdef REGULAR_UPTIME
-    irregular_uptime = (REGULAR_UPTIME * 3600);
+    uptime_limit = (REGULAR_UPTIME * 3600);
 #ifdef UPTIME_VARIATION
-    irregular_uptime +=
+    uptime_limit +=
         (random(UPTIME_VARIATION * 3600) - (UPTIME_VARIATION * 1800));
 #endif UPTIME_VARIATION
 #endif REGULAR_UPTIME
+}
+
+/*
+ * Function name: save_master
+ * Description  : This function saves the master object to a file.
+ */
+static void
+save_master()
+{
+    set_auth(this_object(), "root:root");
+
+    save_object(SAVEFILE); 
 }
 
 /*
@@ -178,18 +189,6 @@ short()
     return "the hole of the donut";
 }
 
-/*
- * Function name: save_master
- * Description  : This function saves the master object to a file.
- */
-static void
-save_master()
-{
-    set_auth(this_object(), "root:root");
-
-    save_object(SAVEFILE); 
-}
-
 /*********************************************************************
  *
  * GD - INTERFACE LFUNS
@@ -198,10 +197,15 @@ save_master()
  */
 
 /*
- * Called on startup of game if '-f' is given on the commandline.
- *
- * To test a new function xx in object yy, do
- * driver "-fcall yy xx arg" "-fshutdown"
+ * Function name: flag
+ * Description  : Called on startup of game if '-f' is given on the commandline.
+ *                Recognised flag commands:
+ *                    echo <text> - display <text> on stdout.
+ *                    call <file> <fun> - call function <fun> in <file>.
+ *                    shutdown - cause the game to shut down.
+ *                To test a new function xx in object yy, do
+ *                    driver "-fcall yy xx" "-fshutdown"
+ * Arguments    : string str - the command (minus the '-f' prefix).
  */
 static void 
 flag(string str) 
@@ -382,6 +386,8 @@ valid_set_auth(object setter, object getting_set, string value)
     string *newauth;
     string auth = query_auth(getting_set);
 
+//    find_player("cotillion")->catch_tell("AUTH: " + file_name(getting_set) + " by " + file_name(setter) + " " + calling_function(-1) + "\n");
+
     if (!stringp(value) ||
             ((setter != this_object()) &&
          (setter != find_object(SIMUL_EFUN))))
@@ -483,6 +489,7 @@ valid_write(string file, mixed writer, string func)
     string *dirs, *wpath;
     string dname;
     string wname;
+    string subdir;
     string dir;
     int size;
 
@@ -537,9 +544,9 @@ valid_write(string file, mixed writer, string func)
 	 * domain, but not reachable by anyone (i.e. before any sanction
 	 * checks are made)
 	 */
-        wname = dirs[2];
+        subdir = dirs[2];
         dir = ((size > 3) ? dirs[3] : "");
-	if ((dname == BASE_DOMAIN) && (wname == "ateam"))
+	if ((dname == BASE_DOMAIN) && (subdir == "ateam"))
 	{
 	    /* This can be allowed only if the wizard is a member of the team,
 	     * or if the ateam code is writing in its own dir. Otherwise we
@@ -571,22 +578,13 @@ valid_write(string file, mixed writer, string func)
             return 1;
         }
 
-        /* Only the Lord of a domain can write in the 'domain' directory,
-         * except those with 'all' sanctions. 
-         */
-        if (wname == "domain")
+        /* Only a mentor can write the file of his mentee in the 'restrictlog'
+	 * directory, but not write in the directory itself. */
+        if ((subdir == "private") && (size > 3) && (dirs[3] == "restrictlog"))
         {
-            /* Except the private dir where only the liege/steward can write
-             * and the subdir for restrictlogs where the mentor can write the
-             * appropriate file
-             */
-            if (size > 5 && 
-                (dirs[3] == "private" && dirs[4] == "restrictlog"))
-            {
-                return IN_ARRAY(dirs[5], query_students(writer));
-            }
-
-            return valid_write_all_sanction(writer, dname);
+	    if (size == 4)
+		return 0;
+            return IN_ARRAY(dirs[4], query_students(writer));
         }
 
         /* Wizards can write everywhere in the domain unless this is the
@@ -605,7 +603,7 @@ valid_write(string file, mixed writer, string func)
         }
 
         /* The private directory of a domain is closed. */
-        if (wname == "private")
+        if (subdir == "private")
         {
             return 0;
         }
@@ -659,11 +657,8 @@ valid_write(string file, mixed writer, string func)
             return 0;
         }
 
-        /* To write something now you need a sanction. It must be a personal
-         * sanction or a domain 'write all' sanction.
-         */
-        return (valid_write_sanction(writer, wname) ||
-                valid_write_all_sanction(writer, dname));
+        /* To write something now you need a sanction. */
+        return valid_write_sanction(writer, wname);
         /* Not reached. */
 
     default:
@@ -688,6 +683,7 @@ valid_read(string file, mixed reader, string func)
     string *dirs, *rpath;
     string dname;
     string wname;
+    string subdir;
     string dir;
     int size;
 
@@ -729,9 +725,9 @@ valid_read(string file, mixed reader, string func)
 
     switch(dirs[0])
     {
-    /* These directories are closed to all save the admin. */
+    /* These directories are closed to all except the admin. */
     case "binaries":
-    case "players":
+    case "data":
         return 0;
         /* Not reached. */
 
@@ -746,7 +742,7 @@ valid_read(string file, mixed reader, string func)
         }
 
         dname = dirs[1];
-        wname = ((size > 2) ? dirs[2] : "");
+        subdir = ((size > 2) ? dirs[2] : "");
 
         /* The domain must be an existing domain. */
         if (query_domain_number(dname) == -1)
@@ -762,23 +758,18 @@ valid_read(string file, mixed reader, string func)
         }
 
         /* The open directory of a domain is free for all. */
-        if (wname == "open")
+        if (subdir == "open")
         {
             return 1;
         }
 
-        /* The domain dir can be read by all, apart from the private dir
-         * which is reserved for the liege/steward
-         */
-        if (wname == "domain")
+        /* Only a mentor can read the file of his mentee in the 'restrictlog'
+	 * directory, but not read in the directory itself. */
+        if ((subdir == "private") && (size > 3) && (dirs[3] == "restrictlog"))
         {
-            /* The subdir for restrictlogs is open for the mentor who can 
-             * read the appropriate file
-             */
-            if ((size > 5) && (dirs[3] == "private") && (dirs[4] == "restrictlog"))
-            {
-                return IN_ARRAY(dirs[5], query_students(reader));
-            }
+	    if (size == 4)
+		return 0;
+            return IN_ARRAY(dirs[4], query_students(reader));
         }
 
 	/* Check for special team directory here, as it is in the base
@@ -786,7 +777,7 @@ valid_read(string file, mixed reader, string func)
 	 * checks are made)
 	 */
         dir = ((size > 3) ? dirs[3] : "");
-	if ((dname == BASE_DOMAIN) && (wname == "ateam"))
+	if ((dname == BASE_DOMAIN) && (subdir == "ateam"))
 	{
 	    /* This can be allowed only if the wizard is a member of the team,
 	     * or if the ateam code is reading in its own dir. Otherwise we
@@ -808,7 +799,7 @@ valid_read(string file, mixed reader, string func)
         /* We have to check for the directory sanctions here because they
          * might disclose the private directories.
          */
-        if (strlen(wname) &&
+        if (strlen(subdir) &&
             recursive_valid_read_path_sanction(reader, dname, dirs[2..]))
         {
             return 1;
@@ -846,9 +837,15 @@ valid_read(string file, mixed reader, string func)
         }
 
         /* The private directory of a domain is close to all others. */
-        if (wname == "private")
+        if (subdir == "private")
         {
             return 0;
+        }
+
+        /* As experiment, mages, stewards and Lords have global read rights. */
+        if (query_wiz_rank(reader) >= WIZ_MAGE)        
+        {
+            return 1;
         }
 
         /* To read something now you need a sanction. */
@@ -899,19 +896,8 @@ valid_read(string file, mixed reader, string func)
             return 0;
         }
 
-        /* Some people have been granted global read rights. Global read
-         * includes the personal directory of a player. Team members
-	 * all have global read.
-         */
-        if (m_global_read[reader] ||
-	    sizeof(query_team_membership(reader)) > 0)
-        {
-            return 1;
-        }
-
         /* To read something now you need a sanction. */
-        return (valid_read_sanction(reader, wname) ||
-                valid_read_all_sanction(reader, dname));
+        return valid_read_sanction(reader, wname);
         /* Not reached. */
 
     case "syslog":
@@ -991,6 +977,52 @@ valid_resident(object ob)
 varargs int
 valid_debug(object ob, string cmd, mixed arg1, mixed arg2, mixed arg3)
 {
+    return 0;
+}
+
+/*
+ * Functioon name: valid_domain_bit
+ * Descriptioon  : This function is called to verify whether a certain euid is
+ *                 allowed to manipulate domain bits in a player.
+ * Arguments     : mixed actor - the object/euid that wants to make the change.
+ *                 string dname - the domain
+ *                 int bit - the bit (range 0..149).
+ */
+public int
+valid_domain_bit(mixed actor, string dname, int bit)
+{
+    /* No domain, no show. */
+    dname = capitalize(dname);
+    if (query_domain_number(dname) < 0)
+    {
+        return 0;
+    }
+
+    if (objectp(actor))
+    {
+        actor = geteuid(actor);
+    }
+
+    /* Domains can manipulate their own bits. */
+    if (actor == dname)
+    {
+        return 1;
+    }
+
+    /* Root, arches and keepers can do as they please. */
+    if ((actor == ROOT_UID) || query_wiz_rank(actor) >= WIZ_ARCH)
+    {
+        return 1;
+    }
+
+    /* Wizards can set bits within their domain, or they may have a
+     * "write all" sanction. */
+    if ((query_wiz_dom(actor) == dname) ||
+        valid_write_all_sanction(actor, dname))
+    {
+        return 1;
+    }
+
     return 0;
 }
 
@@ -1153,13 +1185,6 @@ check_snoop_validity(object snooper, object snoopee, int sanction)
         return 1;
     }
 
-    /* Mortals are safe in sanctuary for all but arch++. */
-    if (environment(snoopee) &&
-        (environment(snoopee)->query_prevent_snoop()))
-    {
-        return 0;
-    }
-
     /* Check for domain restriction */
     if ((SECURITY->query_restrict(by_name) & RESTRICT_SNOOP_DOMAIN) &&
         domain(environment(snoopee)) != query_wiz_dom(by_name))
@@ -1170,6 +1195,13 @@ check_snoop_validity(object snooper, object snoopee, int sanction)
     /* Ordinary wizzes snoops all mortals. */
     if (on_type == WIZ_MORTAL)
     {
+        /* Mortals are safe in sanctuary for all but lord++. */
+        if (environment(snoopee)->query_prevent_snoop() &&
+            (by_type < WIZ_LORD))
+        {
+           return 0;
+        }
+
         return 1;
     }
 
@@ -1192,9 +1224,9 @@ check_snoop_validity(object snooper, object snoopee, int sanction)
  * the administration.
  */
 #ifdef LOG_SNOOP
-#define ACTION_SNOOP(str) \
+#define LOG_NON_ARCH_SNOOP(str) \
 if (query_wiz_rank(caller_name) < WIZ_ARCH) \
-{ this_object()->log_syslog(LOG_SNOOP, ctime(time()) + " " + (str)); }
+{ log_file(LOG_SNOOP, ctime(time()) + " " + (str), 100000); }
 #endif LOG_SNOOP
 
 /*
@@ -1229,9 +1261,8 @@ valid_snoop(object initiator, object snooper, object snoopee)
         }
 
 #ifdef LOG_SNOOP
-        ACTION_SNOOP(sprintf(" %-11s snoop broken by %s\n",
-                             capitalize(snooper->query_real_name()),
-                             capitalize(caller_name)));
+        LOG_NON_ARCH_SNOOP(sprintf(" %-11s snoop broken by %s\n",
+            capitalize(snooper->query_real_name()), capitalize(caller_name)));
 #endif LOG_SNOOP
         return 1;
     }
@@ -1258,10 +1289,9 @@ valid_snoop(object initiator, object snooper, object snoopee)
         }
 
 #ifdef LOG_SNOOP
-        ACTION_SNOOP(sprintf(" %-11s snoops %-11s forced by %s\n",
-                             capitalize(snooper->query_real_name()),
-                             capitalize(snoopee->query_real_name()),
-                             capitalize(caller_name)));
+        LOG_NON_ARCH_SNOOP(sprintf(" %-11s snoops %-11s forced by %s\n",
+            capitalize(snooper->query_real_name()),
+            capitalize(snoopee->query_real_name()), capitalize(caller_name)));
 #endif LOG_SNOOP
         return 1;
     }
@@ -1272,12 +1302,12 @@ valid_snoop(object initiator, object snooper, object snoopee)
     if (check_snoop_validity(snooper, snoopee, 1))
     {
 #ifdef LOG_SNOOP
-        ACTION_SNOOP(sprintf(" %-11s snoops %s\n",
-                             capitalize(snooper->query_real_name()),
-                             capitalize(snoopee->query_real_name())));
+        LOG_NON_ARCH_SNOOP(sprintf(" %-11s snoops %s\n",
+            capitalize(snooper->query_real_name()),
+            capitalize(snoopee->query_real_name())));
         if (query_wiz_rank(caller_name) < WIZ_ARCH)
         {
-            this_object()->log_syslog(LOG_SNOOP, "    " +
+            log_file(LOG_SNOOP, "    " +
                 RPATH(file_name(environment(snooper))) + " snoops " +
                 RPATH(file_name(environment(snoopee))) + "\n");
         }
@@ -1408,13 +1438,13 @@ load_domain_link(string file)
 
 /*
  * Function name: start_boot()
- * Description:   Loads master data, including list of all domains and
+ * Description  : Loads master data, including list of all domains and
  *                wizards. Then make a list of preload stuff
- * Arguments:     load_empty: If true start_boot() does no preloading
- * Return:        List of files to preload
+ * Arguments    : int no_preload - If true start_boot() does no preloading
+ * Return       : string * - List of files to preload
  */
 static string *
-start_boot(int load_empty)
+start_boot(int no_preload)
 {
     string *prefiles, *links;
     object simf;
@@ -1441,15 +1471,13 @@ start_boot(int load_empty)
         runlevel = WIZ_MORTAL;
     }
 
-    /* Set to reasonable defaults, if they don't exist. */
-    if (!pointerp(def_locations))
+    /* Game started variable is set in keepersave ... we crashed before. */
+    if (game_started && (time() < query_start_time() + 60))
     {
-        def_locations = ({ });
+        write("Crash detected.\n");
+        game_started = 0;
     }
-    if (!pointerp(temp_locations))
-    {
-        temp_locations = ({ });
-    }
+
     /* Update some internal data. */
     update_guild_cache();
 
@@ -1457,12 +1485,25 @@ start_boot(int load_empty)
     init_sitebans();
     /* Initialise the player info (seconds). */
     init_player_info();
+    /* Remove orphan mail files from the website. */
+    web_mail_archive_clean();
+    /* Initialize GMCP. */
+    init_gmcp();
 
-    if (load_empty) 
+    if (no_preload) 
     {
         write("Not preloading.\n");
         return 0;
     }
+
+    /* Garbage collection on predeath files. */
+    set_alarm(5.0, 0.0, purge_predeath);
+
+    /* Garbage collection on bad names. */
+    set_alarm(10.0, 0.0, purge_bad_names);
+
+    /* Garbage collection on bad names. */
+//    set_alarm(15.0, 0.0, purge_new_chars);
 
 #ifdef PRELOAD_FIRST
     /* In case PRELOAD_FIRST is a single string, it contains the path to a
@@ -1478,7 +1519,7 @@ start_boot(int load_empty)
      */
     else if (pointerp(PRELOAD_FIRST))
     {
-        prefiles = PRELOAD_FIRST + ({});
+        prefiles = PRELOAD_FIRST + ({ });
     }
 #endif PRELOAD_FIRST
 
@@ -1620,6 +1661,8 @@ final_shutdown()
     /* Process the graph data even if this isn't the top of the hour. */
     graph_process_data();
 
+    /* It's a proper shutdown, so we are not started. */
+    game_started = 0;
     /* Save the master. */
     save_master();
 
@@ -1637,6 +1680,8 @@ final_shutdown()
 static void 
 log_error(string path, string error)
 {
+    int tme;
+
     set_auth(this_object(), "root:root");
 
     /* Display the message to interactive wizards. */
@@ -1656,6 +1701,13 @@ log_error(string path, string error)
         mkdir(path);
     }
     path += "/errors";
+
+    /* Put a time stamp if it's the first entry of the day. */
+    if (file_time(path) < (time() - (time() % 86400)))
+    {
+        write_file(path, ctime(time()) + "\n");
+    }
+
     write_file(path, error);
 }
 
@@ -1799,6 +1851,16 @@ valid_exec(string name, object to, object from)
         return 1;
     }
 
+    /* Allow shapeshift to occur. */
+    if ((name == "/d/Genesis/newmagic/spells/shapeshift_obj.c") ||
+        (name == "/d/Genesis/specials/std/spells/obj/shapeshift_obj.c"))
+    {
+        if (IS_PLAYER_OBJECT(from) && IS_CREATE_SOME(to, "create_creature", "/d/Genesis/race/shapeshift/shapeshift_creature"))
+            return 1;
+        if (IS_PLAYER_OBJECT(to) && IS_CREATE_SOME(from, "create_creature", "/d/Genesis/race/shapeshift/shapeshift_creature"))
+            return 1;
+    }
+
     return 0;
 }
 
@@ -1857,37 +1919,39 @@ loaded_object(object lob, object ob)
 
 /*
  * Function name: cloned_object
- * Description  : This function is called when an object is cloned. It
- *                tests whether the clone was valid. It also sets the
- *                authorisation variable in the cloned object. If the
- *                clone was not valid, throw() will terminate the
- *                execution.
+ * Description  : This function is called when an object is cloned. It tests
+ *                whether the clone was valid. It also sets the authorisation
+ *                variable in the cloned object. If the clone was not valid,
+ *                it will be destroyed and throw() terminates the execution.
  * Arguments    : object cob - the cloning object.
  *                object ob  - the cloned object.
  */
 void
 cloned_object(object cob, object ob)
 {
-    string creator = creator_object(ob); 
+    string creator = creator_object(ob);
+    string target;
     string *auth = explode(query_auth(cob), ":");
 
     if (!strlen(creator))
     {
-        creator = file_name(ob);
+        target = file_name(ob);
         do_debug("destroy", ob);
-        throw("Unauthorized clone: " + creator + " by: " +
-            file_name(cob) + ".\n");
+        throw("Clone has no Creator: " + target + " by: " + file_name(cob) + "\n");
         return;
     }
 
     if (auth[1] == "0")
     {
-        creator = file_name(ob);
+        target = file_name(ob);
         do_debug("destroy", ob);
-        throw("Cloning without privilege: " + creator + " by: " +
-            file_name(cob) + ".\n");
+        throw("Cloning without EUID: " + target + " by: " + file_name(cob) + "\n");
         return;
     }
+
+    object watcher = find_object("/w/cotillion/tools/clone_watcher");
+    if (objectp(watcher)) 
+    	watcher->object_cloned(cob, ob);
 
     if ((creator == BACKBONE_UID) ||
         (creator == auth[0]))
@@ -1934,12 +1998,7 @@ modify_command(string cmd, object ob)
 
     if (strlen(str = command_substitute[cmd]))
     {
-        if (query_interactive(ob) && !ob->query_wiz_level() &&
-            pointerp(m_domains[domain = environment(ob)->query_domain()]))
-        {
-            m_domains[domain][FOB_DOM_CMNDS]++;
-        }
-        return str;
+        cmd = str;
     }
 
     /* No modification for NPC's */
@@ -1984,6 +2043,18 @@ query_move_opposites()
 }
 
 /*
+ * Function name: query_command_stubstitute
+ * Description  : Get a long substitute for a command.
+ * Arguments    : string cmd - the short command.
+ * Returns      : string - the long substitute.
+ */
+string
+query_command_substitute(string cmd)
+{
+    return command_substitute[cmd];
+}
+
+/*
  * Function name: query_memory_percentage
  * Description  : This function will return the percentage of memory usage
  *                of the game so far. When the counter reaches 100, it is
@@ -1993,12 +2064,11 @@ query_move_opposites()
 nomask public int
 query_memory_percentage()
 {
-    string foobar, *data = explode(SECURITY->do_debug("malloc"), "\n");
-    int    f, cval, sz = sizeof(data);
+    string *data = explode(SECURITY->do_debug("malloc"), "\n");
+    int cval;
 
     // This code relies heaviily on the ssbrk line being last. Good enough.
-    if (sscanf(data[sz-1], 
-	       "%ssbrk requests: %d %d (a) %s", foobar, f, cval, foobar) == 4)
+    if (sscanf(data[-1], "Total heap size: %d", cval) == 1)
 	return (cval / (memory_limit / 100));
     else
 	return 0;
@@ -2065,7 +2135,10 @@ memory_reconfigure(int mem)
 }
 
 /*
- * This function is called if the driver gets sent a signal that it catches.
+ * Function name: external_signal
+ * Description  : This function is called if the driver gets sent a signal that
+ *                it catches. Usually not a good sign ...
+ * Arguments    : string sig_name - the signal received.
  */
 static void
 external_signal(string sig_name)
@@ -2140,7 +2213,7 @@ log_incoming_service(string request, string wname, string path)
         fname = parts[1];
     }
 
-    this_object()->log_syslog(("ftplog/" + fname),
+    log_file(("ftplog/" + fname),
         sprintf("%s %-7s %-11s %s\n", ctime(time()), request, wname, path),
         500000);
 }
@@ -2168,9 +2241,7 @@ incoming_service(string request)
         return "ERROR Bad request\n";
     }
 
-    /* The request may be separated by three different characters, \n,
-     * \r or the space.
-     */
+    /* The request may be separated by \n, \r or space. */
     tmp = explode(request, "\n");
     if (sizeof(tmp))
         request = tmp[0];
@@ -2191,50 +2262,32 @@ incoming_service(string request)
         }
 
         tmp[1] = lower_case(tmp[1]);
-        ob = find_player(tmp[1]);
-        if (objectp(ob))
+        if (query_wiz_rank(tmp[1]) >= WIZ_NORMAL)
         {
-            if (query_wiz_rank(tmp[1]) >= WIZ_NORMAL)
+            /* Only allow wizards access via FTP while they are logged into the
+             * game. Added bit of paranoia against possessed NPC's with the
+             * same name before we give out the password. */
+            if (!objectp(ob = find_player(tmp[1])) || !IS_PLAYER_OBJECT(ob))
             {
-                path = query_wiz_path(tmp[1]);
-#ifdef LOG_FTP
-                log_incoming_service("AUTH", tmp[1], path);
-#endif LOG_FTP
-                return ob->query_password() + ":" +
-                    query_wiz_level(tmp[1]) + ":" +
-                    path + "\n";
+                return "*:0:/w/" + tmp[1] + "\n";
             }
+            path = query_wiz_path(tmp[1]);
+#ifdef LOG_FTP
+            log_incoming_service("AUTH", tmp[1], path);
+#endif LOG_FTP
+            str = ob->query_password() + ":" + query_wiz_rank(tmp[1]) + ":" + path + "\n";
+            return str;
         }
-        else
-        {
-            ob = finger_player(tmp[1]);
-            if (objectp(ob))
-            {
-                path = query_wiz_path(tmp[1]);
-                str = ob->query_password() + ":" +
-                    query_wiz_level(tmp[1]) + ":" +
-                    path + "\n";
-                ob->remove_object();
-                if (query_wiz_rank(tmp[1]) >= WIZ_NORMAL)
-                {
-#ifdef LOG_FTP
-                    log_incoming_service("AUTH", tmp[1], path);
-#endif LOG_FTP
-                    return str;
-                }
-            }
 
-            /* This is done to ensure that no one will ever log in with the
-             * name of a domain. The "*" as password can never be matched,
-             * though it allows to type "cd ~Domain".
-             */
-            if (query_domain_number(capitalize(tmp[1])) >= 0)
-            {
-                return "*:0:/d/" + capitalize(tmp[1]) + "\n";
-            }
+        /* This is done to ensure that no one will ever log in with the
+         * name of a domain. The "*" as password can never be matched,
+         * though it allows to type "cd ~Domain".
+         */
+        if (query_domain_number(capitalize(tmp[1])) >= 0)
+        {
+            return "*:0:/d/" + capitalize(tmp[1]) + "\n";
         }
         return "ERROR No such user\n";
-	break;
 
     case "perms":
         if (sizeof(tmp) != 4)
@@ -2263,14 +2316,14 @@ incoming_service(string request)
 	    rval += "-";
  
 	return rval + "\n";
-	break;
 
     case "read":
         if (sizeof(tmp) != 3)
         {
             return "ERROR Wrong number of parameters\n";
         }
-        if (valid_read(tmp[2], lower_case(tmp[1]), "FTP"))
+        tmp[1] = lower_case(tmp[1]);
+        if (valid_read(tmp[2], tmp[1], "FTP"))
         {
 #ifdef LOG_FTP
             log_incoming_service("READ", tmp[1], tmp[2]);
@@ -2278,7 +2331,6 @@ incoming_service(string request)
             return "READ access\n";
         }
         return "ERROR No access\n";
-	break;
 
     case "write":
         if (sizeof(tmp) != 3)
@@ -2293,7 +2345,21 @@ incoming_service(string request)
             return "WRITE access\n";
         }
         return "ERROR No access\n";
-	break;
+
+    case "move":
+        if (sizeof(tmp) != 4)
+            return "ERROR wrong number of parameters\n";
+
+        if (valid_write(tmp[2], lower_case(tmp[1]), "FTP") &&
+            valid_write(tmp[3], lower_case(tmp[1]), "FTP"))
+        {
+#ifdef LOG_FTP
+            log_incoming_service("MOVE", tmp[1], tmp[2] + " " + tmp[3]);
+#endif LOG_FTP
+            return "MOVE access\n";
+        }
+
+        return "ERROR No access\n";
 
     case "delete":
         if (sizeof(tmp) != 3)
@@ -2308,12 +2374,34 @@ incoming_service(string request)
             return "DELETE access\n";
         }
         return "ERROR No access\n";
-	break;
+
+    case "gmcp_token":
+        if (sizeof(tmp) != 2)
+        {
+            return "ERROR Wrong number of parameters\n";
+        }
+        return "TOKEN " + query_gmcp_token_user(tmp[1]) + "\n";
 
     default:
         return "ERROR Unknown request\n";
 	break;
     }
+}
+
+/*
+ * Function Name: valid_incoming_service
+ * Description  : This function is called when a new connection arrives on the
+ *                service port. If the function returns 1 the connection is accepted
+ *                otherwise it is closed.
+ * Argumnents   : string ip - The source ip address
+ *                int port  - The source port
+ */
+int
+valid_incoming_service(string host, int port)
+{
+    if (host == "::1" || host == "127.0.0.1")
+        return 1;
+    return 0;
 }
 
 #if 0
@@ -2361,12 +2449,19 @@ master_reload()
 {
 }
 
+/*
+ * Function name: recreate
+ * Description  : Re-initializes the gamedriver and reloads the data file.
+ *                It is called from the gamedriver when the MASTER object
+ *                is reloaded (e.g. by an archwizard doing development).
+ *                It will not not preload the preload files.
+ */
 void
 recreate(object old_master)
 {
     create();
     game_started = 0;
-    start_boot(1); /* This does what we want */
+    start_boot(1); /* Do not preload. */
     game_started = 1;
 #ifdef UDP_ENABLED
 #ifdef UDP_MANAGER
@@ -2401,6 +2496,19 @@ incoming_udp(string from_host, string message)
 #endif UDP_ENABLED
 }
 
+
+/*
+ * Function name: incoming_mssp
+ * Arguments    : MSSP protocol request
+ * Returns      : Mapping with MSSP data
+ */
+mapping
+incoming_mssp(object ob)
+{
+    return MSSP->mssp_data(ob);
+}
+
+
 /*
  * Function name: mark_quit
  * Description  : Called when a player is about to quit. It's used to log
@@ -2416,9 +2524,8 @@ mark_quit(object player)
 
     /* Don't trigger on people quitting or people forced to quit on idle. */
     if (player->query_linkdead() ||
-        (!player->query_wiz_level() &&
-         interactive(player) &&
-         (query_idle(player) > MAX_IDLE_TIME)) ||
+        player->query_prop("_mark_quit_idle") ||
+        player->query_prop("_mark_quit") ||
         (query_verb() == "quit"))
     {
         return;
@@ -2530,6 +2637,24 @@ runtime_error(string error, object ob, string prog, string file)
     string fmt_error;
     string path = "";
     string mortal = "";
+    string fname = "<???>";
+
+    /* Create the log directory if necessary. */
+    if (objectp(ob))
+    {
+        path = query_wiz_path(creator_object(ob));
+        fname = file_name(ob);
+        if ((fname[..11] == "/std/combat/") && ob->qme())
+        {
+            fname += " for " + file_name(ob->qme());
+        }
+    }
+
+    fmt_error =
+        "Runtime error: " + error +
+        "       Object: " + fname + 
+        "\n      Program: " + prog +
+        "\n         File: " + file + "\n";
 
     /* Display the message to interactive wizards. */
     if (this_interactive())
@@ -2537,16 +2662,11 @@ runtime_error(string error, object ob, string prog, string file)
         if (this_interactive()->query_wiz_level() ||
             this_interactive()->query_prop(PLAYER_I_SEE_ERRORS))
         {
-            fmt_error =
-                "\n\nRuntime error: " + error +
-                "       Object: " + (ob ? file_name(ob) : "<???>") + 
-                "\n      Program: " + prog +
-                "\n         File: " + file + "\n\n";
-            this_interactive()->catch_tell(fmt_error);
+            this_interactive()->catch_tell("\n\n" + fmt_error + "\n");
             return;
         }
 
-        /* Tell the player an error occured, but not which error. */
+        /* Tell the mortal player an error occured, but not which error. */
         this_interactive()->catch_tell("Your sensitive mind notices " +
             "a wrongness in the fabric of space.\n");
         mortal = capitalize(this_interactive()->query_real_name());
@@ -2554,11 +2674,6 @@ runtime_error(string error, object ob, string prog, string file)
 
     set_auth(this_object(), "root:root");
 
-    /* Create the log directory if necessary. */
-    if (objectp(ob))
-    {
-        path = query_wiz_path(creator_object(ob));
-    }
     path += "/log";
     if (file_size(path) != -2) 
     {
@@ -2566,14 +2681,9 @@ runtime_error(string error, object ob, string prog, string file)
     }
     path += "/runtime";
 
-    fmt_error = ctime(time()) +
-        (strlen(mortal) ? " (Interactive mortal: " + mortal + ")" : "") + "\n" +
-        "Runtime error: " + error +
-        "       Object: " + (ob ? file_name(ob) : "<???>") + "\n" +
-        "      Program: " + prog + "\n" +
-        "         File: " + file + "\n";
-
-    write_file(path, fmt_error + "\n");
+    write_file(path, ctime(time()) +
+        (strlen(mortal) ? " (Interactive mortal: " + mortal + ")" : "") +
+        "\n" + fmt_error + "\n");
 }
 
 /* 
@@ -2608,57 +2718,106 @@ remove_binary(string path)
 }
 
 /*
+ * Function name: add_playerfile
+ * Description  : When a new player is created, update some records.
+ * Arguments    : string pname - the name of the new player.
+ */
+public void
+add_playerfile(string pname)
+{
+    /* May only be called from the Arch soul or the Purge object. */
+    if (!CALL_BY(LOGIN_NEW_PLAYER) &&
+        !CALL_BY_SELF)
+    {
+        return;
+    }
+
+    /* Register new character for auto-purge if not used. */
+    add_new_char(pname);
+
+    /* Amend PINFO if there is any. */
+    if (file_size(PINFO_FILE(pname)) > 0)
+    {
+	write_file(PINFO_FILE(pname), ctime(time()) + " New character created.\n\n");
+    }
+}
+
+/*
  * Function name: remove_playerfile
- * Description:   This function moves a playerfile from /players/<?>/
- *                to /players/deleted/<?>/
+ * Description:   This function moves a playerfile from /data/players/<?>/
+ *                to /data/deleted/<?>/
  *                It also adds some text to the log DELETED.
- * Arguments:     string player - The player to remove
+ * Arguments:     string pname - The player to remove
  *                string reason - The reason to why the file is removed
+ *                int silent - No log if true. May ONLY be used for automatic purges.
  * Returns:       True if everything went ok, false other wise
  */
 public int
-remove_playerfile(string player, string reason)
+remove_playerfile(string pname, string reason, int silent)
 {
     string file;
     string deleted;
+    string wname;
     int number = 1;
 
-    /* May only be called from the Arch soul. */
-    if (!CALL_BY(WIZ_CMD_ARCH))
+    /* May only be called from the Arch soul or the Purge object. */
+    if (!CALL_BY(WIZ_CMD_ARCH) &&
+        !CALL_BY(PURGE_OBJECT) &&
+        !CALL_BY(LOGIN_OBJECT) &&
+        !CALL_BY_SELF)
     {
         return 0;
     }
 
-    file = PLAYER_FILE(player) + ".o";
-    deleted = DELETED_FILE(player) + ".o";
+    file = PLAYER_FILE(pname) + ".o";
+    deleted = DELETED_FILE(pname) + ".o";
 
-    /* If there is a file, move it to the deleted dir. */
+    /* Nothing to purge. */
     if (file_size(file) < 0)
     {
         return 0;
     }
 
+    /* If there is a file, move it to the deleted dir. */
     if (file_size(deleted) != -1)
     {
         while (file_size(deleted + "." + number) != -1)
-              number++;
+            number++;
 
         deleted += "." + number;
     }
-
-    /* Move the file */
     if (!rename(file, deleted))
     {
         return 0;
     }
 
-    /* Inform the domains of the deletion. */
-    map(query_domain_links(), find_object)->domain_delete_player(player);
+    if (CALL_BY_SELF)
+	wname = "Root";
+    else if (CALL_BY(PURGE_OBJECT))
+        wname = "Purge";
+    else
+	wname = capitalize(this_interactive()->query_real_name());
 
-    /* Log the action */
-    log_file("DELETED", ctime(time()) + " " + capitalize(player) +
-        " by " + capitalize(this_interactive()->query_real_name()) +
-        " (" + reason + ")\n", -1);
+    /* Log the action, but not for automagic purges. */
+    if (!silent)
+    {
+        log_file("DELETED", ctime(time()) + " " + capitalize(pname) +
+            " by " + wname + " (" + reason + ")\n", -1);
+    }
+
+    /* Amend PINFO if there is any. */
+    if (file_size(PINFO_FILE(pname)) != -1)
+    {
+	write_file(PINFO_FILE(pname), ctime(time()) + " Deleted by " + wname + ".\n\n");
+    }
+
+    /* Inform the domains of the deletion. */
+    map(query_domain_links(), find_object)->domain_delete_player(pname);
+
+    /* Remove player from the other registrations. */
+    remove_player_seconds(pname);
+    remove_bad_name(pname);
+    remove_new_char(pname);
 
     return 1;
 }
@@ -2674,9 +2833,12 @@ public int
 rename_playerfile(string oldname, string newname)
 {
     mapping playerfile;
+    string wname;
+    string text;
 
-    /* May only be called from the Arch soul. */
-    if (!CALL_BY(WIZ_CMD_ARCH))
+    /* May only be called from the Arch soul or login object. */
+    if (!CALL_BY(WIZ_CMD_ARCH) &&
+        !CALL_BY(LOGIN_OBJECT))
     {
         return 0;
     }
@@ -2693,8 +2855,8 @@ rename_playerfile(string oldname, string newname)
     playerfile = restore_map(PLAYER_FILE(newname));
     playerfile["name"] = newname;
     save_map(playerfile, PLAYER_FILE(newname));
-    write("Player " + capitalize(oldname) + " succesfully renamed to " +
-        capitalize(newname) + ".\n");
+    text = "Player " + capitalize(oldname) + " succesfully renamed to " +
+        capitalize(newname) + ".\n";
 
     /* Rename the mail folder if there is one. */
     if (file_size(FILE_NAME_MAIL(oldname) + ".o") > 0)
@@ -2702,23 +2864,46 @@ rename_playerfile(string oldname, string newname)
         if (rename(FILE_NAME_MAIL(oldname) + ".o",
             FILE_NAME_MAIL(newname) + ".o"))
         {
-            write("Mail folder found and renamed.\n");
+            text += "Mail folder found and renamed.\n";
         }
         else
         {
-            write("Mail folder found, but renaming failed.\n");
+            text += "Mail folder found, but renaming failed.\n";
         }
     }
-
+    else
+    {
+        text += "No mail folder found.\n";
+    }
+    
     /* Update a wizard. */
     if (query_wiz_rank(oldname))
     {
         rename_wizard(oldname, newname);
     }
 
+    wname = CALL_BY(LOGIN_OBJECT) ? "Login" : capitalize(this_interactive()->query_real_name());
     log_file("DELETED", ctime(time()) + " " + capitalize(oldname) +
-        " -> " + capitalize(newname) + ", renamed by " +
-        capitalize(this_interactive()->query_real_name()) + ".\n", -1);
+        " -> " + capitalize(newname) + ", renamed by " + wname + ".\n", -1);
+    if (wname != "Login")
+    {
+	write(text);
+    }
+
+    /* Rename the PINFO if there is any. */
+    if (file_size(PINFO_FILE(oldname)) > 0)
+    {
+        rename(PINFO_FILE(oldname), PINFO_FILE(newname));    
+	write_file(PINFO_FILE(oldname), ctime(time()) +
+            " Renamed to " + capitalize(newname) + " by " + wname + ".\n\n");
+    }
+
+    /* No longer a bad name, if it was one. */
+    remove_bad_name(oldname);
+
+    /* Inform the domains of the new name. */
+    map(query_domain_links(), find_object)->domain_rename_player(oldname, newname);
+
     return 1;
 }
 
@@ -2727,9 +2912,8 @@ rename_playerfile(string oldname, string newname)
  * Description  : This function can be used to check whether a certain
  *                password is less likely to be broken using a general
  *                cracker. Therefore the following is checked:
- *                - the password must at least be 6 characters long;
- *                - the password must contain at least one 'non-letter';
- *                - this letter may not be the first or the last letter;
+ *                - the password must at least be 8 characters long;
+ *                - the password must contain at least two 'non-letter';
  * Arguments    : string str - the password to check.
  * Returns      : int 1/0 - proper/bad.
  */
@@ -2739,46 +2923,24 @@ proper_password(string str)
     int index = -1;
     int size;
     int normal;
-    int stage = 0;
+    int special = 0;
 
     /* Length of the password must be at least 6 characters. */
     size = strlen(str);
-    if (size < 6)
+    if (size < 8)
     {
         return 0;
     }
 
-    /* This may seem a little strange, but it actually is quite simple. As
-     * stated before, there should at least be one non-letter and that
-     * should be between normal letters. Therefore, starting at stage 0, we
-     * wait until we find a letter. Have we found that, more to
-     * stage 1 and wait for a non-letter. Then, at stage 2 we again wait for
-     * a normal letter. If all checks out, we should be at stage 3 at the
-     * end.
-     */
     str = lower_case(str);
     while(++index < size)
     {
         normal = ((str[index] >= 'a') && (str[index] <= 'z'));
-
-        switch(stage)
-        {
-        case 0:
-            stage = (normal ? 1 : 0);
-            break;
-
-        case 1:
-            stage = (normal ? 1 : 2);
-            break;
-
-        case 2:
-            stage = (normal ? 3 : 2);
-            break;
-        }
+        special += (normal ? 0 : 1);
     }
 
-    /* If the stage isn't 3, the password isn't good. */
-    return (stage == 3);
+    /* Must have atlast two special */
+    return (special >= 2);
 }
 
 /*
@@ -2793,27 +2955,27 @@ public string
 generate_password()
 {
     string tmp = "";
-    int    size = 8;
+    int    size = 12;
     int    index;
 
     while(--size >= 0)
     {
-        switch(random(5))
+        switch(random(10))
         {
-        case 0:
+        case 0..1:
             /* With 20% change, add a single digit */
             tmp += ("" + random(10));
             break;
 
-        case 1:
-            /* With 20% chance, add a "special" character */
+        case 2:
+            /* With 10% chance, add a "special" character */
             index = random(24);
             tmp += "!@?$%^&*()[]{};:<>,.-_=+"[index..index];
             break;
 
-        case 2..4:
+        case 3..9:
         default:
-             /* With 60% chance, add a letter, capitalized with 50% chance */
+             /* With 70% chance, add a letter, capitalized with 50% chance */
             index = random(26);
             tmp += (random(2) ? ALPHABET[index..index] :
                 capitalize(ALPHABET[index..index]));
@@ -2906,20 +3068,17 @@ domain_object(object obj)
 
 /*
  * Function name: load_player
- * Descripton:    This function is called from /std/player_sec 
- *                  when the player object is loaded initially. 
- *                It sets the euid of the player to root for 
- *                the duration of the load.
+ * Descripton:    This function is called from /std/player.c when the player
+ *                object is loaded initially. It sets the euid of the player
+ *                to root for  the duration of the load.
  */
 int
 load_player()
 {
     int res;
-    object pobj;
+    object pobj = previous_object();
 
-    pobj = previous_object();
-
-    if (function_exists("load_player", pobj) != PLAYER_SEC_OBJECT ||
+    if (function_exists("load_player", pobj) != PLAYER_OBJECT ||
         !LOGIN_NEW_PLAYER->legal_player(pobj))
         return 0;
     else
@@ -2928,7 +3087,7 @@ load_player()
         export_uid(pobj);
         res = (int)pobj->load_player(pobj->query_real_name());
         set_auth(this_object(), "#:" + (pobj->query_wiz_level() ?
-                          pobj->query_real_name() : BACKBONE_UID));
+            pobj->query_real_name() : BACKBONE_UID));
         export_uid(pobj);
         set_auth(this_object(), "#:root");
         return res;
@@ -2942,32 +3101,24 @@ load_player()
 int
 save_player()
 {
-
     int res;
-    object pobj;
+    object pobj = previous_object();
 
-    pobj = previous_object();
-    
-    if ((function_exists("save_player", pobj) != PLAYER_SEC_OBJECT) ||
+    if ((function_exists("save_player", pobj) != PLAYER_OBJECT) ||
         !LOGIN_NEW_PLAYER->legal_player(pobj))
     {
         return 0;
     }
-    else
-    {
-        set_auth(this_object(), "#:backbone");
-        pobj->fix_saveprop_list();
-        set_auth(this_object(), "#:root");
-        export_uid(pobj);
-        res = (int)pobj->save_player(pobj->query_real_name());
-        pobj->open_player();
-        set_auth(this_object(), "#:" + (pobj->query_wiz_level() ?
-                                        pobj->query_real_name() :
-                                        BACKBONE_UID));
-        export_uid(pobj);
-        set_auth(this_object(), "#:root");
-        return res;
-    }
+
+    set_auth(this_object(), "#:root");
+    export_uid(pobj);
+    res = (int)pobj->save_player(pobj->query_real_name());
+    pobj->open_player();
+    set_auth(this_object(), "#:" + (pobj->query_wiz_level() ?
+        pobj->query_real_name() : BACKBONE_UID));
+    export_uid(pobj);
+    set_auth(this_object(), "#:root");
+    return res;
 }
 
 /*
@@ -2981,11 +3132,10 @@ save_player()
 void
 store_predeath()
 {
-    object pobj;
+    object pobj = previous_object();
     string pfile, prefile;
 
-    pobj = previous_object();
-    if (function_exists("load_player", pobj) != PLAYER_SEC_OBJECT)
+    if (!IS_PLAYER_OBJECT(pobj))
         return;
 
     pfile = PLAYER_FILE(pobj->query_real_name());
@@ -2996,127 +3146,23 @@ store_predeath()
         rename(pfile, prefile);
 }
 
-int
-rem_def_start_loc(string str)
-{
-    if (!def_locations)
-        def_locations = STARTING_PLACES;
-
-    if (query_wiz_rank(this_interactive()->query_real_name()) < WIZ_ARCH)
-    {
-        write("Only arches or keepers may remove starting locations.\n");
-        return 1;
-    }
-
-    set_auth(this_object(), "#:root");
-    def_locations -= ({ str });
-    def_locations = sort_array(def_locations);
-    save_master();
-}
-
-int
-add_def_start_loc(string str)
-{
-    if (!def_locations)
-    {
-        def_locations = STARTING_PLACES;
-    }
-    
-    if (query_wiz_rank(this_interactive()->query_real_name()) < WIZ_ARCH)
-    {
-        write("Only arches or keepers may add starting locations.\n");
-        return 1;
-    }
-    
-    if (file_size(str + ".c") < 0)
-    {
-        write("No such file: " + str + "\n");
-        return 1;
-    }
-
-    /* Delete copies */
-    def_locations -= ({ str });
-    def_locations = sort_array(def_locations + ({ str }) );
-    save_master();
-}
-
-int
-rem_temp_start_loc(string str)
-{
-    if (!temp_locations)
-    {
-        temp_locations = TEMP_STARTING_PLACES;
-    }
-
-    if (query_wiz_rank(this_interactive()->query_real_name()) < WIZ_ARCH)
-    {
-        write("Only arches or keepers may remove starting locations.\n");
-        return 1;
-    }
-
-    /* Delete copies */
-    temp_locations -= ({ str });
-    temp_locations = sort_array(temp_locations);
-    save_master();
-}
-
-int
-add_temp_start_loc(string str)
-{
-    if (query_wiz_rank(this_interactive()->query_real_name()) < WIZ_ARCH)
-    {
-        write("Only arches or keepers may add starting locations.\n");
-        return 1;
-    }
-
-    if (file_size(str + ".c") <= 0)
-    {
-        write("No such file: " + str + "\n");
-        return 1;
-    }
-    if (!sizeof(temp_locations))
-    {
-        temp_locations = TEMP_STARTING_PLACES;
-    }
-    
-    /* Delete copies */
-    temp_locations -= ({ str });
-    temp_locations = sort_array(temp_locations + ({ str }) );
-    save_master();
-}
-
-public string *
-query_list_def_start()
-{
-    return secure_var(def_locations);
-}
-
-public string *
-query_list_temp_start()
-{
-    return secure_var(temp_locations);
-}
-
-int
-check_temp_start_loc(string str)
-{
-    return IN_ARRAY(str, temp_locations);
-}
-
-int
-check_def_start_loc(string str)
-{
-    if (!def_locations)
-        def_locations = STARTING_PLACES;
-    return IN_ARRAY(str, def_locations);
-}
-
+/*
+ * Function name: log_syslog
+ * Description  : Write a message to a log in the system log file. It may
+ *                only be called from code in the /secure, /cmd and /std
+ *                directories.
+ * Arguments    : string file - the path to the log file to write into.
+ *                string text - the message to record.
+ *                int length: The cycle size to apply to the log. The limit
+ *                    may be maximized in the local.h settings of the mud.
+ *                 -1 : maximum/unlimited cycle size is used.
+ *                  0 : default cycle size is used.
+ *                 >0 : specified cycle size is used.
+ */
 public varargs void
 log_syslog(string file, string text, int length = 0)
 {
-    string fname;
-
-    fname = calling_program();
+    string fname = calling_program();
 
     if ((fname[0..6] != "secure/") &&
         (fname[0..3] != "cmd/") &&
@@ -3125,31 +3171,35 @@ log_syslog(string file, string text, int length = 0)
         return;
     }
 
-    set_auth(this_object(), "#:root");
     log_file(file, text, length);
 }
 
+/*
+ * Function name: log_public
+ * Description  : Write a message to a log in the public log file. It may
+ *                only be called from code in the /secure and /std
+ *                directories. Cycling logging is applied as per default.
+ * Arguments    : string file - the path to the log file to write into.
+ *                string text - the message to record.
+ */
 void
 log_public(string file, string text)
 {
-    int fsize, msize;
-    string fname;
-
-    fname = calling_program();
+    int msize;
+    string fname = calling_program();
 
     file = OPEN_LOG_DIR + "/" + file;
     
-    if ((fname[0..5] != "secure") &&
-        (fname[0..2] != "std"))
+    if ((fname[0..6] != "secure/") &&
+        (fname[0..3] != "std/"))
     {
         return;
     }
 
 #ifdef CYCLIC_LOG_SIZE
-    fsize = file_size(file);
     msize = CYCLIC_LOG_SIZE["root"];
 
-    if (msize > 0 && fsize > msize)
+    if (msize > 0 && (file_size(file) > msize))
         rename(file, file + ".old");
 #endif /* CYCLIC_LOG_SIZE */
 
@@ -3167,10 +3217,7 @@ log_restrict(string verb, string arg)
     if (dom == "")
         dom = BASE_DOMAIN;
 
-    path = "/d/" + dom + "/domain";
-    if (file_size(path) == -1)
-        mkdir(path);
-    path += "/private";
+    path = "/d/" + dom + "/private";
     if (file_size(path) == -1)
         mkdir(path);
     path += "/restrictlog";
@@ -3257,7 +3304,7 @@ finger_player(string pl_name, string file)
     ob = clone_object(file);
 
     f = function_exists("load_player", ob);
-    if (f != PLAYER_SEC_OBJECT && f != FINGER_PLAYER)
+    if (f != PLAYER_OBJECT && f != FINGER_PLAYER)
     {
         do_debug("destroy", ob);
         return 0;
@@ -3288,18 +3335,36 @@ finger_player(string pl_name, string file)
  * Function name: note_something
  * Description  : This function is called from the info.c commandsoul when
  *                someone made a report. It distuishes between sys-reports
- *                and room-related reports and writes them to the correct
- *                directory.
+ *                and room-related reports and either forwards to the report
+ *                handler or writes them to the correct directory.
  * Arguments:     string str - the message to log.
  *                int id     - the id (type) of the log.
- *                object env - the environment of this_player().
+ *                object target - the target of the report.
  */
 void
-note_something(string str, int id, object env)
+note_something(string str, int id, object target)
 {
-    string file;
-    string ts = ctime(time());
-    string text = ts[4..10] + ts[-4..] + ts[10..15]; /* mmm dd yyyy HH:MM */
+    string path;
+    string stime = ctime(time());
+
+    /* Log the bug, idea and typo reports with the central report handler.
+     * The rest is written to log files.
+     */
+    if (IN_ARRAY(id, ({ LOG_BUG_ID, LOG_IDEA_ID, LOG_TYPO_ID,
+            LOG_SYSBUG_ID, LOG_SYSIDEA_ID, LOG_SYSTYPO_ID }) ))
+    {
+        /* A cludgy way to transform the sys-report ID's into report ID's.
+         * Bug/Typo/Idea = 1,2,3 and Sysbug/Systypo/Sysidea = 6,7,8 and thus
+         * susceptible to modulo 5. */
+        REPORT_CENTRAL->add_report(this_player()->query_real_name(),
+            file_name(target),
+            (id % 5),
+            (id >= LOG_SYSBUG_ID),
+            str);
+        return;
+    }
+
+    stime = stime[4..10] + stime[-4..] + stime[10..15]; /* mmm dd yyyy HH:MM */
 
     /* If there is a SYS-related log, write it to the proper log file in the
      * OPEN_LOG_DIR.
@@ -3307,8 +3372,8 @@ note_something(string str, int id, object env)
     if (id >= LOG_SYSBUG_ID)
     {
         set_auth(this_object(), "#:root");
-        write_file((OPEN_LOG_DIR + "/SYS" + LOG_PATH(id)), (text + " " +
-            file_name(env) + " (" +
+        write_file((OPEN_LOG_DIR + "/SYS" + LOG_PATH(id)), (stime + " " +
+            file_name(target) + " (" +
             capitalize(this_player()->query_real_name()) + ")\n" + str +
             "\n"));
         return;
@@ -3316,29 +3381,29 @@ note_something(string str, int id, object env)
 
     if (id == LOG_DONE_ID)
     {
-        file = this_player()->query_real_name();
+        path = this_player()->query_real_name();
     }
     else
     {
-        file = creator_object(env);
+        path = creator_object(target);
     }
 
     set_auth(this_object(), "#:root");
 
-    file = query_wiz_path(file) + "/log";
-    if (file_size(file) != -2)
+    path = query_wiz_path(path) + "/log";
+    if (file_size(path) != -2)
     {
-        mkdir(file);
+        mkdir(path);
     }
 
-    file += LOG_PATH(id);
+    path += LOG_PATH(id);
     if (id == LOG_DONE_ID)
     {
-        write_file(file, ctime(time()) + ":\n" + str + "\n");
+        write_file(path, ctime(time()) + ":\n" + str + "\n");
     }
     else
     {
-        write_file(file, text + " " + file_name(env) + " (" +
+        write_file(path, stime + " " + file_name(target) + " (" +
             capitalize(this_player()->query_real_name()) + ")\n" + str + "\n");
     }
 }
@@ -3382,6 +3447,7 @@ query_start_time()
     int theport;
     string game_start;
 
+    /* Find the time-stamp from the log file that marks the game starts. */
     theport = debug("mud_port");
     if (theport != 0)
     {
@@ -3397,16 +3463,40 @@ query_start_time()
 }
 
 /*
- * Function name: query_irregular_uptime
+ * Function name: query_uptime_limit
  * Description  : The (irregular) uptime after which this game is being
  *                rebooted. This uptime is counted from the start of the
  *                game.
  * Returns      : int - the (irregular) uptime, or 0.
  */
 public int
-query_irregular_uptime()
+query_uptime_limit()
 {
-    return irregular_uptime;
+    return uptime_limit;
+}
+
+/*
+ * Function name: set_uptime_limit
+ * Description  : Schedules a reboot in the future. This function may only be
+ *                called from the normal wizard soul, i.e. from the 'shutdown'
+ *                command.
+ * Arguments    : int t - the time() value to reboot at.
+ */
+public void
+set_uptime_limit(int t)
+{
+    if (previous_object() != find_object(WIZ_CMD_NORMAL))
+    {
+        return;
+    }
+
+#ifdef LOG_SHUTDOWN
+    log_file(LOG_SHUTDOWN, sprintf("%s %-11s: Shutdown at %s.\n",
+        ctime(time()), this_interactive()->query_name(), ctime(t)), -1);
+#endif LOG_SHUTDOWN
+
+    /* Must be at least 1 hour to go. */
+    uptime_limit = max((t - query_start_time()), 3600);
 }
 
 /*
@@ -3438,14 +3528,13 @@ set_runlevel(int level)
 {
     if (previous_object() != find_object(WIZ_CMD_NORMAL))
     {
-        write("Illegal call to set_runlevel(). Call only from wizard soul.\n");
         return;
     }
 
 #ifdef LOG_SHUTDOWN
-    log_file(LOG_SHUTDOWN, ctime(time()) + " Runlevel " +
-        WIZ_RANK_NAME(level) + " set by " + this_interactive()->query_name() +
-        ".\n", -1);
+    log_file(LOG_SHUTDOWN, sprintf("%s %-11s: Runlevel set at %s.\n",
+        ctime(time()), this_interactive()->query_name(),
+        WIZ_RANK_NAME(level)), -1);
 #endif LOG_SHUTDOWN
 
     runlevel = level;
@@ -3613,8 +3702,10 @@ wiz_home(string wiz)
     path = query_wiz_path(wiz) + "/workroom.c";
     set_auth(this_object(), "#:root");
     if (file_size(path) <= 0)
+    {
         write_file(path, "inherit \"/std/workroom\";\n\n" +
-                   "void\ncreate_workroom()\n{\n  ::create_workroom();\n}\n");
+             "void\ncreate_workroom()\n{\n  ::create_workroom();\n}\n");
+    }
 
     return path;
 }
@@ -3716,8 +3807,9 @@ banish(string name, int what)
 
     info = allocate(2);
 
-    if ((previous_object() != find_object(WIZ_CMD_NORMAL)) &&
-        (previous_object() != find_object(WIZ_CMD_APPRENTICE)))
+    if (!CALL_BY(WIZ_CMD_NORMAL) &&
+        !CALL_BY(WIZ_CMD_APPRENTICE) &&
+        !CALL_BY_SELF)
     {
         return ({});
     }
@@ -3750,7 +3842,7 @@ banish(string name, int what)
         if (file_size(file) > -1)
         {
 #ifdef LOG_BANISH
-            this_object()->log_syslog(LOG_BANISH,
+            log_file(LOG_BANISH,
                 sprintf("%s: %-11s unbanishes %s.\n", ctime(time()),
                 capitalize(euid), capitalize(name)));
 #endif LOG_BANISH
@@ -3765,7 +3857,7 @@ banish(string name, int what)
             return info;
         }
 #ifdef LOG_BANISH
-        this_object()->log_syslog(LOG_BANISH,
+        log_file(LOG_BANISH,
             sprintf("%s: %-11s banishes   %s.\n", ctime(time()),
             capitalize(euid), capitalize(name)));
 #endif LOG_BANISH
@@ -3795,6 +3887,15 @@ varargs mixed
 do_debug(string icmd, mixed a1, mixed a2, mixed a3)
 {
     string euid = geteuid(previous_object());
+
+    /*
+     * Some debug() commands are blocked entirely. 
+     * Usually when they are broken in the GD etc.
+     */
+    if (IN_ARRAY(icmd, DEBUG_BLOCKED))
+    {
+        return 0;
+    }
 
     /* Some debug() commands are not meant to be called by just anybody. Only
      * 'root' and the administration may call them.
@@ -3882,14 +3983,12 @@ check_memory(int dodecay)
     }
 #endif REGULAR_REBOOT
 
-#ifdef REGULAR_UPTIME
-    if (uptime > irregular_uptime)
+    if (uptime > uptime_limit)
     {
         set_auth(this_object(), "root:root");
         ARMAGEDDON->start_shutdown("The game has been up " + CONVTIME(uptime) +
             ", time for a reboot!", 10, ROOT_UID);
     }
-#endif REGULAR UPTIME
 
     /* We should add a decay here for the xp stored for each domain. */
     if (dodecay == 1)

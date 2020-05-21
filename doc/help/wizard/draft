@@ -9,12 +9,11 @@ ACCESS LEVEL
 
 DESCRIPTION
 	The command draft can be used by an archwizard or keeper to add
-	a wizard to a domain. Only apprentices and wizard in the
-	independant wizard-domain can be drafted to a domain.
+	a wizard to a domain. The following people may be drafted:
+        - apprentices
+        - wizards and higher who are in the independent-wizard domain.
 
-	Please note that new wizards are added with all restrict-options
-	preset.
-
+	Note that new wizards are added with all restrict-options preset.
 	Remember to assign a suitable mentor to the new wizard.
 
 ARGUMENTS

@@ -5,9 +5,8 @@ SYNOPSIS
 	unwield <specification>
 
 OPTIONS
-        specification - a string that specifies what you want to unwield
-	                it can take many different forms the item specified
-			must be in your inventory
+        specification - a string that specifies what you want to unwield.
+	                It can take many different forms.
 	
 SEE ALSO
 	remove, wield, wear

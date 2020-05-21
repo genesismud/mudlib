@@ -11,11 +11,10 @@ Skillnumber allocation:
 5000 - 99999  Free skill numbers. You can use them but have no guarantee
 	       that somebody else does not use them for something else.
 
-100000 -      Domain reserved skills. This is dependant on the domain
-	      number which can be gotten from /secure/master
-	      Each domain gets 1000 numbers each i.e:
+100000 -      Domain reserved skills. Each domain gets 1000 numbers. The
+              range can be calculated with 100000 + Domain# * 1000, e.g.:
 	      Domain #0: 100000 - 100999
-	      Domain #1: 101000 - 101999
+	      Domain #7: 107000 - 107999
 			etc
 
 	      To get the domain number: 
@@ -67,8 +66,7 @@ SS_HIDE			55	Hide inside rooms
 SS_BACKSTAB		56	Do something bad to someones back
 
 /* Language skills */
-SS_LANG_COMMON          70	
-SS_LANGUAGE		109	Speak other languages
+SS_LANG_COMMON          70	Obsolete - do not use
 
 /* General skills */
 SS_APPR_MON		100	Appraise an opponent
@@ -80,6 +78,7 @@ SS_ANI_HANDL		105	Handle animals
 SS_LOC_SENSE		106	Know where you are
 SS_TRACKING		107	Track something in the wild
 SS_HUNTING		108	Hunt for a living
+SS_LANGUAGE		109	Speak other languages
 SS_AWARENESS		110	Be weary of backstab/sneak/hide
 SS_TRADING		111	Trade with profit
 SS_RIDING               112     Riding a steed

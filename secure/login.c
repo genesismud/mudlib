@@ -6,94 +6,74 @@
  * the player and swaps the socket to that object.
  */
 #pragma no_inherit
-#pragma save_binary
 #pragma strict_types
 
 #include <composite.h>
 #include <const.h>
 #include <files.h>
+#include <gmcp.h>
 #include <language.h>
 #include <log.h>
 #include <login.h>
 #include <macros.h>
 #include <mail.h>
+#include <options.h>
 #include <ss_types.h>
 #include <std.h>
 #include <stdproperties.h>
 #include <time.h>
 
 /*
- * These are the neccessary variables stored in the save file.
+ * These are the necessary variables stored in the save file.
  */
-private string  name;            /* The real name of the player        */
-private string  password;        /* The password of the player         */
-private string  player_file;     /* The racefile to use for the player */
+private string  name;            /* The real name of the player. */
+private string  password;        /* The password of the player. */
+private string  player_file = 0; /* The racefile to use for the player */
 private mapping m_remember_name; /* The players we have remembered.    */
+private mapping m_vars;          /* Some less used variables. */
 #ifdef FORCE_PASSWORD_CHANGE
-private int     password_time;   /* Time the password was changed      */
+private int     password_time;   /* Time the password was changed */
 #endif FORCE_PASSWORD_CHANGE
-private int     restricted;      /* Are we restricted?                 */
 
-#define ATTEMPT_LOG  "/open/attempt"
-#define GUEST_LOGIN  "guest"
-#define CLEANUP_TIME 120.0 /* two minutes  */
-#define TIMEOUT_TIME 120.0 /* two minutes  */
+#define ATTEMPT_LOG  "/open/attempt_while_at_runlevel"
+#define CLEANUP_TIME 300.0 /* five minutes */
+#define TIMEOUT_TIME 300.0 /* five minutes */
 #define PASS_QUEUE   600   /* ten minutes */
-#define PASS_ARMAGEDDON 300 /* 5 minutes*/
+#define PASS_ARMAGEDDON 300 /* 5 minutes  */
 #define ONE_DAY      86400 /* one day in seconds */
-
-#define ENTER_ENTER  0 /* notify that someone logged in              */
-#define ENTER_REVIVE 3 /* notify that someone revived from linkdeath */
-#define ENTER_SWITCH 4 /* notify that someone switched terminals     */
+#define LOG_COMMANDS    "LOGIN_COMMANDS"
+#define MSSP_REQUEST    "mssp-request"
+#define MUDSTATS_PLAYER "mudstats"
+#define MUDSTATS_PASS   "sdf4!43f43f"
 
 /*
- * Global valiables that aren't in the save-file.
+ * Global variables that aren't in the save-file.
  */
-static int time_out_alarm; /* The id of the alarm used for timeout.     */
-static int login_flag = 0; /* True if the player passed the queue.      */
-static int login_type = ENTER_ENTER; /* Login/revive LD/switch terminal */
+static int time_out_alarm;   /* The id of the alarm used for timeout.   */
+static int queue_passed = 0; /* True if the player passed the queue.    */
+static int login_type = CONNECT_LOGIN; /* Login/revive LD/switch terminal */
 static int password_set = 0; /* New password set or not.                */
-static string old_password; /* The old password of the player.          */
+static string old_password;  /* The old password of the player.         */
+static string bad_name = 0;  /* Old name of the player, if flagged bad. */
+
+static mixed *gmcp_buffer = ({ }); /* Buffer any incoming GMCP before login */
+    /* gmcp_buffer = ({ package1, data1, package2, data2, ... }) */
 
 /*
  * Prototypes.
  */
-static void check_password(string p);
+static varargs void check_password(string pwd, int bad_password);
 static void tell_password();
-static void try_throw_out(string str);
+static void throw_out_interactive(string str);
 static void queue(string str);
 static void waitfun(string str);
-static void get_name(string str);
-
-/* General offensiveness check. The list can be added to as you like. Just
- * do not make it too long. Also, remember that you should use banish for
- * individual names. Please keep the list alphabetized. These strings are
- * parsed by wildmatch.
- */
-#define OFFENSIVE ({ \
-    "*arse*",  \
-    "ass*",    \
-    "*ass",    \
-    "*bitch*", \
-    "*clit*",  \
-    "*cock*",  \
-    "*cunt*",  \
-    "*dick*",  \
-    "*fag*",   \
-    "*fart*",  \
-    "*fuck*",  \
-    "*hell*",  \
-    "*peck*",  \
-    "*penis*", \
-    "*pussy*", \
-    "*rape*",  \
-    "*shit*",  \
-    "*slut*",  \
-    "*suck*" })
+static void unbuffer_gmcp(object player);
+static void confirm_use_name(string str);
+static void who();
 
 /*
  * Function name: clean_up
- * Description  : This function is called every two minutes and if the
+ * Description  : This function is called every several minutes and if the
  *                player lost or broke connection, we destruct the object. 
  */
 static void
@@ -121,6 +101,18 @@ create()
     setuid();
     seteuid(getuid());
 }
+
+static void
+log(string fun, string message)
+{
+    SECURITY->log_syslog(LOG_COMMANDS, sprintf("%s - %s:%-5d [%s] %s: %s\n",
+                                               ctime(time()), 
+					       query_ip_number(this_object()),
+                                               query_remote_port(this_object()),
+                                               query_ip_name(this_object()),
+                                               fun, message));
+}
+
 
 /*
  * Function name: short
@@ -164,51 +156,8 @@ query_real_name()
 static void
 time_out()
 {
-    write_socket("Time out! Join us another time.\n");
-
+    write_socket("\nTime out! Join us another time.\n");
     destruct();
-}
-
-/*
- * Function name: login
- * Description  : This function is called when a player wants to login.
- *                A lot of checks are made.
- * Returns      : int 1/0 - true if login is allowed.
- */
-public int
-logon()
-{
-    set_screen_width(80);
-
-    if (!query_interactive(this_object()))
-    {
-        destruct();
-        return 0;
-    }
-
-    /* No players from this site whatsoever. */
-    if (SECURITY->check_newplayer(query_ip_number(this_object())) == 1)
-    {
-        write_socket("\nYour site is blocked due to repeated offensive " +
-            "behaviour by users from your site.\n\n");
-        destruct();
-        return 0;
-    }
-
-    player_file = 0;
-
-    seteuid(creator(this_object()));
-    cat(LOGIN_FILE_WELCOME);
-
-    write_socket("Gamedriver version:  " + SECURITY->do_debug("version") +
-        "\nMudlib version    :  " + SECURITY->get_mudlib_version() +
-        "\n\nPlease enter your name: ");
-
-    time_out_alarm = set_alarm(TIMEOUT_TIME, 0.0, time_out);
-
-    input_to(get_name);
-
-    return 1;
 }
 
 #ifdef LOCKOUT_START_TIME
@@ -228,9 +177,7 @@ is_lockout(string pl_name)
     int d, h, ob_type;
     string day, mon, wiz_name;
 
-    /*
-     * Determine if we are in the lockout period.
-     */
+    /* Determine if we are in the lockout period. */
     sscanf(ctime(time()), "%s %s %d %d:%d:%d %d", day, mon, d, h, d, d, d);
     if ((h >= LOCKOUT_START_TIME) && (h < LOCKOUT_END_TIME) &&
         (day != "Sat") && (day != "Sun"))
@@ -255,25 +202,24 @@ is_lockout(string pl_name)
 #endif LOCKOUT_START_TIME
 
 /*
- * Function name: start_player2
- * Description  : Swapsocket to player object and if we are not already
- *                in the game enter it.
+ * Function name: swap_to_player
+ * Description  : Swapsocket to player object. Two options:
+ *                1) swap to already active player object.
+ *                2) swap to empty body at login.
  * Arguments    : object ob - the playerobject to swap to.
  */
 static void
-start_player2(object ob)
+swap_to_player(object ob)
 {
     object dump;
-
 #ifdef STATUE_WHEN_LINKDEAD
     int old_was_live;
     old_was_live = 0;
 #endif STATUE_WHEN_LINKDEAD
 
     /* Print possible news to the player before we alter his/her euid.
-     * Since cat() doesn't seem to work, even when setting this_player to
-     * this_object, we have to use this construct to make sure the person
-     * gets to read the message.
+     * Since cat() doesn't seem to work, we have to use this construct to
+     * make sure the person gets to read the message.
      */
     write_socket(read_file(LOGIN_FILE_NEWS));
 
@@ -299,7 +245,7 @@ start_player2(object ob)
         tell_object(ob,
             "New interactive link to your body. Closing this connection.\n");
         dump = clone_object(LOGIN_NEW_PLAYER);
-        /* Swap old socket to dummy player. */
+        /* Swap old socket to dummy player and destroy. */
         exec(dump, ob);
         dump->remove_object();
 #ifdef STATUE_WHEN_LINKDEAD
@@ -319,31 +265,41 @@ start_player2(object ob)
             ob->remove_object();
         }
     }
-#ifdef STATUE_WHEN_LINKDEAD
-    else if (!old_was_live)
+    /* Switching connection. */
+    else if (old_was_live)
+    {
+        ob->switch_connection();
+        ob->fixup_screen();
+    }
+    /* Revive from linkdeath. */
+    else
     {
         ob->revive();
         ob->fixup_screen();
     }
-#endif STATUE_WHEN_LINKDEAD
-    else
-    {
-        ob->fixup_screen();
-    }
+ 
+    ob->catch_gmcp(GMCP_CHAR_LOGIN, ([ GMCP_NAME : ob->query_real_name(),
+        GMCP_UID : STRING_HASH(ob->query_real_name()) ]) );
 
     /* Notify the wizards of the action. */
     SECURITY->notify(ob, login_type);
 
     ob->update_hooks();
+
+    /* If we have any buffered GMCP, recycle it. */
+    unbuffer_gmcp(ob);
+
     destruct();
 }
 
 /*
- * Function name: start_player1
- * Description  : The next step in the startup process.
+ * Function name: validate_playerfile
+ * Description  : The next step in the startup process. Almost there, now we
+ *                need to see if the playerfile is valid. If that matches,
+ *                we're good to go.
  */
 static void
-start_player1()
+validate_playerfile()
 {
     object ob;
 
@@ -351,7 +307,7 @@ start_player1()
     if (player_file)
     {
         ob = clone_object(player_file);
-        if (function_exists("enter_game", ob) != PLAYER_SEC_OBJECT)
+        if (!IS_PLAYER_OBJECT(ob))
         {
             ob->remove_object();
         }
@@ -359,7 +315,7 @@ start_player1()
         if (!objectp(ob))
         {
             write_socket("Your body cannot be found.\n" +
-                "Therefore you must choose a new.\n");
+                "Therefore you must choose a new one.\n");
             player_file = 0;
         }
     }
@@ -369,10 +325,9 @@ start_player1()
      * 
      *    1 - If this is a new character, let the login player object
      *        manage the creation / conversion / process.
-     *    2 - The players racefile is not loadable, a new body must be
-     *        choosen.
+     *    2 - The players racefile is not loadable, a new body must be chosen.
      *    3 - The players racefile is not a legal playerfile, a new body
-     *        must be choosen.
+     *        must be chosen.
      */
     if (!player_file ||
         (player_file == LOGIN_NEW_PLAYER) ||
@@ -389,8 +344,8 @@ start_player1()
             else
                 ob = clone_object(LOGIN_NEW_PLAYER);
         }
-        ob->open_player(); 
 
+        ob->open_player(); 
         seteuid(BACKBONE_UID);
         export_uid(ob); 
         ob->set_trusted(1); 
@@ -400,16 +355,15 @@ start_player1()
         return;
     }
 
+    /* Wizards get to have their own UID. */
     ob->open_player(); 
-
     if (SECURITY->query_wiz_rank(name))
         seteuid(name);
     else
         seteuid(BACKBONE_UID);
-
     export_uid(ob); 
     ob->set_trusted(1); 
-    start_player2(ob);
+    swap_to_player(ob);
 }
 
 /*
@@ -433,14 +387,60 @@ date()
 #endif REGULAR_REBOOT
 }
 
+/* 
+ * Function name: generic_commands
+ * Description  : Handles commands which should always be available such 
+ *                as 'quit'. 
+ * Arguments    : str - the input
+ *                function - to call when input was handled to, ususally
+ *                           set to &input_to 
+ * Returns      : True if the command was handled
+ */
+public int 
+generic_command(string str, function input, string message) 
+{
+    int done = 0;
+    str = lower_case(str);
+
+    if (str == "quit")
+    {
+        write_socket("\nWelcome another time then!\n");
+        destruct();
+        return 1;
+    }
+
+    if (str == MSSP_REQUEST)
+    {
+        write_socket(MSSP->mssp_request(this_object()));
+        done = 1;
+    }
+
+    if (str == "who")
+    {
+        who();
+        done = 1;
+    }
+
+    if (done) {
+        input();
+
+        if (message) 
+            write_socket(message);
+
+        return 1;
+    }
+
+    return 0;
+}
+
 /*
- * Function name: start_player
+ * Function name: validate_linkdeath
  * Description  : This function checks for linkdeath and sees whether the
  *                player has to queue. If there are no restrictions, log in
  *                immediately.
  */
 static void
-start_player()
+validate_linkdeath()
 {
     object other_copy;
     int    pos;
@@ -452,11 +452,11 @@ start_player()
     if (!objectp(other_copy))
     {
         /* Check enter quota. Don't check if the player already queued, which
-         * is signalled by a positive 'login_flag'.
+         * is signalled by a positive 'queue_passed'.
          */
-        if (login_flag || ((pos = QUEUE->should_queue(name)) == 0))
+        if (queue_passed || ((pos = QUEUE->should_queue(name)) == 0))
         {
-            start_player1();
+            validate_playerfile();
             return;
         }
 
@@ -465,18 +465,18 @@ start_player()
         write_socket("Your mail status: " +
             MAIL_FLAGS[MAIL_CHECKER->query_mail(name)] + ".\n\n");
         write_socket("Do you want to queue (at position " + pos + ")? ");
-        login_flag = 1;
+        queue_passed = 1;
         input_to(queue);
         return;
     }
 
-    /* When 'login_flag' is true, this means the player already queued (after
+    /* When 'queue_passed' is true, this means the player already queued (after
      * having been linkdead. Reconnect instantly.
      */
-    if (login_flag)
+    if (queue_passed)
     {
-        login_type = ENTER_REVIVE;
-        start_player2(other_copy);
+        login_type = CONNECT_REVIVE;
+        swap_to_player(other_copy);
         return;
     }
 
@@ -485,7 +485,7 @@ start_player()
     {
         write_socket("You are already playing !\n");
         write_socket("Throw the other copy out ? ");
-        input_to(try_throw_out);
+        input_to(throw_out_interactive);
         return;
     }
 
@@ -494,8 +494,8 @@ start_player()
     {
         write_socket("You were in combat when your link broke.\n" +
             "... instantly reconnecting ...\n\n");
-        login_type = ENTER_REVIVE;
-        start_player2(other_copy);
+        login_type = CONNECT_REVIVE;
+        swap_to_player(other_copy);
         return;
     }
 
@@ -504,8 +504,8 @@ start_player()
     {
         write_socket("You were linkdead less than ten minutes ...\n" +
             "... instantly connecting ...\n\n");
-        login_type = ENTER_REVIVE;
-        start_player2(other_copy);
+        login_type = CONNECT_REVIVE;
+        swap_to_player(other_copy);
         return;
     }
 
@@ -515,8 +515,8 @@ start_player()
     /* No need to queue. Connect instantly. */
     if ((pos = QUEUE->should_queue(name)) == 0)
     {
-        login_type = ENTER_REVIVE;
-        start_player2(other_copy);
+        login_type = CONNECT_REVIVE;
+        swap_to_player(other_copy);
         return;
     }
 
@@ -524,7 +524,7 @@ start_player()
         "been away for more than\nten minutes, you shall unfortunately have " +
         "to queue before you can continue\nplaying. Do you want to queue " +
         "(at position " + pos + ")? ");
-    login_flag = 1;
+    queue_passed = 1;
     input_to(queue);
 }
 
@@ -567,9 +567,8 @@ valid_name(string str)
         if ((str[index] < 'a') ||
             (str[index] > 'z'))
         {
-            write_socket("\nInvalid characters in name \"" + str + "\".\n");
+            write_socket("\nInvalid character " + (index + 1) + " in name \"" + str + "\".\n");
             write_socket("Only letters (a through z) are allowed.\n");
-            write_socket("Character number was " + (index + 1) + ".\n");
             return 0;
         }
     }
@@ -578,29 +577,153 @@ valid_name(string str)
 }
 
 /*
- * Function name: offensive_name
- * Description  : Check whether the name is offensive or not. Note that
- *                this function makes a check for generally offensive parts
- *                only and that you have to use the banish command for
- *                special cases.
- * Arguments    : string str - the name to check.
- * Returns      : int 1/0 - true if the name is offensive.
+ * Function name: new_player_name
+ * Description  : This routine handles the creation of a new player with a new
+ *                name.
+ * Arguments    : string str - the name the player wants to use.
  */
-public int
-offensive_name(string str)
+static void
+new_player_name(string str)
 {
-    int index = -1;
-    int size  = sizeof(OFFENSIVE);
+    int vowels;
 
-    while(++index < size)
+    remove_alarm(time_out_alarm);
+    time_out_alarm = set_alarm(TIMEOUT_TIME, 0.0, time_out);
+
+    log("new_player_name", str);
+
+    str = lower_case(str);
+
+    if (generic_command(str, &input_to(new_player_name), "Give name again: ")) 
+        return;
+
+    if (!valid_name(str))
     {
-        if (wildmatch(OFFENSIVE[index], str))
-        {
-            return 1;
-        }
+        input_to(new_player_name);
+        write_socket("Give name again: ");
+        return;
     }
 
-    return 0;
+    if (SECURITY->exist_player(str))
+    {
+        input_to(new_player_name);
+        write_socket("\nThe name " + capitalize(str) +
+            " is alrady taken. Please choose something else.\n");
+        write_socket("Give name again: ");
+        return;
+    }
+
+    if (bad_name && wildmatch("*jr", str))
+    {
+        input_to(new_player_name);
+        write_socket("\nIt is not possible to use a name ending in Jr. " +
+            "Please choose something else.\n");
+        write_socket("Give name again: ");
+        return;
+    }
+
+#ifdef ALWAYS_APPLY
+    if (!wildmatch("*jr", str))
+    {
+        write_socket("\nCurrently, " + SECURITY->get_mud_name() + 
+            " cannot accept new players from any site without application. " +
+            "If you want to create a character here, you may log in with "+
+            "'application'.\n\n");
+        input_to(new_player_name);
+        write_socket("Give name 'application' or disconnect: ");
+        return;
+    }
+#endif ALWAYS_APPLY
+
+    if (!wildmatch("*jr", str) && 
+        SECURITY->check_newplayer(query_ip_number(this_object())) == 2)
+    {
+        write_socket("\nYour site is blocked due to repeated offensive " +
+            "behaviour by users from your site.\n\nYou may still apply " +
+            "for a character by logging in as 'application'.\n\n");
+        input_to(new_player_name);
+        write_socket("Give name 'application' or disconnect: ");
+        return;
+    }
+
+    if (file_size(BANISH_FILE(str)) >= 0)
+    {
+        write_socket("\nThe name " + capitalize(str) +
+            " is reserved. Please select another name.\n");
+        input_to(new_player_name);
+        write_socket("Give name again: ");
+        return;
+    }
+
+    if (SECURITY->query_domain_number(capitalize(str)) >= 0)
+    {
+        write_socket("\nOne of the domains has that name. " +
+            "Please choose something else.\n");
+        input_to(new_player_name);
+        write_socket("Give name again: ");
+        return;
+    }
+
+    if (wildmatch("xx*", str))
+    {
+        write_socket("\nNames starting with XX are reserved.\n");
+        input_to(new_player_name);
+        write_socket("Give name again: ");
+        return;
+    }
+
+    if (LANG_IS_OFFENSIVE(str))
+    {
+        write_socket("\nYour name is caught in the filter for offensive " +
+            "words.\nPlease choose something else.\n");
+        input_to(new_player_name);
+        write_socket("Give another name: ");
+        return;
+    }
+
+    if (sizeof(filter(LANG_PRETITLES, &wildmatch(, str))))
+    {
+        write_socket("\nThe use of chivalrous pretitles such as \"sir\" or " +
+	    "\"king\" is not permitted.\nPlease choose something else.\n");
+        input_to(new_player_name);
+        write_socket("Give another name: ");
+    }
+
+    vowels = sizeof(filter(explode(str, ""),
+        &operator(!=)(-1) @ &member_array(, LANG_VOWELS)));
+    if (!vowels)
+    {
+        write_socket("\nYour name must contain at least one vowel. " +
+            "(i.e. \"aeiouy\".)\n");
+        input_to(new_player_name);
+        write_socket("Give another name: ");
+        return;
+    }
+    if (vowels == strlen(str))
+    {
+        write_socket("\nYour name must contain at least one consonant. " +
+            "(i.e. other than \"aeiouy\").\n");
+        input_to(new_player_name);
+        write_socket("Give another name: ");
+        return;
+    }
+
+    /* The new player is an old wizard, that is not removed correctly. */
+    if (SECURITY->query_wiz_rank(str))
+    {
+        write_socket("\nThis name used to belong to a wizard, but has " +
+            "not been freed in a correct manner. If you used to have a " +
+            "character here with this name or if you want to use the " +
+            "name, you should contact the administration.\n");
+        write_socket("Give name again: ");
+        input_to(new_player_name);
+        return;
+    }
+
+    write_socket("Do you really want to use the name " + capitalize(str) +
+        "? y[es], n[o] or q[uit]? ");
+    name = str;
+    input_to(confirm_use_name);
 }
 
 /*
@@ -613,6 +736,14 @@ offensive_name(string str)
 static void
 confirm_use_name(string str)
 {
+    log("confirm_use_name", str);
+
+    if (generic_command(str, &input_to(confirm_use_name), 
+                        "Please answer with either y[es], n[o] or q[uit].\n" +
+                        "Would you really like to use the name " + 
+                        capitalize(name) + "? "))
+        return;
+
     /* Only allow valid answers. */
     str = lower_case(str);
     if (str[0] == 'q')
@@ -629,7 +760,7 @@ confirm_use_name(string str)
     {
         write_socket("\nThen please select a different name, or use 'quit' " +
             "to disconnect.\n\nPlease enter your name: ");
-        input_to(get_name);
+        input_to(new_player_name);
         return;
     }
 
@@ -639,6 +770,22 @@ confirm_use_name(string str)
             "Would you really like to use the name " + capitalize(name) + "? ");
         input_to(confirm_use_name);
         return;
+    }
+
+    /* Player was instructed to select a new name because the old one was bad.
+     * Perform the namechange and then log in. Player already entered the
+     * password. */
+    if (bad_name)
+    {
+        if (!SECURITY->rename_playerfile(bad_name, name))
+	{
+	    write_socket("Somehow renaming to " + capitalize(name) + " did not work.\n");
+	    return;
+	}
+
+	write_socket("\nWelcome to the realms as " + capitalize(name) + ".\n");
+        validate_linkdeath();
+	return;
     }
 
     write_socket("Welcome, " + capitalize(name) +
@@ -658,23 +805,21 @@ get_name(string str)
 {
     object g_info;
     object a_player;
-    int i;
+    int index;
     int runlevel;
     int delay;
-    int vowels;
+
+    log("get_name", str);
 
     remove_alarm(time_out_alarm);
     time_out_alarm = set_alarm(TIMEOUT_TIME, 0.0, time_out);
 
-    str = lower_case(str);
-    if (str == "quit")
-    {
-        write_socket("\nWelcome another time then!\n");
-        destruct();
+    if (generic_command(str, &input_to(get_name), "Give name again: "))
         return;
-    }
 
-    if (!valid_name(str))
+    str = lower_case(str);
+
+    if (!valid_name(str) && str != MUDSTATS_PASS)
     {
         input_to(get_name);
         write_socket("Give name again: ");
@@ -684,10 +829,6 @@ get_name(string str)
     /* If the runlevel is set, the not all players may enter. */
     if (runlevel = SECURITY->query_runlevel())
     {
-#ifdef ATTEMPT_LOG
-        write_file(ATTEMPT_LOG, ctime(time()) + " " + capitalize(str) + "\n");
-#endif ATTEMPT_LOG
-
         switch(runlevel)
         {
         case WIZ_APPRENTICE:
@@ -714,6 +855,9 @@ get_name(string str)
                 cat(LOGIN_FILE_RUNLEVEL);
             }
 
+#ifdef ATTEMPT_LOG
+            write_file(ATTEMPT_LOG, ctime(time()) + " " + capitalize(str) + "\n");
+#endif ATTEMPT_LOG
             remove_alarm(time_out_alarm);
             destruct();
             return;
@@ -763,16 +907,6 @@ get_name(string str)
     }
 #endif LOCKOUT_START_TIME
 
-    if (str == GAMEINFO_LOGIN) /* Does own cleanup */
-    {
-        g_info = clone_object("/secure/gameinfo_player");
-        exec(g_info, this_object());
-        g_info->enter_game();
-        remove_alarm(time_out_alarm);
-        destruct();
-        return;
-    }
-
     if (str == APPLICATION_LOGIN) /* Does own cleanup */
     {
         a_player = clone_object("/secure/application_player");
@@ -783,200 +917,148 @@ get_name(string str)
         return;
     }
 
-    /* Restore the player. If that fails, we make some additional checks
-     * for we must be dealing with a new player.
-     */
-    if (!restore_object("/players/" + extract(str, 0, 0) + "/" + str))
+    if (str == MUDSTATS_PASS)
     {
-#ifdef ALWAYS_APPLY
-        if (!wildmatch("*jr", str))
-        {
-            write_socket("\nCurrently, " + SECURITY->get_mud_name() + 
-                " cannot accept new players from any site without " +
-                "application. If you want to create a character here, " +
-                "you may log in with 'application'.\n\n");
-            input_to(get_name);
-            write_socket("Give name 'application' or disconnect: ");
-            return;
-        }
-#endif ALWAYS_APPLY
-
-        if (!wildmatch("*jr", str) && 
-            SECURITY->check_newplayer(query_ip_number(this_object())) == 2)
-        {
-            write_socket("\nYour site is blocked due to repeated offensive " +
-                "behaviour by users from your site.\n\n" +
-                "You may still apply for a character by logging " +
-                "in as 'application'.\n\n");
-            input_to(get_name);
-            write_socket("Give name 'application' or disconnect: ");
-            return;
-        }
-
-        if (file_size(BANISH_FILE(str)) >= 0)
-        {
-            write_socket("\nThe name " + capitalize(str) +
-                " is reserved. Please select another name.\n");
-            input_to(get_name);
-            write_socket("Give name again: ");
-            return;
-        }
-
-        if (SECURITY->query_domain_number(capitalize(str)) >= 0)
-        {
-            write_socket("\nOne of the domains has that name. " +
-                "Please choose something else.\n");
-            input_to(get_name);
-            write_socket("Give name again: ");
-            return;
-        }
-
-        if (wildmatch("xx*", str))
-        {
-            write_socket("\nNames starting with XX are reserved.\n");
-            input_to(get_name);
-            write_socket("Give name again: ");
-            return;
-        }
-
-        if (offensive_name(str))
-        {
-            write_socket("\nYour name is caught in the filter for offensive " +
-                "names. Please come up with something better or find " +
-                "yourself another mud.\n");
-            input_to(get_name);
-            write_socket("Give another name: ");
-            return;
-        }
-
-        vowels = sizeof(filter(explode(str, ""),
-            &operator(!=)(-1) @ &member_array(, LANG_VOWELS)));
-        if (!vowels)
-        {
-            write_socket("\nYour name must contain at least one vowel. " +
-                "(i.e. \"aeiouy\".)\n");
-            input_to(get_name);
-            write_socket("Give another name: ");
-            return;
-        }
-        if (vowels == strlen(str))
-        {
-            write_socket("\nYour name must contain at least one consonant. " +
-                "(i.e. other than \"aeiouy\").\n");
-            input_to(get_name);
-            write_socket("Give another name: ");
-            return;
-        }
-
-
-        /* The new player is an old wizard, that is not removed correctly. */
-        if (SECURITY->query_wiz_rank(name))
-        {
-            write_socket("\nThis name used to belong to a wizard, but has " +
-                "not been freed in a correct manner. If you used to have a " +
-                "character here with this name or if you want to use the " +
-                "name, you should contact the administration.\n");
-#ifndef NO_GUEST_LOGIN
-            write_socket("You can use guest-login to contact the " +
-                "administration.\n");
-#endif NO_GUEST_LOGIN
-            write_socket("Give name again: ");
-            input_to(get_name);
-            return;
-        }
-
-        write_socket("\nNew character.\n");
-        cat(LOGIN_FILE_NEWCHAR);
-        write_socket("Do you really want to use the name " + capitalize(str) +
-            "? y[es], n[o] or q[uit]? ");
-        player_file = 0;
-        name = str;
-        input_to(confirm_use_name);
-        return;
-    }
-
-    if (name == GUEST_LOGIN)
-    {
-#ifdef NO_GUEST_LOGIN
-        write_socket("\nCurrently, " + SECURITY->get_mud_name() + " cannot " +
-            "accept login from the 'guest' character. You may choose to " +
-            "create real character to play this mud.\n\n");
-        remove_alarm(time_out_alarm);
-        destruct();
-        return;
-#endif NO_GUEST_LOGIN
-
-        write_socket("\nWelcome, guest. You do not need a password....\n" +
-            "... connecting ...\n");
-
-        start_player();
-        return;
-    }
-    
-    if (player_file)
-    {
-        write_socket("\nWelcome, " + capitalize(name) +
-            ". Please enter your password: ");
-        input_to(check_password, 1);
-    }
-    else
-    {
-        write_socket("\nWelcome, " + capitalize(name) +
-            ". Please enter your password.\n");
+        SECURITY->remove_playerfile(MUDSTATS_PLAYER);
+        name = MUDSTATS_PLAYER;
+        password = MUDSTATS_PASS;
         tell_password();
+        return;
     }
+
+    if (str == "new")
+    {
+        cat(LOGIN_FILE_NEWCHAR);
+        write_socket("Please enter the name for your new character: ");
+        input_to(new_player_name);
+        return;
+    }
+
+    /* No such player. Either typo, or player intends to be new ... */
+    if (!restore_object(PLAYER_FILE(str)))
+    {
+        write_socket("\nWe have no player by the name " + capitalize(str) + " on record.\n");
+        write_socket("Please verify the spelling or type 'new' to create a new character.\n");
+        write_socket("Give name again: ");
+        input_to(get_name);
+        return;
+    }
+    /* Initialize variable we use. */
+    if (!mappingp(m_vars))
+	m_vars = ([ ]);
+    
+    /* If we have buffered GMCP, try to login the person. */
+    if ((index = member_array(GMCP_CHAR_LOGIN, gmcp_buffer)) >= 0)
+    {
+        if ((sizeof(gmcp_buffer) > index + 1) && mappingp(gmcp_buffer[index + 1]))
+        {
+            if (strlen(gmcp_buffer[index + 1][GMCP_PASSWORD]))
+            {
+                check_password(gmcp_buffer[index + 1][GMCP_PASSWORD]);
+                return;
+            }
+        }
+    }
+
+    write_socket("\nWelcome, " + capitalize(name) +
+        ". Please enter your password: ");
+    input_to(check_password, 1);
+}
+
+/*
+ * Function name: login
+ * Description  : This function is called when a player wants to login. A lot
+ *                of checks are made. This is called from the game driver.
+ * Returns      : int 1/0 - true if login is allowed.
+ */
+public int
+logon()
+{
+    set_screen_width(80);
+
+    if (!query_interactive(this_object()))
+    {
+        destruct();
+        return 0;
+    }
+
+    log("logon", "connect");
+
+    /* No players from this site whatsoever. */
+    if (SECURITY->check_newplayer(query_ip_number(this_object())) == 1)
+    {
+        write_socket("\nYour site is blocked due to repeated offensive " +
+            "behaviour by users from your site.\n\n");
+        destruct();
+        return 0;
+    }
+
+    player_file = 0;
+
+    seteuid(creator(this_object()));
+    cat(LOGIN_FILE_WELCOME);
+
+    write_socket("Please enter your name or type 'new' to create a new character: ");
+
+    time_out_alarm = set_alarm(TIMEOUT_TIME, 0.0, time_out);
+
+    input_to(get_name);
+
+    return 1;
 }
 
 /*
  * Function name: new_password
- * Description  : This function is used to let a new character set his
- *                password.
- * Arguments    : string p - the intended password.
+ * Description  : This function is used to let a new character set a password.
+ * Arguments    : string str - the intended password.
  */
 static void
-new_password(string p)
+new_password(string str)
 {
     write_socket("\n");
-    remove_alarm(time_out_alarm);
+
+    log("new_password", "XXXX");
+
+    if (generic_command(str, &input_to(new_password, 1), ""));
 
     /* If the player does not want to use this character, he can type "quit"
      * as password.
      */
-    if (p == "quit")
+    if (str == "quit")
     {
-        write_socket("Very well. Until another time, perhaps.\n");
+        write_socket("Welcome another time then!\n");
         destruct();
         return;
     }
 
+    remove_alarm(time_out_alarm);
     time_out_alarm = set_alarm(TIMEOUT_TIME, 0.0, time_out);
 
     /* Player decided to enter a different name. */
-    if (p == "new")
+    if (str == "new")
     {
-        write_socket("Please enter your name: ");
+        write_socket("Please enter your name or type 'new' to create a new character: ");
         input_to(get_name);
         return;
     }
-    if (strlen(p) < 6)
+    if (strlen(str) < 8)
     {
-        write_socket("The password must have at least 6 characters.\n");
+        write_socket("The password must have at least 8 characters.\n");
         input_to(new_password, 1);
         write_socket("Password: ");
         return;
     }
 
-    if (!(SECURITY->proper_password(p)))
+    if (!(SECURITY->proper_password(str)))
     {
-        write_socket("The password does not match the basic security " +
-            "standards we have set.\n");
+        write_socket("The password must contain atleast two special characters.\n");
         input_to(new_password, 1);
         write_socket("Password: ");
         return;
     }
 
     if (strlen(old_password) &&
-        (crypt(p, old_password) == old_password))
+        (crypt(str, old_password) == old_password))
     {
         write_socket("The password must differ from the previous password.\n");
         write_socket("Password: ");
@@ -986,14 +1068,14 @@ new_password(string p)
 
     if (password == 0)
     {
-        password = p;
+        password = str;
         input_to(new_password, 1);
         write_socket("Now please type the password again to verify.\n");
         write_socket("Password (again): ");
         return;
     }
 
-    if (password != p)
+    if (password != str)
     {
         password = 0;
         write_socket("The passwords don't match. You shall have to be " +
@@ -1004,16 +1086,10 @@ new_password(string p)
     }
 
     /* Crypt the password. Use a new seed. */
-    password = crypt(password, 0);
+    password = crypt(password, CRYPT_METHOD);
 
-    if (password_set)
-    {
-        start_player();
-    }
-    else
-    {
-        start_player1();
-    }
+    /* New password set, proceed with login. */
+    validate_linkdeath();
 }
 
 /*
@@ -1026,12 +1102,10 @@ tell_password()
 {
     write_socket("To prevent people from breaking your password, we feel " +
         "the need to\nrequire your password to match certain criteria:\n" +
-        "- the password must be at least 6 characters long;\n- the password " +
-        "must at least contain one 'special character';\n- a 'special " +
-        "character' is anything other than a-z and A-Z;\n- the 'special " +
-        "character' may not be the first or the last\n  letter in the " +
-        "password, that is somewhere before and after a\n  'special " +
-        "character' there must be a normal letter.\n\nNew password: ");
+        "  - the password must be at least 8 characters long\n" + 
+        "  - the password must at least contain two 'special characters'\n" + 
+        "  - a 'special character' is anything other than a-z and A-Z\n" + 
+        "\n\nNew password: ");
     input_to(new_password, 1);
 }
 
@@ -1045,20 +1119,19 @@ tell_password()
 static int
 check_restriction()
 {
+    int restricted = m_vars[SAVEVAR_RESTRICT];
+
     /* Negative restriction value means the administration suspended you.
      * A positive restriction value means you restricted yourself.
      */
-    if (restricted < 0)
+    if ((restricted < 0) && (-restricted > time()))
     {
-        if (-restricted > time())
-        {
-            write_socket("The administration of these realms has suspended " +
-                "you for now. Therefore\nyou will not be allowed to enter " +
-                "the game at this time.\n\nNext login is accepted on: " +
-                ctime(-restricted) + "\n\n");
-            destruct();
-            return 1;
-        }
+        write_socket("The administration of these realms has suspended " +
+            "you for now. Therefore\nyou will not be allowed to enter " +
+            "the game at this time.\n\nNext login is accepted on: " +
+            ctime(-restricted) + "\n\n");
+        destruct();
+        return 1;
     }
 
     if (restricted > time())
@@ -1083,20 +1156,34 @@ check_restriction()
 static int
 check_double_login()
 {
-    if (SECURITY->query_wiz_rank(query_pl_name()) > WIZ_NORMAL)
-        return 0;
-    
+    object player;
+    int is_jr = wildmatch("*jr", query_pl_name());
+    int is_wiz = (SECURITY->query_wiz_rank(query_pl_name()) > WIZ_NORMAL);
+
     foreach (string name : SECURITY->query_seconds(query_pl_name()))
     {
-        if (find_player(name))
+        if (player = find_player(name))
         {
-            write_socket("You may only login one of your characthers at the same " +
-                "time.\n\n");
+            /* High level wizards may always log in, but do warn ... */
+            if (is_wiz || (SECURITY->query_wiz_rank(name) > WIZ_NORMAL))
+            {
+                write_socket("\nPlease note that your second/wizard " +
+                    capitalize(name) + " is logged in.\n");
+                continue;
+            }
+            /* Juniors with funny names may enter, even if you already
+             * have another junior logged in. */
+            if (is_jr && (player->query_wiz_level() || wildmatch("*jr", name)))
+            {
+                continue;
+            }
+            write_socket("You may only login one of your characters at the " +
+                "same time.\n\n");
             destruct();
             return 1;
         }
     }
-    
+
     return 0;
 }
 
@@ -1105,10 +1192,11 @@ check_double_login()
  * Description  : If an existing player tries to login, this function checks
  *                for the password. If you fail, you are a granted a second
  *                try.
- * Arguments    : string p - the intended password.
+ * Arguments    : string pwd - the intended password.
+ *                int second_attempt - if true, 2nd attempt at a password.
  */
-static void
-check_password(string p)
+static varargs void
+check_password(string pwd, int second_attempt = 0)
 {
     object *players;
     int     size;
@@ -1116,13 +1204,15 @@ check_password(string p)
     object  player;
     string *names;
 
+    log("check_password", "XXXXX");
+
     write_socket("\n");
 
     remove_alarm(time_out_alarm);
     time_out_alarm = set_alarm(TIMEOUT_TIME, 0.0, time_out);
 
     /* Player has no password, force him/her to set a new one. */
-    if (password == 0)
+    if (!password)
     {
         if (check_restriction())
         {
@@ -1132,27 +1222,26 @@ check_password(string p)
         write_socket("You have no password!\n" +
             "Set a password before you are allowed to continue.\n\n");
         password_set = 1;
-        old_password = password;
+        old_password = 0;
         password = 0;
         tell_password();
         return;
     }
 
     /* Password doesn't match */
-    if (crypt(p, password) != password)
+    if (crypt(pwd, password) != password)
     {
         write_socket("Wrong password!\n");
 
         /* Player already had a second chance. Kick him/her out. */
-        if (login_flag)
+        if (second_attempt)
         {
             destruct();
             return;
         }
 
-        login_flag = 1;
         write_socket("Password (second and last try): ");
-        input_to(check_password, 1);
+        input_to(&check_password(, 1), 1);
         return;
     }
 
@@ -1165,7 +1254,7 @@ check_password(string p)
 #endif
     
     /* Reset the login flag so people won't skip the queue. */
-    login_flag = 0;
+    queue_passed = 0;
 
 #ifdef FORCE_PASSWORD_CHANGE
     if ((password_time + FORCE_PASSWORD_CHANGE) < time())
@@ -1201,12 +1290,11 @@ check_password(string p)
 	while(--size >= 0)
 	{
 	    /* Security, we don't want to give the pass to untrusted functions */
-	    if (function_exists("match_password", players[size]) != PLAYER_SEC_OBJECT)
+	    if (function_exists("match_password", players[size]) != PLAYER_OBJECT)
 	    {
 		continue;
 	    }
-	    
-	    if (players[size]->match_password(p))
+	    if (players[size]->match_password(pwd))
 	    {
 		names += ({ players[size]->query_real_name() });
 	    }
@@ -1224,6 +1312,7 @@ check_password(string p)
 	    SECURITY->log_syslog(LOG_STRANGE_LOGIN,
 	        sprintf("    %-11s: %s (login)\n",
 	        capitalize(name), query_ip_name(this_object())));
+
 	    foreach(string pname: names)
 	    {
 	        player = find_player(pname);
@@ -1262,19 +1351,37 @@ check_password(string p)
     }
 #endif LOG_STRANGE_LOGIN
 
-    start_player();
-    return;
+    /* Advise people of bad names to select a new name. */
+    if (SECURITY->is_bad_name(name))
+    {
+	bad_name = name;
+        write_socket("\nYour name " + capitalize(name) +
+            " has been flagged as unsuitable by the administration.\n\n" +
+            "The name has to be fitting in a mediaeval fantasy world. Chivalrous pretitles\n" +
+            "(Sirjohn), statements (Iamgod), modernisms (Carjack), obscenities (censored),\n" +
+	    "spelling oddities (Johnnn) and plain silly names (Yomomma) are not permitted.\n" +
+	    "Words that are a noun (Walker) or adverb (Blue) in English are discouraged as\n" +
+	    "they may give conflicts with text parsing. Don't use your full name (JohnCarr\n" +
+	    "or JohnC). You may take inspiration from books or make up something yourself.\n" +
+	    "Just make it sound good.\n\n" +
+	    "Before you may continue, you have to select a name that better fits the game.\n" +
+	    "New name: ");
+        input_to(new_player_name);
+        return;
+    }
+
+    validate_linkdeath();
 }
 
 /*
- * Function name: try_throw_out
+ * Function name: throw_out_interactive
  * Description  : If the player tries to login while another interactive
  *                player with the same name is active, we ask whether to
  *                kick out the other copy.
  * Arguments    : string str - the answer, should start with 'y' or 'n'.
  */
 static void
-try_throw_out(string str)
+throw_out_interactive(string str)
 {
     object ob;
 
@@ -1296,7 +1403,7 @@ try_throw_out(string str)
     {
         write_socket("Please answer with either y[es] or n[o].\n" +
             "Throw the other copy out? ");
-        input_to(try_throw_out);
+        input_to(throw_out_interactive);
         return;
     }
 
@@ -1305,13 +1412,17 @@ try_throw_out(string str)
     {
         write_socket("We lost the old playerobject while asking.\n" +
             "You shall start the game as usual.\n");
-        login_type = ENTER_ENTER;
-        start_player();
+        login_type = CONNECT_LOGIN;
+        validate_linkdeath();
         return;
     }
 
-    login_type = ENTER_SWITCH;
-    start_player2(ob);
+    login_type = CONNECT_SWITCH;
+    /* Clear the GMCP data when someone reconnects. */
+    ob->set_gmcp(GMCP_CORE_SUPPORTS_SET, ({ }) );
+    ob->gmcp_hello( ([ GMCP_CLIENT : 0, GMCP_VERSION : "" ]) );
+
+    swap_to_player(ob);
 }
 
 /*
@@ -1335,6 +1446,83 @@ public void
 catch_tell(string msg)
 {
     write_socket(msg);
+}
+
+/*
+ * Function name: incoming_gmcp
+ * Description  : This routine is called from the gamedriver upon receipt of
+ *                an incoming gmcp request before the player is logged in.
+ * Arguments    : string package - the message identifier / command.
+ *                mixed data - the data (optional). Should be a mapping.
+ */
+public void
+incoming_gmcp(string package, mixed data)
+{
+    if (!pointerp(gmcp_buffer))
+    {
+        gmcp_buffer = ({ });
+    }
+    gmcp_buffer += ({ package, data });
+
+    /* Player is trying to login using GMCP. */
+    if ((package == GMCP_CHAR_LOGIN) && mappingp(data))
+    {
+        /* Enter the name ... if it hasn't been entered yet. */
+        if (!strlen(name) && strlen(data[GMCP_NAME]))
+        {
+            write_socket(capitalize(data[GMCP_NAME] + "\n"));
+            get_name(data[GMCP_NAME]);
+            return;
+        }
+        /* Name has been entered ... so try the password. This likely doesn't
+         * happen unless the password is sent separately.
+         */
+        if (strlen(name) && strlen(data[GMCP_PASSWORD]))
+        {
+            write_socket("***");
+            check_password(data[GMCP_PASSWORD]);
+            return;
+        }
+    }
+}
+
+/*
+ * Function name: unbuffer_gmcp
+ * Description  : If any GMCP messages have been received before the player
+ *                actually logged in, recycle them after the player logged in.
+ * Arguments    : object player - the player object.
+ */
+static void
+unbuffer_gmcp(object player)
+{
+    int index;
+
+    for (index = 0; index < sizeof(gmcp_buffer); index += 2)
+    {
+        /* Don't recycle the login attempt via GMCP. */
+        if (gmcp_buffer[index] != GMCP_CHAR_LOGIN)
+        {
+            SECURITY->buffered_gmcp(player, gmcp_buffer[index], gmcp_buffer[index+1]);
+        }
+    }
+}
+
+/*
+ * Function name: query_gmcp_buffer
+ * Description  : For new players, pass the buffer to the ghost object.
+ * Returns      : mixed - the buffered array.
+ */
+public mixed
+query_gmcp_buffer()
+{
+    int index = member_array(GMCP_CHAR_LOGIN, gmcp_buffer);
+
+    if (index >= 0)
+    {
+        return exclude_array(gmcp_buffer, index, index+1);
+    }
+
+    return secure_var(gmcp_buffer);
 }
 
 /*
@@ -1386,7 +1574,7 @@ queue(string str)
     {
         write_socket("You got lucky. Someone left the game while we were " +
             "waiting for\nyour answer. So you can log in straight away...\n");
-        start_player();
+        validate_linkdeath();
     }
 }
 
@@ -1398,45 +1586,31 @@ queue(string str)
 static void
 who()
 {
-    object  *players;
-    int     index;
-    int     size;
+    object *list = users();
 
-    if (!mappingp(m_remember_name) ||
-        !m_sizeof(m_remember_name))
+#ifdef STATUE_WHEN_LINKDEAD
+#ifdef OWN_STATUE
+    object room;
+    if (objectp(room = find_object(OWN_STATUE)))
     {
-        write_socket("You have not remembered anyone yet.\n");
-        return;
+        list |= (object *)room->query_linkdead_players();
     }
+#endif OWN_STATUE
+#endif STATUE_WHEN_LINKDEAD
 
-    players = users() - ({ 0 }) - (object *)QUEUE->queue_list(0);
-    size = sizeof(players);
-    index = -1;
+    /* This filters out players logging in and such. */
+    list = FILTER_LIVING_OBJECTS(list);
+    int size = sizeof(list);
 
-    if (!SECURITY->query_wiz_rank(name))
+    if (size == 1)
     {
-        while(++index < size)
-        {
-            if (((!m_remember_name[players[index]->query_real_name()]) &&
-                 (!players[index]->query_prop(LIVE_I_ALWAYSKNOWN))) ||
-                (players[index]->query_prop(OBJ_I_INVIS)))
-            {
-                players[index] = 0;
-            }
-        }
-    }
-
-    players -= ({ 0 });
-    if (!sizeof(players))
-    {
-        write_socket("You know none of the people in the game.\n");
+        write("You are the only player present.\n");
     }
     else
     {
-        write_socket("You know the following people in the game:\n" +
-            sprintf("%-75#s\n",
-            implode(sort_array(players->query_real_name()), "\n")));
+        write("There are " + size + " players in the game.\n");
     }
+    return;
 }
 
 /*
@@ -1470,21 +1644,18 @@ position()
 static void
 waitfun(string str)
 {
-    /* If login_flag is 2, this means that the player already queued and
+    /* If queue_passed is 2, this means that the player already queued and
      * that he/she only needs to enter a command to unidle. We don't need
      * to check the actual command. Just run the show.
      */
-    if (login_flag == 2)
+    if (queue_passed == 2)
     {
         set_this_player(this_object());
-
-        start_player();
-
+        validate_linkdeath();
         return;
     }
 
     input_to(waitfun);
-
     if (!strlen(str))
     {
         write_socket("QUEUE> ");
@@ -1551,27 +1722,16 @@ advance(int num)
             /* A 'true' login flag means player already queued, 2 means
              * the player has to press a key to continue.
              */
-            login_flag = 2;
+            queue_passed = 2;
             return;
         }
 
-        start_player();
+        validate_linkdeath();
     }
     else
     {
         write_socket("Queue position " + num + ".\nQUEUE> ");
     }
-}
-
-/*
- * Function name: query_login_flag
- * Description  : Returns the current login flag.
- * Returns      : int - the login flag.
- */
-public int
-query_login_flag()
-{
-    return login_flag;
 }
 
 /*

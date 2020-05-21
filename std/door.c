@@ -42,7 +42,9 @@
  *
  * set_pass_command(m)	- Call this function with the command string or a 
  *			  list of all the command strings that can be 
- *			  given to pass through the door.
+ *			  given to pass through the door. Wizards can pass
+ *                        any door by adding an exclamation point to the
+ *                        command.
  *
 -* set_fail_pass(s)	- Call this function with the message you are given
  *			  if the door is closed when you try to pass through.
@@ -364,51 +366,68 @@ int pick_lock(string str);
 void
 init()
 {
-    int i, s;
-
     ::init();
-    for (i = 0 , s = sizeof(pass_commands) ; i < s ; i++)
-	add_action(pass_door, check_call(pass_commands[i]));
 
-    for (i = 0 , s = sizeof(open_commands) ; i < s ; i++)
-	add_action(open_door, check_call(open_commands[i]));
+    foreach(mixed cmd: pass_commands)
+    	add_action(pass_door, check_call(cmd));
 
-    for (i = 0 , s = sizeof(close_commands) ; i < s ; i++)
-	add_action(close_door, check_call(close_commands[i]));
+    if (this_player()->query_wiz_level())
+    {
+        foreach(mixed cmd: pass_commands)
+	    add_action(pass_door, check_call(cmd) + "!");
+    }
 
-    for (i = 0 , s = sizeof(lock_commands) ; i < s ; i++)
-	add_action(lock_door, check_call(lock_commands[i]));
+    foreach(mixed cmd: open_commands)
+	add_action(open_door, check_call(cmd));
 
-    for (i = 0 , s = sizeof(unlock_commands) ; i < s ; i++)
-	add_action(unlock_door, check_call(unlock_commands[i]));
+    foreach(mixed cmd: close_commands)
+	add_action(close_door, check_call(cmd));
+
+    foreach(mixed cmd: lock_commands)
+	add_action(lock_door, check_call(cmd));
+
+    foreach(mixed cmd: unlock_commands)
+	add_action(unlock_door, check_call(cmd));
 
     if (sizeof(unlock_commands))
 	add_action(pick_lock, "pick");
 
-    for (i = 0 , s = sizeof(knock_commands) ; i < s ; i++)
-	add_action(knock_door, check_call(knock_commands[i]));
+    foreach(mixed cmd: knock_commands)
+	add_action(knock_door, check_call(cmd));
 }
 
 /*
  * Function name: pass_door
- * Description:   Pass the door.
+ * Description:   Pass the door. Wizards can pass the door by giving the
+ *                command with an exclamation point.
  * Arguments:	  arg - arguments given
  */
 int
 pass_door(string arg)
 {
+    string sub;
     int dexh;
+    string vb = query_verb();
 
     if (!other_door)
     {
 	load_other_door();
     }
 
-    /* The times higher a player can be and still get through */
-    dexh = 2 + (this_player()->query_stat(SS_DEX) / 25);
+    if (this_player()->query_wiz_level() &&
+        (extract(vb, -1) == "!"))
+    {
+        arg = extract(vb, 0, -2);
+        sub = SECURITY->query_command_substitute(arg);
+        this_player()->move_living((sub ? sub : arg) + " though the " + short(), other_room);
+        return 1;
+    }
 
     if (open_status)
     {
+        /* The times higher a player can be and still get through */
+        dexh = 2 + (this_player()->query_stat(SS_DEX) / 25);
+
 	/* Lets say we arbitrarily can bend as dexh indicates.
 	   For something else, inherit and redefine.
 	 */
@@ -431,7 +450,7 @@ pass_door(string arg)
 		      short() + ".\n", this_player());
 	}
 
-	this_player()->move_living(query_verb(), other_room);
+	this_player()->move_living(vb, other_room);
     }
     else
     {
@@ -949,22 +968,26 @@ query_closed_desc() { return closed_desc; }
 
 /*
  * Function name: set_pass_command
- * Description:   Set which command is needed to pass the door
+ * Description  : Set which command is needed to pass the door.
+ *                Wizards can pass any door by adding an exclamation point
+ *                to the command.
+ * Arguments    : string *cmds - the commands.
  */
 void
-set_pass_command(mixed command)
+set_pass_command(mixed cmds)
 {
-    if (!command)
+    if (!cmds)
 	pass_commands = ({ });
-    if (pointerp(command))
-	pass_commands = command;
+    if (pointerp(cmds))
+	pass_commands = cmds;
     else
-	pass_commands = ({ command });
+	pass_commands = ({ cmds });
 }
 
 /*
  * Function name: query_pass_command
- * Description:   Query what command lets you pass the door
+ * Description  : Query what commands lets you pass the door.
+ * Returns      : string * - array of pass commands.
  */
 string *
 query_pass_command() { return pass_commands; }
@@ -985,22 +1008,24 @@ query_fail_pass() { return fail_pass; }
 
 /*
  * Function name: set_open_command
- * Description:   Set command to open the door
+ * Description  : Set command(s) to open the door
+ * Arguments    : string *cmds - the commands.
  */
 void
-set_open_command(mixed command)
+set_open_command(mixed cmds)
 {
     if (!command)
 	open_commands = ({ });
-    if (pointerp(command))
-	open_commands = command;
+    if (pointerp(cmds))
+	open_commands = cmds;
     else
-	open_commands = ({ command });
+	open_commands = ({ cmds });
 }
 
 /*
  * Function name: query_open_command
- * Description:   Query what command opens the door
+ * Description  : Query what commands opens the door
+ * Arguments    : string * - the commands.
  */
 string *
 query_open_command() { return open_commands; }
@@ -1042,22 +1067,24 @@ query_fail_open() { return fail_open; }
 
 /*
  * Function name: set_close_command
- * Description:   Set what command closes the door
+ * Description  : Set what command(s) closes the door.
+ * Arguments    : string *cmds - the commands to close.
  */
 void
-set_close_command(mixed command)
+set_close_command(mixed cmds)
 {
     if (!command)
 	close_commands = ({ });
-    if (pointerp(command))
-	close_commands = command;
+    if (pointerp(cmds))
+	close_commands = cmds;
     else
-	close_commands = ({ command });
+	close_commands = ({ cmds });
 }
 
 /*
  * Function name: query_close_command
- * Description:   Query what command closes the door
+ * Description  : Query what commands close the door.
+ * Returns      : string * - the commands.
  */
 string *
 query_close_command() { return close_commands; }
@@ -1564,6 +1591,71 @@ leave_env(object old, object dest)
         remove_item(lock_name);
     }
     remove_door_info(old);
+}
+
+/*
+ * Function name: get_pick_chance
+ * Description  : Make a string from the difference in pick-skill of the
+ *                player and pick-level of the container for the appraise
+ *                by the player
+ * Arguments    : pick_val - the mentioned difference
+ * Returns      : string   - a nice string with the mentioned description.
+ */
+public nomask string
+get_pick_chance(int pick_val)
+{
+    if (pick_val >= 40)
+        return "pickable by only looking at it";
+    else if (pick_val >= 30)
+        return "very easy to pick";
+    else if (pick_val >= 20)
+        return "quite easy to pick";
+    else if (pick_val >= 10)
+        return "easy to pick";
+    else if (pick_val >= 0)
+        return "pickable";
+    else if (pick_val >= -10)
+        return "tricky, but pickable";
+    else if (pick_val >= -20)
+        return "difficult to pick";
+    else if (pick_val >= -30)
+        return "very hard to pick";
+    else if (pick_val >= -40)
+        return "almost impossible to pick";
+
+    /* pick_val apparently < -40 */
+    return "completely unpickable by you";
+}
+
+/*
+ * Function name: appraise_object
+ * Description  : This function is called when a player appraises the
+ *                container to find out more about it.
+ * Arguments    : num - use this num rather than the players appraise skill
+ */
+public varargs void
+appraise_object(int num)
+{
+    int pick_level = pick;
+    int seed;
+    int skill;
+
+    ::appraise_object(num);
+
+    if (!key)
+    {
+        return;
+    }
+
+    skill = num ? num : (int)this_player()->query_skill(SS_APPR_OBJ);
+
+    sscanf(OB_NUM(this_object()), "%d", seed);
+    skill = random((1000 / (skill + 1)), seed);
+    pick_level = (int)this_player()->query_skill(SS_OPEN_LOCK) -
+        cut_sig_fig(pick_level + (skill % 2 ? -skill % 70 : skill) *
+	pick_level / 100);
+
+    write ("You appraise that its lock is " + get_pick_chance(pick_level) + ".\n");
 }
 
 /*

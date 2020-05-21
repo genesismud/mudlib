@@ -9,6 +9,7 @@
 
 #include <composite.h>
 #include <formulas.h>
+#include <gmcp.h>
 #include <language.h>
 #include <ss_types.h>
 #include <login.h>
@@ -16,6 +17,8 @@
 static  mixed   room_descs;        /* Extra longs added to the rooms own */
 static  int     searched;          /* Times this room has been searched */
 static  string *herbs;             /* WHat herbs grows in this room? */
+/* Buffer this as it's a rather costly call. */
+static  string  gmcp_room_id = MASTER_HASH(this_object());
 
 /*
  * Function name: add_my_desc
@@ -176,22 +179,28 @@ exits_description()
 
 /*
  * Function name: long
- * Description:   Describe the room and possibly the exits
- * Arguments:     str: name of item or 0
- * Returns:       A string holding the long description of the room.
+ * Description  : Describe the room and possibly the exits
+ * Arguments    : string item: name of item or 0
+ * Returns      : string - A string holding the long description of the room.
  */
-varargs public mixed
-long(string str)
+varargs public string
+long(string item)
 {
     int index;
     int size;
-    mixed lg;
+    string desc = ::long(item);
 
-    lg = ::long(str);
-    if (stringp(str))
-        return lg;
-    if (!stringp(lg))
-        lg = "";
+    /* When querying for an item, just return the underlying desc. */
+    if (stringp(item))
+    {
+        return desc;
+    }
+
+    /* Initialize in case there isn't a long description (bad long). */
+    if (!stringp(desc))
+    {
+        desc = "";
+    }
 
     /* This check is to remove extra descriptions that have been added by
      * an object that is now destructed.
@@ -207,11 +216,72 @@ long(string str)
         size = sizeof(room_descs);
         while((index += 2) < size)
         {
-            lg = lg + check_call(room_descs[index]);
+            desc += check_call(room_descs[index]);
         }
     }
 
-    return lg + exits_description();
+    return desc + exits_description();
+}
+
+/*
+ * Function name: gmcp_room_info
+ * Description  : Constructs the Room.Info package for GMCP.
+ * Arguments    : object player - the player who wants to know.
+ *                mapping data - if used, contains the main descriptions of
+ *                    the inner container. Do not set manually. It is only
+ *                    used to recurse this function.
+ */
+public varargs void
+gmcp_room_info(object player, mapping data = 0)
+{
+    object room;
+
+    /* If data not yet filled, use the data of this room. Otherwise, this it
+     * means we were called with room data of a nested room, and only amend
+     * our coordinates. */
+    if (!mappingp(data))
+    {
+        data = ([ GMCP_ID : gmcp_room_id ]);
+
+        if (!CAN_SEE_IN_ROOM(player))
+        {
+            data[GMCP_SHORT] = "A dark room.";
+            data[GMCP_DOORS] = ({ });
+            data[GMCP_EXITS] = ({ });
+        }
+        else
+        {
+            data[GMCP_SHORT] = short(player);
+            data[GMCP_EXITS] = (query_noshow_obvious() ? ({ }) : query_obvious_exits());
+            data[GMCP_DOORS] = query_door_cmds();
+        }
+    }
+
+    /* If we are inside another room, pass our description and let our
+     * environment (e.g. sea) provide the map and coordinates.
+     */
+    if (room = this_object()->query_room_env())
+    {
+        room->gmcp_room_info(player, data);
+        return;
+    }
+
+    /* Update the map file, if needed. */
+    player->gmcp_room_map(map_mapfile, map_section);
+
+    /* Only add the coordinates if there actually are any. */
+    if (map_x && CAN_SEE_IN_ROOM(player))
+    {
+	data[GMCP_MAPX] = map_x;
+	data[GMCP_MAPY] = map_y;
+	if (map_zoomx)
+	{
+            data[GMCP_ZOOMX] = map_zoomx;
+            data[GMCP_ZOOMY] = map_zoomy;
+	}
+    }
+
+    player->catch_gmcp(GMCP_ROOM_INFO, data);
 }
 
 /*
@@ -264,14 +334,12 @@ calc_pros(object player)
     if (player->query_guild_style_lay() == "cleric") p = p + 10;
     if (player->query_guild_style_occ() == "ranger") p = p + 10;
     if (player->query_guild_style_lay() == "ranger") p = p + 5;
-    p = p + player->query_skill(SS_HERBALISM);
+    p += player->query_skill(SS_HERBALISM);
 
     /* Penalty will be given if no skill. */
     /* To add a certain element of luck  - wise players might get lucky. */
 
-    p = p + random(player->query_stat(SS_WIS) / 3);
-
-    return p;
+    return p + random(player->query_stat(SS_WIS) / 3);
 }
 
 /*
@@ -287,23 +355,23 @@ calc_cons(object player)
 
     /* If no herbalism skill, players will really have problems. */
     if (!player->query_skill(SS_HERBALISM))
-        p = p + 15;
+        p += 15;
 
     /* Extra penalty if the player cannot see in the room or is blind */
     if (!CAN_SEE_IN_ROOM(player) || !CAN_SEE(player, this_object()))
-        p = p + 45;
+        p += 45;
 
     /* Penalty increases for each time the room has been searched.
      * This will of course be sad for those who comes to the room after
      * a non-skilled searcher has tried to search some times, but this
      * could indicate that the first person trampled the herbs underfoot :-)
      */
-    p = p + searched * searched * 5;
+    p += searched * searched * 5;
 
     /* If we have good luck, we can also have bad luck....
      * ....and stupid players with low intelligence have more bad luck ;-)
      */
-    p = p + random((100 - player->query_stat(SS_INT)) / 3);
+    p += random((100 - player->query_stat(SS_INT)) / 3);
 
     return p;
 }
@@ -398,6 +466,26 @@ add_herb_file(string file)
 }
 
 /*
+ * Function name: remove_herb_file
+ * Description:   Remove a herb file from our array
+ * Arguments:     file - The filename to our herb
+ * Returns:       1 if removed 
+ */
+int
+remove_herb_file(string file)
+{
+    if (!file)
+        return 0;
+
+    if (!herbs)
+        herbs = ({ });
+    else
+        herbs = filter(herbs, &operator(!=)(, file)); 
+
+    return 1;
+}
+
+/*
  * Function name: query_herb_files
  * Description:   Query the herb files
  * Returns:       The herb array or 0.
@@ -441,10 +529,9 @@ track_now(object player, int track_skill)
     string *track_arr,
             result = "You do not find any tracks.\n",
             dir,
-           *dir_arr,
             race,
            *races = RACES + ({ "animal" });
-    int     i;
+    int     size;
     mixed  *exits;
 
     track_arr = query_prop(ROOM_S_DIR);
@@ -459,12 +546,12 @@ track_now(object player, int track_skill)
     if (CAN_SEE_IN_ROOM(player) && pointerp(track_arr) && track_skill > 0)
     {
         dir = track_arr[0];
-        if (dir == "X" || dir == "M")
-            dir = "nowhere";
-        if (strlen(dir)>5)
+        if (!dir || dir == "X" || dir == "M")
         {
-            dir_arr = explode(dir," ");
-            if (dir_arr[0] != "the")
+            dir = "nowhere";
+        }
+        else if (dir[..3] != "the ")
+        {
             dir = "the " + dir;
         }
         race = track_arr[1];
@@ -476,11 +563,11 @@ track_now(object player, int track_skill)
             case  1..10:
                 break;
             case 11..20:
-                if(random(2))
+                if (random(2))
                 {
                     exits = query_exit();
-                    if(i = sizeof(exits))
-                        dir = exits[random(i/3)*3+1];
+                    if (size = sizeof(exits))
+                        dir = "the " + exits[random(size/3)*3+1];
                 }
                 result += "They are probably leading towards " + dir + ".\n";
                 break;
@@ -488,14 +575,14 @@ track_now(object player, int track_skill)
                 result += "They are leading towards " + dir + ".\n";
                 break;
             case 51..75:
-                if(random(2))
+                if (random(2))
                     race = one_of_list(races);
                 result += "They were probably made by " +LANG_ADDART(race) +
-                    " and are leading " + dir + ".\n";
+                    " and are leading towards " + dir + ".\n";
                 break;
             case 76..150:
                 result += "They were made by " +LANG_ADDART(race) +
-                    " and are leading " + dir + ".\n";
+                    " and are leading towards " + dir + ".\n";
                 break;
         }
     }
@@ -538,6 +625,7 @@ track_room()
         paralyze->set_standard_paralyze("tracking");
         paralyze->set_stop_fun("stop_track");
         paralyze->set_stop_verb("stop");
+	paralyze->set_combat_stop(1);
         paralyze->set_stop_message("You stop searching for tracks on the ground.\n");
         paralyze->set_remove_time(time);
         paralyze->set_fail_message("You are busy searching for tracks. You must " +

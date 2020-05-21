@@ -6,6 +6,7 @@ SYNOPSYS
 
 ACCESS CLASS
 	Playerarch team members (AoP team)
+                Requires the player tool (/secure/player_tool).
 
 DESCRIPTION
 	With this command the playerfile of a mortal player can be copied

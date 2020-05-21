@@ -19,10 +19,18 @@
 #include <files.h>
 #include <macros.h>
 #include <language.h>
+#include <living_desc.h>
+#include <login.h>
+#include <options.h>
 #include <ss_types.h>
 #include <state_desc.h>
 #include <std.h>
 #include <stdproperties.h>
+
+/* Local var for changes in looks.
+ * newlooks = ([ "name" : ([ "var" : "value" ]) ])
+ */
+static private mapping newlooks = ([ ]);
 
 /*
  * Prototypes.
@@ -61,7 +69,8 @@ get_prefs(string str)
 
     if (!strlen(str))
     {
-        write("Please use \"<stat> [and] <stat>\", \"evenly\" or \"abort\".\n" +
+        write("Please use \"<stat> [and] <stat>\", \"evenly\", "+
+	    "\"physical\", \"mental\" or \"abort\".\n" +
             "Example: \"dexterity and wisdom\"\nPlease try again: ");
         input_to(get_prefs);
         return;
@@ -72,11 +81,28 @@ get_prefs(string str)
         write("Leaving your preferences unchanged.\n");
         return;
     }
-
     if (str == "evenly")
     {
         this_player()->set_learn_pref(prefs);
         write("Distributing your focus evenly over all stats.\n");
+        return;
+    }
+    if (str == "mental")
+    {
+        prefs[SS_WIS] = GS_SECONDARY_FOCUS;
+        prefs[SS_INT] = GS_SECONDARY_FOCUS;
+        prefs[SS_DIS] = GS_SECONDARY_FOCUS;
+        this_player()->set_learn_pref(prefs);
+        write("You focus on your mental abilities.\n");
+        return;
+    }
+    if (str == "physical")
+    {
+        prefs[SS_STR] = GS_SECONDARY_FOCUS;
+        prefs[SS_DEX] = GS_SECONDARY_FOCUS;
+        prefs[SS_CON] = GS_SECONDARY_FOCUS;
+        this_player()->set_learn_pref(prefs);
+        write("You focus on your physical abilities.\n");
         return;
     }
 
@@ -97,8 +123,8 @@ get_prefs(string str)
         /* Intentional fallthrough. */
 
     default:
-        write("Use \"<stat> and <stat>\", \"evenly\" or \"abort\".\n" +
-            "Please try again: ");
+        write("Use \"<stat> and <stat>\", \"evenly\", \"mental\", " +
+            "\"physical\" or \"abort\".\nPlease try again: ");
         input_to(get_prefs);
         return;
     }
@@ -154,12 +180,12 @@ set_prefs()
 {
     write("Deep in trance you can select to concentrate on improving your " +
         "different stats. Simply type \"abort\" to keep your preferences " +
-        "unchanged or \"evenly\" to distribute your focus evenly over all " +
-        "stats.\n");
+        "unchanged.\n");
     write("The syntax is \"<stat> [and] <stat>\" using the stats " +
         COMPOSITE_WORDS(SD_LONG_STAT_DESC[..(SS_NO_EXP_STATS-1)]) +
-        " (or their known abbreviations).\nOn which stats do you wish " +
-        "to focus? ");
+        " (or their known abbreviations).\nYou may also enter \"evenly\", " +
+        "\"mental\" or \"physical\" to direct your focus.\nOn which stats " +
+        "do you wish to focus? ");
 
     input_to(get_prefs);
     return 1;
@@ -184,7 +210,7 @@ gs_leave_inv(object ob, object to)
 }
 
 /*
- * Function name: list
+ * Function name: gs_list
  * Description  : With this command, players can get information on their
  *                guilds.
  * Arguments    : string str - the command line argument.
@@ -240,7 +266,7 @@ gs_list(string str)
         }
         else
         {
-            write("Guildmaster(s): " +
+            write("Guildmaster" + (sizeof(masters) > 1 ? "s" : "") + ": " +
                 COMPOSITE_WORDS(map(masters, capitalize)) + ".\n");
         }
         write("\n");
@@ -282,6 +308,197 @@ gs_list(string str)
 }
 
 /*
+ * Function name: gs_looks
+ * Description  : With this command, young players can modify their looks.
+ * Arguments    : string str - the command line argument.
+ * Returns      : int 1/0 - success/failure.
+ */
+nomask int
+gs_looks(string str)
+{
+    string *args;
+    string *attributes;
+    string *adjs = this_player()->query_adjs();
+    string name = this_player()->query_real_name();
+    string race = this_player()->query_race();
+    string result, guild;
+    string gender = LD_GENDER_MAP[this_player()->query_gender()];
+    int    scrw = this_player()->query_option(OPT_SCREEN_WIDTH);
+
+    if (!strlen(str))
+    {
+	str = "list";
+    }
+    if (!mappingp(newlooks[name]))
+    {
+	newlooks[name] = ([ ]);
+    }
+
+    args = explode(str, " ");
+    str = implode(args[1..], " ");
+    switch(args[0])
+    {
+    case "adj1":
+    case "adj2":
+        if (!strlen(str))
+	{
+	    write(HANGING_INDENT("Possible attribute categories: " +
+	        COMPOSITE_WORDS(LD_ATTRIB_CATEGORIES) + ".", 4, 0));
+	    write("See the attributes per category with: looks <category>\n");
+	    return 1;
+	}
+	if (!LD_IS_ATTRIBUTE(str))
+	{
+	    write("Not a valid attribute: " + str + ".\n");
+	    return 1;
+	}
+	newlooks[name][args[0]] = str;
+	return gs_looks("new");
+
+    case "gender":
+        if (!strlen(str))
+	{
+	    write("Possible genders: male and female.\n");
+	    return 1;
+	}
+	if (!IN_ARRAY(str, m_indices(LD_GENDER_REVERSE_MAP)))
+	{
+	    write("Not a valid gender: " + str + ".\n");
+	    return 1;
+	}
+	newlooks[name]["gender"] = str;
+	return gs_looks("new");
+
+    case "race":
+        if (!strlen(str))
+	{
+	    write("Possible races: " + COMPOSITE_WORDS(RACES) + ".\n");
+	    return 1;
+	}
+	if (!IN_ARRAY(str, RACES))
+	{
+	    write("Not a valid race: " + str + ".\n");
+	    return 1;
+	}
+	newlooks[name]["race"] = str;
+	guild = this_player()->query_guild_name_race();
+        write("Warning: you are changing your race from " + race +
+	    " to " + newlooks[name]["race"] + ". This will not come into " +
+	    "effect until you quit and log in again." +
+	    (strlen(guild) ? " It will cause you to be expelled from the " + guild + "." : "") +
+	    "\n\n");
+	return gs_looks("new");
+
+    case "height":
+        if (!strlen(str))
+	{
+	    write("Possible heights: " + COMPOSITE_WORDS(HEIGHTDESC) + ".\n");
+	    return 1;
+	}
+	if (!IN_ARRAY(str, HEIGHTDESC))
+	{
+	    write("Not a valid height: " + str + ".\n");
+	    return gs_looks("height");
+	}
+	newlooks[name]["height"] = str;
+	return gs_looks("new");
+
+    case "width":
+        if (!strlen(str))
+	{
+	    write("Possible widths: " + COMPOSITE_WORDS(WIDTHDESC) + ".\n");
+	    return 1;
+	}
+	if (!IN_ARRAY(str, WIDTHDESC))
+	{
+	    write("Not a valid width: " + str + ".\n");
+	    return gs_looks("width");
+	}
+	newlooks[name]["width"] = str;
+	return gs_looks("new");
+
+    case "list":
+        write("You are " + LANG_ADDART(this_player()->query_nonmet_name()) +
+	    "; you are " + this_player()->query_height_desc() + " and " +
+	    this_player()->query_width_desc() + " for " + LANG_ADDART(race) + ".\n");
+	write("  adj1   : " + adjs[0] + "\n");
+	write("  adj2   : " + adjs[1] + "\n");
+	write("  gender : " + gender + "\n");
+	write("  race   : " + this_player()->query_race_name() + "\n");
+	write("  height : " + this_player()->query_height_desc() + "\n");
+	write("  width  : " + this_player()->query_width_desc() + "\n");
+	return gs_looks("new");
+
+    case "new":
+    	result = "";
+	if (newlooks[name]["adj1"]) result += "  adj1   : " + newlooks[name]["adj1"] + "\n";
+	if (newlooks[name]["adj2"]) result += "  adj2   : " + newlooks[name]["adj2"] + "\n";
+	if (newlooks[name]["gender"]) result += "  gender : " + newlooks[name]["gender"] + "\n";
+	if (newlooks[name]["race"]) result += "  race   : " + newlooks[name]["race"] + "\n";
+	if (newlooks[name]["height"]) result += "  height : " + newlooks[name]["height"] + "\n";
+	if (newlooks[name]["width"]) result += "  width  : " + newlooks[name]["width"] + "\n";
+	if (strlen(result))
+	{
+	    write("You prepared the following new looks:\n" + result +
+	        "\nIt would make you " +
+		LANG_ADDART(newlooks[name]["adj1"] ? newlooks[name]["adj1"] : adjs[0]) +
+		" " + (newlooks[name]["adj2"] ? newlooks[name]["adj2"] : adjs[1]) +
+		" " + (newlooks[name]["gender"] ? newlooks[name]["gender"] : gender) +
+		" " + (newlooks[name]["race"] ? newlooks[name]["race"] : race) +
+		".\nEnter \"looks confirm\" when you are done to confirm all changes.\n");
+	}
+        return 1;
+
+    case "confirm":
+        if (!wildmatch("*jr", name))
+	{
+	    write("Only juniors may undergo this experimental treatment.\n");
+	    return 1;
+	}
+	this_player()->remove_adjs(adjs);
+	if (newlooks[name]["adj1"])
+	    adjs = newlooks[name]["adj1"] + adjs[1..];
+	if (newlooks[name]["adj2"])
+	    adjs = adjs[..0] + newlooks[name]["adj2"];
+	this_player()->set_adjs(adjs);
+	if (newlooks[name]["gender"])
+	    this_player()->set_gender(LD_GENDER_REVERSE_MAP[newlooks[name]["gender"]]);
+	if (newlooks[name]["race"])
+	{
+	    this_player()->set_player_file(RACEMAP[newlooks[name]["race"]]);
+	    write("Warning: you are changing your race from " + race +
+	        " to " + newlooks[name]["race"] + ". This will not come " +
+		"into effect until you quit and log in again.\nAlso note " +
+		"that you may need to reset your height and width of your " +
+		"new body upon login (as they are based on your current " +
+		"race).\n");
+	}
+	if (newlooks[name]["height"])
+	    this_player()->set_height_desc(newlooks[name]["height"]);
+	if (newlooks[name]["width"])
+	    this_player()->set_width_desc(newlooks[name]["width"]);
+	newlooks[name] = ([ ]);
+        write("You are now " + LANG_ADDART(this_player()->query_nonmet_name()) +
+	    "; you are " + this_player()->query_height_desc() + " and " +
+	    this_player()->query_width_desc() + " for " + LANG_ADDART(race) + ".\n");
+	return 1;
+
+    default:
+        attributes = LD_ATTRIBS_BY_CAT(args[0]);
+        if (sizeof(attributes))
+	{
+	    write("Attributes for category " + args[0] + ":\n");
+	    scrw = ((scrw >= 40) ? (scrw - 3) : 79);
+	    write(sprintf("%-*#s\n", scrw, implode(attributes, "\n")));
+	    return 1;
+	}
+
+        write("Unknown instruction. Please see \"help looks\"for details.\n");
+	return 1;
+    }
+}
+
+/*
  * Function name: gs_hook_already_meditate
  * Description  : This hook is called when player is already meditating and
  *                tries to mediate again. You can mask this function to give
@@ -307,9 +524,8 @@ gs_hook_start_meditate()
     write("Slowly you sit down on the soft carpet and close your eyes. A " +
         "feeling of great ease and self control falls upon you. You block " +
         "off your senses and concentrate solely upon your own mind. You " +
-        "find yourself able to <set> your different preferences at you own " +
-        "desire. Just <rise> when you are done meditating. You estimate " +
-        "your stats and the progress you make at them.\n");
+        "find yourself able to <set> your different preferences at your own " +
+        "desire. Just <rise> when you are done meditating.\n");
     say(QCTNAME(this_player()) + " sits down on the carpet and starts " +
         "to meditate.\n");
 }
@@ -377,67 +593,90 @@ gs_meditate(string str)
     gs_hook_start_meditate();
     write("Here you may also <restrict> yourself from playing.\n\n");
 
+    /* Average stat, mortal level. */
+    stat = this_player()->query_average_stat();
+    if (stat >= SD_AV_LEVELS[SD_NUM_AV_LEVELS-1])
+    {
+        write("You are " + LANG_ADDART(SD_AV_TITLES[SD_NUM_AV_LEVELS-1]) +
+            ", one step from reaching immortality.\n" );
+    }
+    else
+    {
+        level = SD_NUM_AV_LEVELS;
+        while(--level >= 0)
+        {
+            if (stat >= SD_AV_LEVELS[level])
+            {
+                break;
+            }
+        }
+        residue = stat - SD_AV_LEVELS[level];
+        spread = SD_AV_LEVELS[level+1] - SD_AV_LEVELS[level];
+        write("You are " + GET_NUM_DESC(residue, spread, SD_AV_ADVANCE_DESCS) +
+            " " + one_of_list( ({ "advancing", "developing", "progressing", "being promoted", "rising" }) ) +
+            " to " + SD_AV_TITLES[level+1] + ".\n");
+    }
+
+    /* Individual stats. */
     index = -1;
     while(++index < SS_NO_EXP_STATS)
     {
         stat = this_player()->query_stat(index);
         if (stat >= SD_STATLEVEL_SUP)
         {
-            write("You have supreme " + SD_LONG_STAT_DESC[index] + ".\n");
-            continue;
-        }
-        if (stat >= SD_STATLEVEL_IMM)
-        {
-            write("You have the " + SD_LONG_STAT_DESC[index] +
-                " of an immortal.\n");
-            continue;
-        }
-        if (stat >= SD_STATLEVEL_EPIC)
-        {
-            write("You have reached epic " + SD_LONG_STAT_DESC[index] +
-                ".\n");
+            write("You have reached supreme " + SD_LONG_STAT_DESC[index] + ".\n");
             continue;
         }
 
-        level = SD_NUM_STATLEVS;
-        while(--level >= 0)
-        {
-            if (stat >= SD_STATLEVELS[level])
-            {
-                break;
-            }
-        }
+        level = GET_NUM_LEVEL_INDEX(stat, SD_STATLEVELS);
         residue = stat - SD_STATLEVELS[level];
-        level++;
-        spread = ((level >= SD_NUM_STATLEVS) ? SD_STATLEVEL_EPIC :
-            SD_STATLEVELS[level]) - SD_STATLEVELS[level-1];
+        spread = SD_STATLEVELS[level+1] - SD_STATLEVELS[level];
 
         write("You are " + GET_NUM_DESC(residue, spread, SD_ADVANCE_DESCS) +
-            " advancing to " + ((level == SD_NUM_STATLEVS) ?
-            ("epic " + SD_LONG_STAT_DESC[index]) :
-            GET_STAT_INDEX_DESC(index, level)) + ".\n");
-    }
-
-    prefs = this_player()->query_learn_pref(-1)[..(SS_NO_EXP_STATS-1)];
-    sorted_prefs = sort_array( ({ }) + prefs);
-    if (sorted_prefs[SS_NO_EXP_STATS-1] <= sorted_prefs[SS_NO_EXP_STATS-2] + 1)
-    {
-        write("\nYour focus is distributed evenly over your stats.\n");
-    }
-    else
-    {
-        index = member_array(sorted_prefs[SS_NO_EXP_STATS-1], prefs);
-        write("\nYour primary focus is on " + SD_LONG_STAT_DESC[index] + ".\n");
-
-        if (sorted_prefs[SS_NO_EXP_STATS-2] > sorted_prefs[SS_NO_EXP_STATS-3] + 1)
-        {
-            index = member_array(sorted_prefs[SS_NO_EXP_STATS-2], prefs);
-            write("Your secondary focus is on " + SD_LONG_STAT_DESC[index] + ".\n");
-        }
-        write("The focus on your other stats is distributed evenly.\n");
+            " " + one_of_list( ({ "advancing", "developing", "improving", "progressing", "rising" }) ) +
+            " to " + GET_STAT_INDEX_DESC(index, level+1) + ".\n");
     }
 
     add_action(gs_catch_all, "", 1);
+
+    write("\n");
+    prefs = this_player()->query_learn_pref(-1)[..(SS_NO_EXP_STATS-1)];
+    /* One point difference between first and last stat means equal. */
+    sorted_prefs = sort_array( ({ }) + prefs);
+    if (abs(sorted_prefs[0] - sorted_prefs[SS_NO_EXP_STATS-1]) <= 1)
+    {
+        write("Your focus is distributed evenly over your stats.\n");
+        return 1;
+    }
+
+    /* See if both mental and physical stats are at the same levels ... */
+    if ((abs(prefs[SS_STR] - prefs[SS_CON]) <= 1) &&
+        (abs(prefs[SS_WIS] - prefs[SS_INT]) <= 1))
+    {
+        /* WIS is about 2 x STR */
+        if (abs(prefs[SS_WIS] - prefs[SS_STR] - prefs[SS_CON]) <= 2)
+        {
+            write("Your focus is towards the mental stats.\n");
+            return 1;
+        }
+
+        /* CON is about 2 x INT */
+        if (abs(prefs[SS_CON] - prefs[SS_INT] - prefs[SS_DIS]) <= 2)
+        {
+            write("Your focus is towards the physical stats.\n");
+            return 1;
+        }
+    }
+
+    index = member_array(sorted_prefs[SS_NO_EXP_STATS-1], prefs);
+    write("Your primary focus is on " + SD_LONG_STAT_DESC[index] + ".\n");
+
+    if (sorted_prefs[SS_NO_EXP_STATS-2] > sorted_prefs[SS_NO_EXP_STATS-3] + 1)
+    {
+        index = member_array(sorted_prefs[SS_NO_EXP_STATS-2], prefs);
+        write("Your secondary focus is on " + SD_LONG_STAT_DESC[index] + ".\n");
+    }
+    write("The focus on your other stats is distributed evenly.\n");
     return 1;
 }
 
@@ -578,6 +817,7 @@ gs_catch_all(string arg)
     case "systypo":
     case "syspraise":
     case "sysidea":
+    case "looks":
         return 0;
 
     default:
@@ -593,6 +833,7 @@ gs_catch_all(string arg)
 void
 init_guild_support()
 {
-    add_action(gs_list    , "list");
+    add_action(gs_list, "list");
+    add_action(gs_looks, "looks");
     add_action(gs_meditate, "meditate");
 }

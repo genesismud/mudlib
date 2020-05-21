@@ -8,9 +8,10 @@ SYNOPSIS
 	alias <short> <pre>%%<aft>
 
 DESCRIPTION
-	With this quicktyper command, you can manage your alias list.
-	An alias is an abbreviation that will substitute a longer
-	command so you have to type less.
+	With this quicktyper command, you can manage your alias list. An
+	alias is an abbreviation that will substitute a longer command so
+	you have to type less. Several aliases are built into the game by
+	default.
 
 OPTIONS
 	<none>	- list all your aliases.
@@ -30,4 +31,4 @@ EXAMPLE
 	you type 'brace Mercade'.
 
 SEE ALSO
-	unalias, quicktyper
+	aliaslist, unalias, quicktyper

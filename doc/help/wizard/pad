@@ -7,6 +7,7 @@ SYNOPSIS
 	pad w			Enter the editor to write a note on your pad.
 	pad <text>		Write <text> on a note of your notepad.
 	pad d <num> / all	Delete note <num> or delete all notes.
+	pad trim		Trim gaps and re-number your notes.
 
 DESCRIPTION
 	In a file .notepad.o in your home directory, notes will be stored

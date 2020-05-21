@@ -21,7 +21,7 @@
 #include <stdproperties.h>
 
 /* Prototypes. */
-public object * check_block_action(object *targets, int cmd_attr);
+public object *check_block_action(object *targets, int cmd_attr);
 
 /*
  * Global variable.
@@ -29,6 +29,33 @@ public object * check_block_action(object *targets, int cmd_attr);
  * parse_msg - the error message when parsing distances and access.
  */
 static string parse_msg = "";
+
+/*
+ * Function name: say_gmcp
+ * Description  : For communication that uses VBFC, this routine will relay the
+ *                message to all onlookers and passes the same to GMCP. In both
+ *                cases the VBFC is properly resolved.
+ * Arguments    : string verb - the verb/line used.
+ *                string text - the text, containing VBFC.
+ *                object *oblist - the people not to give the message to.
+ */
+varargs void
+say_gmcp(string verb, string text, object *oblist = 0)
+{
+    object *objs;
+
+    /* Apparently some NPCs speak in the void. To whom, one might ask? */
+    if (!environment(this_player())) return;
+    
+    objs = FILTER_LIVE(all_inventory(environment(this_player())));
+    objs -= ({ this_player() });
+    if (pointerp(oblist))
+    {
+        objs -= oblist;
+    }
+    objs->catch_msg(text, this_player());
+    objs->gmcp_comms_vbfc(verb, text);
+}
 
 /*
  * Function name: desc_vbfc
@@ -45,30 +72,43 @@ desc_vbfc(object ob)
 }
 
 /*
- * Function name: desc_theshort
+ * Function name: desc_pos_short
  * Description  : This function takes an object and returns LANG_THESHORT
  *                applied to it. We need this map function because it is not
  *                possible to treat macros like functionpointers.
  * Arguments    : object ob - the object.
  *                object for_obj - the looking object.
- *                int poss - return a possessive form string?
  * Returns      : string - the macro LANG_THESHORT applied to the object.
  */
 public varargs string
-desc_theshort(object ob, object for_ob, int poss)
+desc_pos_short(object ob, object for_ob)
 {
     if (ob->query_prop(HEAP_I_IS))
     {
-	if (!poss)
-	    return ob->short(for_ob);
-	else
-	    return LANG_POSS(ob->short(for_ob));
-    }
-    else if (!poss)
-    {
-	return "the " + ob->short(for_ob);
+        return LANG_POSS(ob->short(for_ob));
     }
     return "the " + LANG_POSS(ob->short(for_ob));
+}
+
+/*
+ * Function name: desc_poss_live
+ * Description  : This function takes an object (ob1) and returns its name or
+ *                possessive name as seen by another (ob2). This is needed
+ *                because direct functionpointers cannot be shadowed.
+ * Arguments    : object ob1 - the first object.
+ *                object ob2 - the second object.
+ *                int poss - if true, use possessive form.
+ * Returns      : string - the macro LANG_THESHORT applied to the object.
+ */
+public string
+desc_poss_live(object ob1, object ob2, int poss)
+{
+    if (!objectp(ob2))
+    {
+        ob2 = this_player();
+    }
+
+    return (poss ? ob1->query_the_possessive_name(ob2) : ob1->query_the_name(ob2));
 }
 
 /*
@@ -109,11 +149,13 @@ desc_many(object *oblist)
  *                object *oblist - the targets of the emotion.
  *                string str1    - an optional second part of the message.
  *                                 Start with "'s" for possessive target form.
+ *                string gmcp_verb - the gmcp verb (optional)
  */
 public varargs void
-actor(string str, object *oblist, string str1)
+actor(string str, object *oblist, string str1, string gmcp_verb = 0)
 {
     int poss;
+    string text;
 
     /* Sanity check. */
     if (!sizeof(oblist))
@@ -127,22 +169,27 @@ actor(string str, object *oblist, string str1)
 
     if (living(oblist[0]))
     {
-	function oname = (poss == 0 ?
-	  &->query_the_name(this_player()) :
-	  &->query_the_possessive_name(this_player()));
-
-	write(str + " " +
-	    COMPOSITE_WORDS(map(oblist, oname)) +
-	    (strlen(str1) ? (str1 + "\n") : ".\n"));
+	text = str + " " + COMPOSITE_WORDS(map(oblist, &desc_poss_live(, 0, poss))) +
+	    (strlen(str1) ? str1 : ".");
+    }
+    else if (poss)
+    {
+        /* Only make a manual composition for the possessive form. */
+	text = str + " " +
+	    COMPOSITE_WORDS(map(oblist, &desc_pos_short(, this_player()))) +
+	    (strlen(str1) ? str1 : ".");
     }
     else
     {
-	write(str + " " +
-	    COMPOSITE_WORDS(map(oblist,
-		    &desc_theshort(, this_player(), poss))) +
-	    (strlen(str1) ? (str1 + "\n") : ".\n"));
+        text = str + " " + COMPOSITE_DEAD(oblist) +
+	    (strlen(str1) ? str1 : ".");
     }
 
+    write(text + "\n");
+    if (gmcp_verb)
+    {
+        this_player()->gmcp_comms(gmcp_verb, 0, text);
+    }
     this_player()->emote_hook_actor(query_verb(), oblist);
 }
 
@@ -162,12 +209,15 @@ actor(string str, object *oblist, string str1)
  *                object *oblist - the people to get the message.
  *                string adverb  - the optional adverb if one was used.
  *                int cmd_attr   - the action attributes (from cmdparse.h)
+ *                string gmcp_verb - the gmcp verb (optional)
  */
 public varargs void
-target(string str, object *oblist, string adverb = "", int cmd_attr = 0)
+target(string str, object *oblist, string adverb = "", int cmd_attr = 0,
+    string gmcp_verb = 0)
 {
     int poss;
     object *players, *all_oblist;
+    string name, text;
 
     /* Sanity check. */
     if (!sizeof(oblist))
@@ -204,12 +254,17 @@ target(string str, object *oblist, string adverb = "", int cmd_attr = 0)
     /* Tell the message to players. */
     if (sizeof(players))
     {
-	function name = (poss ? this_player()->query_The_possessive_name :
-	    this_player()->query_The_name);
-
 	foreach(object player: players)
 	{
-	    player->catch_tell(name(player) + str + "\n");
+	    /* Do a direct call to allow for shawing. */
+	    name = this_player()->query_The_name(player);
+	    text = (poss ? this_player()->query_The_possessive_name(player) : name) + str;
+	    player->catch_tell(text + "\n");
+	    if (gmcp_verb)
+	    {
+	        /* Don't bother with possessive form. */
+	        player->gmcp_comms(gmcp_verb, name, text);
+	    }
 	}
     }
 
@@ -225,9 +280,10 @@ target(string str, object *oblist, string adverb = "", int cmd_attr = 0)
  * Arguments    : see target().
  */
 public varargs void
-targetbb(string str, object *oblist, string adverb = "", int cmd_attr = 0)
+targetbb(string str, object *oblist, string adverb = "", int cmd_attr = 0,
+    string gmcp_verb = 0)
 {
-    target(str, oblist, adverb, cmd_attr | ACTION_BLIND);
+    target(str, oblist, adverb, cmd_attr | ACTION_BLIND, gmcp_verb);
 }
 
 /*
@@ -247,12 +303,14 @@ targetbb(string str, object *oblist, string adverb = "", int cmd_attr = 0)
  *                                or start with "'s" for possessive actor form.
  *                string adverb - the optional adverb if one was used.
  *                int cmd_attr  - the action attributes (from cmdparse.h)
+ *                string gmcp_verb - the gmcp verb (optional)
  */
 public varargs void
-all(string str, string adverb = "", int cmd_attr = 0)
+all(string str, string adverb = "", int cmd_attr = 0, string gmcp_verb = 0)
 {
     int poss;
     object *oblist, *players;
+    string name, text;
 
     if (str[..1] == "'s")
     {
@@ -274,12 +332,16 @@ all(string str, string adverb = "", int cmd_attr = 0)
     /* Tell the message to players. */
     if (sizeof(players))
     {
-	function name = (poss ? this_player()->query_The_possessive_name :
-	    this_player()->query_The_name);
-
 	foreach(object player: players)
 	{
-	    player->catch_tell(name(player) + str + "\n");
+	    /* Do a direct call to allow for shadowing. */
+	    name = this_player()->query_The_name(player);
+	    text = (poss ? this_player()->query_The_possessive_name(player) : name) + str;
+	    player->catch_tell(text + "\n");
+	    if (gmcp_verb)
+	    {
+	        player->gmcp_comms(gmcp_verb, name, text);
+	    }	    
 	}
     }
 
@@ -295,9 +357,9 @@ all(string str, string adverb = "", int cmd_attr = 0)
  * Arguments    : see all().
  */
 public varargs void
-allbb(string str, string adverb = "", int cmd_attr = 0)
+allbb(string str, string adverb = "", int cmd_attr = 0, string gmcp_verb = 0)
 {
-    all(str, adverb, cmd_attr | ACTION_BLIND);
+    all(str, adverb, cmd_attr | ACTION_BLIND, gmcp_verb);
 }
 
 /*
@@ -328,12 +390,14 @@ allbb(string str, string adverb = "", int cmd_attr = 0)
  *                                 Start with "'s" for possessive target form.
  *                string adverb  - the optional adverb if one was used.
  *                int cmd_attr   - the action attributes (from cmdparse.h)
+ *                string gmcp_verb - the gmcp verb (optional)
  */
 public varargs void
 all2act(string str, object *oblist, string str1, string adverb = "",
-    int cmd_attr = 0)
+    int cmd_attr = 0, string gmcp_verb = 0)
 {
     int    a_poss, o_poss;
+    string name, text;
     object *livings, *players;
 
     /* Sanity check. */
@@ -352,43 +416,44 @@ all2act(string str, object *oblist, string str1, string adverb = "",
     if (!sizeof(livings))
 	return;
 
+    /* a_poss = possessive form on the actor. */
     if (str[..1] == "'s")
     {
 	a_poss = 1;
 	str = str[2..];
     }
 
+    /* o_poss = possessive form on the oblist (targets). */
     if (strlen(str1) &&
 	(str1[..1] == "'s"))
     {
 	o_poss = 1;
 	str1 = str1[2..];
     }
+    if (!strlen(str1))
+	str1 = ".";
 
     players = FILTER_PLAYERS(livings);
     if (sizeof(players))
     {
-	function name = (a_poss ? this_player()->query_The_possessive_name :
-	    this_player()->query_The_name);
-
-	str1 = (strlen(str1) ? (str1 + "\n") : ".\n");
-	if (living(oblist[0]))
+        foreach(object player: players)
 	{
-	    foreach(object player: players)
+	    text = capitalize(desc_poss_live(this_player(), player, a_poss) + str + " ");
+	    if (living(oblist[0]))
 	    {
-		function oname = (o_poss ? &->query_the_possessive_name(player) :
-		    &->query_the_name(player));
-
-		player->catch_tell(name(player) + str + " " +
-		    COMPOSITE_WORDS(map(oblist, oname)) + str1);
+		text += COMPOSITE_WORDS(map(oblist, &desc_poss_live(, player, o_poss))) + str1;
 	    }
-	}
-	else
-	{
-	    foreach(object player: players)
+	    else
 	    {
-		player->catch_tell(name(player) + str + " " +
-		    COMPOSITE_WORDS(map(oblist, &desc_theshort(, player, o_poss))) + str1);
+	        text += (o_poss ? COMPOSITE_WORDS(map(oblist, &desc_pos_short(, player))) :
+	            FO_COMPOSITE_DEAD(oblist, player)) + str1;
+	    }
+	
+	    player->catch_tell(text + "\n");
+	    if (gmcp_verb)
+	    {
+	        name = this_player()->query_The_name(player);
+		player->gmcp_comms(gmcp_verb, name, text);
 	    }
 	}
     }
@@ -406,11 +471,10 @@ all2act(string str, object *oblist, string str1, string adverb = "",
  */
 public varargs void
 all2actbb(string str, object *oblist, string str1, string adverb = "",
-    int cmd_attr = 0)
+    int cmd_attr = 0, string gmcp_verb = 0)
 {
-    all2act(str, oblist, str1, adverb, cmd_attr | ACTION_BLIND);
+    all2act(str, oblist, str1, adverb, cmd_attr | ACTION_BLIND, gmcp_verb);
 }
-
 
 /*
  * Functon name: cmd_access
@@ -418,35 +482,42 @@ all2actbb(string str, object *oblist, string str1, string adverb = "",
  * Arguments:    object ob      - the command target
  *               object for_obj - the actor
  *               int cmd_attr  - the command's attributes (from cmdparse.h)
- * Returns:      1 - command not blocked
+ * Returns:      1 - command allowed (not blocked)
  *               0 - command blocked
  */
 public int
 cmd_access(object ob, object for_obj, int cmd_attr)
 {
     mixed acs;
-    object env;
+    object env = environment(ob);
 
-    if (!(env = environment(for_obj)))
+    /* Allow to proceed if the target is non-interactive. */
+    if (objectp(ob) && !interactive(ob))
     {
-	return 1;
+        return 1;
     }
 
-    if (!(acs = env->block_action(query_verb(), ob, for_obj, cmd_attr)))
+    /* Environment may block the action. */
+    if (objectp(env) && (acs = env->block_action(query_verb(), ob, for_obj, cmd_attr)))
     {
-	if (!(acs = ob->block_action(query_verb(), for_obj, cmd_attr)))
-	{
-	    return 1;
-	}
+        if (stringp(acs))
+        {
+	    parse_msg += acs;
+        }
+        return 0;
     }
 
-    if (stringp(acs))
+    /* Target player may block the action. */
+    if (acs = ob->block_action(query_verb(), 0, for_obj, cmd_attr))
     {
-	parse_msg += acs;
-	return 0;
+        if (stringp(acs))
+        {
+	    parse_msg += acs;
+        }
+        return 0;
     }
 
-    return !!acs;
+    return 1;
 }
 
 /*
@@ -615,7 +686,7 @@ parse_this(string str, string form, int cmd_attr = 0, int allow_self = 0)
     if (sscanf(str, "%s except %s", target, except) == 2)
     {
 	oblist = parse_this_and(target, form, allow_self) -
-	parse_this_and(except, form, allow_self);
+	    parse_this_and(except, form, allow_self);
     }
     else
     {
@@ -737,6 +808,7 @@ public string *
 parse_adverb_with_space(string str, string def_adv, int trail)
 {
     string *pa = parse_adverb(str, def_adv, trail);
+
     return ({ pa[0], ADD_SPACE_TO_ADVERB(pa[1]) });
 }
 

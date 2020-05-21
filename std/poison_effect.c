@@ -73,6 +73,9 @@ object poisonee; /* The victim that is being poisoned                   */
 string responsible_object; /* The object that cloned the poison into us */
 string responsible_living; /* The living responsible for the poisoning. */
 
+/* Prototype. */
+public void remove_object();
+
 /*
  * A property we use when the player is linkdead.
  */
@@ -399,9 +402,8 @@ kill_player()
     a_time = 0;
 
     tell_object(poisonee, "You have died.\n");
+    set_alarm(0.0, 0.0, remove_object);
     poisonee->do_die(this_object());
-
-    remove_object();
 }
 
 /*
@@ -609,7 +611,7 @@ start_poison(object poisoner)
         {
             poisoner = previous_ob->query_wielded();
         }
-        if (objectp(poisoner))
+        if (!objectp(poisoner))
         {
             poisoner = this_player();
             responsible_living = "TP: ";

@@ -8,9 +8,6 @@
 
 #include <config.h>
 
-inherit MAIL_INFO_OBJ;
-inherit SPECIAL_INFO_OBJ;
-
 #include <const.h>
 #include <formulas.h>
 #include <language.h>
@@ -46,30 +43,23 @@ private int	exp_points,
 		*learn_pref,
 		alignment,
 		*acc_exp,
-                restricted,
                 scar;
 
 private mapping m_remember_name = ([ ]);
+private mapping skillmap;
+private mapping m_vars;
 
 private static int wiz_level;
 private static int stats_set=0;
 private static int *stats;
 
 #define STAT if (!stats_set) acc_exp_to_stats()
+
 static void acc_exp_to_stats();
 
 void
 create()
 { 
-    seteuid(0);
-}
-
-void
-finger_info()
-{
-    seteuid(getuid());
-    finger_mail();
-    finger_special();
     seteuid(0);
 }
 
@@ -88,6 +78,10 @@ load_player(string pl_name)
     seteuid(0);
 
     wiz_level = (SECURITY->query_wiz_rank(pl_name) > WIZ_MORTAL);
+
+    /* Ensure the mapping is initialized. */
+    if (!mappingp(m_vars))
+	m_vars = ([ ]);
 
     /* Protect against too short arrays. */
     acc_exp = acc_exp + allocate(SS_NO_STATS - sizeof(acc_exp));
@@ -197,7 +191,17 @@ query_the_name(object pobj)
 
 string query_The_name(object pobj) { return capitalize(query_the_name(pobj)); }
 
-string query_mailaddr() { return mailaddr; }
+string
+query_mailaddr()
+{
+    string ceuid = geteuid(calling_object());
+    if (ceuid == ROOT_UID || SECURITY->query_wiz_rank(ceuid) >= WIZ_ARCH ||
+        SECURITY->query_team_member("aop", ceuid)) {
+        return mailaddr;
+    }
+    return "";
+}
+
 
 string query_player_file() { return player_file; }
 
@@ -464,7 +468,7 @@ stat_living()
 		  to->query_exp_quest(),
 		  to->query_exp_combat(),
 		  to->query_exp_general(),
-                  SS_STAT_DESC,
+                  SD_STAT_DESC,
 
                   ({ query_stat(SS_STR), query_stat(SS_DEX),
                      query_stat(SS_CON), query_stat(SS_INT),
@@ -508,7 +512,7 @@ remove_object()
 public int
 query_restricted()
 {
-    return restricted;
+    return mappingp(m_vars) ? m_vars[SAVEVAR_RESTRICT] : 0;
 }
 
 public string
@@ -527,6 +531,32 @@ query_student()
 	return ({});
 
     return student;
+}
+
+public int *
+query_all_skill_types()
+{
+    if (!mappingp(skillmap))
+        return 0;
+    return m_indexes(skillmap);
+}
+
+public int
+query_skill(int skill)
+{
+    if (!mappingp(skillmap))
+        return 0;
+
+    return skillmap[skill];
+}
+
+public int
+query_base_skill(int skill)
+{
+    if (!mappingp(skillmap))
+        return 0;
+
+    return skillmap[skill];
 }
 
 public mapping

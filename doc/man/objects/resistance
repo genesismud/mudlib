@@ -201,16 +201,129 @@ remove(object ob)
     return 0;
 }
 
+How resistance is applied in practice
+=====================================
+How magic resistance is applied in practice isn't intuitive. There 
+are at least three stages of resistance checks that can impact the 
+damage output or success of a spell.
+
+First, the relevant MAGIC_I_RES_* is checked, which gives a flat 
+resistance (20% = 20%). If it fails this check, the spell fails. 
+Simples.
+
+If it passes this initial check, a secondary check is conducted at 
+80% of the resistance value to determine the penetration value of 
+the spell. If the check fails, the spell is set to 0 penetration, 
+and in effect negated. 
+
+If the secondary check succeeds the penetration of the spell is 
+reduced, impacting the damage output or effectiveness of the spell.
+
+So in effect the addition of magic resistance properties provides three 
+levels of benefit.
+
+It is important to take this into account when applying resistances to 
+creatures, magical item benefits, or guild abilities.
+
+The following table provides a guideline on the benefits of different 
+levels of MAGIC_I_RES_* property settings:
 
 
+MAGIC_I_RES_*  PEN       Chance for   Average      Efficiency   Effective 
+                         0 pen        Pen          in %         Resistance
+---------------------------------------------------------------------------
+0.0%           1446      0.0%         1446         100          0
+5.0%           1373.7    4.0%         1318.752     91.2         8.8
+10.0%          1301.4    8.0%         1197.288     82.8         17.2
+15.0%          1229.1    12.0%        1081.608     74.8         25.2
+20.0%          1156.8    16.0%        971.712      67.2         32.8
+25.0%          1084.5    20.0%        867.6        60           40
+30.0%          1012.2    24.0%        769.272      53.2         46.8
+35.0%          939.9     28.0%        676.728      46.8         53.2
+40.0%          867.6     32.0%        589.968      40.8         59.2
+45.0%          795.3     36.0%        508.992      35.2         64.8
+50.0%          723       40.0%        433.8        30           70
+55.0%          650.7     44.0%        364.392      25.2         74.8
+60.0%          578.4     48.0%        300.768      20.8         79.2
+65.0%          506.1     52.0%        242.928      16.8         83.2
+70.0%          433.8     56.0%        190.872      13.2         86.8
+75.0%          361.5     60.0%        144.6        10           90
+80.0%          289.2     64.0%        104.112      7.2          92.8
+85.0%          216.9     68.0%        69.408       4.8          95.2
+90.0%          144.6     72.0%        40.488       2.8          97.2
+95.0%          72.3      76.0%        17.352       1.2          98.8
+100.0%         0         80.0%        0            0            100
 
 
+Determining combat aid for guild resistance specials
+====================================================
 
+Spells that provide resistance protection are quite common, specials less
+so. Regardless, any guild ability that offers resistance protection will 
+have a combat aid cost applied to their guild's total combat aid cap 
+equating to 1% of combat aid per point of resistance offered.
 
+Only one magical damage type can be applied from a magical attack, so the 
+benefit of multiple resistance types technically do not stack when 
+determining the aid of specials or spells that provide multiple resistance.
 
+However this is not a balanced way of looking at resistances, and runs the
+risk of spells and specials providing blanket immunity across all forms
+at the same combat aid cost as targeted/tailored resistance options that 
+make players actually think about the damage types they are likely to face.
 
+So the following guidelines should be followed when incorporating resistance
+abilities to a guild and determining the combat aid benefit to be applied 
+towards the guild's combat aid cap:
 
+* For a guild special that isn't a spell, each point of form resistance costs 
+  1% combat aid.
 
+* Resistance spells must use the /d/Genesis/specials/std/spells/resistance.c
+  base spell as the spell template.
 
+* Up to three MAGIC_I_RES_* form resistances may be included in such a 
+  resistance spell for a combat aid cost of 1% per resistance point of the
+  highest MAGIC_I_RES_* form resistance offered by the spell.
+
+  So a resistance spell offering MAGIC_I_RES_FIRE of 15, MAGIC_I_RES_COLD of
+  14, and MAGIC_I_RES_POISON of 13 would have a combat aid benefit of 15%.
+
+* If the spell offers more than three MAGIC_I_RES_* resistances, an additional
+  combat aid multiple of x1.1 (i.e 10% extra) is applied for each of the 
+  additional spell form resistances over the original three.
+
+  So a resistance spell offering MAGIC_I_RES_FIRE, MAGIC_I_RES_COLD,
+  MAGIC_I_RES_POISON, MAGIC_I_RES_AIR, and MAGIC_I_RES_EARTH of 15 would have a 
+  combat aid benefit of 15% multipled by a factor of x1.2 (two additional
+  resistances over the base three), providing a combat aid benefit of 18%.
+
+* If the spell offers less than three MAGIC_I_RES_* form resistances, that
+  spell's combat aid is calculated at a multiple reduction of 1.1 (10%) per 
+  resistance less than the base three.
+
+  So a resistance spell offering only MAGIC_I_RES_FIRE at 15 will have an
+  effective combat aid benefit reduced by 20% (2 less resistances than the 
+  base three) for a combat aid of 12%, while a resistance spell that offers
+  both MAGIC_I_RES_FIRE and MAGIC_I_RES_AIR at 15 will have an effective
+  combat aid reduced by 10% (1 less resistance than the base three) for 
+  a combat aid of 13.5%.
+
+* As MAGIC_I_RES_MAGIC resistance provides resistance against all the forms
+  of which there are 14 (12 if you exclude *_MAGIC and *_IDENTIFY), this
+  resistance type is treated differently from individual forms when 
+  determining combat aid benefit. Every point of MAGIC_I_RES_MAGIC is counted
+  as 2% combat aid. This aid is cumulative with other form resistances 
+  offered.
+
+  So a resistance spell offering MAGIC_I_RES_MAGIC at 15 would have a combat
+  aid benefit of 30%.  A spell offering MAGIC_I_RES_MAGIC at 15 and 
+  MAGIC_I_RES_AIR at 15 would have a combat aid benefit of 42% (30% for the
+  *_RES_MAGIC component and 12% for the *_RES_AIR component).
+
+* Resistance spells shouldn't mix meta and physical resistances (i.e. 
+  physical being acid/cold/fire and meta being life/death etc), however this
+  guideline can be bent for appropriate thematic reasons. Any such spells
+  need to be approved by both the domain Liege and AoB.
 
 

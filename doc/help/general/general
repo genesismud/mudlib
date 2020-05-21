@@ -11,6 +11,7 @@ DESCRIPTION
         --------
         wear|remove <armour>, wield|unwield <weapon>, kill <enemy>,
         options wimpy <state>, see <fights|no fights>
+        aim, shoot, fire (archery skills)
 
         Activities
         ----------

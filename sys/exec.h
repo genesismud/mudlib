@@ -18,6 +18,7 @@
  *
  * FP(s)   find_player(s)
  * FL(s)   find_living(s)
+ * FO(s)   find_object(s)
  * ENV(o)  environment(o)
  * INV(o)  all_inventory(o)
  * CAP(s)  capitalize(s)
@@ -51,6 +52,10 @@
 #ifndef FL
 #define FL(s)  (find_living(s))
 #endif  FL
+
+#ifndef FO
+#define FO(s)  (find_object(s))
+#endif  FO
 
 #ifndef ENV
 #define ENV(o) (environment(o))

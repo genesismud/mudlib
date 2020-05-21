@@ -20,20 +20,15 @@
  * - tree
  */
 
-#include <filepath.h>
+#include <files.h>
 #include <stdproperties.h>
 #include <options.h>
 
 /* These properties are used by this object only. */
 #define WIZARD_AS_DIRPATH   "_wizard_as_dirpath"
 #define WIZARD_S_LAST_DIR   "_wizard_s_last_dir"
-#define WIZARD_S_TAIL_PATH  "_wizard_s_tail_path"
-#define WIZARD_I_TAIL_LIMIT "_wizard_i_tail_limit"
 
-#define MAX_TREE_SIZE   ( 60)
-#define TAIL_READ_CHUNK (800)
-
-#define REOPEN_SOUL	("reopen_soul")
+#define MAX_TREE_SIZE     (60)
 
 #define SPACES ("                              ")
 
@@ -246,14 +241,17 @@ list_files(string path)
     int     i;
     int     j;
     int     ml, mf;
-    int     size;
+    int     size, len;
     mixed   tmp;
     string  mode;
+    string  prefix;
     string *files;
     string *items;
+    int     scrw = this_player()->query_option(OPT_SCREEN_WIDTH);
 
     CHECK_SO_WIZ;
 
+    scrw = ((scrw >= 40) ? (scrw - 1) : 79);
     mode = "";
 
     if (!stringp(path))
@@ -360,34 +358,35 @@ list_files(string path)
     {
         mf    = !wildmatch("*f*", mode);
         ml    = 1;
-	i     = -1;
 	items = files + ({});
 	files = ({});
+	/* Allow for long file names, but at least 20 chars. */
+        int len = max(20, min((scrw-32), applyv(max, map(items, strlen))) + 1);
 
-	while (++i < size)
+	foreach(string fname: items)
 	{
-	    if ((j = file_size(path + items[i])) == -2)
+	    if ((j = file_size(path + fname)) == -2)
 	    {
 		if (mf)
 		{
-		    items[i] = items[i] + "/";
+		    fname += "/";
 		}
-		files += ({ "d " });
-		j      = 512;
+		prefix =  "d";
+		j      = 0;
 	    }
-	    else if (find_object(path + items[i]))
+	    else if (find_object(path + fname))
 	    {
-		files += ({ "* " });
+		prefix =  "*";
 	    }
 	    else
 	    {
-		files += ({ "- " });
+		prefix =  "-";
 	    }
 
-	    tmp = ctime(file_time(path + items[i]));
+	    tmp = ctime(file_time(path + fname));
 	    tmp = tmp[4..9] + tmp[19..23] + tmp[10..15];
 
-	    files[i] += sprintf("%-20s%10d  %s", items[i], j, tmp);
+	    files += ({ sprintf("%1s %-*s%10d  %s", prefix, len, fname, j, tmp) });
 	}
     }
 
@@ -435,8 +434,8 @@ list_files(string path)
     }
     else
     {
-	tmp = sprintf("%-*#s\n", 76, implode(files, "\n"));
-	if (strlen(tmp) > 5000)
+	tmp = sprintf("%-*#s\n", scrw, implode(files, "\n"));
+	if (strlen(tmp) > 4000)
 	{
 	    this_player()->more(tmp);
 	}
@@ -606,104 +605,7 @@ pwd()
 /* **************************************************************************
  * tail - display the end of a file.
  */
-
-/*
- * Function name: tail_input_player
- * Description  : Input function for the "tail -r" command. We call the
- *                function reload_soul in the player to get an euid into
- *                the soul again and then display more text.
- * Arguments    : string str - the input-argument.
- */
-nomask void
-tail_input_player(string str)
-{
-    str = (strlen(str) ? lower_case(str) : "u");
-
-    switch(str[0])
-    {
-    case 'q':
-    case 'x':
-	/* Clean up after ourselves. */
-	this_interactive()->remove_prop(WIZARD_S_TAIL_PATH);
-	this_interactive()->remove_prop(WIZARD_I_TAIL_LIMIT);
-	return;
-
-    case 'u':
-	call_other(this_interactive(), REOPEN_SOUL);
-	return;
-
-    default:
-	write("Invalid command. \"q/x\" to quit or RETURN to continue --- ");
-	input_to(tail_input_player);
-	return;
-    }
-
-    write("Impossible end of tail_input_player() in the apprentice soul.\n" +
-      "Notify the administration.\n");
-}
-
-/*
- * Function name: tail_lines
- * Description  : This function will actually print a part of the file that
- *                the wizard wants to tail.
- */
-private void
-tail_lines()
-{
-    string path  = this_interactive()->query_prop(WIZARD_S_TAIL_PATH);
-    int    size  = file_size(path);
-    int    limit = this_interactive()->query_prop(WIZARD_I_TAIL_LIMIT);
-    int    begin = limit - TAIL_READ_CHUNK;
-    string text;
-    string *lines;
-
-    /* If we reach the begin of the file, stop. */
-    if (begin <= 0)
-    {
-	text = read_bytes(path, 0, limit);
-	write(text + "BOF\n");
-	this_interactive()->remove_prop(WIZARD_S_TAIL_PATH);
-	this_interactive()->remove_prop(WIZARD_I_TAIL_LIMIT);
-	return;
-    }
-
-    text = read_bytes(path, begin, TAIL_READ_CHUNK);
-    lines = explode(text, "\n");
-
-    /* If there is at least one line, only print the complete lines. */
-    if (sizeof(lines) > 1)
-    {
-	text = implode(lines[1..], "\n");
-    }
-
-    write(text + "\n");
-    limit -= (strlen(text) + 1);
-    write("TAIL " + limit + "/" + size + " (" + (100 * limit / size) + "%)" +
-      " --- \"q/x\" to quit, RETURN to continue --- ");
-
-    this_interactive()->add_prop(WIZARD_I_TAIL_LIMIT, limit);
-    input_to(tail_input_player);
-}
-
-/*
- * Function name: tail_input_player_reloaded
- * Description  : When the euid of this object has been set to the euid
- *                of the wizard again, print more of the file.
- */
-public nomask void
-tail_input_player_reloaded()
-{
-    if ((previous_object() != this_interactive()) ||
-      (calling_function() != REOPEN_SOUL))
-    {
-	write("Illegal call to tail_input_player_reloaded().\n");
-	return;
-    }
-
-    tail_lines();
-}
-
-nomask int
+int
 tail_file(string path)
 {
     int reverse;
@@ -751,17 +653,7 @@ tail_file(string path)
 	return 0;
     }
 
-    /* If the file is too small, print the whole file. */
-    if (size <= TAIL_READ_CHUNK)
-    {
-	cat(path);
-	return 1;
-    }
-
-    /* Add the relevant information to the player in properties. */
-    this_interactive()->add_prop(WIZARD_S_TAIL_PATH, path);
-    this_interactive()->add_prop(WIZARD_I_TAIL_LIMIT, size);
-    tail_lines();    
+    this_player()->tail(path);
     return 1;
 }
 

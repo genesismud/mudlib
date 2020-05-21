@@ -1,6 +1,6 @@
 Property   : LIVE_M_NO_SCRY   (and LIVE_I_NO_SCRY)
 
-Defined in : #include <stdproperties.H
+Defined in : #include <stdproperties.h>
 
 Description: This property is used to indicate that it is not possible to scry
              this person. The property may return a string with a specific

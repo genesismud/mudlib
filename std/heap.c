@@ -10,6 +10,7 @@
 inherit "/std/object";
 
 #include <cmdparse.h>
+#include <formulas.h>
 #include <language.h>
 #include <macros.h>
 #include <ss_types.h>
@@ -18,18 +19,18 @@ inherit "/std/object";
 /*
  * Protoypes.
  */
-void count_up(float delay, int amount, int counted);
-int count(string str);
-int stop(string str);
 int heap_volume();
 int heap_weight();
 int heap_value();
 int heap_light();
 int no_garbage_collection();
 void collect_garbage();
+public int num_heap();
 
+/* Global variables. */
 static         int     item_count,   /* Number of items in the heap */
-                       leave_behind; /* Number of items to leave behind */
+                       leave_behind, /* Number of items to leave behind */
+                       heapdiff = random(81)-40; /* inaccuracy on heap count */
 static private int     count_alarm,
                        gNo_merge;
 static private mapping gOwn_props;
@@ -70,18 +71,6 @@ reset_object()
 }
 
 /*
- * Function name: init
- * Description  : This function is called each time the object 'meets' another
- *                object.
- */
-void
-init()
-{
-    ::init();
-    add_action(count, "count");
-}
-
-/*
  * Function name: heap_weight
  * Description  : The weight of the heap, used by OBJ_I_WEIGHT
  * Returns      : int - the weight of the heap, in grams.
@@ -89,7 +78,7 @@ init()
 public int
 heap_weight()
 {
-    return query_prop(HEAP_I_UNIT_WEIGHT) * (item_count - leave_behind);
+    return query_prop(HEAP_I_UNIT_WEIGHT) * num_heap();
 }
 
 /*
@@ -100,7 +89,7 @@ heap_weight()
 public int
 heap_volume()
 {
-    return query_prop(HEAP_I_UNIT_VOLUME) * (item_count - leave_behind);
+    return query_prop(HEAP_I_UNIT_VOLUME) * num_heap();
 }
 
 /*
@@ -111,7 +100,7 @@ heap_volume()
 public int
 heap_value()
 {
-    return query_prop(HEAP_I_UNIT_VALUE) * (item_count - leave_behind);
+    return query_prop(HEAP_I_UNIT_VALUE) * num_heap();
 }
 
 /*
@@ -122,7 +111,7 @@ heap_value()
 public int
 heap_light()
 {
-    return query_prop(HEAP_I_UNIT_LIGHT) * (item_count - leave_behind);
+    return query_prop(HEAP_I_UNIT_LIGHT) * num_heap();
 }
 
 /*
@@ -160,9 +149,22 @@ set_heap_size(int num)
         num = 0;
     }
     item_count = num;
+    leave_behind = min(num, leave_behind);
 
     /* We must update the weight and volume of what we reside in. */
     update_state();
+}
+
+/*
+ * Function name: reduce_heap_size
+ * Description  : This reduces the heap with a certain number. If the heap is
+ *                not big enough, it will be removed completely.
+ * Arguments    : int num - the number of items to remove (default = 1).
+ */
+public varargs void
+reduce_heap_size(int num = 1)
+{
+    set_heap_size(item_count - num);
 }
 
 /*
@@ -197,6 +199,7 @@ query_leave_behind()
  *                moved. Afterwards the heap is restored.
  * Arguments    : int num - the number of items that is being split from the
  *                    heap in order to be moved.
+ * Returns      : int - the number of items split off (same as input).
  */
 public int
 split_heap(int num)
@@ -294,14 +297,13 @@ short(object for_obj)
     {
         return 0;
     }
-    if (num_heap() < 2)
+    if (num_heap() == 1)
     {
         str = singular_short(for_obj);
         return LANG_ADDART(str);
     }
 
     str = plural_short(for_obj);
-
     if (num_heap() < 12) 
     {
         return LANG_WNUM(num_heap()) + " " + str;
@@ -310,12 +312,18 @@ short(object for_obj)
     {
         return "a dozen " + str;
     }
-    if (this_player()->query_stat(SS_INT) / 2 > num_heap())
+    /* Need enough intelligence or be a wizard to see the count. */
+    if ((num_heap() <= F_HEAP_SEE_COUNT(for_obj->query_stat(SS_INT))) ||
+        for_obj->query_wiz_level())
     {
-        return num_heap() + " " + str;
+        return sprintf("%,d", num_heap()) + " " + str;
     }
 
-    return (num_heap() < 1000 ? "many " : "a huge heap of ") + str;
+    if (num_heap() < (500 + (heapdiff / 2)))
+	return "many " + str;
+    if (num_heap() < (1000 + heapdiff))
+	return "a heap of " + str;
+    return "a huge heap of " + str;
 }
 
 /*
@@ -368,9 +376,8 @@ query_pronoun()
 
 /*
  * Function name: make_leftover_heap
- * Description:   clone a heap to be used as the leftover
- *                heap after a split
- * Returns:       The leftover heap object 
+ * Description  : Clone a heap to be used as the leftover heap after a split.
+ * Returns      : object - the leftover heap object
  */
 public object
 make_leftover_heap()
@@ -395,7 +402,10 @@ make_leftover_heap()
 }
      
 /*
- * Description: Called when heap leaves it's environment
+ * Description: Called when heap leaves it's environment. It will leave behind
+ *              the leftover heap.
+ * Arguments  : object env - the environment we are leaving.
+ *              object dest - the destination we are entering (or 0).
  */
 public void
 leave_env(object env, object dest)
@@ -411,103 +421,86 @@ leave_env(object env, object dest)
 }
 
 /*
- * Description: Called when heap enters and environment
+ * Function Name: force_heap_merge
+ * Description  : Call this routine to check whether this heap can be merged
+ *                with similar heaps. Bypasses the gNoMerge variable. Use only
+ *                if you know what you're doing.
  */
 public void
-enter_env(mixed env, object old)
+force_heap_merge()
 {
-    object *ob;
-    int i, tmphide, tmpinvis;
-    string unique;
+    object *obs;
+    int tmphide, tmpinvis;
 
-    ::enter_env(env, old);
-
-    if (gNo_merge)
-    {
+    /* Don't merge if we are going to self-destruct. */
+    if (query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
         return;
-    }
 
-    if (!objectp(env))
-    {
-        env = find_object(env);
-    }
-    ob = filter(all_inventory(env) - ({ this_object() }),
-        &->query_prop(HEAP_I_IS));
+    obs = filter(all_inventory(environment(this_object())) - ({ this_object() }),
+        &operator(==)(query_prop(HEAP_S_UNIQUE_ID), ) @ &->query_prop(HEAP_S_UNIQUE_ID));
+    obs = filter(obs, not @ &->query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT));
 
     tmphide = !!query_prop(OBJ_I_HIDE);
     tmpinvis = !!query_prop(OBJ_I_INVIS);
-    unique = query_prop(HEAP_S_UNIQUE_ID);
 
-    for (i = 0; i < sizeof(ob); i++)
+    foreach(object obj: obs)
     {
-        if ((ob[i]->query_prop(HEAP_S_UNIQUE_ID) == unique) &&
-            (!!ob[i]->query_prop(OBJ_I_HIDE) == tmphide) &&
-            (!!ob[i]->query_prop(OBJ_I_INVIS) == tmpinvis) &&
-            !ob[i]->query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
+        if ((!!obj->query_prop(OBJ_I_HIDE) == tmphide) &&
+            (!!obj->query_prop(OBJ_I_INVIS) == tmpinvis))
         {
-            ob[i]->set_heap_size(item_count + ob[i]->num_heap());
- 
-            if (ob[i]->query_keepable() && !(ob[i]->query_keep()))
-            {
-                ob[i]->set_keep(this_object()->query_keep());
-            }
-
             leave_behind = 0;
-            catch(move(ob[i], 1));
-            add_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT, 1);
-	    set_alarm(0.0, 0.0, remove_object);
+            obj->config_merge(this_object());
+            obj->set_heap_size(item_count + obj->num_heap());
+	    add_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT, 1);
+	    catch(move(obj, 1));
+            set_alarm(0.0, 0.0, remove_object);
             return;
         }
     }
 }
 
 /*
- * Function name: set_no_merge
- * Description:   Make sure that the heap won't merge
+ * Function name: enter_env
+ * Description  : Called when heap enters an environment. We check whether
+ *                there are any similar heaps to merge with.
+ * Arguments    : mixed env - the new environment.
+ *                object old - the old environment.
  */
 public void
-set_no_merge(int i)
+enter_env(mixed env, object old)
 {
-    if (i && !gNo_merge)
+    object *obs;
+    int tmphide, tmpinvis;
+
+    ::enter_env(env, old);
+
+    if (!gNo_merge)
     {
-        set_alarm(0.0, 0.0, &set_no_merge(0));
-    }
-
-    gNo_merge = i;
-}
-
-public void
-force_heap_merge()
-{
-    object *ob;
-    int i, tmphide, tmpinvis;
-    string unique;
-
-    ob = filter(all_inventory(environment(this_object())) - ({ this_object() }),
-        &->query_prop(HEAP_I_IS));
-
-    tmphide = !!query_prop(OBJ_I_HIDE);
-    tmpinvis = !!query_prop(OBJ_I_INVIS);
-    unique = query_prop(HEAP_S_UNIQUE_ID);
-
-    for (i = 0; i < sizeof(ob); i++)
-    {
-        if ((ob[i]->query_prop(HEAP_S_UNIQUE_ID) == unique) &&
-            (!!ob[i]->query_prop(OBJ_I_HIDE) == tmphide) &&
-            (!!ob[i]->query_prop(OBJ_I_INVIS) == tmpinvis) &&
-            !ob[i]->query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
-        {
-            ob[i]->set_heap_size(item_count + ob[i]->num_heap());
-	    add_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT, 1);
-            set_alarm(0.0, 0.0, remove_object);
-        }
+       force_heap_merge();
     }
 }
 
 /*
+ * Function name: set_no_merge
+ * Description  : Make sure that the heap won't merge.
+ * Arguments    : int merge - if true, the heap won't merge.
+ */
+public void
+set_no_merge(int merge)
+{
+    if (merge && !gNo_merge)
+    {
+        set_alarm(0.0, 0.0, &set_no_merge(0));
+    }
+
+    gNo_merge = merge;
+}
+
+/*
  * Function name: force_heap_split
- * Description:   Cause the heap to split into two.
- * Returns:       The new heap
+ * Description  : Cause the heap to split into two. The new heap won't merge
+ *                back into the old heap.
+ * Returns      : object - the new heap
  */
 public object
 force_heap_split()
@@ -535,7 +528,28 @@ query_prop_map()
 }
 
 /*
- * Description: This is called before inserting this heap into the game
+ * Function name: config_merge
+ * Description  : This is called when a heap merges with another heap. It
+ *                is called in the parent heap where the child gets merged
+ *                into. It is called before the heap size is adjusted.
+ * Arguments    : object child - the child that gets merged into us.
+ */
+void
+config_merge(object child)
+{
+    if (child->query_keep())
+    {
+        this_object()->set_keep(1);
+    }
+}
+
+/*
+ * Function name: config_split
+ * Description  : This is called when a heap is split into two. It will set
+ *                various necessary values of the new heap identical to the
+ *                old heap.
+ * Arguments    : int new_num - the number of elements in the new heap.
+ *                object orig - the parent object we split from.
  */
 void
 config_split(int new_num, object orig)
@@ -560,100 +574,6 @@ config_split(int new_num, object orig)
 }
 
 /*
- * Description: Function called when player gives 'count' command
- */
-public int
-count(string str)
-{
-    string *tmp;
-    float delay;
-    int intg;
-
-    if (!check_seen(this_player()))
-    {
-        return 0;
-    }
-
-    if (this_player()->query_attack())
-    {
-        notify_fail("You are too busy fighting to count anything!\n");
-        return 0;
-    }
-
-    if (!stringp(str) ||
-        !parse_command(str, ({ this_object() }), "%i", tmp))
-    {
-        notify_fail("Count what?\n", 0);
-        return 0;
-    }
-
-    intg = this_player()->query_stat(SS_INT);
-    delay = 60.0 / itof(intg);
-    /* count_arg contains interval, coins per count and total so far */
-    count_alarm = set_alarm(delay, 0.0, &count_up(delay, 5 * (intg / 10 + 1), 0));
-    add_action(stop, "", 1);
-
-    write("You start counting your " + plural_short(this_player()) + ".\n");
-    say(QCTNAME(this_player()) + " starts to count some " +
-        plural_short(this_player()) + ".\n");
-    return 1;
-}
-
-/*
- * Description: Stop counting the items in the heap.
- */
-varargs int
-stop(string str)
-{
-    if (query_verb() == "stop")
-    {
-        update_actions();
-        remove_alarm(count_alarm);
-        write("You stop counting.\n");
-        say(QCTNAME(this_player()) + " stops counting.\n");
-        return 1;
-    }
-
-    /* Allow wizards and allow commands that are allowed. */
-    if (this_player()->query_wiz_level() ||
-    	CMDPARSE_PARALYZE_CMD_IS_ALLOWED(query_verb()))
-    {
-        /* When quitting, update the actions, so people can drop stuff. */
-        if (query_verb() == "quit")
-        {
-            update_actions();
-        }
-        return 0;
-    }
-    
-    write("You are busy counting. You have to stop if you want " +
-        "to do something else.\n");
-    return 1;
-}
-
-/*
- * Description: Count some more, how much depends on intelligence of player
- */
-void
-count_up(float delay, int amount, int counted)
-{
-    counted += amount;
-    if (counted < num_heap())
-    {
-        write("... " + counted + "\n");
-        count_alarm = set_alarm(delay, 0.0, &count_up(delay, amount, counted));
-    }
-    else
-    {
-        write("The last count reached " + num_heap() + ".\n");
-        say(QCTNAME(this_player()) + " finishes " +
-            this_player()->query_possessive() + " count.\n");
-        update_actions();
-        count_alarm = 0;
-    }
-}
-
-/*
  * Function name: collect_garbage
  * Description  : When the heap is still in the void some time after it was
  *                cloned, we destruct it to save memory. If you really do not
@@ -663,7 +583,7 @@ count_up(float delay, int amount, int counted)
 void
 collect_garbage()
 {
-    if (!environment())
+    if (!environment() && IS_CLONE)
     {
         remove_object();
     }
@@ -686,13 +606,24 @@ no_garbage_collection()
 /*
  * Function name: appraise_number
  * Description:   This function is called when someon tries to appraise number 
- *                of pices in heap of this object.
+ *                of pieces in heap of this object. If the number of items in
+ *                the heap is less than you can see in one go, it shows the
+ *                real number.
  * Arguments:     num - use this number instead of skill if given.
  */
 public int
 appraise_number(int num)
 {
-    int value, skill, seed;
+    int value = num_heap();
+    int skill, seed;
+
+    /* Up to a dozen, or player can see the number in one go. */
+    if ((value <= 12) ||
+        (value <= F_HEAP_SEE_COUNT(this_player()->query_stat(SS_INT))))
+    {
+        return value;
+    }
+
 
     if (!num)
         skill = this_player()->query_skill(SS_APPR_OBJ);
@@ -700,7 +631,6 @@ appraise_number(int num)
         skill = num;
 
     skill = 1000 / (skill + 1);
-    value = num_heap();
     sscanf(OB_NUM(this_object()), "%d", seed);
     skill = random(skill, seed);
     value = cut_sig_fig(value + (skill % 2 ? -skill % 70 : skill) *
@@ -716,11 +646,16 @@ void
 appraise_object(int num)
 {
     write(this_object()->long() + "\n");
-    write(break_string("You appraise that the weight is " +
-        appraise_weight(num) + " and you guess its volume is about " +
-        appraise_volume(num) + ".\n", 75));
-    write(break_string("You estimate that there are " + appraise_number(num) + 
-        " pieces worth approx " + appraise_value(num) + ".\n", 75));
+    write("You " + APPRAISE_VERB + " that the weight is " +
+        appraise_weight(num) + " and you " + APPRAISE_VERB +
+	" its volume is " + appraise_volume(num) + ". ");
+    if (num_heap() > 1)
+        write("You " + APPRAISE_VERB + " that there are " +
+	    appraise_number(num) + " " + query_pname() + " worth " +
+	    appraise_value(num) + ".\n");
+    else
+        write("You " + APPRAISE_VERB + " the " + singular_short() +
+            " to be worth " + appraise_value(num) + ".\n");
 }
 
 /*
@@ -732,13 +667,9 @@ appraise_object(int num)
 string
 stat_object()
 {
-    string str;
+    string str = ::stat_object();
 
-    str = ::stat_object();
-
-    str += "Num: " + num_heap() + ".\n";
-
-    return str;
+    return str + "Count: " + num_heap() + "\n";
 }
 
 /*

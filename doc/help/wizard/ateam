@@ -5,6 +5,7 @@ SYNOPSIS
 	ateam
 	ateam add <team> <member>
 	ateam remove <team> <member>
+	ateam leader <team> <member>
 
 ACCESS LEVEL
 	Archwizard
@@ -31,6 +32,10 @@ ARGUMENTS
 	   it's automatically removed. At the same time any old
 	   member of any team who has changed wizard status and
 	   no longer is a full wizard is removed.
+
+	ateam leader <team> <member>
+	   Promotes a team member to the team leader. Demoting
+           any previous leader to team member.
 
 ADMINISTRATIVE COMMENTS
 	All team members have global read.

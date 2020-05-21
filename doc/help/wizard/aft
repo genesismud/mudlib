@@ -2,27 +2,25 @@ NAME
 	aft - [Avenir's] file tracker
 
 SYNOPSIS
-	aft			defaults to "aft lu" (list all changed)
-	aft c <file>		catchup; mark <file> as tracked
-	aft C			catchup; mark all files as tracked
-	aft lu			list all tracked files that have changed
-	aft l			list all tracked files
-        aft r [<file>]          read the next file being tracked using "tail".
-	aft rr [<file>]		as "aft r", but using "tail -r"
-	aft s <path> [<name>]	select a file for tracking
-	aft u <file>		unselect <file> for tracking
-        aft U			unselect all files
+	aft			defaults to "aft lu" (list all changed).
+	aft c <file>		catchup; mark <file> as tracked.
+	aft C			catchup; mark all files as tracked.
+	aft lu			list all tracked files that have changed.
+	aft l			list all tracked files.
+        aft n [<file>]          display new lines in the next tracked file.
+        aft r [<file>]          use "tail -r" on the next tracked file.
+	aft s <path> [<name>]	select a file for tracking.
+	aft u <file>		unselect <file> for tracking.
+        aft U			unselect all files.
 
 DESCRIPTION
 	The file tracker can be used to keep track of (log) files. You can
 	register a file in your list of tracked files. Then, it will keep
-	track of whether the file changed since you last read it. To do
-	this, the file-time of the last edit action on the file is kept for
-	you.
+	track of whether the file changed since you last read it.
 
-	When you read the file, the "tail" of the file is printed to your
-	screen. Using the "rr" subcommand, the "tail -r" is printed, allowing
-	you to scroll up in the file.
+	When you read the file, either the new lines are displayed, or the
+	"tail -r" is printed, allowing you to scroll up in the file.
+	Recommended use: "aft n"
 
 	A typical "aft l" list looks as follows. The list is sorted based on
 	the file name. To refer to a file, you can use the number, the name
@@ -56,8 +54,3 @@ ARGUMENTS
 
 SEE ALSO
 	tail
- 
-CAVEAT
-	With aft, a wizard will force him/herself to tail a particular file.
-        Therefore, using %% after an "aft r" will result in the same file being
-	tailed again, and not in another "aft r".

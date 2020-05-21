@@ -38,7 +38,6 @@ static private mapping  player;
 static private int      *bit_wizlist;
 static private int      *bit_bitlist;
 static private mixed    change = CHANGE;
-static private int      c_size = sizeof(change);
 static private int      doing_saved;
 static private string   source = DOMAIN;
 static private string   destination = DOMAIN;
@@ -83,76 +82,56 @@ nomask static void
 change_present_player(string name)
 {
     object player = find_player(name);
-    int    index = -1;
-    string result = sprintf("%11-s IN:",
-    	capitalize(player->query_real_name()));
+    string result = sprintf("%11-s IN:", capitalize(player->query_real_name()));
     int    changed = 0;
 
-    while(++index < c_size)
+    foreach(mixed *line: change)
     {
-    	switch(change[index][INDEX_COMMAND])
+    	switch(line[INDEX_COMMAND])
     	{
     	case "remove":
     	    /* If the bit is set, remove it. */
-    	    if (player->test_bit(destination,
-                change[index][INDEX_SOURCE_GROUP],
-    	        change[index][INDEX_SOURCE_BIT]))
+    	    if (player->test_bit(destination, line[INDEX_SOURCE_GROUP], line[INDEX_SOURCE_BIT]))
     	    {
                 seteuid(destination);
-    	        player->clear_bit(change[index][INDEX_SOURCE_GROUP],
-    	            change[index][INDEX_SOURCE_BIT]);
-    	        result += " C" + change[index][INDEX_SOURCE_GROUP] + ":" +
-    	            change[index][INDEX_SOURCE_BIT];
+    	        player->clear_bit(line[INDEX_SOURCE_GROUP], line[INDEX_SOURCE_BIT]);
+    	        result += " C" + line[INDEX_SOURCE_GROUP] + ":" + line[INDEX_SOURCE_BIT];
     	        changed = 1;
     	    }
     	    break;
 
     	case "moveall":
     	    /* If the destination bit is set, remove it first. */
-    	    if (player->test_bit(destination,
-                change[index][INDEX_DEST_GROUP],
-    	        change[index][INDEX_DEST_BIT]))
+    	    if (player->test_bit(destination, line[INDEX_DEST_GROUP], line[INDEX_DEST_BIT]))
     	    {
                 seteuid(destination);
-    	        player->clear_bit(change[index][INDEX_DEST_GROUP],
-    	            change[index][INDEX_DEST_BIT]);
-		result += " C" + change[index][INDEX_DEST_GROUP] + ":" +
-		    change[index][INDEX_DEST_BIT];
+    	        player->clear_bit(line[INDEX_DEST_GROUP], line[INDEX_DEST_BIT]);
+		result += " C" + line[INDEX_DEST_GROUP] + ":" + line[INDEX_DEST_BIT];
 		changed = 1;
     	    }
     	    /* Intentional fallthrough. */
 
     	case "moveset":
 	    /* If the source bit is set, remove it and set the target. */
-    	    if (player->test_bit(source,
-	        change[index][INDEX_SOURCE_GROUP],
-    	        change[index][INDEX_SOURCE_BIT]))
+    	    if (player->test_bit(source, line[INDEX_SOURCE_GROUP], line[INDEX_SOURCE_BIT]))
     	    {
                 seteuid(source);
-    	        player->clear_bit(change[index][INDEX_SOURCE_GROUP],
-    	            change[index][INDEX_SOURCE_BIT]);
-		result += " C" + change[index][INDEX_SOURCE_GROUP] + ":" +
-		    change[index][INDEX_SOURCE_BIT];
+    	        player->clear_bit(line[INDEX_SOURCE_GROUP], line[INDEX_SOURCE_BIT]);
+		result += " C" + line[INDEX_SOURCE_GROUP] + ":" + line[INDEX_SOURCE_BIT];
                 seteuid(destination);
-    	        player->set_bit(change[index][INDEX_DEST_GROUP],
-    	            change[index][INDEX_DEST_BIT]);
-		result += " S" + change[index][INDEX_DEST_GROUP] + ":" +
-		    change[index][INDEX_DEST_BIT];
+    	        player->set_bit(line[INDEX_DEST_GROUP], line[INDEX_DEST_BIT]);
+		result += " S" + line[INDEX_DEST_GROUP] + ":" + line[INDEX_DEST_BIT];
 		changed = 1;
     	    }
     	    break;
 
     	case "copyset":
 	    /* If the source bit is set, don't remove it, but set the target. */
-    	    if (player->test_bit(source,
-	        change[index][INDEX_SOURCE_GROUP],
-    	        change[index][INDEX_SOURCE_BIT]))
+    	    if (player->test_bit(source, line[INDEX_SOURCE_GROUP], line[INDEX_SOURCE_BIT]))
     	    {
                 seteuid(destination);
-    	        player->set_bit(change[index][INDEX_DEST_GROUP],
-    	            change[index][INDEX_DEST_BIT]);
-		result += " S" + change[index][INDEX_DEST_GROUP] + ":" +
-		    change[index][INDEX_DEST_BIT];
+                player->set_bit(line[INDEX_DEST_GROUP], line[INDEX_DEST_BIT]);
+		result += " S" + line[INDEX_DEST_GROUP] + ":" + line[INDEX_DEST_BIT];
 		changed = 1;
     	    }
     	    break;
@@ -298,7 +277,6 @@ change_file(string name)
 {
     string result = sprintf("%11-s SF:", capitalize(name));
     int    changed = 0;
-    int    index = -1;
 
     /* If the player is logged in, it is useless to alter the playerfile.
      * Therefore we have the player object altered.
@@ -322,62 +300,48 @@ change_file(string name)
 
     unpack_bits();
 
-    while(++index < c_size)
+    foreach(mixed *line: change)
     {
-	switch(change[index][INDEX_COMMAND])
+	switch(line[INDEX_COMMAND])
 	{
 	case "remove":
 	    /* If the bit is set, remove it. */
-    	    if (test_bit(change[index][INDEX_SOURCE_GROUP],
-    	        change[index][INDEX_SOURCE_BIT], destination_num))
+    	    if (test_bit(line[INDEX_SOURCE_GROUP], line[INDEX_SOURCE_BIT], destination_num))
     	    {
-    	        clear_bit(change[index][INDEX_SOURCE_GROUP],
-    	            change[index][INDEX_SOURCE_BIT], destination_num);
-    	        result += " C" + change[index][INDEX_SOURCE_GROUP] + ":" +
-    	            change[index][INDEX_SOURCE_BIT];
+    	        clear_bit(line[INDEX_SOURCE_GROUP], line[INDEX_SOURCE_BIT], destination_num);
+    	        result += " C" + line[INDEX_SOURCE_GROUP] + ":" + line[INDEX_SOURCE_BIT];
     	        changed = 1;
     	    }
     	    break;
 
 	case "moveall":
     	    /* If the destination bit is set, remove it first. */
-    	    if (test_bit(change[index][INDEX_DEST_GROUP],
-    	        change[index][INDEX_DEST_BIT], destination_num))
+    	    if (test_bit(line[INDEX_DEST_GROUP], line[INDEX_DEST_BIT], destination_num))
     	    {
-    	        clear_bit(change[index][INDEX_DEST_GROUP],
-    	            change[index][INDEX_DEST_BIT], destination_num);
-		result += " C" + change[index][INDEX_DEST_GROUP] + ":" +
-		    change[index][INDEX_DEST_BIT];
+    	        clear_bit(line[INDEX_DEST_GROUP], line[INDEX_DEST_BIT], destination_num);
+		result += " C" + line[INDEX_DEST_GROUP] + ":" + line[INDEX_DEST_BIT];
 		changed = 1;
     	    }
             /* Intentional fallthrough. */
 
 	case "moveset":
 	    /* If the source bit is set, remove it and set the target. */
-    	    if (test_bit(change[index][INDEX_SOURCE_GROUP],
-    	        change[index][INDEX_SOURCE_BIT], source_num))
+    	    if (test_bit(line[INDEX_SOURCE_GROUP], line[INDEX_SOURCE_BIT], source_num))
     	    {
-    	        clear_bit(change[index][INDEX_SOURCE_GROUP],
-    	            change[index][INDEX_SOURCE_BIT], source_num);
-		result += " C" + change[index][INDEX_SOURCE_GROUP] + ":" +
-		    change[index][INDEX_SOURCE_BIT];
-    	        set_bit(change[index][INDEX_DEST_GROUP],
-    	            change[index][INDEX_DEST_BIT], destination_num);
-		result += " S" + change[index][INDEX_DEST_GROUP] + ":" +
-		    change[index][INDEX_DEST_BIT];
+    	        clear_bit(line[INDEX_SOURCE_GROUP], line[INDEX_SOURCE_BIT], source_num);
+		result += " C" + line[INDEX_SOURCE_GROUP] + ":" + line[INDEX_SOURCE_BIT];
+    	        set_bit(line[INDEX_DEST_GROUP], line[INDEX_DEST_BIT], destination_num);
+		result += " S" + line[INDEX_DEST_GROUP] + ":" + line[INDEX_DEST_BIT];
 		changed = 1;
     	    }
     	    break;
 
 	case "copyset":
 	    /* If the source bit is set, don't remove it, but set the target. */
-    	    if (test_bit(change[index][INDEX_SOURCE_GROUP],
-    	        change[index][INDEX_SOURCE_BIT], source_num))
+    	    if (test_bit(line[INDEX_SOURCE_GROUP], line[INDEX_SOURCE_BIT], source_num))
     	    {
-    	        set_bit(change[index][INDEX_DEST_GROUP],
-    	            change[index][INDEX_DEST_BIT], destination_num);
-		result += " S" + change[index][INDEX_DEST_GROUP] + ":" +
-		    change[index][INDEX_DEST_BIT];
+    	        set_bit(line[INDEX_DEST_GROUP], line[INDEX_DEST_BIT], destination_num);
+		result += " S" + line[INDEX_DEST_GROUP] + ":" + line[INDEX_DEST_BIT];
 		changed = 1;
     	    }
     	    break;

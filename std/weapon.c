@@ -35,8 +35,10 @@
 #pragma strict_types
 
 inherit "/std/object";
+inherit "/lib/keep";
 
 #include <cmdparse.h>
+#include <composite.h>
 #include <files.h>
 #include <formulas.h>
 #include <language.h>
@@ -65,7 +67,6 @@ static int      wep_hit,        /* Weapon to hit */
                 max_value;      /* Value of weapon at prime condition */
 static object   wielder,        /* Who is holding it */
                 wield_func;     /* Object that defines extra wield/unwield */
-static private int      will_not_recover;       /* True if it won't recover */
 
 /*
  * Prototypes
@@ -74,6 +75,7 @@ string  wep_condition_desc();
 void    update_prop_settings();
 int     query_value();
 varargs void remove_broken(int silent = 0);
+static int invoke_wf(function func);
 
 /*
  * Function name: create_weapon
@@ -118,6 +120,16 @@ create_object()
     create_weapon();
 
     update_prop_settings();
+
+    if (IS_CLONE)
+    {
+        LISTENER_NOTIFY(this_object());
+
+        if (!function_exists("query_auto_load", this_object()))
+        {
+            set_item_expiration(); 
+        }
+    }
 }
 
 /*
@@ -280,7 +292,7 @@ wield_me()
     /*
      * A wield function in another object.
      */
-    if (!wield_func || !(wret=wield_func->wield(this_object())))
+    if (!wield_func || !(wret = invoke_wf(&->wield(this_object()))))
     {
         if (wielded_in_hand == W_BOTH)
             write("You wield " + LANG_THESHORT(this_object()) +
@@ -303,6 +315,8 @@ wield_me()
         wielded = 1;
         set_adj("wielded");
         remove_adj("unwielded");
+        this_object()->add_expiration_combat_hook(wielder);
+        
         return 1;
     }
 
@@ -359,7 +373,7 @@ unwield_me()
 
     wret = 0;
 
-    if (!wield_func || !(wret = wield_func->unwield(this_object())))
+    if (!wield_func || !(wret = invoke_wf(&->unwield(this_object()))))
     {
         if (check_seen(wielder))
         {
@@ -380,6 +394,7 @@ unwield_me()
     {
         wielder->unwield(this_object());
         wielded = 0;
+        this_object()->remove_expiration_combat_hook(wielder);
         remove_adj("wielded");
         add_adj("unwielded");
         wielded_in_hand = wep_hands;
@@ -416,14 +431,14 @@ leave_env(object from, object dest)
     if (!wielded)
         return;
 
-    if ((!wield_func || !wield_func->unwield(this_object())) &&
-        wielder)
+    if (!wield_func || !invoke_wf(&->unwield(this_object())) && wielder)
     {
         tell_object(wielder, "You stop wielding " +
 	    LANG_THESHORT(this_object()) + ".\n");
     }
 
     wielder->unwield(this_object());
+    this_object()->remove_expiration_combat_hook(wielder);
     remove_adj("wielded");
     add_adj("unwielded");
     wielded = 0;
@@ -516,9 +531,9 @@ query_modified_pen()
     co = corroded - repair_corr;
     pen = this_object()->query_pen();
 
-    m_pent = allocate(W_NO_DT);
+    m_pent = allocate(W_NUM_DT);
 
-    for (i = 0; i < W_NO_DT; i++)
+    for (i = 0; i < W_NUM_DT; i++)
     {
         if (!pointerp(m_pen))
             m_pent[i] = pen;
@@ -701,14 +716,39 @@ set_wf(object obj)
     wield_func = obj;
 }
 
+/*
+ * Function name: invoke_wf
+ * Description  : This function is called internally to wrap calls to the wield
+ *                func if one has been set.
+ *                It ensures this_player() is set to the wielder allowing wizards
+ *                to use write / say etc.
+ * Arguments    : function - The function to invoke in the object set with set_wf
+ * Returns      : int - the function result
+ */
+static int
+invoke_wf(function func)
+{
+    if (!wielder || !objectp(wield_func))
+        return 0;
+
+    object otp = this_player();
+    set_this_player(wielder);
+    int ret = func(wield_func);
+    set_this_player(otp);
+
+    return ret;
+}
+
 #if 0
 /* 
  * Function name: wield
  * Description  : This function might be called when someone tries to wield
  *                this weapon. To have this function called, use the function
  *                set_wf().
- *                Note: this routine does not actually exist in /std/weapon.
- *                      A trick is used to fool the document maker.
+ *                Note: - this routine does not actually exist in /std/weapon.
+ *                        A trick is used to fool the document maker.
+ *                      - this_player() will be set to the wielder during this
+ *                        call.
  * Arguments    : object obj - the weapon someone tried to wield.
  * Returns      : int  0 - wield this weapon normally.
  *                     1 - wield the weapon, but print no messages.
@@ -726,8 +766,10 @@ wield(object obj)
  * Description  : This function might be called when someone tries to unwield
  *                this weapon. To have this function called, use the function
  *                set_wf().
- *                Note: this routine does not actually exist in /std/weapon.
- *                      A trick is used to fool the document maker.
+ *                Note: - this routine does not actually exist in /std/weapon.
+ *                        A trick is used to fool the document maker.
+ *                      - this_player() will be set to the wielder during this
+ *                        call.
  * Arguments    : object obj - the weapon to stop wielding.
  * Returns      : int  0 - the weapon can be unwielded normally.
  *                     1 - unwield the weapon, but print no messages.
@@ -848,6 +890,34 @@ void set_likely_break(int i) { likely_break = i; }
 int query_likely_break() { return likely_break; }
 
 /*
+ * Function name: query_wield_desc
+ * Description  : Describe this weapon as wielded by a something.
+ * Argumensts   : string p: Possessive description of wielder
+ * Returns      : string - the description.
+ */
+public nomask string 
+query_wield_desc(string p)
+{
+    string str;
+
+    /* Allow masking of the short. */
+    if (check_seen(this_player()))
+        str = LANG_ADDART(this_object()->short(this_player()));
+    else
+        str = "something";
+
+    switch(wielded_in_hand)
+    {
+    case W_RIGHT:return str + " in " + p + " right hand";
+    case W_LEFT: return str + " in " + p + " left hand";
+    case W_BOTH: return str + " in both hands";
+    case W_FOOTR:return str + " on " + p + " right foot";
+    case W_FOOTL:return str + " on " + p + " left foot";
+    }
+    return str;
+}
+
+/*
  * Function name: remove_broken
  * Description  : The weapon got broken so the player has to stop
  *                wielding it.
@@ -869,15 +939,13 @@ remove_broken(int silent = 0)
         return;
     }
 
-    if (objectp(wield_func))
-    {
-        wield_func->unwield(this_object());
-    }
+    invoke_wf(&->unwield(this_object()));
 
     /* If the wizard so chooses, these messages may be suppressed. */
     if (!silent)
     {
-        tell_object(wielder, "The " + short(wielder) + " breaks!!!\n");
+        tell_object(wielder, "The " + LANG_STRIPART(query_wield_desc("your")) +
+	    " breaks!!!\n");
         tell_room(environment(wielder), "The " + QSHORT(this_object()) +
             " wielded by " + QTNAME(wielder) + " breaks!!!\n", wielder);
     }
@@ -888,6 +956,7 @@ remove_broken(int silent = 0)
     wielder->unwield(this_object());
     remove_adj("wielded");
     add_adj("unwielded");
+    this_object()->remove_expiration_combat_hook(wielder);
     add_prop(OBJ_I_BROKEN, 1);
     wielded = 0;
 }
@@ -1122,34 +1191,6 @@ set_default_weapon(int hit, int pen, int wt, int dt, int hands, object obj)
 }
 
 /*
- * Function name: query_wield_desc
- * Description  : Describe this weapon as wielded by a something.
- * Argumensts   : string p: Possessive description of wielder
- * Returns      : string - the description.
- */
-public nomask string 
-query_wield_desc(string p)
-{
-    string str;
-
-    /* Allow masking of the short. */
-    if (check_seen(this_player()))
-        str = LANG_ADDART(this_object()->short(this_player()));
-    else
-        str = "something";
-
-    switch(wielded_in_hand)
-    {
-    case W_RIGHT:return str + " in " + p + " right hand";
-    case W_LEFT: return str + " in " + p + " left hand";
-    case W_BOTH: return str + " in both hands";
-    case W_FOOTR:return str + " on " + p + " right foot";
-    case W_FOOTL:return str + " on " + p + " left foot";
-    }
-    return str;
-}
-
-/*
  * Function name: update_prop_settings
  * Description:   Will uppdate weight and value of this object to be legal
  */
@@ -1311,7 +1352,7 @@ wep_condition_desc()
 
 /*
  * Function name: weapon_type
- * Description  : This function shuold return the type of the weapon in text.
+ * Description  : This function should return the type of the weapon in text.
  * Returns      : string - the name of the weapon type.
  */
 string
@@ -1337,6 +1378,7 @@ string
 wep_usage_desc()
 {
     string hand;
+    string *damage = ({ });
 
     switch (wep_hands)
     {
@@ -1356,7 +1398,16 @@ wep_usage_desc()
             hand = "by some strange creature"; break;
     }
 
-    return ("The " + weapon_type() + " is made to be wielded " + hand + ".\n");
+    if (wep_dt & W_IMPALE)
+        damage += ({ one_of_list( ({ "impale", "pierce", "stab" }) ) });
+    if (wep_dt & W_SLASH)
+        damage += ({ one_of_list( ({ "slash", "cut", "hack" }) ) });
+    if (wep_dt & W_BLUDGEON)
+        damage += ({ one_of_list( ({ "bludgeon", "beat", "batter" }) ) });
+    if (!sizeof(damage)) damage = ({ "cause damage" });
+
+    return ("The " + weapon_type() + " can be wielded " + hand +
+        ". It can be used to " + COMPOSITE_WORDS(damage) + ".\n");
 }
 
 /*
@@ -1388,43 +1439,6 @@ did_parry(object att, int aid, int dt)
 }
 
 /*
- * Function name: may_not_recover
- * Description  : This function will be true if the weapon may not recover.
- * Returns      : int - 1 - no recovery, 0 - recovery.
- */
-nomask int
-may_not_recover()
-{
-    return will_not_recover;
-}
-
-/*
- * Function name: may_recover
- * Description  : In some situations it is undesirable to have a weapon
- *                not recover. This function may then be used to force the
- *                weapon to be recoverable.
- *
- *                This function may _only_ be called when a craftsman sells
- *                a weapon he created to a player! It may expressly not be
- *                called in weapons that are to be looted from NPC's!
- */
-nomask void
-may_recover()
-{
-    will_not_recover = 0;
-}
-
-/*
- * Function name: set_may_not_recover
- * Description  : Call this to force the weapon to be non-recoverable.
- */
-nomask void
-set_may_not_recover()
-{
-    will_not_recover = 1;
-}
-
-/*
  * Function name: query_wep_recover
  * Description  : Return the recover strings for changing weapon variables.
  * Returns      : string - a recover string.
@@ -1434,7 +1448,7 @@ query_wep_recover()
 {
     return ("#WEP#" + hits + "#" + dull + "#" + corroded + "#" +
         repair_dull + "#" + repair_corr + "#" + query_prop(OBJ_I_BROKEN) +
-        "#");
+        "#") + query_item_expiration_recover();
 }
 
 /*
@@ -1448,6 +1462,9 @@ init_wep_recover(string arg)
     string foobar;
     int    broken;
 
+
+    init_item_expiration_recover(arg);
+    
     sscanf(arg, "%s#WEP#%d#%d#%d#%d#%d#%d#%s", foobar,
         hits, dull, corroded, repair_dull, repair_corr, broken, foobar);
 
@@ -1488,4 +1505,3 @@ init_recover(string arg)
 {
     init_wep_recover(arg);
 }
-

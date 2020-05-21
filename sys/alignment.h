@@ -37,5 +37,17 @@
 #define	ALIGN_DAMNED		( -930)
 #define	ALIGN_MIN		(-1000)
 
+/*
+ * General definitions to find out whether a living is good-aligned,
+ * evil-aligned or neutral. Or, if they are not one of those categories.
+ */
+#define ALIGN_IS_NEUTRAL(a)  (((a) < ALIGN_AGREEABLE) && ((a) > ALIGN_DISAGREEABLE))
+#define ALIGN_IS_EVIL(a)     ((a) <= ALIGN_DISAGREEABLE)
+#define ALIGN_IS_GOOD(a)     ((a) >= ALIGN_AGREEABLE)
+
+#define ALIGN_NOT_NEUTRAL(a) (((a) >= ALIGN_AGREEABLE) || ((a) <= ALIGN_DISAGREEABLE))
+#define ALIGN_NOT_EVIL(a)    ((a) > ALIGN_DISAGREEABLE)
+#define ALIGN_NOT_GOOD(a)    ((a) < ALIGN_AGREEABLE)
+
 /* No definitions beyond this line. */
 #endif SYS_ALIGNMENT_DEFINITIONS

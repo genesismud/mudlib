@@ -12,10 +12,11 @@ inherit "/std/object";
  * Variables
  */
 static string	stop_verb,	/* What verb to stop this paralyze ? */
-		stop_fun,	/* What function to call when stopped */
-		fail_message,   /* Message to write when command failed */
+		stop_fun;	/* What function to call when stopped */
+static mixed	fail_message,   /* Message to write when command failed */
 		stop_message;	/* Message to write when paralyze stopped */
-static int	remove_time;	/* Shall it go away automatically? */
+static int	remove_time,	/* Shall it go away automatically? */
+                combat_stop;    /* If true, stop when we're attacked. */
 static object	stop_object;	/* Object to call stop_fun in when stopped */
 
 /*
@@ -43,10 +44,11 @@ nomask void
 create_object()
 {
     create_paralyze();
+    add_name("_std_paralyze_");
 
     set_no_show();
 
-    add_prop(OBJ_M_NO_GET, 1);
+    add_prop(OBJ_M_NO_GIVE, 1);
     add_prop(OBJ_M_NO_DROP, 1);
     add_prop(OBJ_M_NO_STEAL, 1);
     add_prop(OBJ_M_NO_TELEPORT, 1);
@@ -94,8 +96,8 @@ stop(string str)
     if (stringp(stop_verb) &&
 	(query_verb() == stop_verb))
     {
-        /* If a stop_fun is defined it MUST return 1 in order not stop the
-         * paralyze.
+        /* If a stop_fun is defined, the paralysis STOPS if it returns 0.
+	 * Returning 1 will cause the the paralysis to continue.
          */
         if (objectp(stop_object) &&
             call_other(stop_object, stop_fun, str))
@@ -103,7 +105,7 @@ stop(string str)
             return 1;
         }
 
-	if (stringp(stop_message))
+	if (stop_message)
         {
             this_player()->catch_msg(stop_message);
         }
@@ -113,7 +115,7 @@ stop(string str)
     }
 
     /* We allow VBFC, so here we may use catch_msg(). */
-    if (stringp(fail_message))
+    if (fail_message)
     {
         this_player()->catch_msg(fail_message);
     }
@@ -212,10 +214,10 @@ query_stop_object()
  * Function name: set_fail_message
  * Description  : Set the fail message when player tries to do something.
  *                This supports VBFC and uses this_player().
- * Arguments    : string - the fail message.
+ * Arguments    : mixed - the fail message.
  */
 void
-set_fail_message(string message)
+set_fail_message(mixed message)
 {
     fail_message = message;
 }
@@ -224,9 +226,9 @@ set_fail_message(string message)
  * Function name: query_fail_message
  * Description  : Returns the fail message when player tries to do something.
  *                This returns the real value, not resolved for VBFC.
- * Returns      : string - the message.
+ * Returns      : mixed - the message.
  */
-string
+mixed
 query_fail_message()
 {
     return fail_message;
@@ -255,13 +257,35 @@ query_remove_time()
 }
 
 /*
+ * Function name: set_combat_stop
+ * Description  : Set if we should stop the paralysis when we are attacked.
+ * Arguments    : int cb - if true, stop upon combat.
+ */
+void
+set_combat_stop(int stop)
+{
+    combat_stop = stop;
+}
+
+/*
+ * Function name: query_combat_stop
+ * Description  : Find out if this paralysis should stop when we are attacked.
+ * Returns      : int - 1/0 - if true, break upon combat.
+ */
+int
+query_combat_stop()
+{
+    return combat_stop;
+}
+
+/*
  * Function name: set_stop_message
  * Description  : Set the message written when paralyze stops. This may
  *                support VBFC and uses this_player().
- * Arguments    : string - the message.
+ * Arguments    : mixed - the message.
  */
 void
-set_stop_message(string message)
+set_stop_message(mixed message)
 {
     stop_message = message;
 }
@@ -270,9 +294,9 @@ set_stop_message(string message)
  * Function name: query_stop_message
  * Description  : Returns the message written when paralyze stops. It returns
  *                the real value, not solved for VBFC.
- * Returns      : string - the message.
+ * Returns      : mixed - the message.
  */
-string
+mixed
 query_stop_message()
 {
     return stop_message;
@@ -297,9 +321,50 @@ set_standard_paralyze(string str)
 }
 
 /*
+ * Function name: try_stop_combat
+ * Description  : When combat initiates against us, we may try to stop the
+ *                paralysis if we are e.g. counting or searching.
+ */
+public void
+try_combat_stop()
+{
+    object old_tp;
+
+    if (!combat_stop)
+        return;
+
+    /* We need to modify this_player() as the stop-fun may depend on it. */
+    if (this_player() != environment())
+    {
+        old_tp = this_player();
+	set_this_player(environment());
+    }
+
+    /* We call the stop_fun if it exists, but we don't honour the result since
+     * combat is forcing the break.
+     */
+    if (objectp(stop_object))
+    {
+        call_other(stop_object, stop_fun, "");
+    }
+    if (stop_message)
+    {
+        environment()->catch_msg(stop_message);
+    }
+
+    /* And clean up after ourselves. */
+    if (old_tp)
+    {
+        set_this_player(old_tp);
+    }
+
+    remove_object();
+}
+
+/*
  * Function name: stop_paralyze
- * Description  : This function is called if the paralyze shall stop due to 
- *		  the time running out.
+ * Description  : This function is called if time runs out and the paralysis
+ *                stops due to expiration.
  */
 void
 stop_paralyze()
@@ -317,7 +382,7 @@ stop_paralyze()
     {
         call_other(stop_object, stop_fun, environment());
     }
-    else if (strlen(stop_message))
+    else if (stop_message)
     {
         environment()->catch_msg(stop_message);
     }

@@ -96,25 +96,71 @@ m_indices(mixed arg)
 /*
  * Function name: slice_array
  * Description:   Return a portion of a given array
- * Arguments:     mixed a - an array
- *                int f   - The index at which to start.  If less
- *                          than zero, it is set to 0.
- *                int t   - the index at which to end.  If greater
- *                          or equal to the size of 'a', it is
- *                          set to sizeof(a) - 1.
- * Returns:       mixed   - The portion of array 'a', starting at
- *                          'f' and ending at 't'.
+ * Arguments:     mixed arr - an array
+ *                int from - Index from which to return elements.
+ *                int to - Last index to be returned.
+ * Returns:       mixed - The portion of array 'arr', starting at
+ *                    'from' and ending at 'to' (inclusive).
  */
-mixed
-slice_array(mixed a, int f, int t)
+public mixed
+slice_array(mixed arr, int from, int to)
 {
-    if (f < 0)
-	f = 0;
-    if (t >= sizeof(a))
-	t = sizeof(a) - 1;
-    if (f > t)
-	return ({});
-    return (pointerp(a)) ? a[f..t] : 0;
+    if (from < 0)
+	from = 0;
+    if (to >= sizeof(arr))
+	to = sizeof(arr) - 1;
+    if (from > to)
+	return ({ });
+    return (pointerp(arr)) ? arr[from..to] : 0;
+}
+
+/*
+ * Function name: exclude_array
+ * Description  : Deletes a section of an array.
+ * Arguments    : mixed arr - The array to exclude from.
+ *		  int from - Index from which to delete elements.
+ *		  int to - Last index to be deleted.
+ * Returns      : mixed - the array minus the exclusion.
+ */
+public mixed
+exclude_array(mixed arr, int from, int to)
+{
+    mixed a,b;
+    if (!pointerp(arr))
+	return 0;
+    
+    if (from > sizeof(arr))
+	from = sizeof(arr);
+    a = (from <= 0 ? ({ }) : arr[.. from - 1]);
+
+    if (to < 0)
+	to = 0;
+    b = (to >= sizeof(arr) - 1 ? ({ }) : arr[to + 1 ..]);
+
+    return a + b;
+}
+
+/*
+ * Function name: include_array
+ * Description  : Inserts a section into an array.
+ * Arguments    : mixed arr - the array to insert into.
+ *                mixed insert - the array to be inserted.
+ *                int index - the index before which to insert the slice.
+ *                    If index < 0 it will count from the right.
+ *                    If index >= sizeof(arr) it will append.
+ * Returns      : mixed - the combined array.
+ */
+public mixed
+include_array(mixed arr, mixed insert, int index)
+{
+    if (!pointerp(arr) || !pointerp(insert))
+	return 0;
+
+    if (!index)
+        return insert + arr;
+    if (index >= sizeof(arr))
+        return arr + insert;
+    return arr[.. index - 1] + insert + arr[index ..];
 }
 
 /*
@@ -176,7 +222,7 @@ cat(string file, ...)
         break;
     default:
         set_auth(this_object(), "#:" + "root");
-        throw("Too many arguments to cat.");
+        throw("Too many arguments to cat.\n");
         break;
     }
     set_auth(this_object(), "#:" + "root");
@@ -186,32 +232,6 @@ cat(string file, ...)
     return (sizeof(lines) == 1 && strlen(lines[0]) <= 3) ? 0 : sizeof(lines);
 }
 #endif CFUN
-
-/*
- * Function name: exclude_array
- * Description:   Deletes a section of an array
- * Arguments:     arr: The array
- *		  from: Index from which to delete elements
- *		  to: Last index to be deleted.
- * Returns:
- */
-public mixed
-exclude_array(mixed arr, int from, int to)
-{
-    mixed a,b;
-    if (!pointerp(arr))
-	return 0;
-    
-    if (from > sizeof(arr))
-	from = sizeof(arr);
-    a = (from <= 0 ? ({}) : arr[0 .. from - 1]);
-
-    if (to < 0)
-	to = 0;
-    b = (to >= sizeof(arr) - 1 ? ({}) : arr[to + 1 .. sizeof(arr) - 1]);
-
-    return a + b;
-}
 
 /*
  * Function name: inventory
@@ -380,12 +400,10 @@ sort_array(mixed arr, mixed lfunc, object obj)
 		arr = insertion_sort(arr, bot, bot + n - 1, lfunc, obj); \
     }
 
-static mixed
-quick_sort(mixed arr, int orig_bot, int orig_top, string lfunc, object obj);
-static mixed
-insertion_sort(mixed arr, int orig_bot, int orig_top, string lfunc, object obj);
+static mixed quick_sort(mixed arr, int orig_bot, int orig_top, string lfunc, object obj);
+static mixed insertion_sort(mixed arr, int orig_bot, int orig_top, string lfunc, object obj);
 
-public varargs void log_file(string file, string text, int csize);
+// public varargs void log_file(string file, string text, int csize);
 
 /*
  * Function name:  	sort_array
@@ -433,7 +451,8 @@ quick_sort(mixed arr, int orig_bot, int orig_top, string lfunc, object obj)
     /*
      * bot and nmemb must be set
      */
-    for (;;) {
+    for (;;)
+    {
 	/*
 	 * Find middle and top elements
 	 */
@@ -667,7 +686,7 @@ export_uid(object ob)
     euid = explode(query_auth(ob),":")[1];
     euid2 = explode(query_auth(previous_object()), ":")[1];
     if (euid2 == "0")
-	throw("Illegal to export euid 0");
+	throw("Illegal to export euid 0.\n");
     if (euid == "0")
         set_auth(ob, euid2 + ":#");
 }
@@ -821,9 +840,9 @@ say(mixed str, mixed oblist)
  * Description:   Logs a message in the creators ~/log subdir in a given file.
  * Arguments:     string file: The filename.
  *		  string text: The text to add to the file.
- * 		  int cyclesize: The cycle size to apply to the log. The limit
- *                    may be maximized in the local.h settings of the mud.
- *                 -1 : maximum/unlimited cycle size is used.
+ * 		  int cyclesize: The cycle size to apply to the log. If not
+ *                    provided, we'll use the default from the local.h file.
+ *                 -1 : unlimited cycle size is used.
  *                  0 : default cycle size is used.
  *                 >0 : specified cycle size is used.
  */
@@ -835,7 +854,6 @@ log_file(string file, string text, int cyclesize)
     string  crname;
     string *split;
     int     index;
-    int     maxsize;
 
     /* Find out the owner of the log. */
     crname = SECURITY->creator_object(previous_object());
@@ -875,34 +893,22 @@ log_file(string file, string text, int cyclesize)
 
 #ifdef CYCLIC_LOG_SIZE
 
-    /* Find out the maximum for this owner. */
-    maxsize = CYCLIC_LOG_SIZE[crname];
-    /* If no size is found, use the default maximum. */
-    if (!maxsize) maxsize = CYCLIC_LOG_SIZE[0];
-
-    switch(cyclesize)
+    /* If no cycle size was provided, use the default cycle size. */
+    if (!cyclesize)
     {
-    case -1:
-    case 0:
-        /* Basically default == maximum. */
-        cyclesize = maxsize;
-        break;
-
-    default:
-        /* If we have a limit, then ensure it's enforced. */
-        if (maxsize > 0)
-        {
-            cyclesize = ((cyclesize > maxsize) ? maxsize : cyclesize);
-        }
+        if (!(cyclesize = CYCLIC_LOG_SIZE[crname]))
+	{
+	    cyclesize = CYCLIC_LOG_SIZE[0];
+	}
     }
+
+#endif /* CYCLIC_LOG_SIZE */
 
     /* If we have a positive cycle size, enforce it. */
     if ((cyclesize > 0) && (file_size(file) > cyclesize))
     {
 	rename(file, file + ".old");
     }
-
-#endif /* CYCLIC_LOG_SIZE */
 
     write_file(file, text);
     this_object()->seteuid(oldeuid);
@@ -1202,32 +1208,6 @@ applyv(function f, mixed *v)
 {
     function g = papplyv(f, v);
     return g();
-}
-
-/*
- * Function name: for_each
- * Description:   For each of the elements in the array 'elements', for_each
- *                calls func with it as as parameter.
- *                This is the same functionality as the efun map, but without
- *                the return value.
- * Arguments:     mixed elements      (the array/mapping of elements to use)
- *                function func       (the function to recieve the elements)
- */
-void
-for_each(mixed elements, function func)
-{
-#if 0
-    int i;
-    int sz;
-    mixed arr;
-
-    arr = elements;
-    if (mappingp(elements))
-        arr = m_values(elements);
-    sz = sizeof(arr);
-    for(i = 0; i < sz; i++)
-        func(arr[i]);
-#endif
 }
 
 /*

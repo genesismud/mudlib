@@ -9,6 +9,7 @@ SYNOPSIS
 	pinfo t <name>         Tail the pinfo on player <name>.
         pinfo d <name>         Delete the pinfo file on <player>.
         pinfo e <name>         Edit the pinfo on <player> as a whole.
+        pinfo l                List the players whose pinfo was just edited.
 
 ACCESS RIGHTS
         This command can be handled by administrators, lieges (only on

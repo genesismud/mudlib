@@ -37,8 +37,11 @@
  *                                 (int 0/1)  status open/closed,
  *                                 (string)   owner name
  *                               }) ])
+ *
+ * history = ([ (string) name : ({ (string *)last texts }) ])
  */
 static private mapping channels;
+static private mapping history = ([ ]);
 
 #define CHANNEL_OPEN    (0) /* channel is open for all wizard.            */
 #define CHANNEL_CLOSED  (1) /* channel is closed unless after invitation. */
@@ -917,12 +920,31 @@ lineconfig(string str)
     return 1;
 }
 
+/*
+ * Function name: historize_line
+ * Description  : Remember the last 20 uses of the line.
+ * Arguments    : string lname: the name of the line.
+ *                string text: the text.
+ */
+nomask void
+historize_line(string lname, string text)
+{
+    if (pointerp(history[lname]))
+    {
+	history[lname] = history[lname][-14..] + ({ text });
+    }
+    else
+    {
+	history[lname] = ({ text });
+    }
+}
+
 nomask varargs int
 line(string str, int emotion = 0, int busy_level = 0)
 {
     string *members, *receivers;
     string name = this_player()->query_real_name();
-    string line;
+    string lname, lprefix, who, text;
     string timestamp = ctime(time())[11..15] + " ";
     int    size;
     int    rank;
@@ -936,14 +958,14 @@ line(string str, int emotion = 0, int busy_level = 0)
         return 0;
     }
 
-    if (sscanf(str, "%s %s", line, str) != 2)
+    if (sscanf(str, "%s %s", lname, str) != 2)
     {
-        line = str;
+        lname = str;
         str = "";
     }
 
     /* Built-in configurator. */
-    switch(line)
+    switch(lname)
     {
     case "config":
         return lineconfig(str);
@@ -955,13 +977,13 @@ line(string str, int emotion = 0, int busy_level = 0)
     }
 
     /* Channel is a wizline-channel. */
-    if ((rank = member_array(line, CHANNEL_WIZRANK)) >= 0)
+    if ((rank = member_array(lname, CHANNEL_WIZRANK)) >= 0)
     {
-        rank = WIZ_R[member_array(line, WIZ_N)];
-        line = ((line == WIZNAME_APPRENTICE) ? "Wizline" : capitalize(line));
+        rank = WIZ_R[member_array(lname, WIZ_N)];
+        lname = ((lname == WIZNAME_APPRENTICE) ? "Wizline" : capitalize(lname));
         if (SECURITY->query_wiz_rank(name) < rank)
         {
-            write("You do not hold the rank to speak on the " + line + " line.\n");
+            write("You do not hold the rank to speak on the " + lname + " line.\n");
             return 1;
         }        
         members = map(users() - ({ this_player() }), geteuid);
@@ -969,53 +991,53 @@ line(string str, int emotion = 0, int busy_level = 0)
             SECURITY->query_wiz_rank);
     }
     /* Channel is domain-channel. */
-    else if (SECURITY->query_domain_number(line) > -1)
+    else if (SECURITY->query_domain_number(lname) > -1)
     {
         rank = 1;
-        line = capitalize(line);
-        if (SECURITY->query_wiz_dom(name) != line)
+        lname = capitalize(lname);
+        members = SECURITY->query_domain_members(lname);
+        if (!IN_ARRAY(name, members))
         {
-            write("You are not a member of the domain " + line + ".\n");
+            write("You are not a member of the domain " + lname + ".\n");
             return 1;
         }        
-        members = SECURITY->query_domain_members(line);
         members &= map(users() - ({ this_player() }), geteuid);
     }
     /* Channel is an arch team channel. */
-    else if (sizeof(SECURITY->query_team_list(line)))
+    else if (sizeof(SECURITY->query_team_list(lname)))
     {
         rank = 1;
-        line = capitalize(line);
+        lname = capitalize(lname);
         /* Three letter AoX teams capitalized with X. */
-        if ((strlen(line) == 3) && (line[..1] == "Ao"))
+        if ((strlen(lname) == 3) && (lname[..1] == "Ao"))
         {
-            line = line[..1] + capitalize(line[2..]);
+            lname = lname[..1] + capitalize(lname[2..]);
         }
-        if (!SECURITY->query_team_member(line, name))
+        if (!SECURITY->query_team_member(lname, name))
         {
-            write("You are not a member of the " + line + " team.\n");
+            write("You are not a member of the " + lname + " team.\n");
             return 1;
         }        
-        members = SECURITY->query_team_list(line);
+        members = SECURITY->query_team_list(lname);
         members &= map(users() - ({ this_player() }), geteuid);
     }
     /* Channel is normal type of channel, well, you know what I mean. */
-    else if (pointerp(channels[lower_case(line)]))
+    else if (pointerp(channels[lower_case(lname)]))
     {
-        line = lower_case(line);
-        members = channels[line][CHANNEL_USERS] +
-            channels[line][CHANNEL_HIDDEN];
-        line = channels[line][CHANNEL_NAME];
+        lname = lower_case(lname);
+        members = channels[lname][CHANNEL_USERS] +
+            channels[lname][CHANNEL_HIDDEN];
+        lname = channels[lname][CHANNEL_NAME];
         if (member_array(name, members) == -1)
         {
-            write("You are not a subscriber to the " + line + " line.\n");
+            write("You are not a subscriber to the " + lname + " line.\n");
             return 1;
         }        
         members &= map(users() - ({ this_player() }), geteuid);
     }
     else
     {
-        notify_fail("There is no channel called '" + line + "'.\n");
+        notify_fail("There is no channel called '" + lname + "'.\n");
         return 0;
     }
 
@@ -1025,45 +1047,61 @@ line(string str, int emotion = 0, int busy_level = 0)
         /* Listing a domain or team line line by fingering them. */
         if (rank != -1)
         {
-            return finger("-l " + line);
+            return finger("-l " + lname);
         }
     
-        if (line_list(lower_case(line)))
+        if (line_list(lower_case(lname)))
         {
             return 1;
         }
 
-        notify_fail("There is no channel named '" + line + "' for you.\n");
+        notify_fail("There is no channel named '" + lname + "' for you.\n");
         return 0;
     }
 
+    /* Display the history of the line. */
+    if (IN_ARRAY(str, ({ "-", "-h" }) ))
+    {
+	if (!pointerp(history[lname]))
+	{
+            notify_fail("No history available for channel '" + lname + "'.\n");
+	    return 0;
+	}
+	write("Last " + sizeof(history[lname]) + " message" +
+	    (sizeof(history[lname]) == 1 ? "" : "s") + ":\n");
+	write(implode(history[lname], "\n") + "\n");
+	return 1;
+    }
+
     receivers = filter(members, not @ &operator(&)(busy_level | BUSY_F) @
-                       &->query_prop(WIZARD_I_BUSY_LEVEL) @ find_player);
+        &->query_prop(WIZARD_I_BUSY_LEVEL) @ find_player);
     receivers = filter(receivers, &interactive() @ find_player);
     
     if (!(size = sizeof(receivers)))
     {
-        notify_fail("There is no one listening to the channel '" + line +
+        notify_fail("There is no one listening to the channel '" + lname +
             "' at this moment, so your message is not heard.\n");
         return 0;
     }
 
-    line = (line == "Wizline" ? "@ " : "<" + line + "> ");
-    str = capitalize(this_player()->query_real_name() +
-           ((emotion ? emotion : (query_verb() == "linee")) ? " " : ": ") +
-           str + "\n");
+    lprefix = (lname == "Wizline" ? "@ " : "<" + lname + "> ");
+    who = capitalize(this_player()->query_real_name());
+    str = who + ((emotion ? emotion : (query_verb() == "linee")) ? " " : ": ") + str;
+    historize_line(lname, timestamp + lprefix + str);
 
-    while(size--)
+    foreach(string receiver: receivers)
     {
-        wizard = find_player(receivers[size]);
-        tell_object(wizard, line +
-            (wizard->query_option(OPT_TIMESTAMP) ? timestamp : "") + str);
+        wizard = find_player(receiver);
+        text = lprefix + (wizard->query_option(OPT_TIMESTAMP) ? timestamp : "") + str;
+        wizard->catch_tell(text + "\n");
+        wizard->gmcp_comms(lprefix, who, text);
     }
 
     if (this_player()->query_option(OPT_ECHO))
     {
-        write(line +
-            (this_player()->query_option(OPT_TIMESTAMP) ? timestamp : "") + str);
+        text = lprefix + (this_player()->query_option(OPT_TIMESTAMP) ? timestamp : "") + str;
+        write(text + "\n");
+        this_player()->gmcp_comms(lprefix, 0, text);
     }
     else
     {
@@ -1153,9 +1191,7 @@ nomask int
 tell(string str)
 {
     int    idle;
-    int    index;
-    string msg;
-    string who;
+    string msg, msg2, tell_text, who, tell_who;
     string *names;
     object *players = ({ });
     string timestamp = ctime(time())[11..15] + " ";
@@ -1171,12 +1207,12 @@ tell(string str)
 
     /* Find out whether we can reach people. */
     names = explode(sort_array(lower_case(str)), ",");
-    for (index = 0; index < sizeof(names); index++)
+    foreach(string name: names)
     {
-        target = find_living(names[index]);
+        target = find_living(name);
         if (!objectp(target))
         {
-            write("No player named " + capitalize(names[index]) + " logged in.\n");
+            write("No player named " + capitalize(name) + " logged in.\n");
             continue;
         }
 
@@ -1188,13 +1224,13 @@ tell(string str)
 
         if (!query_interactive(target))
         {
-            write(capitalize(names[index]) + " is link dead right now.\n");
+            write(capitalize(name) + " is link dead right now.\n");
             continue;
         }
 
         if (target->query_prop(WIZARD_I_BUSY_LEVEL) & BUSY_F)
         {
-            write(capitalize(names[index]) + " seems to be busy at the moment. " +
+            write(capitalize(name) + " seems to be busy at the moment. " +
                 "If you want to be contacted when " + target->query_pronoun() +
                 " is available again, use the 'audience' command.\n");
             continue;
@@ -1209,41 +1245,43 @@ tell(string str)
     }
 
     /* Tell all recipients the message. */
-    for (index = 0; index < sizeof(players); index++)
+    foreach(object player: players)
     {
-        target = players[index];
-        if ((idle = query_idle(target)) > 300)
+        if ((idle = query_idle(player)) > 300)
         {
-            write(capitalize(target->query_real_name()) + " is idle for " +
+            write(capitalize(player->query_real_name()) + " is idle for " +
                 CONVTIME(idle) + " and may not react instantly.\n");
         }
     
-        if (target->query_wiz_level())
+        if (player->query_wiz_level())
         {
-            target->catch_tell((target->query_option(OPT_TIMESTAMP) ? timestamp : "") + 
-                capitalize(this_player()->query_real_name()) +
-                " tells you: " + msg + "\n");
+            tell_who = capitalize(this_player()->query_real_name());
+            tell_text = (player->query_option(OPT_TIMESTAMP) ? timestamp : "") + 
+                tell_who + " tells you: " + msg;
         }
-        else if ((environment(target) != environment(this_player())) ||
-                 (!CAN_SEE(target, this_player())))
+        else if ((environment(player) != environment(this_player())) ||
+                 (!CAN_SEE(player, this_player())))
         {
-            target->catch_tell("An apparition of " +
-                (target->query_met(this_player()) ? this_player()->query_name() :
-                 LANG_ADDART(this_player()->query_nonmet_name())) +
-                " appears to you.\n" +
-                capitalize(this_player()->query_pronoun()) + " tells you: " +
-                msg + "\nThe figure then disappears again.\n");
+            tell_who = (player->query_met(this_player()) ? this_player()->query_name() :
+                 LANG_ADDART(this_player()->query_nonmet_name()));
+            tell_text = "An apparition of " + tell_who +
+                " appears before you.\n" + capitalize(this_player()->query_pronoun()) +
+                " tells you: " + msg;
+	     msg2 = "The figure then disappears again.\n";
         }
         else
         {
-            target->catch_tell((target->query_met(this_player()) ?
-                this_player()->query_name() :
-                capitalize(LANG_ADDART(this_player()->query_nonmet_name()))) +
-                " tells you: " + msg + "\n");
+            tell_who = (player->query_met(this_player()) ?
+                this_player()->query_name() : capitalize(LANG_ADDART(this_player()->query_nonmet_name())));
+            tell_text = tell_who + " tells you: " + msg;
         }
+        player->catch_tell(tell_text + "\n");
+        player->gmcp_comms("tell", capitalize(tell_who), tell_text);
+	if (strlen(msg2))
+	    player->catch_tell(msg2);
 
         /* Add the name to the reply structure. */
-        names = target->query_prop(PLAYER_AS_REPLY_WIZARD);
+        names = player->query_prop(PLAYER_AS_REPLY_WIZARD);
         who = this_player()->query_real_name();
         if (pointerp(names))
         {
@@ -1253,14 +1291,16 @@ tell(string str)
         {
             names = ({ who });
         }
-        target->add_prop(PLAYER_AS_REPLY_WIZARD, names);
+        player->add_prop(PLAYER_AS_REPLY_WIZARD, names);
     }
 
     /* Feedback to the wizard. */
     if (this_player()->query_option(OPT_ECHO))
     {
         names = map(map(players, &->query_real_name()), capitalize);
-        write("You tell " + COMPOSITE_WORDS(names) + ": " + msg + "\n");
+        tell_text = "You tell " + COMPOSITE_WORDS(names) + ": " + msg;
+        write(tell_text + "\n");
+        this_player()->gmcp_comms("tell", 0, tell_text);
     }
     else
     {
@@ -1288,7 +1328,7 @@ wiz(string str)
     busy = this_interactive()->query_prop(WIZARD_I_BUSY_LEVEL);
     if (busy & BUSY_F)
     {
-        write("WARNING: You are currently 'busy F'.\n");
+        write("WARNING: You are currently 'busy F'. You will not hear responses.\n");
     }
     else if (busy & BUSY_W)
     {
@@ -1296,8 +1336,7 @@ wiz(string str)
         this_interactive()->add_prop(WIZARD_I_BUSY_LEVEL, (busy ^ BUSY_W));
     }
 
-    return line((WIZNAME_APPRENTICE + " " + str), (query_verb() == "wize"),
-                BUSY_W);
+    return line((WIZNAME_APPRENTICE + " " + str), (query_verb() == "wize"), BUSY_W);
 }
 
 /* **************************************************************************
@@ -1307,6 +1346,7 @@ nomask int
 wsay(string str)
 {
     object *wizards;
+    string who, text;
     
     if (!strlen(str))
     {
@@ -1321,13 +1361,17 @@ wsay(string str)
         notify_fail("There are no wizards present to hear your message.\n");
         return 0;
     }
-    
-    wizards->catch_tell(capitalize(this_player()->query_real_name()) +
-        " wizard-speaks: " + str + "\n");
+
+    who = capitalize(this_player()->query_real_name());
+    text = who + " wizard-speaks: " + str;
+    wizards->catch_tell(text + "\n");
+    wizards->gmcp_comms("wsay", who, text);
     
     if (this_player()->query_option(OPT_ECHO))
     {
-        write("You wizard-speak: " + str + "\n");
+        text = "You wizard-speak: " + str;
+        write(text + "\n");
+        this_player()->gmcp_comms("wsay", 0, text);
     }
     else
     {

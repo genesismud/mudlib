@@ -3,11 +3,6 @@
  *
  * This file contains a few definitions that make it easy to convert an
  * integer time to a string. Supported macros are:
- *
- * - TIME_FILE
- * - CONVTIME(time)
- * - TIME2STR(time, sig)
- * - TIME2NUM(time)
  */
 
 #ifndef TIME_DEFINITIONS
@@ -91,6 +86,19 @@
  *           "yyyymmdd" yields "20010903"
  */
 #define TIME2FORMAT(t, f) ((string)TIME_FILE->time2format((t), (f)))
+
+/*
+ * Name   : STAMP2TIME(s)
+ * Returns: int
+ *
+ * Takes a string timestamp and transforms it into the corresponding time()
+ * value or 0 on failure. It accepts the following formats:
+ *
+ * "mmm dd yyyy"          Example: "Mar 01 2013"          -> 1362092400
+ * "mmm dd yyyy hh:mm"    Example: "Mar 01 2013 01:05"    -> 1362096300
+ * "mmm dd yyyy hh:mm:ss" Example: "Mar 01 2013 01:05:10" -> 1362096310
+ */
+#define STAMP2TIME(s) ((int)TIME_FILE->stamp2time(s))
 
 /* No definitions beyond this line. */
 #endif TIME_DEFINITIONS

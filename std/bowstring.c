@@ -1,11 +1,6 @@
-inherit "/std/object";
-inherit "lib/keep";
-
-#include <macros.h>
-#include <stdproperties.h>
-
-
 /*
+ * /std/bowstring.c
+ *
  * This is the base class for bowstrings, inherit
  * and alter this if you want create a bowstring
  * of your own. The bowstring does not alter the
@@ -13,6 +8,12 @@ inherit "lib/keep";
  * the same bowstring when you unstring your bow,
  * hence the reason for this class.
  */
+
+inherit "/std/object";
+inherit "lib/keep";
+
+#include <macros.h>
+#include <stdproperties.h>
 
 /*
  * Function name: create_bowstring
@@ -77,5 +78,3 @@ init_recover(string arg)
 {
     init_keep_recover(arg);
 }
-
-

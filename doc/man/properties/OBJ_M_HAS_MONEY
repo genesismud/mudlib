@@ -8,7 +8,7 @@ Purpose : This property indicates that the object contains money without
           value, rather than clone coins into the NPC at creation time.
 
 Values  : (int)   cc
-          (array) ({ cc, sc, gc, pc })          (omit trailing zero's!)
+          (array) ({ cc, sc, gc, pc })
 
           There are two types or arguments possible. It can be either an
           integer holding the total amount of copper coins equivalent or

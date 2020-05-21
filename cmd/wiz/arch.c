@@ -4,6 +4,7 @@
  * This object holds the commands reserved for archwizards.
  * The following commands are supported:
  *
+ * - account
  * - all_spells
  * - arch
  * - arche
@@ -11,18 +12,17 @@
  * - delchar
  * - draft
  * - global
+ * - lordship
  * - mailadmin
  * - mkdomain
  * - mudstatus
  * - namechange
  * - newchar
- * - nopurge
  * - pingmud
  * - purge
  * - resetpassword
  * - rmdomain
  * - siteban
- * - startloc
  * - storemuds
  * - suspend
  * - trace
@@ -41,16 +41,15 @@ inherit "/cmd/std/command_driver";
 #include <adverbs.h>
 #include <composite.h>
 #include <files.h>
+#include <log.h>
 #include <macros.h>
 #include <mail.h>
-#include <log.h>
+#include <options.h>
 #include <stdproperties.h>
 #include <std.h>
 
 #define CHECK_SO_ARCH   if (WIZ_CHECK < WIZ_ARCH) return 0; \
                         if (this_interactive() != this_player()) return 0
-
-#define NOPURGE(s)      ("/syslog/nopurge/" + extract((s), 0, 0) + "/" + (s))
 
 /* **************************************************************************
  * Return a list of which souls are to be loaded.
@@ -84,6 +83,7 @@ nomask mapping
 query_cmdlist()
 {
     return ([
+             "account":"account",
              "all_spells":"all_spells",
              "arch":"arch",
              "arche":"arch",
@@ -94,13 +94,14 @@ query_cmdlist()
 
              "global":"global",
 
+             "lordship":"lordship",
+
              "mailadmin":"mailadmin",
              "mkdomain":"mkdomain",
              "mudstatus":"mudstatus",
 
              "namechange":"namechange",
              "newchar":"newchar",
-             "nopurge":"nopurge",
 
              "pingmud":"pingmud",
              "purge":"purge",
@@ -122,9 +123,20 @@ query_cmdlist()
 }
 
 /* **************************************************************************
- * Here follows the actual functions. Please add new functions in the 
+ * Here follows the actual functions. Please add new functions in the
  * same order as in the function name list.
  * **************************************************************************/
+
+/* **************************************************************************
+ * account - list the GoG account of a player.
+ */
+nomask int
+account(string str)
+{
+    CHECK_SO_ARCH;
+
+    return GOG_ACCOUNTS->account(str);
+}
 
 /* **************************************************************************
  * all_spells - list all active spells
@@ -135,7 +147,7 @@ all_spells()
     CHECK_SO_ARCH;
 
     SECURITY->list_spells();
-    
+
     return 1;
 }
 
@@ -174,7 +186,8 @@ ateam(string str)
     {
         notify_fail("Syntax: ateam\n" +
                     "        ateam add <team> <member>\n" +
-                    "        ateam remove <team> <member>\n");
+                    "        ateam remove <team> <member>\n" +
+                    "        ateam leader <team> <leader>\n");
         return 0;
     }
 
@@ -206,17 +219,29 @@ ateam(string str)
         SECURITY->remove_team_member(args[1], args[2]);
         write("Ok.\n");
         break;
+    case "leader":
+        if (sizeof(args) != 3)
+        {
+            ateam("?");
+            return 0;
+        }
 
+        SECURITY->set_team_leader(args[1], args[2]);
+        write("Ok.\n");
+        break;
     default:
         tms = sort_array(SECURITY->query_teams());
         if (sizeof(tms))
         {
             for (i = 0, sz = sizeof(tms) ; i < sz ; i++)
             {
-                args = sort_array(SECURITY->query_team_list(tms[i]));
-                write(sprintf("%-10s", capitalize(tms[i])) + 
-                    (sizeof(args) ? COMPOSITE_WORDS(map(args, capitalize)) :
-                    "No members") + ".\n");
+                string leader = SECURITY->query_team_leader(tms[i]);
+                args = sort_array((string *)SECURITY->query_team_list(tms[i]) - ({ leader }));
+                write(sprintf("%-14s %-12s %s",
+                              capitalize(tms[i]),
+                              (leader ? capitalize(leader) : "No Leader"),
+                              (sizeof(args) ? COMPOSITE_WORDS(map(args, capitalize)) : "No members") + ".\n"));
+
             }
         }
         else
@@ -234,22 +259,32 @@ nomask int
 delchar(string str)
 {
     string who, reason;
+    string *seconds;
+    int force;
+    mixed info;
 
     CHECK_SO_ARCH;
 
-    if ((!stringp(str)) ||
-        (sscanf(str, "%s %s", who, reason) != 2))
-        return notify_fail("Usage: delchar <player> <reason>\n");
+    if (!stringp(str))
+        return notify_fail("Usage: delchar [-f] <player> <reason>\n");
+
+    if (wildmatch("-f *", str))
+    {
+        force = 1;
+        str = str[3..];
+    }
+
+    if (sscanf(str, "%s %s", who, reason) != 2)
+        return notify_fail("Usage: delchar [-f] <player> <reason>\n");
 
     who = lower_case(who);
-
     if (objectp(find_player(who)))
     {
         notify_fail("The player " + capitalize(who) + " is logged in. It is " +
             "useless to remove the file now.\n");
         return 0;
     }
-    
+
     if (SECURITY->query_wiz_rank(who))
     {
         notify_fail("Wizards should be demoted.\n");
@@ -263,6 +298,16 @@ delchar(string str)
         return 0;
     }
 
+    if (SECURITY->is_bad_name(who) && !force)
+    {
+        info = SECURITY->query_bad_name_info(who);
+        notify_fail("The name " + capitalize(who) + " is marked as " +
+           "inappropriate by " + capitalize(info[0]) + " and given the " +
+           "option of a namechange. Use -f to force deletion.\n");
+        return 0;
+    }
+
+    seconds = SECURITY->query_seconds(who);
     if (!SECURITY->remove_playerfile(who, reason))
     {
         notify_fail("Failed to delete the player.\n");
@@ -270,6 +315,12 @@ delchar(string str)
     }
 
     write("The player " + capitalize(who) + " has been removed.\n");
+
+    if (sizeof(seconds))
+    {
+        write("Listed second" + ((sizeof(seconds) == 1) ? "" : "s") + ": " +
+            COMPOSITE_WORDS(sort_array(map(seconds, capitalize))) + ".\n");
+    }
     return 1;
 }
 
@@ -350,6 +401,26 @@ global(string str)
 }
 
 /* **************************************************************************
+ * lordship - manage domain lordships
+ */
+nomask int
+lordship(string str)
+{
+    string name, domain;
+
+    CHECK_SO_ARCH;
+
+    if (!strlen(str) ||
+	sscanf(str, "%s %s", name, domain) != 2)
+    {
+	notify_fail("Syntax: lordship <name> <domain>\n");
+	return 0;
+    }
+    return SECURITY->lordship(name, domain);
+}
+
+
+/* **************************************************************************
  * mailadmin - manage the mail system
  */
 nomask int
@@ -401,7 +472,7 @@ mudstatus(string arg)
             notify_fail("SYNTAX: mudstatus on/off eval_limit time_limit(ms)\n");
             return 0;
         }
-        ev = 0; 
+        ev = 0;
         ti = 0;
     }
 
@@ -508,7 +579,7 @@ newchar(string str)
         return 0;
     }
 
-    if (file_size("/players/saved/" + name + ".o") != -1)
+    if (file_size(SAVED_PLAYERS_DIR + name + ".o") != -1)
     {
         notify_fail("The player '" + capitalize(name) + "' is saved.\n");
         return 0;
@@ -517,14 +588,14 @@ newchar(string str)
     tmp_char = restore_map("/secure/proto_char");
     tmp_char["name"] = name;
     passwd = SECURITY->generate_password();
-    tmp_char["password"] = crypt(passwd, 0);
+    tmp_char["password"] = crypt(passwd, CRYPT_METHOD);
     tmp_char["mailaddr"] = args[1];
     tmp_char["password_time"] = time();
     tmp_char["login_time"] = time();
 
     /*
      * NOTA BENE!
-     * 
+     *
      * DO NOT CHANGE THE FORMAT OF THE NEWCHAR_LIST FILE!!!!
      * This file is read automatically by an external service which mails
      * the recipiants of the charater, messing with this will mess up that
@@ -545,105 +616,6 @@ newchar(string str)
 }
 
 /* **************************************************************************
- * nopurge - prevent someone from being purged.
- */
-nomask int
-nopurge(string str)
-{
-    string *words;
-    string name;
-
-    CHECK_SO_ARCH;
-
-    if (!stringp(str))
-    {
-        notify_fail("No argument to nopurge. See the help page.\n");
-        return 0;
-    }
-
-    words = explode(str, " ");
-
-    switch(words[0])
-    {
-    case "-i":
-    case "-info":
-        /* Strip the first argument. */
-        words = words[1..];
-        break;
-
-    case "-a":
-    case "-add":
-        if (sizeof(words) < 3)
-        {
-            write("No reason added to 'purge -a[dd]'.\n");
-            return 1;
-        }
-
-        name = lower_case(words[1]);
-        if (SECURITY->query_no_purge(name))
-        {
-            write("Player '" + capitalize(name) +
-                "' is already protected against purging.\n");
-            return 1;
-        }
-
-        if (!write_file(NOPURGE(name), implode(words[2..], " ")))
-        {
-            write("Failed to write purge protection on '" + capitalize(name) +
-                "'.\n");
-            return 1;
-        }
-
-        write("Purge protection added to '" + capitalize(name) + "'.\n");
-        return 1;
-
-    case "-r":
-    case "-remove":
-        name = lower_case(words[1]);
-        if (!(SECURITY->query_no_purge(name)))
-        {
-            write("Players '" + capitalize(name) +
-                "' is not protected against purging.\n");
-            return 1;
-        }
-
-        if (!rm(NOPURGE(name)))
-        {
-            write("Failed to remove purge protection from '" +
-                capitalize(name) + "'.\n");
-            return 1;
-        }
-
-        write("Removed purge protection from '" + capitalize(name) + "'.\n");
-        return 1;
-
-    default:
-        break;
-    }
-
-    name = lower_case(words[0]);
-    if (!(SECURITY->query_no_purge(name)))
-    {
-        write("Player '" + name + "' is not purge-protected.\n");
-        return 1;
-    }
-
-    write("Purge protection on '" + name + "':\n");
-
-    if (!strlen(str = read_file(NOPURGE(name))))
-    {
-        write("    Error: unable to read purge protection.\n");
-        return 1;
-    }
-
-    words = explode(str, "\n");
-    write("Wizard: " + words[0] +
-        "\nReason: " + words[1] +
-        "\nDate  : " + ctime(file_time(NOPURGE(name)))+ "\n");
-    return 1;
-}
- 
-/* **************************************************************************
  * pingmud - send a udp ping to another mud
  */
 nomask int
@@ -651,7 +623,7 @@ pingmud(string arg)
 {
     CHECK_SO_ARCH;
 
-#ifdef UDP_MANAGER    
+#ifdef UDP_MANAGER
     return UDP_MANAGER->cmd_ping(arg);
 #else
     notify_fail("No udp manager active.\n");
@@ -668,9 +640,6 @@ purge(string str)
 {
     CHECK_SO_ARCH;
 
-    notify_fail("Currently not operational.\n");
-    return 0;
-
     if (str == "players")
     {
         if (objectp(PURGE_OBJECT))
@@ -679,11 +648,11 @@ purge(string str)
             return 0;
         }
 
-        PURGE_OBJECT->purge_players();
+        PURGE_OBJECT->purge(str);
         return 1;
     }
 
-    return SECURITY->purge(lower_case(str));
+    return delchar(str);
 }
 
 /* **************************************************************************
@@ -695,6 +664,8 @@ resetpassword(string str)
     string pswd = 0;
     string name;
     mapping playerfile;
+
+    CHECK_SO_ARCH;
 
     if (!strlen(str))
     {
@@ -724,9 +695,11 @@ resetpassword(string str)
 
     /* Reset the password and also the time, forcing the player to change upon
        login if we set the password to a text. */
-    playerfile["password"] = (strlen(pswd) ? crypt(pswd, 0) : 0);
+    playerfile["password"] = (strlen(pswd) ? crypt(pswd, CRYPT_METHOD) : 0);
     playerfile["password_time"] = 0;
     save_map(playerfile, PLAYER_FILE(name));
+
+    write_file(PINFO_FILE(name), ctime(time()) + "\nPassword reset by " + capitalize(this_interactive()->query_real_name()) + ".\n\n");
 
     if (pswd)
     {
@@ -758,7 +731,7 @@ nomask int
 siteban(string str)
 {
     CHECK_SO_ARCH;
-    
+
     return SECURITY->siteban(str);
 }
 
@@ -815,7 +788,9 @@ suspend(string str)
         else
         {
             playerfile = restore_map(PLAYER_FILE(words[0]));
-            playerfile["restricted"] = 0;
+	    if (!playerfile[SAVEVAR_VARS])
+		playerfile[SAVEVAR_VARS] = ([ ]);
+            m_delkey(playerfile[SAVEVAR_VARS], SAVEVAR_RESTRICT);
             save_map(playerfile, PLAYER_FILE(words[0]));
         }
         return 1;
@@ -877,7 +852,9 @@ suspend(string str)
         else
         {
             playerfile = restore_map(PLAYER_FILE(words[0]));
-            playerfile["restricted"] = -(time() + seconds);
+	    if (!playerfile[SAVEVAR_VARS])
+		playerfile[SAVEVAR_VARS] = ([ ]);
+            playerfile[SAVEVAR_VARS][SAVEVAR_RESTRICT] = -(time() + seconds);
             save_map(playerfile, PLAYER_FILE(words[0]));
         }
         return 1;
@@ -939,7 +916,7 @@ storemuds(string arg)
 {
     CHECK_SO_ARCH;
 
-#ifdef UDP_MANAGER    
+#ifdef UDP_MANAGER
     if (UDP_MANAGER->update_masters_list())
     {
         write("Ok.\n");
@@ -1016,7 +993,7 @@ vip(string str)
     }
 
     write("VIP access of " + capitalize(str) + " was NOT granted.\n");
-    return 1;    
+    return 1;
 }
 
 

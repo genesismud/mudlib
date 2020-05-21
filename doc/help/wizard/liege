@@ -6,6 +6,7 @@ ACCESS LEVEL
 
 SYNOPSIS
 	liege <message>
+	liege -
 
 DESCRIPTION
 	This will send a message to all lieges and higher in the game.
@@ -15,6 +16,7 @@ DESCRIPTION
 
 ARGUMENTS
 	<message> - the message to send all lieges and higher.
+        -         - display the last 20 messages on the line.
 
 SEE ALSO
 	busy, line, liegee

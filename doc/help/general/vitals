@@ -11,13 +11,14 @@ DESCRIPTION
         With this command you can see certain vitals relevant to your current
 	status. These include health and mental condition as well as how
 	panicky, tired, hungry, thirsty and intoxicated you are. These values
-	vary depending on what you do.
+	vary depending on what you do. If you are in combat, or relaxing from
+	combat, you will notice that you are full of adrenaline.
 
         It is also possible to see a single line of your vitals. For that,
         use the following arguments as <line>:
 
         age, align[ment], encumbrance, fatigue, health, intox[ication],
-        mana, mail, panic, soaked, stuffed
+        mana, mail, panic, soaked, stuffed, quickness
 
 OPTIONS
         [none]   - see your own vitals.

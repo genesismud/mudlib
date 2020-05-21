@@ -26,13 +26,14 @@
  * This is the macro for finding the filename for saving the player object.
  * The second macro returns the filename for a banished-file.
  */
-#define PLAYER_FILE(n)  ("/players/" + extract((n), 0, 0) + "/" + (n))
-#define BANISH_FILE(n)  ("/players/banished/" + extract((n), 0, 0) + \
-			 "/" + (n))
-#define PINFO_FILE(n)   ("/players/pinfo/" + extract((n), 0, 0) + "/" + (n))
-#define DELETED_FILE(n) ("/players/deleted/" + extract((n), 0, 0) + \
-			 "/" + (n))
-#define SANCTION_DIR    "/players/sanctions/"
+#define PLAYER_FILE_DIR "/data/players/"
+#define PLAYER_FILE(n)  (PLAYER_FILE_DIR + extract((n), 0, 0) + "/" + (n))
+#define BANISH_FILE(n)  ("/data/banished/" + extract((n), 0, 0) + "/" + (n))
+#define PINFO_FILE(n)   ("/data/pinfo/" + extract((n), 0, 0) + "/" + (n))
+#define DELETED_FILE(n) ("/data/deleted/" + extract((n), 0, 0) + "/" + (n))
+#define SANCTION_DIR    "/data/sanctions/"
+#define SAVED_PLAYERS_DIR "/data/saved/"
+#define SECONDS_SAVE    "/data/seconds"
 
 /*
  * CALLED_BY_SECURITY
@@ -95,7 +96,7 @@
 		   WIZNAME_KEEPER }) )
 
 #define WIZ_S ( ({ "mort", "appr", "pilg", "retd", "wiz ", "mage", "stwd", \
-		   "lieg", "arch", "kpr " }) )
+		   "lieg", "arch", "keep" }) )
 
 /*
  * WIZ_RANK_NAME(rank)
@@ -140,15 +141,17 @@
  *
  * This macro returns an array of ranks to which it is possible to promote
  * or demote someone with the normal promote/demote command. Note that
- * some changes are possible, but not in this macro. At domain-creation
- * for instance, you need to make an apprentice into a Lord, but that is
- * not possible using the promote/demote command, so it is not in this
- * macro. It is not possible to promote/demote keepers via that command.
- * There is a special "keeper" command in the keeper-soul.
+ * some changes are possible, but not in this macro.
+ * - At domain-creation you need to make an apprentice into a Lord. That is
+ *   done through domain creation.
+ * - Apprentices cannot be promoted to full wizard. That has to be done via
+ *   the "draft" or "accept" command.
+ * - It is not possible to promote/demote keepers via that command. There is a
+ *   special "keeper" command in the keeper-soul.
  */
 #define WIZ_RANK_POSSIBLE_CHANGE(rank) ( ([                                 \
     WIZ_MORTAL:     ({ WIZ_APPRENTICE }),                                   \
-    WIZ_APPRENTICE: ({ WIZ_MORTAL, WIZ_PILGRIM, WIZ_RETIRED, WIZ_NORMAL }), \
+    WIZ_APPRENTICE: ({ WIZ_MORTAL, WIZ_PILGRIM, WIZ_RETIRED }),             \
     WIZ_PILGRIM:    ({ WIZ_MORTAL, WIZ_APPRENTICE }),                       \
     WIZ_RETIRED:    ({ WIZ_MORTAL, WIZ_APPRENTICE }),                       \
     WIZ_NORMAL:     ({ WIZ_MORTAL, WIZ_APPRENTICE, WIZ_RETIRED,             \
@@ -170,7 +173,7 @@
  * Since there are also hidden members, we have to store this list in a
  * safe place.
  */
-#define CHANNELS_SAVE "/players/channels"
+#define CHANNELS_SAVE "/data/channels"
  
 /*
  * WIZ_SOUL(rank)
@@ -184,7 +187,7 @@
     WIZ_CMD_APPRENTICE,     \
     WIZ_CMD_PILGRIM,        \
     WIZ_CMD_APPRENTICE,     \
-    WIZ_CMD_NORMAL,         \
+    WIZ_CMD_WIZARD,         \
     WIZ_CMD_MAGE,           \
     WIZ_CMD_LORD,           \
     WIZ_CMD_LORD,           \
@@ -214,7 +217,7 @@
  *
  * A list of player info commands allowed to lieges.
  */
-#define ALLOWED_LIEGE_COMMANDS ({ "pinfo" })
+#define ALLOWED_LIEGE_COMMANDS ({ "badname", "pinfo" })
 
 /*
  * MUDLIST_SERVER
@@ -231,6 +234,13 @@
 #ifndef CONFIG_DEFINED
 #include "/sys/config.h"
 #endif  CONFIG_DEFINED
+
+/*
+ * CRYPT_METHOD
+ *
+ * The method used to encrypt long passwords. See 'man crypt'.
+ */
+#define CRYPT_METHOD "$6$"
 
 /* No definitions beyond this line. */
 #endif SECURE_DEFINED 

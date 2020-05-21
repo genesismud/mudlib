@@ -6,8 +6,9 @@
  * It contains the functions and data related to the exits of a room.
  */
 
+#include <cmdparse.h>
+#include <files.h>
 #include <filter_funs.h>
-#include <filepath.h>
 
 /*
  * Global variables.
@@ -16,19 +17,17 @@ static mixed room_exits;
 static mixed tired_exits;
 static mixed non_obvious_exits;
 static int   room_no_obvious;
+static string *default_dirs = DEFAULT_DIRECTIONS;
+static mapping no_exit_messages;
+static string *exit_order = ({ "north", "northeast", "east", "southeast", 
+                             "south", "southwest", "west", "northwest", "up", 
+                             "down" });
 
 /*
  * Prototype
  */
 int unq_move(string str);
 int unq_no_move(string str);
-
-/*
- * Fix to get rid of the obnoxius 'What ?' when we try to walk in a nonexistant
- * direction. These are the default direction commands.
- */
-#define DEF_DIRS ({ "north", "south", "east", "west", "up", "down", \
-		    "northeast", "northwest", "southeast", "southwest" })
 
 /*
  * Function name: ugly_update_function
@@ -40,24 +39,17 @@ int unq_no_move(string str);
 public void
 ugly_update_action(string cmd, int add)
 {
-    object *livings;
-    object old_tp;
-    int index;
-    int size;
-
-    old_tp = this_player();
-    livings = FILTER_LIVE(all_inventory(this_object()));
-    size = sizeof(livings);
-    index = -1;
-    while(++index < size)
+    object old_tp = this_player();    
+    
+    foreach (object liv : FILTER_LIVE(all_inventory(this_object())))
     {
-	set_this_player(livings[index]);
+	set_this_player(liv);
 	if (add == 1)
 	    add_action(unq_move, cmd);
 	else
 	    add_action(unq_no_move, cmd);
     }
-
+    
     if (objectp(old_tp))
     {
 	set_this_player(old_tp);
@@ -73,24 +65,19 @@ init()
 {
     int index;
     int size;
-    string *dd;
 
     ::init();
 
-    dd = DEF_DIRS;
     index = -2;
     size = sizeof(room_exits);
     while((index += 3) < size)
     {
 	add_action(unq_move, room_exits[index]);
-	dd -= ({ room_exits[index] });
     }
 
-    index = -1;
-    size = sizeof(dd);
-    while(++index < size)
+    foreach (string dir: default_dirs)
     {
-	add_action(unq_no_move, dd[index]);
+	add_action(unq_no_move, dir);
     }
 }
 
@@ -195,6 +182,7 @@ add_exit(string place, string cmd, mixed efunc, mixed tired, mixed non_obvious)
     }
 
     ugly_update_action(cmd, 1);
+    default_dirs -= ({ cmd });
     return 1;
 }
 
@@ -228,6 +216,10 @@ remove_exit(string cmd)
 	    {
 		non_obvious_exits = exclude_array(non_obvious_exits, i, i);
 	    }
+
+            if (member_array(cmd, DEFAULT_DIRECTIONS) >= 0)
+                default_dirs += ({ cmd });
+            
 	    ugly_update_action(cmd, 0);
 	    return 1;
 	}
@@ -415,7 +407,9 @@ query_obvious_exits()
     /* No non-obvious exits marked, so all exits are obvious. */
     if (!pointerp(non_obvious_exits))
     {
-	return query_exit_cmds();
+	obvious_exits = query_exit_cmds();
+        string *sorted_exits = obvious_exits & exit_order;                          
+        return sorted_exits + (obvious_exits - sorted_exits);             
     }
 
     size_cmds = sizeof(room_exits) / 3;
@@ -436,7 +430,8 @@ query_obvious_exits()
 	}
     }
 
-    return obvious_exits;
+    string *sorted_exits = obvious_exits & exit_order;
+    return sorted_exits + (obvious_exits - sorted_exits);
 }
 
 /*
@@ -454,4 +449,94 @@ query_non_obvious_exits()
 
     return non_obvious_exits + allocate((sizeof(room_exits) / 3) -
 					sizeof(non_obvious_exits));
+}
+
+/*
+ * Function name: set_no_exit_msg
+ * Description	: set the custom no-exit msg for direction(s). So instead of
+ *                "There is no obvious exit west.", you can tell player
+ *                "You wander west among the trees for a bit, then return to the road."
+ * Arguments	: mixed exits - either a string or an array of strings with the
+ *                    direction(s) for which this room does not have an exit.
+ *                mixed msg - the message for these directions; supports VBFC.
+ */
+public void
+set_no_exit_msg(mixed exits, mixed msg)
+{
+    /* No extra exits allowed. */
+    if (query_prop(ROOM_I_NO_EXTRA_EXIT))
+    {
+	return;
+    }
+
+    if (!mappingp(no_exit_messages))
+        no_exit_messages = ([ ]);
+
+    if (pointerp(exits))
+    {
+        foreach(string exit: exits)
+        {
+            no_exit_messages[exit] = msg;
+        }
+    }
+    else if (stringp(exits) && strlen(exits))
+    {
+	no_exit_messages[exits] = msg;
+    }
+}
+
+/*
+ * Function name: query_no_exit_msgs
+ * Description  : Find out the exits that have a no-exit message.
+ * Returns      : string * - list of exits with a no-exit message.
+ */
+public mixed
+query_no_exit_msgs()
+{
+    return m_indices(no_exit_messages);
+}
+
+/*
+ * Function name: query_no_exit_msg
+ * Description  : Find out the specific no-exit messages per exit.
+ * Arguments    : string exit - the exit for which to get the text for.
+ * Returns      : mixed - the no-exit message (may be VFBC).
+ */
+public mixed
+query_no_exit_msg(string exit)
+{
+    if (!mappingp(no_exit_messages))
+        return 0;
+
+    return no_exit_messages[exit];
+}
+
+/*
+ * Function name: query_doors
+ * Description  : Finds all door objects in this room.
+ * Returns      : object * - the door objects.
+ */
+public object *
+query_doors()
+{
+    return FILTER_DOOR_OBJECTS(all_inventory());
+}
+
+/*
+ * Function name: query_door_cmds
+ * Description  : Returns an array of strings that the player can use as
+ *                commands to move through a doors in the room.
+ * Returns      : string * - the array with commands.
+ */
+public string *
+query_door_cmds()
+{
+    string *exits = ({ });
+
+    foreach(object door: query_doors()) 
+    {
+        exits += door->query_pass_command();
+    }
+
+    return exits;
 }

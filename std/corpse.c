@@ -35,7 +35,8 @@ string long_func();
 int     decay;
 int     decay_id;
 string  met_name, nonmet_name, state_desc, pstate_desc;
-mixed           leftover_list;
+mixed   leftover_list;
+string  cause1, cause2;
 
 #if 0
 /*
@@ -64,6 +65,7 @@ create_container()
     set_long(long_func);
     add_prop(CONT_I_WEIGHT, 50000);
     add_prop(CONT_I_VOLUME, 50000);
+    add_prop(CONT_I_ATTACH, 1);
     state_desc = "corpse of ";
     pstate_desc = "corpses of ";
 
@@ -263,17 +265,21 @@ pshort_func()
 string
 long_func()
 {
-    object pob;
+    object pob = vbfc_caller();
+    string cause;
 
-    pob = vbfc_caller();
     if (!pob || !query_interactive(pob) || pob == this_object())
         pob = this_player();
+
+    /* Attach cause of death (or rather, cause of most damage). */
+    cause = (strlen(cause1) ? (". " + cause1) : ".") + "\n";
+
     if (pob->query_real_name() == lower_case(met_name))
-        return "This is your own dead body.\n";
+        return "This is your own dead body" + cause;
     if (pob->query_met(met_name))
-        return "This is the dead body of " + capitalize(met_name) + ".\n";
+        return "This is the dead body of " + capitalize(met_name) + cause;
     else
-        return "This is the dead body of " + nonmet_name + ".\n";
+        return "This is the dead body of " + nonmet_name + cause;
 }
 
 /*
@@ -303,6 +309,47 @@ move_out(object ob)
 }
 
 /*
+ * Function name: make_leftover
+ * Description  : Called to create the leftover and move it to its destination.
+ * Arguments    : mixed leftovers - The leftover array.
+ *                object dest - the destination.
+ */
+void
+make_leftover(mixed leftovers, object dest)
+{
+    object obj;
+    int volume = 10;
+    int weight = 10;
+    int relweight = ((sizeof(leftovers) > 6) ? leftovers[6] : 0);
+
+    if (relweight)
+    {
+        volume = (relweight * query_prop(CONT_I_VOLUME)) / 1000;
+        weight = (relweight * query_prop(CONT_I_WEIGHT)) / 1000;
+    }
+
+    seteuid(getuid());
+
+    object room = environment();
+    while (objectp(environment(room)))
+    {
+        room = environment(room);
+    }
+
+    obj = clone_object(leftovers[0]);
+    obj->leftover_init(leftovers[1], query_prop(CORPSE_S_RACE));
+    obj->set_amount(weight);
+    obj->add_prop(HEAP_I_UNIT_VOLUME, volume);
+    obj->add_prop(OBJ_O_LOOTED_IN_ROOM, room);
+
+    if (obj->move(dest, 0) && living(dest))
+    {
+        write(LANG_THESHORT(obj) + " is too much to carry.\n");
+	obj->move(environment(), 1);
+    }
+}
+
+/*
  * Function name: decay_remove
  * Description  : Second stage of decay. Clone the leftovers and then destruct
  *                the corpse.
@@ -311,7 +358,6 @@ void
 decay_remove()
 {
     int i, j, flag;
-    object obj;
 
     for (i = 0; i < sizeof(leftover_list); i++)
     {
@@ -319,9 +365,7 @@ decay_remove()
         {
             for (j = 0 ; j < leftover_list[i][2] ; j++)
             {
-                obj = clone_object(leftover_list[i][0]);
-                obj->leftover_init(leftover_list[i][1], query_prop(CORPSE_S_RACE));
-                obj->move(environment(this_object()), 0);
+                make_leftover(leftover_list[i], environment(this_object()));
                 flag = 1;
             }
         }
@@ -462,41 +506,102 @@ query_race()
 void
 appraise_object(int num)
 {
-    int skill, value, volume, weight, seed;
-
-    if (num)
-        skill = num;
-    else
-        skill = this_player()->query_skill(SS_APPR_OBJ);
-
-    volume = query_prop(CONT_I_VOLUME);
-    weight = query_prop(CONT_I_WEIGHT);
-
-    sscanf(OB_NUM(this_object()), "%d", seed);
-    skill = 1000 / (skill + 1);
-    skill = random(skill, seed);
-
-    weight = cut_sig_fig(weight + (skill % 2 ? -skill % 70 : skill) *
-                        weight / 100);
-    volume = cut_sig_fig(volume + (skill % 2 ? -skill % 70 : skill) *
-                        volume / 100);
-
-    write("\n" + this_object()->long(0, this_player()) + "\n");
-    write(break_string("You appraise that the weight is " + weight +
-        " grams and you guess its volume is about " + volume +
-        " milliliters.\n", 75));
+    write(this_object()->long(0, this_player()) +
+        (strlen(cause2) ? (cause2 + "\n") : "") + "\n");
+    write("You appraise that the weight is " + appraise_weight(num) +
+        " and you guess its volume is about " + appraise_volume(num) + ".\n");
 }
 
 /*
- * Function name: add_leftover
- * Description:   Add leftovers (at death) to the body.
+ * Function name: set_damage
+ * Description  : Upon creation of the corpse, passes the information about
+ *                damage sustained by the lifeform, so that we may tell the
+ *                status of the corpse.
+ * Arguments    : mapping damage - ([ int damage type : int hitpoints ])
+ */
+public void
+set_damage(mapping damage)
+{
+    int maxdam, maxdt;
+
+    /* Find out the primary source of damage. */
+    foreach(int dt: m_indices(damage))
+    {
+        if (damage[dt] > maxdam)
+	{
+	    maxdt = dt;
+	}
+    }
+    switch(maxdt)
+    {
+    case W_IMPALE:
+        cause1 = "It looks pierced and stabbed."; break;
+    case W_SLASH:
+        cause1 = "It looks slashed and cut."; break;
+    case W_BLUDGEON:
+        cause1 = "It looks bruised and battered."; break;
+    case MAGIC_DT:
+        cause1 = "It looks damaged by arts of magic."; break;
+    case SS_ELEMENT_DEATH:
+        cause1 = "It looks damaged by death magic."; break;
+    case SS_ELEMENT_LIFE:
+        cause1 = "It looks damaged by life magic."; break;
+    case SS_ELEMENT_FIRE:
+        cause1 = "It looks damaged by fire magic."; break;
+    case SS_ELEMENT_AIR:
+        cause1 = "It looks damaged by air magic."; break;
+    case SS_ELEMENT_EARTH:
+        cause1 = "It looks damaged by earth magic."; break;
+    case SS_ELEMENT_WATER:
+        cause1 = "It looks damaged by water magic."; break;
+    }
+
+    /* Find out a secondary source of damage. */
+    m_delkey(damage, maxdt);
+    maxdt = 0;
+    maxdam = 0;
+    foreach(int dt: m_indices(damage))
+    {
+        if (damage[dt] > maxdam)
+	{
+	    maxdt = dt;
+	}
+    }
+    switch(maxdt)
+    {
+    case W_IMPALE:
+        cause2 = "There are secondary stabs and jabs."; break;
+    case W_SLASH:
+        cause2 = "There are secondary slashes and cuts."; break;
+    case W_BLUDGEON:
+        cause2 = "There are secondary bruises."; break;
+    case MAGIC_DT:
+        cause2 = "There is secondary damage by arts of magic."; break;
+    case SS_ELEMENT_DEATH:
+        cause1 = "There is secondary damage by death magic."; break;
+    case SS_ELEMENT_LIFE:
+        cause1 = "There is secondary damage by life magic."; break;
+    case SS_ELEMENT_FIRE:
+        cause1 = "There is secondary damage by fire magic."; break;
+    case SS_ELEMENT_AIR:
+        cause1 = "There is secondary damage by air magic."; break;
+    case SS_ELEMENT_EARTH:
+        cause1 = "There is secondary damage by earth magic."; break;
+    case SS_ELEMENT_WATER:
+        cause1 = "There is secondary damage by water magic."; break;
+    }
+}
+
+/*
+ * Function name: set_leftover_list
+ * Description:   Sets the leftovers (at death) to the body.
  *                The returned list should be an array of arrays, containing
  *                the following entries:
- *                  ({ ({ objpath, organ, nitems, vbfc, hard, cut }), ... })
+ *                  ({ ({ objpath, organ, nitems, vbfc, hard, cut, foodproc }), ... })
  * Arguments:     mixed list - The leftover list to use.
  */
 varargs public void
-add_leftover(mixed list)
+set_leftover_list(mixed list)
 {
     leftover_list = list;
 }
@@ -584,8 +689,7 @@ get_leftover(string arg)
     if (!arg)
         return 0;
 
-    if (!parse_command(arg, environment(this_player()), "%s 'from' %i",
-                organ, corpses))
+    if (!parse_command(arg, environment(this_player()), "%s 'from' %i", organ, corpses) || !strlen(organ))
         return 0;
 
     found = VISIBLE_ACCESS(corpses, "find_corpse", this_object());
@@ -621,7 +725,8 @@ get_leftover(string arg)
     leftovers = query_leftover(organ);
     if (!sizeof(leftovers) || leftovers[2] == 0)
     {
-        notify_fail("There's no such thing to get from the corpse.\n");
+        notify_fail("There's no such thing to get from the " +
+	    this_object()->short(this_player()) + ".\n");
         return 0;
     }
 
@@ -647,13 +752,12 @@ get_leftover(string arg)
         remove_leftover(leftovers[1]);
     }
 
-    theorgan = clone_object(leftovers[0]);
-    theorgan->leftover_init(leftovers[1], query_prop(CORPSE_S_RACE));
-    theorgan->move(this_player(), 0);
+    make_leftover(leftovers, this_player());
 
     say(QCTNAME(this_player()) + " " + vb + "s " + LANG_ADDART(organ) +
         " from " + QSHORT(found[0]) + ".\n");
-    write("You " + vb +" " + LANG_ADDART(organ) + " from a corpse.\n");
+    write("You " + vb + " " + LANG_ADDART(organ) + " from the " +
+        this_object()->short(this_player()) + ".\n");
     return 1;
 }
 
@@ -721,8 +825,9 @@ search_for_leftovers(object player, string str)
 
     if (sizeof(found) > 0)
     {
-        return "After searching the corpse you believe you " +
-            "can tear out or cut off " + COMPOSITE_WORDS(found) + ".\n";
+        return "After searching the " + this_object()->short(this_player()) +
+            " you believe you can tear out or cut off " +
+	    COMPOSITE_WORDS(found) + ".\n";
     }
 
     return "";

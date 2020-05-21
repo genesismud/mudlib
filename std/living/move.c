@@ -50,7 +50,6 @@ move_reset()
  *
  * Returns:       Result code of move:
  *                      0: Success.
- *
  *                      3: Can't take it out of it's container.
  *                      4: The object can't be inserted into bags etc.
  *                      5: The destination doesn't allow insertions of objects.
@@ -59,13 +58,14 @@ move_reset()
 public varargs int
 move_living(string how, mixed to_dest, int dont_follow, int no_glance)
 {
-    int    index, size, invis;
+    int result, invis;
+    int fromprevlight, fromnewlight, toprevlight, tonewlight;
     object *team, *dragged, env, oldtp;
     string vb = query_verb();
     string com, msgout, msgin;
     mixed msg;
     string from_desc;
-    
+
     oldtp = this_player();
  
     if (!objectp(to_dest))
@@ -85,7 +85,11 @@ move_living(string how, mixed to_dest, int dont_follow, int no_glance)
         }
         else
         {
-            tell_object(this_object(), msg);
+            if (query_wiz_level())
+		tell_object(this_object(), msg);
+	    else
+		tell_object(this_object(),
+	            "You notice a wrongness in the fabric of your destination.\n");
             SECURITY->log_loaderr(to_dest, environment(this_object()), how,
                 previous_object(), msg);
             return 7;
@@ -96,7 +100,7 @@ move_living(string how, mixed to_dest, int dont_follow, int no_glance)
     {
         return 7;
     }
- 
+
     if (!how)
     {
         return move(to_dest, 1);
@@ -143,14 +147,13 @@ move_living(string how, mixed to_dest, int dont_follow, int no_glance)
         msgin += "\n";
     }
 
-    invis = query_prop(OBJ_I_INVIS);
-
     /* Make us this_player() if we aren't already. */
     if (this_object() != this_player())
     {
         set_this_player(this_object());
     }
 
+    invis = query_prop(OBJ_I_INVIS);
     if (env = environment(this_object()))
     {
         /* Update the last room settings. */
@@ -167,6 +170,8 @@ move_living(string how, mixed to_dest, int dont_follow, int no_glance)
         {
             env->add_prop(ROOM_S_DIR, ({ how, query_race_name() }) );
         }
+
+        fromprevlight = env->query_prop(OBJ_I_LIGHT);
 
         /* Report the departure. */                     
         if (msgout)
@@ -195,9 +200,36 @@ move_living(string how, mixed to_dest, int dont_follow, int no_glance)
         remove_prop(LIVE_I_SNEAK);
     }
 
-    if (index = move(to_dest)) 
+    toprevlight = to_dest->query_prop(OBJ_I_LIGHT);
+
+    if (result = move(to_dest)) 
     {
-        return index;
+        return result;
+    }
+
+    /* Display light message to old room. */
+    if (objectp(env))
+    {
+        fromnewlight = env->query_prop(OBJ_I_LIGHT);
+        if ((fromnewlight > 0) && (fromprevlight < 1))
+        {
+            tell_room(env, "The darkness dissipates.\n");
+        }
+        else if ((fromnewlight < 1) && (fromprevlight > 0))
+        {
+            tell_room(env, "Darkness engulfs the surroundings.\n");
+        }
+    }
+
+    /* Display light message to new room. */
+    tonewlight = to_dest->query_prop(OBJ_I_LIGHT);
+    if ((tonewlight > 0) && (toprevlight < 1))
+    {
+        tell_room(to_dest, "The darkness dissipates.\n");
+    }
+    else if ((tonewlight < 1) && (toprevlight > 0))
+    {
+        tell_room(to_dest, "Darkness engulfs the surroundings.\n", ({ this_object() }) );
     }
 
     if (msgin)
@@ -223,6 +255,12 @@ move_living(string how, mixed to_dest, int dont_follow, int no_glance)
     if (interactive(this_object()) &&
         !no_glance)
     {
+        /* Update the GMCP info. */
+        if (query_gmcp(GMCP_ROOM))
+        {
+            to_dest->gmcp_room_info(this_object());
+        }
+
         this_object()->do_glance(this_object()->query_option(OPT_BRIEF));
     }
  
@@ -245,10 +283,13 @@ move_living(string how, mixed to_dest, int dont_follow, int no_glance)
         }
         remove_prop(TEMP_DRAGGED_ENEMIES);
     }
-                               
+
+    /* If leader doesn't want to be followed, don't follow. */
+    dont_follow |= this_player()->query_prop(LIVE_I_TEAM_NO_FOLLOW);
+
     if (!dont_follow &&
         stringp(how) &&
-        (size = sizeof(team = query_team())))
+        (sizeof(team = query_team())))
     {
         /* Command for the followers if this is a leader. */
         if (!strlen(vb))
@@ -272,19 +313,18 @@ move_living(string how, mixed to_dest, int dont_follow, int no_glance)
         }
 
         /* Move the present team members. */
-        index = -1;
-        while(++index < size)
+	foreach(object member: team)
         {
-            if ((environment(team[index]) == env) &&
-                this_object()->check_seen(team[index]))
+            if ((environment(member) == env) &&
+                this_object()->check_seen(member))
             {
-                team[index]->follow_leader(com);
+                member->follow_leader(com);
             }
         }
     }
 
     /* Only reset this_player() if we weren't this_player already. */
-    if (oldtp != this_object())
+    if (oldtp != this_player())
     {
         set_this_player(oldtp);
     }

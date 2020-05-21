@@ -31,8 +31,7 @@ static int my_commands(string str);
 
 #define REOPEN_SOUL_ALLOWED ([ "exec_done_editing" : WIZ_CMD_NORMAL, \
                                "pad_done_editing"  : WIZ_CMD_NORMAL, \
-                               "load_many_delayed" : WIZ_CMD_NORMAL, \
-                               "tail_input_player" : WIZ_CMD_APPRENTICE ])
+                               "load_many_delayed" : WIZ_CMD_NORMAL ])
 #define REOPEN_SOUL_RELOAD  "_reloaded"
 
 /*
@@ -272,6 +271,14 @@ load_wiz_souls()
     {
         write("Error loading wizard soul list. No wizard soul loaded.\n");
         return 0;
+    }
+
+    /* Members of the AoP and AoD teams should have the helper soul, too. */
+    if ((rank < WIZ_LORD) &&
+        (SECURITY->query_team_member("aod", query_real_name()) ||
+	 SECURITY->query_team_member("aop", query_real_name())))
+    {
+        wiz_souls = ({ WIZ_CMD_HELPER }) + wiz_souls;
     }
 
     wiz_souls = start_souls(wiz_souls);

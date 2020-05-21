@@ -7,17 +7,9 @@ SYNOPSIS
 
 DESCRIPTION
 	With this command you can print information about the skills of
-	yourself or another living. Its output will be something like the
-	following:
-
-	Skills of Mercade:
-                     sword:  75 (     0)        open lock:  30 (    50)
-                   polearm:  30 (     1)          acrobat:  13 (    52)
-                       axe: 100 (     2)            sneak:  45 (    54)
-
-	In this, "sword" is the skill name, "75" is the skill I have in
-	fighting with a sword and "0" is the skill number for the sword
-	skill.
+	yourself or another living. The output lists the number and the
+	name of the skill plus the value the player has trained. If there
+	is an extra bonus active on the skill, this is separately noted.
 
 ARGUMENTS
 	<none>	 - print information about yourself.

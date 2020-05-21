@@ -54,5 +54,41 @@
 #define ARMAGEDDON_CANCEL   2
 #define ARMAGEDDON_SHUTDOWN 3
 
+/*
+ * Values for the LIVE_I_SNEAK property.
+ */
+#define SNEAK_ONCE  1
+#define SNEAK_AUTO  2
+
+/*
+ * Flags for notification when someone enters the realms.
+ */
+#define CONNECT_LOGIN   (0)
+#define CONNECT_LOGOUT  (1)
+#define CONNECT_LINKDIE (2)
+#define CONNECT_REVIVE  (3)
+#define CONNECT_SWITCH  (4)
+#define CONNECT_REAL_LD (5)
+
+/*
+ * Some default light values for various types of items in the game. 
+ * 
+ * LIGHT_PASSIVE      - Permanent light from a glowing object
+ * LIGHT_PASSIVE_RARE - Permanent light from a very rare object (clone_unique)
+ * LIGHT_TEMPORARY - Light from a temporarily glowing object (torch/lamp)
+ * LIGHT_HELD      - Light from an item held in a hand replacing a weapon.
+ *
+ * Darkness props as above.
+ */
+#define LIGHT_PASSIVE           1
+#define LIGHT_PASSIVE_RARE      2
+#define LIGHT_TEMPORARY         2
+#define LIGHT_HELD              4
+
+#define DARKNESS_PASSIVE        -2
+#define DARKNESS_PASSIVE_RARE   -4
+#define DARKNESS_TEMPORARY      -5
+#define DARKNESS_HELD           -6
+
 /* No definitions beyond this line. */
 #endif CONST_DEF

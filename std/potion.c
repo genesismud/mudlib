@@ -15,104 +15,57 @@
 #pragma save_binary
 #pragma strict_types
 
-inherit "/std/object";
+inherit "/std/heap";
 inherit "/lib/herb_support";
 
 #include <cmdparse.h>
 #include <composite.h>
 #include <files.h>
+#include <formulas.h>
 #include <macros.h>
 #include <ss_types.h>
 #include <stdproperties.h>
 
-int	id_diff,		/* How difficult is it to id the potion? */
-        magic_resistance,	/* How strong is the resistance against magic */
-        soft_amount,
-        alco_amount,
-        potion_value,
-        identified = 0,
-        quaffed_it;
-object *gFail;
-string	quaff_verb,
-        potion_name,
-        id_long,
-        unid_long,
-        id_smell,
-        unid_smell,
-        id_taste,
-        unid_taste;
+#define QUAFF_VERB     ("quaff")   /* the common ingestion verb of potions */
+
+int	id_diff,	  /* How difficult is it to id the potion? */
+        magic_resistance, /* How strong is the resistance against magic */
+        soft_amount,	  /* the soft amount of the potion */
+        alco_amount,	  /* the alco value of the potion */
+        potion_value,	  /* the cost of potion in a copper coins */
+        identified = 0;
+object *gFail;		  /* needed for a backwards compability */
+string	quaff_verb,	  /* the verb used for potion ingesting */
+        potion_name,	  /* the unique name of the potion */
+        potion_pname,     /* the plural name of the potion */
+        id_long,	  /* the description of identified potion */
+        unid_long,	  /* the description of unidentified potion */
+        id_smell,	  /* the smell of the identified potion */
+        unid_smell,	  /* the smell of the unidentified potion */
+        id_taste,	  /* the taste of the identified potion */
+        unid_taste;	  /* the taste of the unidentified potion */
 
 /*
- * Function name: do_id_check
- * Description:   This little function is called each time the potion
- *                is referred to by a player, to check if (s)he
- *                identifies it or not.
- * Arguments:	  player - The player
- * Returns: 1 for identification, else 0.
+ * Function name: can_id_potion
+ * Description:   This little function is called each time the potion is
+ *                referred to by a player, to check if (s)he identifies it
+ *                or not.
+ * Arguments:	  object player - The player
+ * Returns:       int - 1 for identification, else 0.
  */
 varargs int
-do_id_check(object player)
+can_id_potion(object player = this_player())
 {
-    if (!objectp(player))
-        player = this_player();
-
-    if (objectp(player) && (
-        ((environment(this_object()) == player) && identified) ||
-        (id_diff <= player->query_skill(SS_ALCHEMY))
-        ))
+    if (F_CAN_ID_POTION(id_diff, player->query_skill(SS_ALCHEMY)))
         return 1;
-    else
-        return 0;
-}
 
-int quaff_it(string str);
-int taste_it(string str);
-int smell_it(string str);
+    string *id_names = player->query_prop(LIVE_AS_POTION_ID);
 
-/*
- * Function name: init
- * Description:   adds the quaff-action to the player
- */
-void
-init()
-{
-    ::init(); /* If this isn't added cmd items won't work. */
-
-    add_action(quaff_it, quaff_verb);
-    if (quaff_verb != "quaff")
-        add_action(quaff_it, "quaff");
-    if (quaff_verb != "taste")
-        add_action(taste_it, "taste");
-    if (quaff_verb != "smell")
-        add_action(smell_it, "smell");
-}
-
-void
-leave_env(object from, object to)
-{
-    if (from && living(from))
-    {
-        remove_name(potion_name);
-        identified = 0;
-    }
-
-    ::leave_env(from, to);
-}
-
-void
-enter_env(object dest, object old)
-{
-    if (dest && living(dest) && do_id_check(dest))
-    {
-        add_name(potion_name);
-        identified = 1;
-    }
-
-    ::enter_env(dest, old);
+    return IN_ARRAY(potion_name, id_names);
 }
 
 /*
- * Function name: long_func
+ * Function name: long_description
  * Description:   This is an VBFC function for the set_long in the
  *                potion, which tests if the player examining it can
  *                identify it.
@@ -120,19 +73,20 @@ enter_env(object dest, object old)
  *                from the create_potion() function.
  */
 nomask string
-long_func()
+long_description()
 {
-    if (do_id_check(this_player()))
+    if (can_id_potion(this_player()))
         return id_long;
-    return unid_long;
+    else
+        return unid_long;
 }
 
 /*
  * Function name: set_quaff_verb
  * Description:   Set what verb the player should type to be able to
- * 		  quaff the potion. Default is "quaff"
+ * 		  quaff the potion. Default is "quaff".
  *                "drink" is not possible.
- * Arguments:     str - The verb
+ * Arguments:     string str - The verb
  */
 void
 set_quaff_verb(string str)
@@ -144,7 +98,7 @@ set_quaff_verb(string str)
 /*
  * Function name: query_quaff_verb
  * Description:   What verb is required to quaff this potion?
- * Returns:	  The verb;
+ * Returns:	  string - The verb;
  */
 string
 query_quaff_verb() { return quaff_verb; }
@@ -152,15 +106,19 @@ query_quaff_verb() { return quaff_verb; }
 /*
  * Function name: set_potion_name
  * Description:   Set the true name of the potion
- * Arguments:	  str - The name
+ * Arguments:	  string str - The name
  */
 void
-set_potion_name(string str) { potion_name = str; }
+set_potion_name(string str)
+{
+    potion_name = str;
+    potion_pname = LANG_PWORD(str);
+}
 
 /*
  * Function name: query_potion_name
  * Description:   What is the true name of the potion
- * Returns:	  The name of the potion
+ * Returns:	  string - The name of the potion
  */
 string
 query_potion_name() { return potion_name; }
@@ -169,7 +127,7 @@ query_potion_name() { return potion_name; }
  * Function name: set_id_long
  * Description:   Set the long description you see if you know
  *                what potion it is.
- * Arguments:     str - The description
+ * Arguments:     string str - The description
  */
 void
 set_id_long(string str) { id_long = str; }
@@ -177,16 +135,16 @@ set_id_long(string str) { id_long = str; }
 /*
  * Function name: query_id_long
  * Description:   The long description if you can id the potion
- * Returns:       The long description
+ * Returns:       string - The long description
  */
 string
 query_id_long() { return id_long; }
 
 /*
  * Function name: set_unid_long
- * Description:   Set the long description you see if you cannot identify the 
+ * Description:   Set the long description you see if you cannot identify the
  *		  potion.
- * Arguments:     str - The long description
+ * Arguments:     string str - The long description
  */
 void
 set_unid_long(string str) { unid_long = str; }
@@ -195,7 +153,7 @@ set_unid_long(string str) { unid_long = str; }
  * Function name: query_unid_long
  * Description:   Query the long description you get if you cannot identify
  *		  the potion.
- * Returns:   	  The unidentified long description
+ * Returns:   	  string - The unidentified long description
  */
 string
 query_unid_long() { return unid_long; }
@@ -203,7 +161,7 @@ query_unid_long() { return unid_long; }
 /*
  * Function name: set_id_taste
  * Description:   Set the message when you taste the identified potion
- * Arguments:     str - The message
+ * Arguments:     string str - The message
  */
 void
 set_id_taste(string str) { id_taste = str; }
@@ -212,7 +170,7 @@ set_id_taste(string str) { id_taste = str; }
  * Function name: query_id_taste
  * Description:   Query the message you get if you taste and identify
  *                the potion.
- * Returns:   	  The taste of the identified potion
+ * Returns:   	  string - The taste of the identified potion
  */
 string
 query_id_taste() { return id_taste; }
@@ -220,7 +178,7 @@ query_id_taste() { return id_taste; }
 /*
  * Function name: set_id_smell
  * Description:   Set the message when you smell the identified potion
- * Arguments:     str - The message
+ * Arguments:     string str - The message
  */
 void
 set_id_smell(string str) { id_smell = str; }
@@ -229,7 +187,7 @@ set_id_smell(string str) { id_smell = str; }
  * Function name: query_id_smell
  * Description:   Query the message you get if you smell and identify
  *                the potion.
- * Returns:   	  The smell of the identified potion
+ * Returns:   	  string - The smell of the identified potion
  */
 string
 query_id_smell() { return id_smell; }
@@ -237,7 +195,7 @@ query_id_smell() { return id_smell; }
 /*
  * Function name: set_unid_taste
  * Description:   Set the message when you taste the unidentified potion
- * Arguments:     str - The message
+ * Arguments:     string str - The message
  */
 void
 set_unid_taste(string str) { unid_taste = str; }
@@ -246,7 +204,7 @@ set_unid_taste(string str) { unid_taste = str; }
  * Function name: query_unid_taste
  * Description:   Query the message you get if you taste and do not
  *                identify the potion.
- * Returns:   	  The taste of the unidentified potion
+ * Returns:   	  string - The taste of the unidentified potion
  */
 string
 query_unid_taste() { return unid_taste; }
@@ -254,7 +212,7 @@ query_unid_taste() { return unid_taste; }
 /*
  * Function name: set_unid_smell
  * Description:   Set the message when you smell the unidentified potion
- * Arguments:     str - The message
+ * Arguments:     string str - The message
  */
 void
 set_unid_smell(string str) { unid_smell = str; }
@@ -263,7 +221,7 @@ set_unid_smell(string str) { unid_smell = str; }
  * Function name: query_unid_smell
  * Description:   Query the message you get if you smell and do not
  *                identify the potion.
- * Returns:   	  The smell of the unidentified potion
+ * Returns:   	  string - The smell of the unidentified potion
  */
 string
 query_unid_smell() { return unid_smell; }
@@ -271,7 +229,7 @@ query_unid_smell() { return unid_smell; }
 /*
  * Function name: set_id_diff
  * Description:   Set how hard it is to identify a potion
- * Arguments:     i - The skill needed to know the potion
+ * Arguments:     int i - The skill needed to know the potion
  */
 void
 set_id_diff(int i) { id_diff = i; }
@@ -279,7 +237,7 @@ set_id_diff(int i) { id_diff = i; }
 /*
  * Function name: query_id_diff
  * Description:   How hard is it to identify this potion
- * Returns:  	  The difficulty
+ * Returns:  	  int - The difficulty
  */
 int
 query_id_diff() { return id_diff; }
@@ -288,35 +246,40 @@ query_id_diff() { return id_diff; }
 /*
  * Function name: set_soft_amount
  * Description:   Set the soft amount of the potion
- * Argument:      int - the soft amount
+ * Argument:      int i - the soft amount
  */
-void 
+void
 set_soft_amount(int i)
 {
-    if (i > 10)
-        soft_amount = i;
-    else
-        soft_amount = 10;
+    mark_state();
+    soft_amount = max(i, 10);
 
     add_prop(OBJ_I_VOLUME, soft_amount);
     add_prop(OBJ_I_WEIGHT, soft_amount);
+    update_state();
 }
 
 /*
  * Function name: query_soft_amount
  * Description:   What is the soft amount of the potion
- * Returns:       The soft amount
+ * Returns:       int - The soft amount
  */
-int 
-query_soft_amount(int i) { return soft_amount; }
+int
+query_soft_amount() { return soft_amount; }
 
 /*
  * Function name: set_alco_amount
  * Description:   Set the alco amount of the potion
- * Argument:      int - the alco amount
+ * Argument:      int i - the alco amount
  */
-void 
-set_alco_amount(int i) { alco_amount = i; }
+void
+set_alco_amount(int i)
+{
+    alco_amount = i;
+    /* Somehow various potions lose their strength.
+     * Let's see if keeping heaps separated helps. */
+    add_prop(HEAP_S_UNIQUE_ID, MASTER + "_" + potion_name + "_" + i);
+}
 
 /*
  * Function name: query_alco_amount
@@ -324,24 +287,24 @@ set_alco_amount(int i) { alco_amount = i; }
  *                This is achieved by making this function return 0.
  *                To query the alcohol amount in the potion use
  *                query_alco_strength().
- * Returns:       0
+ * Returns:       int - 0
  */
-nomask int 
-query_alco_amount(int i) { return 0; }
+nomask int
+query_alco_amount() { return 0; }
 
 /*
  * Function name: query_alco_strength
  * Description:   What is the alco amount of the potion?
- * Returns:       The alco amount
+ * Returns:       int - The alco amount
  */
-int 
-query_alco_strength(int i) { return alco_amount; }
+int
+query_alco_strength() { return alco_amount; }
 
 /*
  * Function name: set_potion_value
  * Description:   Set the value of the potion when dealing with
  *                a potion specialist
- * Arguments:     i - The value
+ * Arguments:     int i - The value
  */
 void
 set_potion_value(int i) { potion_value = i; }
@@ -349,51 +312,44 @@ set_potion_value(int i) { potion_value = i; }
 /*
  * Function name: query_potion_value
  * Description:   The value of the potion when dealing with a specialist
- * Returns:	  The value
+ * Returns:	  int - The value
  */
 int
 query_potion_value() { return potion_value; }
 
 /*
- * Function name:       set_quaffed_it
- * Description:         This is called if the potion is quaffed and the 
- *                      quaff_verb != "quaff
- */
-void
-set_quaffed_it() { quaffed_it = 1; }
-
-/*
- * Function name: quaffed_non_quaff_potion
- * Description:   This function is called instead of do_herb_effects
- *                if you quaff a potion that isn't supposed to be
- *                quaffed.
- */
-void
-quaffed_non_quaff_potion()
-{
-    write("You don't feel any effect.\n");
-}
-
-/*
  * Function name: query_identified
  * Description:   Did you identify the potion?
- * Returns:       True if identified
+ * Returns:       int - True if identified
  */
 int
 query_identified() { return identified; }
 
+/*
+ * Function name: set_identified
+ * Description:   Did you identify the potion?
+ * Returns:       int - True if identified
+ */
 varargs void
 set_identified(int i = 1) { identified = i; }
 
+/*
+ * Function name: create_potion
+ * Description:   This is the create-function of the potion, which you should
+ *                redefine and setup the herb from.
+ */
 public void
 create_potion()
 {
-    ::create_object();
-    set_name("potion");
 }
 
+/*
+ * Function name: create_heap
+ * Description:   Constructor. Do not redefine this routine to make your own
+ *                potion. Instead define create_potion().
+ */
 public nomask void
-create_object()
+create_heap()
 {
     set_name("potion");
     set_short("unknown potion");
@@ -408,42 +364,57 @@ create_object()
     set_alco_amount(0);
     set_id_diff(20);
     set_potion_value(10);
-    set_quaff_verb("quaff");
+    set_quaff_verb(QUAFF_VERB);
 
     add_prop(OBJ_I_VALUE, 0);
 
+    set_heap_size(1);
     create_potion();
-    set_long("@@long_func");
-}
+    set_long(long_description);
 
-public nomask void
-reset_object() { this_object()->reset_potion(); }
-
-void
-consume_text(object *arr, string vb)
-{
-    string str;
-
-    write("You " + vb + " " + (str = COMPOSITE_DEAD(arr)) + ".\n");
-    say(QCTNAME(this_player()) + " " + vb + "s " + str + ".\n");
+    if (!query_prop(HEAP_S_UNIQUE_ID))
+        add_prop(HEAP_S_UNIQUE_ID, MASTER + "_" + potion_name);
+    add_prop(HEAP_I_UNIT_VALUE, 0);
 }
 
 /*
- * Function name:	quaff_it
- * Description:		Quaffs the objects described as parameter to the
- *                      quaff_verb. It uses command parsing to find which
- *                      objects to quaff.
- * Arguments:		str: The trailing command after 'quaff_verb ...'
- * Returns:		True if command successful
+ * Function name: reset_potion
+ * Description  : Reset routine. To reset this potion, define reset_potion()
+ *                and call enable_reset() to start the reset functionality.
+ */
+public nomask void
+reset_heap()
+{
+    this_object()->reset_potion();
+}
+
+/*
+ * Function name: consume_text
+ * Description  : Called when the player eats one or more herbs.
+ * Arguments    : object *arr - the herbs eaten.
+ *                string verb - the verb used for eating.
+ */
+void
+consume_text(object *arr, string verb)
+{
+    string str;
+
+    write("You " + verb + " " + (str = COMPOSITE_DEAD(arr)) + ".\n");
+    say(QCTNAME(this_player()) + " " + verb + "s " + str + ".\n");
+}
+
+/*
+ * Function name: quaff_it
+ * Description:	  Quaffs the objects described as parameter to the quaff_verb.
+ *                It uses command parsing to find which objects to quaff.
+ * Arguments:	  string str: The trailing command after 'quaff_verb ...'
+ * Returns:	  int - True if command successful
  */
 public int
 quaff_it(string str)
 {
-    int	    il;
-    object *a,
-           *potions;
-    string  str2,
-            vb;
+    object *potions;
+    string  verb = query_verb();;
 
     if (this_player()->query_prop(TEMP_STDPOTION_CHECKED) ||
 	query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
@@ -451,33 +422,30 @@ quaff_it(string str)
         return 0;
     }
 
-    gFail = ({ });
-    vb = query_verb(); 
-
-    notify_fail(capitalize(vb) + " what?\n", 0);
-    if (!stringp(str))
-        return 0;
-
-/* It's impossible to quaff all potions at once.
- */
+    /* It's impossible to quaff all potions at once. */
     if (str == "all")
     {
-        notify_fail("You must specify which potion to " + vb + ".\n");
+        notify_fail("You must specify which potion to " + verb + ".\n");
         return 0;
     }
 
-    a = CMDPARSE_ONE_ITEM(str, "quaff_one_thing", "quaff_access");
-    if (sizeof(a) > 0)
+    if (!strlen(str))
     {
-        consume_text(a, vb);
-        for (il = 0; il < sizeof(a); il++)
-            a[il]->destruct_object();
+        notify_fail(capitalize(verb) + " what?\n", 0);
+        return 0;
+    }
+
+    gFail = ({ });
+    potions = CMDPARSE_ONE_ITEM(str, "quaff_one_thing", "quaff_access");
+    if (sizeof(potions) > 0)
+    {
+        consume_text(potions, verb);
+        potions->destruct_object();
         return 1;
     }
     else
     {
-	set_alarm(1.0, 0.0,
-	    &(this_player())->remove_prop(TEMP_STDPOTION_CHECKED));
+	    set_alarm(1.0, 0.0, &(this_player())->remove_prop(TEMP_STDPOTION_CHECKED));
         this_player()->add_prop(TEMP_STDPOTION_CHECKED, 1);
         if (sizeof(gFail))
             notify_fail("@@quaff_fail:" + file_name(this_object()));
@@ -485,12 +453,15 @@ quaff_it(string str)
     }
 }
 
+/*
+ * Function name: ingest_fail
+ * Description  : Composes the failure message when you fail to eat something.
+ * Returns      : string - the composite failure message.
+ */
 string
 quaff_fail()
 {
-    string str;
-
-    str = "You try to " + quaff_verb + " " + COMPOSITE_DEAD(gFail) +
+    string str = "You try to " + quaff_verb + " " + COMPOSITE_DEAD(gFail) +
         " but fail.\n";
     say(QCTNAME(this_player()) + " tries to " + quaff_verb + " " +
         QCOMPDEAD + " but fails.\n");
@@ -498,101 +469,108 @@ quaff_fail()
     return str;
 }
 
+/*
+ * Function name: quaff_access
+ * Description  : Find out whether you can (and want to) quaff this.
+ * Arguments    : object ob - the object to try.
+ * Returns      : int 1/0 - if true, you can (and want to) quaff this.
+ */
 int
 quaff_access(object ob)
-{ 
-    string vb = query_verb();
+{
+    string verb = query_verb();
 
-    if ((environment(ob) == this_player()) &&
+    /* Return true if all this is true. */
+    return (environment(ob) == this_player()) &&
         IS_POTION_OBJECT(ob) &&
-        (vb == ob->query_quaff_verb() || vb == "quaff") &&
-        !ob->query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
-        return 1;
-    else
-        return 0;
+        (verb == ob->query_quaff_verb() || verb == QUAFF_VERB) &&
+        !ob->query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT);
 }
 
+/*
+ * Function name: quaff_one_thing
+ * Description  : Actually try to quaff this one herb.
+ * Arguments    : object ob - the object to try.
+ * Returns      : int 1/0 - if true, you can actually ate it.
+ */
 int
 quaff_one_thing(object ob)
 {
-    int     soft = ob->query_soft_amount(),
-            alco = ob->query_alco_amount();
-    string  vb = query_verb();
+    int    index;
+    int    soft = ob->query_soft_amount();
+    int    alco = ob->query_alco_amount();
+    int    size = ob->num_heap();
+    string verb = query_verb();
 
-    if (!(this_player()->drink_soft(soft)))
+    if (verb == QUAFF_VERB)
     {
-        write(capitalize(LANG_ADDART(ob->short())) +
-            " is too much for you.\n");
-        gFail += ({ ob });
-        return 0;
+        /* We "drink" one potion at a time to allow for non-linear formulae. */
+        for (index = 1; index <= size; index++)
+        {
+            if (!this_player()->drink_soft(soft))
+            {
+                /* If we fail on the first, you cannot drink it. */
+                if (index == 1)
+                {
+                    ob->split_heap(1);
+	                write(capitalize(ob->short()) + " is too much for you.\n");
+                    gFail += ({ ob });
+	                return 0;
+                }
+                ob->split_heap(index - 1);
+                break;
+	        }
+            if (!this_player()->drink_alco(alco))
+            {
+                this_player()->drink_soft(-soft);
+                /* If we fail on the first, you cannot stomach it. */
+                if (index == 1)
+                {
+                    ob->split_heap(1);
+	                write(capitalize(ob->short()) + " is too strong for you.\n");
+                    gFail += ({ ob });
+	                return 0;
+                }
+                ob->split_heap(index - 1);
+                break;
+    	    }
+       }
+       ob->force_heap_split();
     }
-    if (!(this_player()->drink_alco(alco)))
-    {
-        this_player()->drink_soft(-soft);
-        write(capitalize(LANG_ADDART(ob->short())) +
-            " is too strong for you.\n");
-        gFail += ({ ob });
-        return 0;
-    }
-    /* Test if you quaffed a non quaff potion */
-    if ((vb == "quaff") && (vb != ob->query_quaff_verb()))
-            ob->set_quaffed_it();
-    
     return 1;
 }
 
 /*
  * Function name: destruct_object
- * Description:   Call do_herb_effects or quaffed_non_quaff_potion
- *                Clone an empty vial and remove potion
+ * Description  : Invokes the herb effects, clones an empty vial and removes
+ *                the potion if nothing is left behind.
  */
 void
 destruct_object()
 {
-    object  vial;
-
-    if (quaffed_it && quaff_verb != "quaff")
-    {
-        quaffed_non_quaff_potion();
-    }
-    else
-    {
-        do_herb_effects();
-    }
+    do_herb_effects(num_heap());
 
     seteuid(getuid());
-    vial = clone_object("/std/container");
-    vial->set_name("vial");
-    vial->add_name(({"_std_potion_vial"}));
-    vial->set_adj("empty");
-    vial->set_long("An empty vial. You could fill a potion into it.\n");
-    vial->add_prop(CONT_I_MAX_VOLUME, 1100);
-    vial->add_prop(CONT_I_MAX_WEIGHT, 1250);
-    vial->add_prop(CONT_I_VOLUME, 100);
-    vial->add_prop(CONT_I_WEIGHT, 250);
-    if (vial->move(environment(this_object())))
-        vial->move(environment(this_object()), 1);
-
-    add_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT, 1);
-    set_alarm(1.0, 0.0, remove_object);
+    clone_object(POTION_VIAL_OBJECT)->move(environment(this_object()), 1);
+    remove_object();
 }
 
 /*
  * Function name: set_magic_res
  * Description:   Set how resistance this potion is agains magic / how easy it
  *		  is to dispel it.
- * Arguments:     resistance - the resistance
+ * Arguments:     int resistance - the resistance
  */
 void set_magic_res(int resistance) { magic_resistance = resistance; }
 
 /*
  * Function name: query_magic_resistance
  * Description:   Query the magic resistance
- * Returns:       How resistive the potion is
+ * Returns:       int - How resistive the potion is
  */
 int
 query_magic_res(string prop)
-{ 
+{
     if (prop == MAGIC_I_RES_MAGIC)
         return magic_resistance;
     else
@@ -602,8 +580,8 @@ query_magic_res(string prop)
 /*
  * Function name: dispel_magic
  * Description:   Function called by a dispel spell
- * Argument:	  magic - How strong the dispel is
- * Returns:	  0 - No dispelling, 1 - Object dispelled
+ * Argument:	  int magic - How strong the dispel is
+ * Returns:	  int 0 - No dispelling, 1 - Object dispelled
  */
 int
 dispel_magic(int magic)
@@ -627,43 +605,55 @@ dispel_magic(int magic)
     return 1;
 }
 
+/*
+ * Function name: smell_access
+ * Description  : Find out whether you can (and want to) smell this.
+ * Arguments    : object ob - the object to try.
+ * Returns      : int 1/0 - if true, you can (and want to) smell this.
+ */
 int
 smell_access(object ob)
-{ 
-    string vb = query_verb();
+{
+    string verb = query_verb();
 
-    if ((environment(ob) == this_player()) && IS_POTION_OBJECT(ob) &&
-        (vb == "taste" || vb == "smell"))
-        return 1;
-    else
-        return 0;
+    return (environment(ob) == this_player()) && IS_POTION_OBJECT(ob)
+        && (verb == "taste" || verb == "smell");
 }
 
+/*
+ * Function name: smell_one_thing
+ * Description  : Actually try to smell this one potion. This handled both
+ *                smelling and teasting.
+ * Arguments    : object ob - the object to try.
+ * Returns      : int 1/0 - if true, you can actually smelled it.
+ */
 int
 smell_one_thing(object ob)
 {
     object  pl = this_player();
-    string  vb = query_verb();
+    string  verb = query_verb();
 
     if (ob->query_identified() ||
         (ob->query_id_diff() <= (pl->query_skill(SS_ALCHEMY) * 150 +
-                     pl->query_skill(SS_HERBALISM) * 50) / 100) )
+         pl->query_skill(SS_HERBALISM) * 50) / 100))
     {
-        ob->add_name(potion_name);
         ob->set_identified(1);
-        if (vb == "taste")
+        pl->add_prop(LIVE_AS_POTION_ID,
+            (pl->query_prop(LIVE_AS_POTION_ID) || ({ })) | ({ potion_name }));
+
+        if (verb == "taste")
             write(ob->query_id_taste());
-        else if (vb == "smell")
+        else if (verb == "smell")
             write(ob->query_id_smell());
     }
     else
     {
-        if (vb == "taste")
+        if (verb == "taste")
             write(ob->query_unid_taste());
-        else if (vb == "smell")
+        else if (verb == "smell")
             write(ob->query_unid_smell());
     }
-    
+
     return 1;
 }
 
@@ -678,9 +668,8 @@ smell_one_thing(object ob)
 int
 smell_it(string str)
 {
-    int     il;
-    object *a;
-    string  vb;
+    object *potions;
+    string  verb = query_verb();
 
     if (this_player()->query_prop(TEMP_STDPOTION_CHECKED) ||
 	query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
@@ -688,32 +677,31 @@ smell_it(string str)
         return 0;
     }
 
-    vb = query_verb();
-
     /* It's impossible to smell all potions at once. */
-    
     if (str == "all")
     {
-        notify_fail("You must specify which potion to " + vb + ".\n");
+        notify_fail("You must specify which potion to " + verb + ".\n");
         return 0;
     }
 
-    notify_fail(capitalize(vb) + " what?\n");  /* access failure */
-    if (!stringp(str))
-	return 0;
-
-    a = CMDPARSE_ONE_ITEM(str, "smell_one_thing", "smell_access");
-    if (sizeof(a) > 0)
+    if (!strlen(str))
     {
-        say(QCTNAME(this_player()) + " " + vb + "s " +
-            COMPOSITE_DEAD(a) + ".\n");
+        notify_fail(capitalize(verb) + " what?\n");
+	return 0;
+    }
+
+    potions = CMDPARSE_ONE_ITEM(str, "smell_one_thing", "smell_access");
+    if (sizeof(potions) > 0)
+    {
+        say(QCTNAME(this_player()) + " " + verb + "s " +
+            COMPOSITE_DEAD(potions) + ".\n");
         return 1;
     }
     else
     {
-	set_alarm(1.0, 0.0,
-	    &(this_player())->remove_prop(TEMP_STDPOTION_CHECKED));
+	    set_alarm(1.0, 0.0, &(this_player())->remove_prop(TEMP_STDPOTION_CHECKED));
         this_player()->add_prop(TEMP_STDPOTION_CHECKED, 1);
+        notify_fail(capitalize(verb) + " what?\n");
         return 0;
     }
 }
@@ -731,3 +719,180 @@ taste_it(string str)
 {
     return smell_it(str);
 }
+
+/*
+ * Function name: init
+ * Description:   adds the quaff-action to the player
+ */
+void
+init()
+{
+    ::init();
+
+    add_action(quaff_it, quaff_verb);
+    if (quaff_verb != QUAFF_VERB)
+        add_action(quaff_it, QUAFF_VERB);
+    if (quaff_verb != "taste")
+        add_action(taste_it, "taste");
+    if (quaff_verb != "smell")
+        add_action(smell_it, "smell");
+}
+
+/*
+ * Function name: config_merge
+ * Description  : This is called when a heap merges with another heap. It
+ *                is called in the parent heap where the child gets merged
+ *                into. It is called before the heap size is adjusted.
+ * Arguments    : object child - the child that gets merged into us.
+ */
+void
+config_merge(object child)
+{
+    int temp;
+    int count = num_heap() + child->num_heap();
+
+    ::config_merge(child);
+
+    /* Calculate the average soft amount, with rounding. */
+    temp = (soft_amount * num_heap()) + (child->num_heap() * child->query_soft_amount()) + (count / 2);
+    set_soft_amount(temp / count);
+    /* Calculate the average alco amount, with rounding. */
+    temp = (alco_amount * num_heap()) + (child->num_heap() * child->query_alco_strength()) + (count / 2);
+    set_alco_amount(temp / count);
+
+    set_identified(identified || child->query_identified());
+}
+
+/*
+ * Function name: config_split
+ * Description  : This is called before inserting this heap into the game
+ *                It configures the split copy.
+ * Arguments    : int new_num - the number to split off.
+ *                object orig - the original object.
+ */
+void
+config_split(int new_num, object orig)
+{
+    if (!new_num)
+        return;
+
+    ::config_split(new_num, orig);
+
+    /* Set the long again because it's overwritten in config_split. */
+    set_long(long_description);
+
+    set_alco_amount(orig->query_alco_strength());
+    set_soft_amount(orig->query_soft_amount());
+    set_identified(orig->query_identified());
+}
+
+/*
+ * Function name: stat_object
+ * Description:   This function is called when a wizard wants to get more
+ *                information about an object.
+ * Returns:       str - The string to write..
+ */
+string
+stat_object()
+{
+    string str = ::stat_object();
+
+    return str + "Soft: " + query_soft_amount() + " \t" + "Alco: " +
+        query_alco_strength() + "\n";
+}
+
+/*
+ * Function name: query_potion_recover
+ * Description  : Return the recover strings for changing potion variables.
+ * Returns      : string - the potion recovery info.
+ */
+string
+query_potion_recover()
+{
+    return "#POT#" + num_heap() + "#" + alco_amount + "#" + soft_amount + "#";
+}
+
+/*
+ * Function name: init_potion_recover
+ * Description  : Initialize the potion variables at recover.
+ * Arguments    : string arg - the argument
+ */
+void
+init_potion_recover(string arg)
+{
+    string foobar;
+    int soft, alco, num;
+
+    if (sscanf(arg, "%s#POT#%d#%d#%d#%s", foobar, num, alco, soft, foobar) == 5)
+    {
+        set_heap_size(max(1, num));
+        set_soft_amount(soft);
+        set_alco_amount(alco);
+    }
+}
+
+/*
+ * Function name: query_recover
+ * Description  : Called to check whether this potion is recoverable. If you
+ *                have variables you want to recover yourself, you have to
+ *                redefine this function, keeping at least the filename and
+ *                the potion recovery variables, like they are queried below.
+ *                If, for some reason, you do not want your potion to
+ *                recover, you should define the function and return 0.
+ * Returns      : string - the default recovery string.
+ */
+string
+query_recover()
+{
+    /* Don't recover if we're about to destruct. */
+    if (query_prop(TEMP_OBJ_ABOUT_TO_DESTRUCT))
+        return 0;
+
+    return MASTER + ":" + query_potion_recover();
+}
+
+/*
+ * Function name: init_recover
+ * Description  : When the object recovers, this function is called to set
+ *                the necessary variables. If you redefine the function,
+ *                you must add a call to init_potion_recover with the string
+ *                that you got after querying query_potion_recover or simply
+ *                call ::init_recover(arg).
+ * Arguments    : string arg - the arguments to parse
+ */
+void
+init_recover(string arg)
+{
+    init_potion_recover(arg);
+}
+
+/*
+ * Function Name: parse_command_id_list
+ * Description  : Used by parse_command to find the names of this item. It
+ *                verifies whether the player can identify this potion.
+ * Returns      : string * - An array of the names for this potion.
+ */
+public string *
+parse_command_id_list()
+{
+    if (can_id_potion())
+        return ::parse_command_id_list() + ({ potion_name });
+    else
+        return ::parse_command_id_list();
+}
+
+/*
+ * Function Name: parse_command_plural_id_list
+ * Description  : Used by parse_command to find the names of this item. It
+ *                verifies whether the player can identify this potion.
+ * Returns      : string * - An array of the names for this potion.
+ */
+public string *
+parse_command_plural_id_list()
+{
+    if (can_id_potion())
+        return ::parse_command_plural_id_list() + ({ potion_pname });
+    else
+        return ::parse_command_plural_id_list();
+}
+

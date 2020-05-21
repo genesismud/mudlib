@@ -14,13 +14,12 @@
 
 #define MANDIR "/doc/man"
 
-static string	*chapters;		/* The chapters under MANDIR */
-static mapping	chapt_index;		/* Array of "chapterized" permutated
-					   indexes on the form:
-
-					   ([ "chaptname" : "subj%%subj%%" ])
-
-					   */
+/* The chapters under MANDIR */
+static string	*chapters;
+/* Array of "chapterized" permutated indexes on the form:
+ * ([ "chaptname" : ({ "index1", "index2", .. }) ])
+ */
+static mapping	chapt_index;
 
 int
 is_dir(string fname)
@@ -53,107 +52,53 @@ init_man()
     {
 	files = filter(get_dir(MANDIR + "/" + chapters[i] + "/*"),
 		       &is_file(, chapters[i]));
-	chapt_index[chapters[i]] = "%%" + implode(files, "%%") + "%%";
+	chapt_index[chapters[i]] = files;
     }
 }
 
 /*
  * Function name:   get_index
  * Description:     Return all subjects in a given chapter
- * Arguments:	    chapter - The chapter to search in. (Optional)
- * Returns:         An array containing the list of found subjects in each
- *		    chapter. Each entry is on the form: 
- *			({ "chapter", ({ "subject", "subject" ... }) })
+ * Arguments:	    chapter - The chapter to search in.
+ * Returns:         An array containing the list of found subjects in the
+ *                  chapter, or empty array.
  */
 public mixed *
 get_index(string chapt)
 {
-    mixed *found_arr, *tmp;
-    int i;
-
-    if (stringp(chapt) && member_array(chapt, chapters) >= 0)
+    if (member_array(chapt, chapters) >= 0)
     {
-	return ({ chapt, explode(chapt_index[chapt], "%%") });
+	return chapt_index[chapt] + ({ });
     }
-    
-    found_arr = ({});
-    for (i = 0; i < sizeof(chapters); i++)
-    {
-	tmp =  explode(chapt_index[chapters[i]], "%%");
-	
-	if (sizeof(tmp))
-	{
-	    found_arr += ({ ({ chapters[i], tmp }) });
-	}
-    }
-    return found_arr;
+    return ({ });
 }
-
-
-
-static string * fix_subjlist(string *split, string keyw,int okbef, int okaft);
 
 /*
  * Function name:   get_keywords
  * Description:     Return all possible subject name array matches of a 
  *		    given keyword in one or all chapters.
- * Arguments:	    chapter - The chapter to search in. (Optional)
+ * Arguments:	    chapter - The chapter to search in.
  *		    keyword - The keyword to seach for.
- * Returns:         An array containing the list of found subjects in each
- *		    chapter. Each entry is on the form: 
- *			({ "chapter", ({ "subject", "subject" ... }) })
+ * Returns:         An array containing the list of found subjects
+  ({ "subject", "subject" ... })
  */
 public mixed *
 get_keywords(string chapt, string keyword)
 {
-    mixed *found_arr, *tmp;
-    int i, okbef, okaft;
-    string st;
-    
-    okbef = 0; 
-    okaft = 0;
+    mixed *topics;
 
-    if (sscanf(keyword, "*%s", st) == 1)
+    if (!pointerp(chapt_index[chapt]))
     {
-	keyword = st;
-	okbef = 1;
+        return ({ });
     }
 
-    if (sscanf(keyword, "%s*", st) == 1)
-    {
-	keyword = st;
-	okaft = 1;
-    }
-
-    if (stringp(chapt) && member_array(chapt, chapters) >= 0)
-    {
-	return ({ chapt, fix_subjlist(explode(chapt_index[chapt], keyword),
-			   keyword, okbef, okaft) });
-
-    }
-    else if (stringp(chapt)) /* No such chapter */
-    {
-	return ({});
-    }
-    
-    found_arr = ({});
-    for (i = 0; i < sizeof(chapters); i++)
-    {
-	tmp = fix_subjlist(explode(chapt_index[chapters[i]], keyword),
-			   keyword, okbef, okaft);
-	if (sizeof(tmp))
-	{
-	    found_arr += ({ ({ chapters[i], tmp }) });
-	}
-    }
-    
-    return found_arr;
+    return filter(chapt_index[chapt], &wildmatch(keyword, ));
 }
 
 /*
  * Function name:   fix_subjlist
  * Description:     Extract the subject names from a subjectlist split
- *		    on a keyword. Typical example: "%%hubba%%hubbi%%bibi%%"
+ *		    on a keyword. Typical example: "hubba%%hubbi%%bibi"
  *		    split on 'bb' will give:
  *			({ "%%hu", "a%%hu", "i%%bibi%%" })
  *		    The result should be:

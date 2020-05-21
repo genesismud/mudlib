@@ -15,12 +15,31 @@
 #include <composite.h>
 #include <language.h>
 
+#define NO_EFFECT_MESSAGE "You don't feel any effect.\n"
+
 /*
  * Variables
  */
 string poison_file;
 mixed *effects;
 mixed *poison_damage;
+int    duration;
+
+string *messages; /* Messages given by the herb effects. */
+
+/*
+ * Function name: add_effect_message
+ * Description  : Buffers the effect messages when ingesting multiple herbs.
+ * Arguments    : string str - the message to add.
+ */
+void
+add_effect_message(string str)
+{
+    if (!IN_ARRAY(str, messages))
+    {
+        messages += ({ str });
+    }
+}
 
 /* 
  * Function name: do_tmp_stat
@@ -34,63 +53,64 @@ mixed *poison_damage;
 void
 do_tmp_stat(int stat, int strength)
 {
+    int dtime;
+
+    dtime = strength / 2 + random(strength);
     if (strength > 0)
     {
-        this_player()->add_tmp_stat(stat, random(3) + 1,
-            strength / 2 + random(strength));
+        this_player()->add_tmp_stat(stat, random(3) + 1, dtime);
 
         switch(stat)
         {
         case SS_STR:
-            write("You feel strengthened.\n");
+            add_effect_message("You feel strengthened.\n");
             break;
         case SS_DEX:
-            write("You feel more dexterous.\n");
+            add_effect_message("You feel more dexterous.\n");
             break;
         case SS_CON:
-            write("You feel healthier.\n");
+            add_effect_message("You feel healthier.\n");
             break;
         case SS_INT:
-            write("You feel brighter.\n");
+            add_effect_message("You feel brighter.\n");
             break;
         case SS_WIS:
-            write("You feel wiser.\n");
+            add_effect_message("You feel wiser.\n");
             break;
         case SS_DIS:
-            write("You feel more secure.\n");
+            add_effect_message("You feel more secure.\n");
             break;
         default:
-            write("You feel more clever.\n");
+            add_effect_message("You feel more clever.\n");
         }
     }
 
     if (strength < 0)
     {
-        this_player()->add_tmp_stat(stat, -(random(3) + 1), strength / 2 +
-            random(strength));
+        this_player()->add_tmp_stat(stat, -(random(3) + 1), -dtime);
 
         switch(stat)
         {
         case SS_STR:
-            write("You feel weakened.\n");
+            add_effect_message("You feel weakened.\n");
             break;
         case SS_DEX:
-            write("You feel slower.\n");
+            add_effect_message("You feel slower.\n");
             break;
         case SS_CON:
-            write("You feel less healthy.\n");
+            add_effect_message("You feel less healthy.\n");
             break;
         case SS_INT:
-            write("You feel stupider.\n");
+            add_effect_message("You feel stupider.\n");
             break;
         case SS_WIS:
-            write("You feel less wise.\n");
+            add_effect_message("You feel less wise.\n");
             break;
         case SS_DIS:
-            write("You feel more insecure.\n");
+            add_effect_message("You feel more insecure.\n");
             break;
         default:
-            write("You feel less clever.\n");
+            add_effect_message("You feel less clever.\n");
         }
     }
 }
@@ -101,23 +121,84 @@ do_tmp_stat(int stat, int strength)
  *                resistance in the player. Max strength is 40.
  *                The resistance added is an additive resistance.
  *                (See /doc/man/general/spells for more info on resistance)
- * Arguments:     res_type - The resistance type
- *                strength - How strong the herb is
+ * Arguments:     string res_type - The resistance type
+ *                int strength - How strong the herb is
  */
 void
-add_resistance(mixed res_type, int strength)
+add_resistance(string res_type, int strength)
 {
     object res_obj;
+    int dtime;
+
     res_obj = clone_object(RESISTANCE_OBJECT);
     if (strength > 40)
     {
         strength = 40;
     }
     res_obj->set_strength(strength);
-    res_obj->set_time(5 * (40 - strength / 2) + 5 * random(strength));
+    if (!(dtime = duration))
+        dtime = 5 * (40 - strength / 2) + 5 * random(strength);
+    res_obj->set_time(dtime);
     res_obj->set_res_type(res_type);
-    res_obj->move(this_player());
-    write("You feel more resistant.\n");
+    res_obj->move(this_player(), 1);
+
+    switch(res_type)
+    {
+
+    case MAGIC_I_RES_ACID:
+        add_effect_message("Your skin is suddenly coverered with a glossy " +
+            "substance, protecting you from acid.\n");
+        break;
+    case MAGIC_I_RES_AIR:
+        add_effect_message("You feel an aura of calm issue from your pores, " +
+            "protecting you from the air.\n");
+        break;
+    case MAGIC_I_RES_COLD:
+        add_effect_message("A heat begins to radiate from your flesh, " +
+            "helping to protect you from cold.\n");
+        break;
+    case MAGIC_I_RES_DEATH:
+        add_effect_message("An indescribable sense of well-being flows " +
+            "through you, protecting you from the elements of death.\n");
+        break;
+    case MAGIC_I_RES_EARTH:
+        add_effect_message("Your entire body stiffens, growing hard to " +
+            "ward off the elements of earth.\n");
+        break;
+    case MAGIC_I_RES_ELECTRICITY:
+        add_effect_message("A smooth springy substance flows from your " +
+            "pores to coat your skin, giving you enhanced protection from " +
+            "electricity.\n");
+        break;
+    case MAGIC_I_RES_FIRE:
+        add_effect_message("A chill washes over your flesh, and tiny ice " +
+            "crystals form along your body as you gain protection from fire.\n");
+        break;
+    case MAGIC_I_RES_ILLUSION:
+        add_effect_message("Your eyes tingle and seem to gain heightened " +
+            "awareness, giving you protection to the powers of illusion.\n");
+        break;
+    case MAGIC_I_RES_LIFE:
+        add_effect_message("A dark pall is cast outward from you to slowly " +
+            "settle and cling to your body, protecting you from the powers " +
+            "of life.\n");
+        break;
+    case MAGIC_I_RES_MAGIC:
+        add_effect_message("The air seems to suddenly hang dully around you " +
+            "in an aura of silence, protecting you from all forms of magic.\n");
+        break;
+    case MAGIC_I_RES_POISON:
+        add_effect_message("With a surge, you feel the veins within your " +
+            "body flood with a tingling sensation, protecting you from poison.\n");
+        break;
+    case MAGIC_I_RES_WATER:
+        add_effect_message("Your skin suddenly takes on an unusual texture " +
+            "to which water cannot easily cling, protecting you from its " +
+            "effects.\n");
+        break;
+    default:
+        add_effect_message("You feel more resistant.\n");
+    }
 }
 
 /*
@@ -128,23 +209,18 @@ add_resistance(mixed res_type, int strength)
 void
 special_effect()
 {
-    write("You don't feel any effect.\n");
+    add_effect_message(NO_EFFECT_MESSAGE);
 }
 
 /* 
- * Function: do_herb_effects
- * Description: In this function the effect(s) of the herb are resolved.
- *              To define a standard effect, do 
- *              set_effect(herb_type, str, strength); in create_herb(),
- *              where herb_type is one of the herb-types in /sys/herb_types.h,
- *              str is a string for the affect type, and strength is an
- *              integer for the strength of the effect.
- *              Read /doc/man/general/herbs for more information.
- *              One effect per herb should be the norm, but adding one or
- *              two is ok, as long as they don't make the herb too good.
+ * Function name: do_one_herb_effect
+ * Description  : In this function the effect(s) of the herb are resolved. It
+ *                is called repeatedly for multiple effects.
+ *                Read /doc/man/general/herbs and the header of set_herb_effect
+ *                for more information.
  */
-nomask int
-do_herb_effects()
+nomask void
+do_one_herb_effect()
 {
     int strength, res, i, n, a;
     string type;
@@ -160,7 +236,8 @@ do_herb_effects()
         {
         case HERB_HEALING:
             type = lower_case(effects[i + 1]);
-            strength = effects[i + 2];
+            /* Allow for VBFC on the strength definition. */
+            strength = this_object()->check_call(effects[i + 2]);
             res = 100 - tp->query_magic_res(MAGIC_I_RES_POISON);
             if (!type || type == "hp")
             {
@@ -175,34 +252,33 @@ do_herb_effects()
                         this_object()->remove_object();
                         break;
                     }
-                    write("You feel less healthy.\n");
+                    add_effect_message("You feel less healthy.\n");
                 }
                 else if (strength > 0)
                 {
                     tp->heal_hp(strength);
-                    write("You feel healthier.\n");
+                    add_effect_message("You feel healthier.\n");
                 }
                 else
                 {
-                    write("You don't feel any effect.\n");
+                    write(NO_EFFECT_MESSAGE);
                 }
             }
             else if (type == "mana")
             {
                 if (strength < 0)
                 {
-                    tp->set_mana(tp->query_mana() - res *
-                            random(-strength) / 100);
-                    write("You feel mentally weaker.\n");
+                    tp->set_mana(tp->query_mana() - res * random(-strength) / 100);
+                    add_effect_message("You feel mentally weaker.\n");
                 }
                 else if (strength > 0)
                 {
                     tp->set_mana(tp->query_mana() + strength);
-                    write("You feel mentally healthier.\n");
+                    add_effect_message("You feel mentally healthier.\n");
                 }
                 else
                 {
-                    write("You don't feel any effect.\n");
+                    add_effect_message(NO_EFFECT_MESSAGE);
                 }
             }
             else if (type == "fatigue")
@@ -211,7 +287,7 @@ do_herb_effects()
                 {
                     tp->set_fatigue(tp->query_fatigue() - res * 
                        random(-strength) / 100);
-                    write("You feel more tired.\n");
+                    add_effect_message("You feel more tired.\n");
                 }
                 else if (strength > 0)
                 {
@@ -220,20 +296,21 @@ do_herb_effects()
                 }
                 else
                 {
-                    write("You don't feel any effect.\n");
+                    add_effect_message(NO_EFFECT_MESSAGE);
                 }
             }
             else
             {
-                write("You don't feel any effect.\n");
+                add_effect_message(NO_EFFECT_MESSAGE);
             }
             break;
         case HERB_ENHANCING:
             type = lower_case(effects[i + 1]);
-            strength = effects[i + 2];
+            /* Allow for VBFC on the strength definition. */
+            strength = this_object()->check_call(effects[i + 2]);
             if (!strength || ((strength < 0) && (res > random(100))))
             {
-                write("You don't feel any effect.\n");
+                add_effect_message(NO_EFFECT_MESSAGE);
                 break;
             }
             switch(type)
@@ -259,14 +336,29 @@ do_herb_effects()
             case "acid":
                 add_resistance(MAGIC_I_RES_ACID, strength);
                 break;
+            case "air":
+                add_resistance(MAGIC_I_RES_AIR, strength);
+                break;
             case "cold":
                 add_resistance(MAGIC_I_RES_COLD, strength);
+                break;
+            case "death":
+                add_resistance(MAGIC_I_RES_DEATH, strength);
                 break;
             case "electr":
                 add_resistance(MAGIC_I_RES_ELECTRICITY, strength);
                 break;
+            case "earth":
+                add_resistance(MAGIC_I_RES_EARTH, strength);
+                break;
             case "fire":
                 add_resistance(MAGIC_I_RES_FIRE, strength);
+                break;
+            case "illusion":
+                add_resistance(MAGIC_I_RES_ILLUSION, strength);
+                break;
+            case "life":
+                add_resistance(MAGIC_I_RES_LIFE, strength);
                 break;
             case "magic":
                 add_resistance(MAGIC_I_RES_MAGIC, strength);
@@ -274,20 +366,24 @@ do_herb_effects()
             case "poison":
                 add_resistance(MAGIC_I_RES_POISON, strength);
                 break;
+            case "water":
+                add_resistance(MAGIC_I_RES_WATER, strength);
+                break;
             default:
-                write("You don't feel any effect.\n");
+                write(NO_EFFECT_MESSAGE);
                 break;
             }
             break;
         case HERB_POISONING:
             type = lower_case(effects[i + 1]);
-            strength = effects[i + 2];
+            /* Allow for VBFC on the strength definition. */
+            strength = this_object()->check_call(effects[i + 2]);
             if (poison_file)
             {
                 poison = clone_object(poison_file);
                 if (!poison)
                 {
-                    write("You don't feel any effect.\n");
+                    write(NO_EFFECT_MESSAGE);
                     break;
                 }
                 if (strength)
@@ -312,7 +408,8 @@ do_herb_effects()
             break;
         case HERB_CURING:
             type = lower_case(effects[i + 1]);
-            strength = effects[i + 2];
+            /* Allow for VBFC on the strength definition. */
+            strength = this_object()->check_call(effects[i + 2]);
             inv = all_inventory(tp);
             n = -1;
             a = 0;
@@ -331,30 +428,57 @@ do_herb_effects()
             }
             if (a <= 0)
             {
-                write("You don't feel any effect.\n");
+                add_effect_message(NO_EFFECT_MESSAGE);
             }
             break;
         case HERB_SPECIAL:
             special_effect();
             break;
         default:
-            write("You don't feel any effect.\n");
+            add_effect_message(NO_EFFECT_MESSAGE);
             break;
         }
         i += 3;
     }
+}
+
+/* 
+ * Function name: do_herb_effects
+ * Description  : In this function the effect(s) of the herb are resolved.
+ *                Read /doc/man/general/herbs and the header of set_herb_effect
+ *                for more information.
+ * Arguments    : int count - the number of herbs being ingested (default = 1)
+ */
+nomask int
+do_herb_effects(int count = 1)
+{
+    messages = ({ });
+
+    while(--count >= 0)
+    {
+        do_one_herb_effect();
+    }
+
+    /* If there are other messages, don't display the no-effect message. */
+    if (sizeof(messages) > 1)
+    {
+        messages -= ({ NO_EFFECT_MESSAGE });
+    }
+    write(implode(messages, ""));
     return 1;
 }
 
 /*
  * Function name: set_effect
  * Description:   Give the herb or potion an effect (see herb.h)
- * Arguments:     herb_type   - What type of effect
- *                affect_type - And what exactly do we affect?
- *                strength    - The strength
+ *                One effect per herb should be the norm, but adding one or
+ *                two is ok, as long as they don't make the herb too good.
+ * Arguments:     int herb_type - What type of effect
+ *                string affect_type - And what exactly do we affect?
+ *                mixed strength - The strength, may contain VBFC resolving to int.
  */
 void
-set_effect(int herb_type, string affect_type, int strength)
+set_effect(int herb_type, string affect_type, mixed strength)
 {
     effects = ({ herb_type, affect_type, strength });
 }
@@ -362,12 +486,14 @@ set_effect(int herb_type, string affect_type, int strength)
 /*
  * Function name: add_effect
  * Description:   Adds one more effect to a herb or potion
- * Arguments:     herb_type   - What type of effect
- *                affect_type - And what exactly do we affect?
- *                strength    - The strength
+ *                One effect per herb should be the norm, but adding one or
+ *                two is ok, as long as they don't make the herb too good.
+ * Arguments:     int herb_type   - What type of effect
+ *                string affect_type - And what exactly do we affect?
+ *                mixed strength - The strength, may contain VBFC resolving to int.
  */
 void
-add_effect(int herb_type, string affect_type, int strength)
+add_effect(int herb_type, string affect_type, mixed strength)
 {
     effects += ({ herb_type, affect_type, strength });
 }
@@ -379,7 +505,7 @@ add_effect(int herb_type, string affect_type, int strength)
 void
 clear_effect()
 {
-    effects = ({});
+    effects = ({ });
 }
 
 /*
@@ -390,8 +516,32 @@ clear_effect()
 mixed *
 query_effect()
 {
-    return effects;
+    return secure_var(effects);
 }
+
+/*
+ * Function name: set_duration
+ * Description  : Set the duration of the herb effect to use instead of the
+ *                default calculation. This is especially used for resistance
+ *                effects. For temp stat effects, use the strength.
+ * Arguments    : int i - the duration in seconds.
+ */
+public void
+set_duration(int i)
+{
+    duration = i;
+}
+
+/*
+ * Function name: query_duration
+ * Description  : The set duration.
+ * Returns      : int - the duration.
+ */
+ public int
+ query_duration()
+ {
+     return duration;
+ }
 
 /*
  * Function name: set_poison_file

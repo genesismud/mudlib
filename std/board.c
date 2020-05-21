@@ -52,7 +52,7 @@
  * length  ( 3) 42..44 ( 3 characters)
  * author  (11) 46..56 (11 characters in lower case)
  * rank    (10) 58..67 (10 characters, this field is optional)
- * date    ( 6) 69..74 ( 3 characters month, 2 characters day, i.e. "30 Jun")
+ * date    ( 9) 69..77 ("dd mmm yy" e.g. "30 Jun 12")
  *
  * During display, the rank length is abbreviated to 7 characters.
  */
@@ -217,7 +217,7 @@ set_show_lvl(int n)
     show_lvl = (fuse ? show_lvl : (n ? 1 : 0));
 }
 
-/* 
+/*
  * Function name: query_show_lvl
  * Description  : Find out whether the rank of authors is shown.
  * Returns      : int - if true, the rank is show.
@@ -266,7 +266,7 @@ query_author(int note)
 /*
  * Function name: query_stats
  * Description  : Return an array with the current statistics
- * Returns      : An array of stats, read & write 
+ * Returns      : An array of stats, read & write
  */
 nomask public int *
 query_stats()
@@ -511,7 +511,7 @@ reset_board()
     if (!random(5))
 	tell_room(environment(),
 		  "A small gnome appears and secures some notes on the " +
-		  short() + 
+		  short() +
 		  " that were loose.\nThe gnome then leaves again.\n");
 }
 
@@ -532,6 +532,9 @@ reset_object()
  *                If you don't have access to the board, you won't see the
  *                headers. NOTE that the arguments to this function are NOT
  *                the normal arguments.
+ *                If the long description as set by set_long() contains ##,
+ *                the text following ## will be posted at the bottom of the
+ *                long, below the message headers. Mind the \n.
  * Arguments    : int start - the first note to print.
  *                int end   - the last note to print.
  * Returns      : string - the long description.
@@ -541,10 +544,18 @@ long(int start = 1, int end = msg_num)
 {
     string name;
     string str;
+    string post_long = "";
+    string *parts;
     int allowed;
 
-    str = check_call(query_long(), this_player()) +
-	"Usage: note <headline>, remove [note] <number>, " +
+    str = check_call(query_long(), this_player());
+    if (wildmatch("*##*", str))
+    {
+        parts = explode(str, "##");
+        str = parts[0];
+	if (sizeof(parts) > 1) post_long = parts[1];
+    }
+    str += "Usage: note <headline>, remove [note] <number>, " +
 	"list [notes] <range>\n" +
 	"       read/mread [note] <number>, " +
 	"read/mread previous/current/next [note]\n";
@@ -589,7 +600,7 @@ long(int start = 1, int end = msg_num)
 	}
     }
 
-    return str;
+    return str + post_long;
 }
 
 /*
@@ -989,48 +1000,50 @@ public nomask int
 create_note(string header, string author, string body)
 {
     string head;
-    string char;
-    int    index = -1;
-    int    len;
+    string name;
+    int    index;
 
     if (geteuid() != geteuid(previous_object()))
 	return 0;
 
     /* The author may not be a real player and the length of the name
-     * must be in the valid range.
+     * must be in the valid range. Remember the original capitalization.
      */
-    author = lower_case(author);
-    if ((strlen(author) > MAX_NAME_LENGTH) ||
-	(strlen(author) < MIN_NAME_LENGTH) ||
-	(SECURITY->exist_player(author)))
-	return 0;
-
-    if (!find_player(author) || 
-	find_player(author) != this_interactive())
+    name = lower_case(author);
+    if ((strlen(name) > MAX_NAME_LENGTH) ||
+	(strlen(name) < MIN_NAME_LENGTH) ||
+	(SECURITY->exist_player(name)))
     {
-	SECURITY->log_syslog("BOARD", ctime(time()) + ": " +
-            capitalize(this_interactive()->query_real_name()) + 
-            " posted on the board '" + 
-            query_board_name() + 
-            "' as '" + author + "'.\n");
+	return 0;
     }
 
-    /* Author's name may only be letters or the dash (-). */
-    len = strlen(author);
-    while(++index < len)
+    if (this_interactive())
     {
-	char = author[index..index];
-	if ((char < "a") &&
-	    (char > "z") &&
-	    (char != "-"))
-	    return 0;
+	SECURITY->log_syslog("BOARD", ctime(time()) + ": " +
+            capitalize(this_interactive()->query_real_name()) +
+            " posted on the board '" + query_board_name() +
+            "' as '" + author + "'.\n", 100000);
     }
 
     /* Header size must be correct and there must be a body too. */
     if ((strlen(header) < MIN_HEADER_LENGTH) ||
 	(strlen(header) > MAX_HEADER_LENGTH) ||
 	(!strlen(body)))
+    {
 	return 0;
+    }
+
+    /* Author's name may only be letters, space or dash (-). */
+    index = strlen(author);
+    while(--index >= 0)
+    {
+	if ((name[index] < 'a') &&
+	    (name[index] > 'z') &&
+	    !IN_ARRAY(name[index], ({ '-', ' ' }) ))
+	{
+	    return 0;
+	}
+    }
 
     head = sprintf("%-*s %3d %-11s ", MAX_HEADER_LENGTH, header,
 	sizeof(explode(body, "\n")), capitalize(author)) +
@@ -1122,12 +1135,11 @@ read_msg(string what_msg, int mr)
 
     text = headers[note][0] + " " +
         TIME2FORMAT(atoi(headers[note][1][1..]), "yyyy") + "\n\n";
-    if (mr == 1)
+    if (mr)
 	this_player()->more(text + read_file(board_name + "/" + headers[note][1], 2));
     else
     {
-	write(text);
-	cat(board_name + "/" + headers[note][1], 2);
+	write(text + read_file(board_name + "/" + headers[note][1], 2));
     }
 
     /* Update the master board central unless that has been prohibited. */
@@ -1182,12 +1194,12 @@ remove_msg(string what_msg)
             headers[note][0] + "\n");
 
     SECURITY->log_syslog("BOARD", ctime(time()) + ": " +
-        capitalize(this_interactive()->query_real_name()) + 
+        capitalize(this_interactive()->query_real_name()) +
         " removed a note on: " + query_board_name() +
-        "\n                          " + headers[note][0] + "\n");
-        
+        "\n--: " + headers[note][0] + "\n", 100000);
+
     discard_message(headers[note][1]);
-    
+
     headers = exclude_array(headers, note, note);
     msg_num--;
 

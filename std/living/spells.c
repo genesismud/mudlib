@@ -51,6 +51,10 @@ query_spellobjs()
     return secure_var(spell_objs); 
 }
 
+/*
+ * Function name: find_spell
+ * Description  : Returns the spell object for a certain spell.
+ */
 public object
 find_spell(string spell)
 {

@@ -24,11 +24,11 @@ static int hit,
            pen,
            broken,
            loaded,
-           defered_join,
-           will_not_recover;
+           defered_join;
 
 /* Prototype */
 public void update_heap_id();
+varargs public string singular_short(object for_obj);
 
 /*
  * Function name: create_projectile
@@ -139,6 +139,7 @@ set_broken(int b)
     {
         add_adj("broken");
 	this_object()->update_heap_id();
+	add_prop(OBJ_M_NO_SELL, capitalize(LANG_ADDART(singular_short())) + " has no value.\n");
     }
     else
     {
@@ -427,15 +428,4 @@ init_recover(string arg)
     
     sscanf(arg, "%sPROJECTILE#%d#%d#%s", head, broken, heap_size, tail);
     set_heap_size(heap_size);
-}
-
-/*
- * Function name: may_not_recover
- * Description  : This function will be true if the projectile may not recover.
- * Returns      : int 1 - no recovery, 0 - recovery.
- */
-nomask int
-may_not_recover()
-{
-    return will_not_recover;
 }

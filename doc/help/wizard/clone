@@ -12,6 +12,11 @@ DESCRIPTION
 	directory for this command to work.
 
 OPTIONS
+        [path]  - the file to clone
+                  Optionally the path can be given in the form
+                  <file>:<arg> which will call trigger a call to 
+                  init_recover or init_arg after the load.
+                  
 	[none]	- clone the object and try to move it to your inventory
 		  subject to the properties that may affect this action.
 

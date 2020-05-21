@@ -90,15 +90,16 @@
 #define LIVE_AO_SPARRING        "_live_ao_sparring"
 #define LIVE_AO_THIEF           "_live_ao_thief"
 #define LIVE_AS_ATTACK_FUMBLE	"_live_as_attack_fumble"
+#define LIVE_AS_POTION_ID       "_live_as_potion_id" 
 #define LIVE_I_ALWAYSKNOWN      "_live_i_alwaysknown"
 #define LIVE_I_ATTACK_DELAY     "_live_i_attack_delay"
 #define LIVE_I_ATTACK_THIEF     "_live_m_attack_thief"
 #define LIVE_M_ATTACK_THIEF     "_live_m_attack_thief"
 #define LIVE_I_BACKSTABBING     "_live_i_backstabbing"
+#define LIVE_I_BLIND            "_live_i_blind"
 #define LIVE_I_CONCENTRATE      "_live_i_concentrate"
 #define LIVE_I_GOT_BACKSTABBED  "_live_i_got_backstabbed"
 #define LIVE_I_HERB_EFFECT      "_live_i_herb_effect"
-#define LIVE_I_LANGUAGE         "_live_i_language"
 #define LIVE_I_LAST_STEAL       "_live_i_last_steal"
 #define LIVE_I_MAX_DRINK	"_live_i_max_drink"
 #define LIVE_I_MAX_EAT		"_live_i_max_eat"
@@ -112,10 +113,17 @@
 #define LIVE_M_NO_ACCEPT_GIVE   "_live_m_no_accept_give"
 #define LIVE_I_NO_BODY          "_live_i_no_body"
 #define LIVE_I_NO_CORPSE	"_live_i_no_corpse"
+#define LIVE_I_NO_DRINK         "_live_m_no_drink"
+#define LIVE_M_NO_DRINK         "_live_m_no_drink"
 #define LIVE_I_NO_FOOTPRINTS    "_live_i_no_footprints"
 #define LIVE_I_NO_GENDER_DESC   "_live_i_no_gender_desc"
+#define LIVE_I_NO_INGEST        "_live_m_no_ingest"
+#define LIVE_M_NO_INGEST        "_live_m_no_ingest"
+#define LIVE_I_NO_MESSAGE       "_live_i_no_message"
 #define LIVE_I_NO_SCRY          "_live_m_no_scry"
 #define LIVE_M_NO_SCRY          "_live_m_no_scry"
+#define LIVE_I_NO_STUN          "_live_m_no_stun"
+#define LIVE_M_NO_STUN          "_live_m_no_stun"
 #define LIVE_I_NON_FORGET	"_live_i_non_forget"
 #define LIVE_I_NON_REMEMBER	"_live_i_non_remember"
 #define LIVE_I_QUICKNESS	"_live_i_quickness"
@@ -123,6 +131,7 @@
 #define LIVE_I_SEE_INVIS	"_live_i_see_invis"
 #define LIVE_I_SNEAK    	"_live_i_sneak"
 #define LIVE_I_STUNNED          "_live_i_stunned"
+#define LIVE_I_TEAM_NO_FOLLOW   "_live_i_team_no_follow"
 #define LIVE_I_UNDEAD		"_live_i_undead"
 #define LIVE_I_VICTIM_ADDED_AWARENESS "_live_i_victim_added_awareness"
 #define LIVE_M_STOP_FIGHTING    "_live_m_stop_fighting"
@@ -191,16 +200,17 @@
 #define OBJ_I_IS_MAGIC_WEAPON	"_obj_i_is_magic_weapon"
 #define OBJ_O_LOOTED_IN_ROOM    "_obj_o_looted_in_room"
 
-#define OBJ_M_NO_MAGIC		"_obj_m_no_magic"
-#define OBJ_I_NO_MAGIC          "_obj_m_no_magic"
-#define OBJ_M_NO_TELEPORT	"_obj_m_no_teleport"
-#define OBJ_I_NO_TELEPORT       "_obj_m_no_teleport"
-#define OBJ_M_NO_MAGIC_ATTACK	"_obj_m_no_magic_attack"
-#define OBJ_I_NO_MAGIC_ATTACK   "_obj_m_no_magic_attack"
-#define OBJ_M_NO_STEAL		"_obj_m_no_steal"
-#define OBJ_I_NO_STEAL          "_obj_m_no_steal"
-#define OBJ_M_NO_ATTACK		"_obj_m_no_attack"
 #define OBJ_I_NO_ATTACK         "_obj_m_no_attack"
+#define OBJ_M_NO_ATTACK		"_obj_m_no_attack"
+#define OBJ_I_NO_MAGIC          "_obj_m_no_magic"
+#define OBJ_M_NO_MAGIC		"_obj_m_no_magic"
+/* Obsolete, redirected to "no attack" properties. */
+#define OBJ_I_NO_MAGIC_ATTACK   OBJ_I_NO_ATTACK
+#define OBJ_M_NO_MAGIC_ATTACK	OBJ_M_NO_ATTACK
+#define OBJ_I_NO_STEAL          "_obj_m_no_steal"
+#define OBJ_M_NO_STEAL		"_obj_m_no_steal"
+#define OBJ_I_NO_TELEPORT       "_obj_m_no_teleport"
+#define OBJ_M_NO_TELEPORT	"_obj_m_no_teleport"
 
 #define OBJ_I_SEARCH_TIME	"_obj_i_search_time"
 #define OBJ_S_SEARCH_FUN	"_obj_s_search_fun"
@@ -216,30 +226,30 @@
 
 #define PRE_OBJ_MAGIC_RES       "_obj"
 
-#define OBJ_I_RES_MAGIC         "_obj_magic_i_res_magic"
 #define OBJ_I_RES_ACID          "_obj_magic_i_res_acid"
 #define OBJ_I_RES_COLD          "_obj_magic_i_res_cold"
 #define OBJ_I_RES_ELECTRICITY   "_obj_magic_i_res_electricity"
-#define OBJ_I_RES_LIGHT		"_obj_magic_i_res_electricity"
-#define OBJ_I_RES_POISON        "_obj_magic_i_res_poison"
 #define OBJ_I_RES_IDENTIFY	"_obj_magic_i_res_identify"
+#define OBJ_I_RES_ILLUSION	"_obj_magic_i_res_illusion"
+#define OBJ_I_RES_LIGHT		"_obj_magic_i_res_electricity"
+#define OBJ_I_RES_MAGIC         "_obj_magic_i_res_magic"
+#define OBJ_I_RES_POISON        "_obj_magic_i_res_poison"
 
 #define OBJ_I_RES_AIR         	"_obj_magic_i_res_air"
-#define OBJ_I_RES_WATER       	"_obj_magic_i_res_water"
+#define OBJ_I_RES_DEATH       	"_obj_magic_i_res_death"
 #define OBJ_I_RES_EARTH       	"_obj_magic_i_res_earth"
 #define OBJ_I_RES_FIRE        	"_obj_magic_i_res_fire"
 #define OBJ_I_RES_LIFE        	"_obj_magic_i_res_life"
-#define OBJ_I_RES_DEATH       	"_obj_magic_i_res_death"
+#define OBJ_I_RES_WATER       	"_obj_magic_i_res_water"
+
 #define OBJ_I_ALIGN             "_obj_i_align"
 
 /* *********************************************************
  * Player properties
  */
-#define PLAYER_AI_LAST_STATS    "_player_ai_last_stats"
 #define PLAYER_AS_REPLY_WIZARD  "_player_as_reply_wizard"
 #define PLAYER_I_AUTOLOAD_TIME  "_player_i_autoload_time"
 #define PLAYER_I_LAST_NOTE	"_player_i_last_note"
-#define PLAYER_I_LASTXP		"_player_i_lastxp"
 #define PLAYER_I_MORE_LEN	"_player_i_more_len"
 #define PLAYER_I_NEWBIE_HELPER  "_player_i_newbie_helper"
 #define PLAYER_I_NO_NOTES       "_player_i_no_notes"
@@ -252,6 +262,7 @@
  */
 #define NPC_M_NO_ACCEPT_GIVE	LIVE_M_NO_ACCEPT_GIVE
 #define NPC_I_NO_FEAR           "_npc_i_no_fear"
+#define NPC_I_NO_FEAR_CHECK     "_npc_i_no_fear_check"
 #define NPC_I_NO_LOOKS		"_npc_i_no_looks"
 #define NPC_I_NO_RUN_AWAY	"_npc_i_no_run_away"
 #define NPC_I_NO_UNARMED        "_npc_i_no_unarmed"
@@ -261,8 +272,15 @@
  */
 #define ROOM_I_IS		"_room_i_is"
 #define ROOM_I_LIGHT		"_room_i_light"
+
+#define ALWAYS_LIGHT_LIMIT      1000000
+#define ALWAYS_LIGHT            (ALWAYS_LIGHT_LIMIT * 2)
+#define ALWAYS_DARK_LIMIT       (-ALWAYS_LIGHT_LIMIT)
+#define ALWAYS_DARK             (ALWAYS_DARK_LIMIT * 2)
+
 #define ROOM_I_INSIDE		"_room_i_inside"
 #define ROOM_I_TYPE		"_room_i_type"
+
 #define ROOM_NORMAL		0
 #define ROOM_IN_WATER		1
 #define ROOM_UNDER_WATER	2
@@ -284,20 +302,21 @@
 #define ROOM_S_EXIT_FROM_DESC   "_room_s_exit_from_desc"
 #define ROOM_S_MAP_FILE         "_room_s_map_file"
 
+#define ROOM_I_NO_ATTACK	"_room_m_no_attack"
+#define ROOM_M_NO_ATTACK        "_room_m_no_attack"
 #define ROOM_I_NO_MAGIC		"_room_m_no_magic"
 #define ROOM_M_NO_MAGIC		"_room_m_no_magic"
+/* Obsolete, redirected to "no attack" properties. */
+#define ROOM_I_NO_MAGIC_ATTACK	ROOM_I_NO_ATTACK
+#define ROOM_M_NO_MAGIC_ATTACK  ROOM_M_NO_ATTACK
+#define ROOM_I_NO_SCRY          "_room_m_no_scry"
+#define ROOM_M_NO_SCRY          "_room_m_no_scry"
+#define ROOM_I_NO_STEAL		"_room_m_no_steal"
+#define ROOM_M_NO_STEAL         "_room_m_no_steal"
 #define ROOM_I_NO_TELEPORT	"_room_m_no_teleport"
 #define ROOM_M_NO_TELEPORT      "_room_m_no_teleport"
 #define ROOM_M_NO_TELEPORT_TO   "_room_m_no_teleport_to"
 #define ROOM_M_NO_TELEPORT_FROM "_room_m_no_teleport_from"
-#define ROOM_I_NO_MAGIC_ATTACK	"_room_m_no_magic_attack"
-#define ROOM_M_NO_MAGIC_ATTACK  "_room_m_no_magic_attack"
-#define ROOM_I_NO_STEAL		"_room_m_no_steal"
-#define ROOM_M_NO_STEAL         "_room_m_no_steal"
-#define ROOM_I_NO_ATTACK	"_room_m_no_attack"
-#define ROOM_M_NO_ATTACK        "_room_m_no_attack"
-#define ROOM_I_NO_SCRY          "_room_m_no_scry"
-#define ROOM_M_NO_SCRY          "_room_m_no_scry"
 
 /* *********************************************************
  * Temporary properties
@@ -310,7 +329,6 @@
 #define TEMP_STDCORPSE_CHECKED 		"_temp_stdcorpse_checked"
 #define TEMP_STDDRINK_CHECKED 		"_temp_stddrink_checked"
 #define TEMP_STDFOOD_CHECKED 		"_temp_stdfood_checked"
-#define TEMP_STDHERB_CHECKED		"_temp_stdherb_checked"
 #define TEMP_STDPOTION_CHECKED		"_temp_stdpotion_checked"
 #define TEMP_STDREAD_CHECKED		"_temp_stdread_checked"
 #define TEMP_STDROPE_CHECKED		"_temp_stdrope_checked"
@@ -325,6 +343,11 @@
 #define WIZARD_I_BUSY_LEVEL	"_wizard_i_busy_level"
 #define WIZARD_S_MAN_SEL_CHAPT	"_wizard_s_man_sel_chapt"
 #define WIZARD_S_SMAN_SEL_DIR	"_wizard_s_sman_sel_dir"
+
+/* Default property setting, can be used in non-humanoids that want the
+ * humanoid behaviour on the no-gift policy.
+ */
+#define DEFAULT_NO_ACCEPT_GIVE_PROP add_prop(LIVE_M_NO_ACCEPT_GIVE, mobile_deny_objects)
 
 /* No definitions beyond this line. */
 #endif PROP_DEF

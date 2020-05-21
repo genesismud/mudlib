@@ -15,6 +15,7 @@
  * LANG_PSENT    -- Get the plural form of a noun phrase.
  * LANG_ART      -- Get the article of a noun.
  * LANG_ADDART   -- Get the article of a noun + the noun.
+ * LANG_STRIPART -- Strip the article from a description.
  * LANG_POSS     -- Get the possessive form of a name.
  * LANG_SHORT    -- Get the short without article. Works for heaps, too.
  * LANG_ASHORT   -- Get the short with article. Works for heaps, too.
@@ -36,6 +37,7 @@
 #define LANG_PSENT(x)    ((string)LANG_FILE->plural_sentence(x))
 #define LANG_ART(x)      ((string)LANG_FILE->article(x))
 #define LANG_ADDART(x)   ((string)LANG_FILE->add_article(x))
+#define LANG_STRIPART(x) ((string)LANG_FILE->strip_article(x))
 #define LANG_POSS(x)     ((string)LANG_FILE->name_possessive(x))
 #define LANG_SHORT(x)    ((string)LANG_FILE->lang_short(x))
 #define LANG_ASHORT(x)   ((string)LANG_FILE->lang_a_short(x))
@@ -55,7 +57,10 @@
  * LANG_IS_OFFENSIVE(x) -- Returns true if the term contains offensive words
  *                         or sub-words.
  */
-#define LANG_IS_OFFENSIVE(x) ((string)LANG_FILE->lang_is_offensive(x))
+#define OFFENSIVE_WORDS ({ "*bitch*", "*clit*", "*cock*", "*cunt*", "*dick*", \
+    "*fag*", "*fart*", "*fuck*", "*peck*", "*penis*", "*pussy*", "*rape*", \
+    "*shit*", "*slut*", "*suck*", "*nigger*", "*titt*", "*twat*", "*poop*" })
+#define LANG_IS_OFFENSIVE(x) (!!sizeof(filter(OFFENSIVE_WORDS, &wildmatch(, (x)))))
 
 /*
  * LANG_VOWELS - an array with all vowels.
@@ -70,16 +75,31 @@
  * that runs from 0-100% instead of an arbitrary maximum.
  */
 #define GET_NUM_DESC(v, mx, md)              ((string)LANG_FILE->get_num_desc((v), (mx), (md)))
+#define GET_NUM_DESC_CENTER(v, mx, ce, cew, md) (LANG_FILE->get_num_desc_centered((v), (mx), (ce), (cew), (md))) 
 #define GET_NUM_DESC_SUB(v, mx, md, sd, ti)  ((string)LANG_FILE->get_num_desc((v), (mx), (md), (sd), (ti)))
 #define GET_PROC_DESC(v, md)                 ((string)LANG_FILE->get_num_desc((v), 100, (md)))
 #define GET_PROC_DESC_SUB(v, md, sd, ti)     ((string)LANG_FILE->get_num_desc((v), 100, (md), (sd), (ti)))
+#define GET_NUM_DESC_COMBOS(md, sd, ti)      ((string)LANG_FILE->get_num_desc_combos((md), (sd), (ti)))
 
 /*
  * GET_NUM_LEVEL_DESC - Match a value 'v' to a series of descriptions 'md'. Each
  * description has an associated level 'lv' that you need to have or exceed to
  * get the description.
+ * GET_NUM_LEVEL_INDEX - Same, but get the index of the level/description.
  */
+#define GET_NUM_LEVEL_INDEX(v, lv)           ((int)LANG_FILE->get_num_level_index((v), (lv)))
 #define GET_NUM_LEVEL_DESC(v, lv, md)        ((string)LANG_FILE->get_num_level_desc((v), (lv), (md)))
+
+/* APPRAISE_VERB - Just a list of synonyms. */
+#define APPRAISE_VERB one_of_list( ({ "appraise", "appraise", "assess", \
+    "consider", "determine", "estimate", "guess", "judge", "reckon" }) )
+
+/* LANG_PRETITLES - list of (mostly) chivalrous pretitles that we don't want
+ * as part of names of new players.
+ */   
+#define LANG_PRETITLES ({ "sir*", "*count*", "duke*", "*lord*", "*lady*", \
+    "*prince*", "*king*", "*queen*", "*master*", "mr*", "miss*", "*dude*", \
+    "*boy*", "*man", "ms*", "*guy" })
 
 /* No definitions beyond this line. */
 #endif LANG_DEF
