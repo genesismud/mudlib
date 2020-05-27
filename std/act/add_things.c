@@ -37,7 +37,7 @@ wield_wear_item(object ob)
 static object
 equip_clone(mixed item)
 {
-    if (stringp(item)) 
+    if (stringp(item))
     {
         item = FPATH(FILE_PATH(file_name()), item);
         item = clone_object(item);
@@ -80,7 +80,7 @@ equip(mixed equiplist, int dont_wield = 0, function init_call = 0)
     if (!pointerp(equiplist))
         equiplist = ({ equiplist });
 
-    equiplist = map(equiplist, equip_clone);
+    equiplist = map(equiplist, equip_clone) - ({ 0 });
     equiplist->move(this_object(), 1);
 
     if (!dont_wield)
