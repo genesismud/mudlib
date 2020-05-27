@@ -1,4 +1,4 @@
-/* 
+/*
  * /std/coins.c
  *
  * This is the heap object for coins.
@@ -53,7 +53,7 @@ create_heap()
     add_prop(OBJ_M_NO_SELL, 1);
 
     create_coins();
-    
+
     if (!query_prop(HEAP_S_UNIQUE_ID))
     {
 	set_coin_type(MONEY_TYPES[0]);
@@ -100,7 +100,7 @@ query_auto_load()
     return (MASTER + ":" + num_heap() + "," + coin_type);
 }
 
-/* 
+/*
  * Function name: init_arg
  * Description  : Called when autoloading. It will set the type of coins
  *                and the number of coins in the heap.
@@ -146,7 +146,7 @@ long()
  *                properties with respect to the coins.
  * Arguments    : string str - the coin type to set.
  */
-public void  
+public void
 set_coin_type(string str)
 {
     int ix;
@@ -221,6 +221,21 @@ stat_object()
     return ::stat_object() + "Coin type: " + coin_type + "\n";
 }
 
+static string
+target_description(object ob)
+{
+    if (!objectp(ob)) {
+        return "void";
+    }
+
+    if (interactive(ob)) {
+        return capitalize(ob->query_real_name()) +
+            (ob->query_wiz_level() ? " (W)" : "");
+    }
+
+    return file_name(ob);
+}
+
 /*
  * Function name: move
  * Description  : Make sure moving of money is logged if the amount is
@@ -231,7 +246,6 @@ stat_object()
 varargs public int
 move(mixed dest, mixed subloc)
 {
-    string str;
     object env = environment();
     int rval = ::move(dest, subloc);
 
@@ -255,7 +269,7 @@ move(mixed dest, mixed subloc)
     if (!objectp(dest) ||
 	dest->query_wiz_level())
     {
-	return 0;
+        return 0;
     }
 
     /* Not really nice to put this in the mudlib, but we need to stop the
@@ -268,15 +282,11 @@ move(mixed dest, mixed subloc)
     if (env->id(PURSE_ID) && (dest == environment(env)))
         return 0;
 
-    str = sprintf("%s: %4d %-8s ", ctime(time()), num_heap(), coin_type);
-    str += (objectp(env) ? (interactive(env) ?
-	capitalize(env->query_real_name()) : file_name(env)) : "void");
-    str += " -> ";
-    str += (interactive(dest) ? capitalize(dest->query_real_name()) :
-	file_name(dest));
+    string str = sprintf("%s: %4d %-8s %s -> %s\n", ctime(time()), num_heap(),
+        coin_type, target_description(env), target_description(dest));
 
     /* Log the transation. */
-    SECURITY->log_syslog("MONEY_LOG", (str + "\n"), 1000000);
+    SECURITY->log_syslog("MONEY_LOG", str, 1000000 * 5);
 
     return 0;
 }
