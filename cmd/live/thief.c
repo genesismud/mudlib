@@ -752,6 +752,16 @@ steal(string str)
         return 1;
     }
 
+    /*
+     * Do not allow theft in locations where others are prevented
+     * from retaliation.
+     */
+    if (environment(this_player())->query_prop(ROOM_M_NO_ATTACK))
+    {
+        write("You may not " + query_verb() + " in this place.\n");
+        return 1;
+    }
+
     /* Don't allow people to try a steal attempt in rapid succession. */
     /* Moved even further up to avoid the messages being sent to players
      * unnecessarily due to obnoxious command spamming.
