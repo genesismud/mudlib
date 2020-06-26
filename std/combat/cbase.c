@@ -1149,30 +1149,25 @@ cb_death_occured(object killer)
 public varargs void
 cb_add_enemy(object enemy, int force)
 {
-    int pos;
-
     cb_update_enemies();
 
+    if (enemy == me)
+        return;
+
     /* Make sure panic value is updated before we add enemies */
-    cb_query_panic(); 
-    pos = member_array(enemy, enemies);
+    cb_query_panic();
 
-    if (force && pos >= 0)
+    if (sizeof(enemies) >= MAX_ENEMIES)
     {
-        enemies = ({ enemy }) + exclude_array(enemies, pos, pos);
-    }
-    else if (force)
-    {
-        enemies = ({ enemy }) + enemies;
-    }
-    else if (pos < 0)
-    {
-        enemies = enemies + ({ enemy });
+        enemies = enemies[..(MAX_ENEMIES - 1)];
     }
 
-    if (sizeof(enemies) > MAX_ENEMIES)
+    object *change = ({ enemy });
+    if (force)
     {
-        enemies = slice_array(enemies, 0, MAX_ENEMIES - 1);
+        enemies = change | enemies;
+    } else {
+        enemies |= change;
     }
 }
 
@@ -2032,7 +2027,7 @@ cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc =
 public nomask void
 cb_attack(object victim)
 {
-    if (!me)
+    if (!me || !victim || victim == me || victim->query_ghost())
     {
         return;
     }
@@ -2043,11 +2038,6 @@ cb_attack(object victim)
     if (victim == attack_ob)
     {
         victim->attacked_by(me);
-        return;
-    }
-
-    if (victim == me || victim->query_ghost())
-    {
         return;
     }
 

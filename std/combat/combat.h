@@ -4,7 +4,7 @@
 
 #define MAX_ATTACK 10
 #define MAX_HITLOC 10
-#define MAX_ENEMIES 10
+#define MAX_ENEMIES 15
 
 #define ATT_WCHIT 0
 #define ATT_WCPEN 1
