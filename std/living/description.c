@@ -824,7 +824,7 @@ do_glance(int brief)
     if (!CAN_SEE_IN_ROOM(this_object()))
     {
  	if (!stringp(item = env->query_prop(ROOM_S_DARK_LONG)))
- 	    write(LD_DARK_LONG);
+ 	    write(LD_DARK_ROOM(env));
  	else
  	    write(item);
 	return 1;
