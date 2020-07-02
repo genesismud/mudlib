@@ -18,6 +18,8 @@
 #define LD_THE			"the"
 #define LD_DARK_LONG		"A dark room.\n"
 #define LD_CANT_SEE		"You are lost, you can't see a thing.\n"
+#define LD_DARK_ROOM(o)		(o->query_prop(ROOM_I_INSIDE) ? \
+    				"A dark room.\n" : "A dark area.\n")
 
 #define LD_SPELL_FAIL 		"Your spell fails.\n"
 #define LD_SPELL_CONC_BROKEN	"Your concentration is broken. No spell will be cast.\n"
