@@ -435,8 +435,8 @@ sk_fix_cost(int skillnum, int steps = 1)
 
     if (this_level >= next_level)
     {
-        if (steps == 1)
-            return "";
+//        if (steps == 1)
+//            return "";
 
         cost = "---     ";
         next_rank = "---";
@@ -691,7 +691,7 @@ sk_list(int steps)
     {
         steps = 1;
     }
-    if (steps < 0)
+    else if (steps < 0)
     {
         sk_hook_skillisting();
         guild_sk = all_sk;
@@ -764,6 +764,11 @@ sk_improve(string str)
     else
     {
         skill = str;
+    }
+
+    if (skill == "all" || skill == "list")
+    {
+        return sk_list(-1);
     }
 
     known_sk = this_player()->query_all_skill_types();
