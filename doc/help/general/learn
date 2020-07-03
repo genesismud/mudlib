@@ -6,6 +6,7 @@ SYNOPSIS
 	learn [<num>] / max
 	learn <name> [<num>]
 	learn <name> max
+	learn all / list
 
 DESCRIPTION
 	With this command you can learn a new skills at different guilds
@@ -24,6 +25,8 @@ OPTIONS
 
 	<name> max  - Learn that skill and improve to the maximum level you
                       can afford with the money you carry.
+
+	all / list  - List all the skills you can learn here.
 
 SEE ALSO
         stats, vitals, skillist, skillevels, improve
