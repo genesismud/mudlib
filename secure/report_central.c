@@ -66,6 +66,7 @@ static void header(string str);
 #define REPORT_NAME_PRAISE "praise"
 #define REPORT_NAMES_SHORT ({ "U", "B", "T", "I", "P" })
 #define REPORT_NAMES_LONG  ({ "unknown", "bug", "typo", "idea", "praise" })
+#define REPORT_NAMES_MAP  ([ "bug" : REPORT_BUG, "typo" : REPORT_TYPO, "idea" : REPORT_IDEA ])
 #define REPORT_STATUS_SHORT ([ 0 : "-", REPORT_DONE: "D", REPORT_DELETED: "X", (REPORT_DONE | REPORT_DELETED) : "X" ])
 #define REPORT_STATUS_LONG  ([ 0 : "-", REPORT_DONE: "Done", REPORT_DELETED: "Deleted" ])
 
@@ -877,7 +878,19 @@ header(string str)
         return;
     }
 
-    if (strlen(str))
+    if (REPORT_NAMES_MAP[str])
+    {
+        report = REPORT_NAMES_MAP[str];
+        size = sizeof(m_reports[gOwner]);
+        for (index = 0; index < size; index++)
+        {
+            if (report == m_reports[gOwner][index][REPORT_TYPE])
+            {
+                indices += ({ index });
+            }
+        }
+    }
+    else if (strlen(str))
     {
         pattern = "*" + lower_case(str) + "*";
         str = capitalize(str);
@@ -1048,7 +1061,7 @@ merge(int *numbers)
 
     foreach(int num: numbers[1..])
     {
-    	mixed report = m_reports[gOwner][num - 1];
+	mixed report = m_reports[gOwner][num - 1];
 	write("Merging report " + num + " into " + first + ".\n");
         write_file(file, read_file(REPORT_FILENAME(report[REPORT_TIME])));
     }
@@ -1398,7 +1411,7 @@ get_cmd(string str)
               " E                - erase all reports of current owner marked as done\n" +
               " M <numbers>      - merge multiple reports into a consolidated entry\n" +
               " f [num] [owner] [type] - forward to a new owner, change the type, or both\n" +
-              " h [auth/pattern] - display headers; filter on author or pattern in the path\n" +
+              " h [type/auth/pattern] - display headers; filter on type, author or pattern in the path\n" +
               " + or -           - display the next or previous " + SCROLL_SIZE + " headers\n" +
               " l [days] [owner] - list headers [up to x days old] [for an owner]\n" +
               " L [owner]        - list summary of all headers [for an owner]\n" +
