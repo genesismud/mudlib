@@ -328,7 +328,7 @@ help(string topic)
         }
     }
 
-    notify_fail("No help on \"" + topic + "\" available " +
+    notify_fail("No help on \"" + topic + "\" available" +
         (category ? " in category \"" + category + "\"": "") + ".\n");
     return 0;
 }
