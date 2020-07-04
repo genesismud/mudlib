@@ -435,9 +435,6 @@ sk_fix_cost(int skillnum, int steps = 1)
 
     if (this_level >= next_level)
     {
-//        if (steps == 1)
-//            return "";
-
         cost = "---     ";
         next_rank = "---";
     }
