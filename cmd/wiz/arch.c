@@ -158,6 +158,8 @@ all_spells()
 nomask int
 arch(string str)
 {
+    CHECK_SO_ARCH;
+
     if (!stringp(str))
     {
         notify_fail(capitalize(query_verb()) + " what?\n");
@@ -176,6 +178,8 @@ ateam(string str)
 {
     string *tms, *helps, *args = ({});
     int i, sz;
+
+    CHECK_SO_ARCH;
 
     if (stringp(str))
         args = explode(lower_case(str), " ");
@@ -552,6 +556,8 @@ newchar(string str)
     string *args, name;
     string passwd;
     mapping tmp_char;
+
+    CHECK_SO_ARCH;
 
     if (!strlen(str))
     {
