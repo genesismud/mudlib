@@ -2138,12 +2138,12 @@ start(string str)
 
     if (str == "valid")
     {
-        write("You must specify either 'start valid def' " +
-            "or 'start valid temp'.\n");
+        write("Syntax: start valid def[ault]\n" +
+              "        start valid temp[orary].\n");
         return 1;
     }
 
-    if (str == "valid temp")
+    if (wildmatch("valid temp*", str))
     {
         string *arr = FPATH_FILENAME->query_temp_start_locations();
         write("Available temporary starting locations:\n" +
@@ -2151,7 +2151,7 @@ start(string str)
         return 1;
     }
 
-    if (str == "valid def")
+    if (wildmatch("valid def*", str))
     {
         string *arr = FPATH_FILENAME->query_def_start_locations();
         write("Available default starting locations:\n" +

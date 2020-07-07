@@ -3,7 +3,7 @@ NAME
 
 SYNOPSIS
 	start 
-	start valid <def / temp>
+	start valid <def[ault] / temp[orary]>
 	start here
 	start [path]
 
@@ -15,8 +15,8 @@ OPTIONS
 	[none] 	- display the current starting location
 	
 	valid	- display valid (mortal) starting locations
-                - specify 'def' for default locations
-                - specify 'temp' for temporary locations
+                - specify 'default' for default locations
+                - specify 'temporary' for temporary locations
 
 	here	- set your starting location to room you are in
 
