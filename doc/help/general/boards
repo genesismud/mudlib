@@ -30,7 +30,7 @@ DESCIPTION
 OPTIONS
 	note    - use the words note or notes optionally to distinguish
 	notes	  the commands from other commands with the same name.
-	<num>	- a number indivating a valid message number, i.e. "5".
+	<num>	- a number indicating a valid message number, i.e. "5".
 	<range>	- a range of valid message numbers of the form 'begin-end'
 		  of which either the begin or the end may be omitted, i.e.
 		  "5 -10", "- 10" or "5-".
