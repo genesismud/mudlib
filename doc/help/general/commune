@@ -15,7 +15,7 @@ OPTIONS
         here	 - Give 'here' to reach the specific wizards who are
 		   responsible for the area you are in.
        <name>	 - This will send your cry for help to one particular wizard.
-		   However, when you use this option, you pay a tenth of you
+		   However, when you use this option, you pay a tenth of your
 		   maximum mana for any such call.
        <domain>  - Give the name of a domain to contact the wizards associated
 		   with that domain.
