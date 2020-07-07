@@ -3,7 +3,8 @@ NAME
 
 SYNOPSIS
 	start 
-	start [options]
+	start valid <def / temp>
+	start here
 	start [path]
 
 DESCRIPTION
@@ -13,10 +14,11 @@ DESCRIPTION
 OPTIONS
 	[none] 	- display the current starting location
 	
-	valid	- display all valid (mortal) starting locations
+	valid	- display valid (mortal) starting locations
+                - specify 'def' for default locations
+                - specify 'temp' for temporary locations
 
-	here	- set your starting location to be this room
+	here	- set your starting location to room you are in
 
 	path	- set your starting location to be 'path'
-
 

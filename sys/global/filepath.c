@@ -202,3 +202,25 @@ valid_temp_start_location(string startloc)
 {
     return IN_ARRAY(startloc, temp_start_locations);
 }
+
+/*
+ * Function name: query_def_start_locations
+ * Description  : Returns a string array of default start locations.
+ * Returns      : string array
+ */
+public string *
+query_def_start_locations()
+{
+    return secure_var(def_start_locations);
+}
+
+/*
+ * Function name: query_temp_start_locations
+ * Description  : Returns a string array of temp start locations.
+ * Returns      : string array
+ */
+public string *
+query_temp_start_locations()
+{
+    return secure_var(temp_start_locations);
+}
