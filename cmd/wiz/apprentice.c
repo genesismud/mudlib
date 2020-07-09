@@ -2138,9 +2138,24 @@ start(string str)
 
     if (str == "valid")
     {
-        str = implode(SECURITY->query_list_def_start(), ", ");
-        write("Available starting locations:\n" + break_string(str, 76, 3) +
-            "\n");
+        write("Syntax: start valid def[ault]\n" +
+              "        start valid temp[orary].\n");
+        return 1;
+    }
+
+    if (wildmatch("valid temp*", str))
+    {
+        string *arr = FPATH_FILENAME->query_temp_start_locations();
+        write("Available temporary starting locations:\n" +
+            break_string(implode(arr, "\n"), 76, 3) + "\n");
+        return 1;
+    }
+
+    if (wildmatch("valid def*", str))
+    {
+        string *arr = FPATH_FILENAME->query_def_start_locations();
+        write("Available default starting locations:\n" +
+            break_string(implode(arr, "\n"), 76, 3) + "\n");
         return 1;
     }
 
