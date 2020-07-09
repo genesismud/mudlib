@@ -633,8 +633,8 @@ gs_meditate(string str)
         spread = SD_STATLEVELS[level+1] - SD_STATLEVELS[level];
 
         write("You are " + GET_NUM_DESC(residue, spread, SD_ADVANCE_DESCS) +
-            " " + one_of_list( ({ "advancing", "developing", "improving", "progressing", "rising" }) ) +
-            " to " + GET_STAT_INDEX_DESC(index, level+1) + ".\n");
+            " " + one_of_list(SD_PROGRESS_DESCS) +
+            " " + GET_STAT_INDEX_DESC(index, level+1) + ".\n");
     }
 
     add_action(gs_catch_all, "", 1);

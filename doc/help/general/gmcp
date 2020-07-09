@@ -15,7 +15,7 @@ DESCRIPTION
 	The Genesis client, Mudlet and CMud (version 3.22 and up) support the
 	GMCP protocol. This includes the handling of the messages and a variety
 	of the core features to interact with the game. It is up to the player
-	to add trigers and or other scripts to use the provided information.
+	to add triggers and or other scripts to use the provided information.
 
 SEE ALSO
 	gmcp_tech

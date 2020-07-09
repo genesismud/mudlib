@@ -1592,7 +1592,8 @@ metflag(string str)
 
     if (!strlen(str))
     {
-        write("Current metflag: " + METFLAG_TEXTS[this_player()->query_wiz_unmet()] + ".\n");
+        write("Current metflag: " +
+            METFLAG_TEXTS[this_player()->query_wiz_unmet()] + ".\n");
         return 1;
     }
 
@@ -1605,7 +1606,7 @@ metflag(string str)
         return metflag("");
 
     default:
-        notify_fail("Syntax: metflag [all/none/players]");
+        notify_fail("Syntax: metflag [all/none/players]\n");
         return 0;
     }
 

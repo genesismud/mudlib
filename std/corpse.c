@@ -279,7 +279,8 @@ long_func()
     if (pob->query_met(met_name))
         return "This is the dead body of " + capitalize(met_name) + cause;
     else
-        return "This is the dead body of " + nonmet_name + cause;
+        return "This is the dead body of " +
+            LANG_ADDART(nonmet_name) + cause;
 }
 
 /*
