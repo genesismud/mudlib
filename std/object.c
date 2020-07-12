@@ -22,6 +22,8 @@ inherit "/lib/item_expiration";
 
 #define SEARCH_PARALYZE "_search_paralyze_"
 #define OBJ_I_SEARCH_ALARM_ID "_obj_i_search_alarm_id"
+#define OBJ_I_BROKEN_ALARM_ID "_obj_i_broken_alarm_id"
+#define REMOVE_BROKEN_DELAY itof(45 + random(46))
 
 static string   obj_pshort,     /* Plural short description */
                 obj_subloc,     /* Current sublocation */
@@ -2062,17 +2064,40 @@ set_trusted(int arg)
 }
 
 /*
+ * Function name: remove_broken_delayed
+ * Descriptions : Called by an alarm initiated by the setting
+ * 		  of the OBJ_I_BROKEN property. This intermediary
+ * 		  function is so that we can externally call the
+ * 		  remove_object() function to allow interception
+ * 		  by any shadows the object may possess.
+ */
+private void
+remove_broken_delayed()
+{
+    if (objectp(environment()))
+    {
+	tell_room(environment(), "The "+ QSHORT(this_object()) +
+	    " disintegrates.\n", 0, this_object());
+    }
+    this_object()->remove_object();
+}
+
+/*
  * Function name: add_prop_obj_i_broken
  * Description  : This function automatically adds the adjective
  *                "broken" when the property OBJ_I_BROKEN is set.
+ *                It also starts an alarm to remove this object
+ *                after a delay to reduce clutter.
  * Arguments    : value - the value of the property set
  * Returns      : 0 - always, the prop may be set.
  */
 public int
 add_prop_obj_i_broken(mixed value)
 {
+    float delay = REMOVE_BROKEN_DELAY;
+    int alarm_id = set_alarm(delay, 0.0, remove_broken_delayed);
+    add_prop(OBJ_I_BROKEN_ALARM_ID, alarm_id);
     set_adj("broken");
-
     return 0;
 }
 
@@ -2080,13 +2105,17 @@ add_prop_obj_i_broken(mixed value)
  * Function name: remove_prop_obj_i_broken
  * Description  : This function is automatically called to remove the
  *                adjective "broken" if OBJ_I_BROKEN is removed.
+ *                Will also remove the object cleanup alarm.
  * Returns      : 0 - always, the prop may be removed.
  */
 public int
 remove_prop_obj_i_broken()
 {
+    int alarm_id = query_prop(OBJ_I_BROKEN_ALARM_ID);
+    remove_prop(OBJ_I_BROKEN_ALARM_ID);
+    if (alarm_id)
+	remove_alarm(alarm_id);
     remove_adj("broken");
-
     return 0;
 }
 
