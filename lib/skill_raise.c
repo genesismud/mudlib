@@ -2,7 +2,7 @@
  * /lib/skill_raise.c
  *
  * This is generic routines for advancing in skills. It is used by inheriting
- * this file and configuring which skills that are teached. 
+ * this file and configuring which skills that are teached.
  *
  * Skill costs are calculated with the formula:
  *
@@ -36,7 +36,7 @@ create_skill_raise()
     sk_default = SS_SKILL_DESC;
     sk_trains = ([]);
     sk_tdesc = ([]);
-    
+
     subdesc =
         ({
             "novice",
@@ -47,11 +47,11 @@ create_skill_raise()
             "seasoned",
             "expert",
             "eminent",
-            "brilliant", 
+            "brilliant",
             "superior",
         });
 
-    desc = 
+    desc =
         ({
             "student",
             "amateur",
@@ -60,7 +60,7 @@ create_skill_raise()
             "journeyman",
             "craftsman",
             "professional",
-            "veteran", 
+            "veteran",
             "master",
             "guru",
         });
@@ -111,7 +111,7 @@ sk_query_sub_levels()
  *                              weight * stat / 100
  */
 public varargs void
-sk_add_train(mixed skillnum, mixed desc, string name, int costf, 
+sk_add_train(mixed skillnum, mixed desc, string name, int costf,
     int maxskill, int stat, int weight)
 {
     int il;
@@ -147,11 +147,11 @@ sk_add_train(mixed skillnum, mixed desc, string name, int costf,
         weight = 100;
     }
     skval = sk_default[skillnum];
-    
+
 #ifdef STAT_LIMITED_SKILLS
     if (pointerp(skval))
     {
-         sk_trains[skillnum] = ({ skval[0], skval[1], maxskill, 
+         sk_trains[skillnum] = ({ skval[0], skval[1], maxskill,
             skval[2], skval[3] });
     }
     else
@@ -207,7 +207,7 @@ sk_do_train(int skillnum, object pl, int to_lev)
     {
         return 0;
     }
- 
+
     if ((to_lev > sk_trains[skillnum][2]) ||
         (to_lev < 0))
     {
@@ -225,7 +225,7 @@ sk_do_train(int skillnum, object pl, int to_lev)
  *                int silent - don't tell anything to the player if true.
  * Returns      : int - the maximum you can train the skill to.
  */
-public varargs int 
+public varargs int
 sk_query_max(int skillnum, int silent)
 {
     mixed skval;
@@ -337,7 +337,7 @@ sk_rank(int lev)
     subl = sizeof(subdesc) * (lev % subl) / subl;
 
     return (strlen(subdesc[subl]) ? subdesc[subl] + " " : "") + desc[mainl];
-}       
+}
 
 /*
  * Function name: sk_query_train
@@ -399,7 +399,7 @@ sk_find_skill(string skname)
     }
     return -1;
 }
-    
+
 /*
  * Function name: sk_hook_allow_train_skill
  * Description:   Checks to see if a specific person can learn a
@@ -650,7 +650,7 @@ sk_train_sufficient_stat(int skill, int to_lev)
 
 #ifdef STAT_LIMITED_SKILLS
     if ((sk_trains[skill][3] >= 0) &&
-        (sk_trains[skill][4] > 0) && 
+        (sk_trains[skill][4] > 0) &&
         ((sk_trains[skill][4] * this_player()->query_stat(sk_trains[skill][3])) < (to_lev * 100)))
     {
         return 0;
@@ -688,7 +688,8 @@ sk_list(int steps)
     {
         steps = 1;
     }
-    else if (steps < 0)
+
+    if (steps < 0)
     {
         sk_hook_skillisting();
         guild_sk = all_sk;
@@ -697,17 +698,17 @@ sk_list(int steps)
     else
     {
         guild_sk = filter(all_sk, &sk_filter_learn(, steps));
-	if (!sizeof(guild_sk))
-	{
-	    if (this_object()->sk_hook_no_list_improve())
-	    {
-	    	return 1;
-	    }
-	    else
-	    {
-            	return sk_hook_no_list_learn();
- 	    }
-	}
+        if (!sizeof(guild_sk))
+        {
+            if (this_object()->sk_hook_no_list_improve())
+            {
+                return 1;
+            }
+            else
+            {
+                return sk_hook_no_list_learn();
+            }
+        }
         sk_hook_write_header(steps);
     }
 
@@ -739,7 +740,7 @@ sk_improve(string str)
     /* Simple way to let Max mean maxing out the skill. */
     if (str == "max")
     {
-	str = MAX_SKILL_LEVEL + "";
+        str = MAX_SKILL_LEVEL + "";
     }
 
     if (!str || sscanf(str, "%d", steps))
