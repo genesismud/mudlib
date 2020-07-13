@@ -27,6 +27,7 @@ static string   *wiz_souls,             /* The wizard soul names */
 public void update_hooks();
 public varargs int communicate(string str = "");
 public varargs int acommunicate(string str = "");
+public varargs int wcommunicate(string str = "");
 static int my_commands(string str);
 
 #define REOPEN_SOUL_ALLOWED ([ "exec_done_editing" : WIZ_CMD_NORMAL, \
@@ -47,6 +48,7 @@ cmdhooks_reset()
     add_action(my_commands, "", 1);
     add_action(communicate, "'", 2);
     add_action(acommunicate, "a'", 2);
+    add_action(wcommunicate, "w'", 2);
 
     /* Get the different race-sounds. */
     if (!m_sizeof(com_sounds = RACESOUND[query_race()]))
@@ -79,6 +81,19 @@ public varargs int
 acommunicate(string str)
 {
     return CMD_LIVE_SPEECH->asay(str);
+}
+
+/*
+ * Function name: wcommunicate
+ * Description  : This function is called whenever the player wants to
+ *                whisper something using the shortcut w'.
+ * Arguments    : string str - the command line argument.
+ * Returns      : int 1/0 - success/failure.
+ */
+public varargs int
+wcommunicate(string str)
+{
+    return CMD_LIVE_SPEECH->whisper(str);
 }
 
 /*

@@ -1,9 +1,13 @@
 NAME
         whisper - communicate with someone without others hearing
+        w'      - built in alias for whisper (you may omit the space)
 
 SYNOPSIS
 	whisper [to] <target> <string>
+	w'[to] <target> <string>
+
         whisper <adverb> [to] <target> <string>
+        w'<adverb> [to] <target> <string>
 
 DESCRIPTION
         Normally this command passes the things you have to say only to
@@ -20,4 +24,4 @@ OPTIONS
 	<string> - Any printable characters
 	
 SEE ALSO
-	adverbs, ask, rsay, say, shout
+	adverbs, asay, ask, rsay, say, shout
