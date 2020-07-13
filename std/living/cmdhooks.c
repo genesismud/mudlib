@@ -27,6 +27,7 @@ static string   *wiz_souls,             /* The wizard soul names */
 public void update_hooks();
 public varargs int communicate(string str = "");
 public varargs int acommunicate(string str = "");
+public varargs int wcommunicate(string str = "");
 static int my_commands(string str);
 
 #define REOPEN_SOUL_ALLOWED ([ "exec_done_editing" : WIZ_CMD_NORMAL, \
