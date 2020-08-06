@@ -60,7 +60,6 @@
     (sizeof(plural_shelf_types) ? \
     plural_shelf_types[0] : LANG_PWORD(shelf_types[0]))
 
-#define BOOK_ID    (MASTER + "_library_book")
 #define DEFAULT_TEXT_FILE_NAME "book"
 
 #define TITLE_LINE   1
@@ -897,6 +896,18 @@ get_book_info(string *books, mapping m)
 }
 
 /*
+ * Function name: get_book_id
+ * Description:   Returns a unique name that is added too all
+ * 		  books when borrowed to aid in filtering.
+ * Returns:       A string id
+ */
+public string
+get_book_id()
+{
+    return (MASTER + "_library_book");
+}
+
+/*
  * Function name: format_book_list
  * Description:   Given an array of book files, return a nicely formatted
  *                string which lists the given books.
@@ -1055,7 +1066,7 @@ library_give_book(string text_filename, string book_name)
     library_configure_book(book, text_filename, book_name);
 
     /* Add a name unique to this library */
-    book->add_name(BOOK_ID);
+    book->add_name(get_book_id());
 
     book->move(this_player(), 1);
     return book;
@@ -1260,7 +1271,7 @@ library_return(string str)
 public int
 return_access(object ob)
 {
-    return ((environment(ob) == this_player()) && ob->id(BOOK_ID));
+    return ((environment(ob) == this_player()) && ob->id(get_book_id()));
 }
 
 /*
@@ -1928,7 +1939,8 @@ init_library()
 public int
 library_exit_block()
 {
-    return !!sizeof(filter(deep_inventory(this_player()), &->id(BOOK_ID)));
+    return !!sizeof(filter(deep_inventory(this_player()),
+            &->id(get_book_id())));
 }
 
 /*
