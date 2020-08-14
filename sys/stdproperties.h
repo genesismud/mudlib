@@ -244,6 +244,8 @@
 
 #define OBJ_I_ALIGN             "_obj_i_align"
 
+#define OBJ_I_AIDS_ACROBATIC    "_obj_i_aids_acrobatic" /* -100 to 100 */
+
 /* *********************************************************
  * Player properties
  */
