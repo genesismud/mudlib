@@ -15,6 +15,10 @@
  *
  * Added a call_hook to cb_update_combat_time to support weapon decay
  * Arman, 23 Nov 2019
+ *
+ * Added SS_ACROBAT based evade
+ * Ckrik, 12, Aug 2020
+ *
  */
 
 #pragma save_binary
@@ -85,7 +89,8 @@ static int    *att_id = ({}),    /* Id's for attacks */
               i_am_real,         /* True if the living object is interactive */
               alarm_id,          /* The id of the heart_beat alarm */
               combat_time,       /* The last time a hit was made. */
-              tohit_mod;         /* Bonus/Minus to the tohit value */
+              tohit_mod,         /* Bonus/Minus to the tohit value */
+              acro_evade;        /* Evade value due to SS_ACROBAT */
 
 static float  speed = 5.0,       /* How often I hit */
               delay = 0.0;
@@ -98,6 +103,102 @@ static object me,                /* The living object concerned */
               attack_ob;         /* Object to attack == Current enemy. */
 
 static mapping dam_by_dt = ([ ]); /* ([ int dt : int cumulative damage ]) */
+
+static string *cb_did_hit_acrobatic_miss_actions = ({
+        "backflip",
+        "groundroll",
+        "sommersault",
+        "twist"
+    }); /* Acrobatic miss verbs */
+
+/*
+ * Function name: compute_acrobat_evade
+ * Description:   Compute the evade effectiveness of SS_ACROBAT skill
+ * Arguments:     vic:   The intended victim
+ * Returns:       The number of evade levels after adjustment.
+ */
+public int
+compute_acrobat_evade(object vic)
+{
+    int a_aid, evade, h = 0;
+
+    evade = vic->query_skill(SS_ACROBAT);
+    /*
+     * No need to proceed further
+     */
+    if (evade == 0)
+    {
+        return 0;
+    }
+
+    /*
+     * For each worn shield, SS_ACROBAT based evade is
+     * 50% less effective
+     */
+    object *shields = filter(vic->query_armour(-1),
+        &operator(==)(A_SHIELD) @ &->query_at());
+
+    h += sizeof(shields) * 50;
+
+    /*
+     * No need to proceed further
+     */
+    if (h >= 100)
+    {
+        return 0;
+    }
+
+    /*
+     * Wielded weapons hinder SS_ACROBAT based evades
+     */
+    object* weapons = vic->query_weapon(-1);
+
+    foreach (object w : weapons)
+    {
+        /*
+         * Some weapons do not suffer penalties
+         */
+        a_aid = w->query_prop(OBJ_I_AIDS_ACROBATIC);
+        if (a_aid != 0)
+        {
+            h += 50 - max(min(a_aid, 100), -100) / 2;
+        }
+        else
+        {
+            /*
+             * For each wielded non-knife weapon,
+             * SS_ACROBAT based evade is 50% less
+             * effective
+             */
+            if (w->query_wt() != W_KNIFE)
+            {
+                h += 50;
+            }
+        }
+    }
+
+    /*
+     * No need to proceed further
+     */
+    if (h >= 100)
+    {
+        return 0;
+    }
+
+    /*
+     * Modify acrobatic evade due to items in hand
+     */
+    evade = evade * (100 - h) / 100;
+
+    int encum_mod = 2 * (max(min(vic->query_encumberance_weight(), 60), 10) - 10);
+    
+    /*
+     * Modify acrobatic evade due to encumberance
+     */
+    evade = evade * (100 - encum_mod) / 100;
+    
+    return evade;
+}
 
 /*
  * Function name: cb_status
@@ -189,13 +290,17 @@ cb_status()
         str += sprintf("%@|13s %|13d\n", ac_s, hitloc[HIT_PHIT]);
     }
 
-    str += "\nParry: " + me->query_skill(SS_PARRY) + "  Defense: " + 
-        me->query_skill(SS_DEFENSE) + "  Stat av: " +
-        (tmp = me->query_average_stat()) + "  Dex: " + me->query_stat(SS_DEX) +
+    str +=
+        "\nParry: " + me->query_skill(SS_PARRY) +
+        "  Defense: " + me->query_skill(SS_DEFENSE) +
+        "  Acrobat: " + me->query_skill(SS_ACROBAT) +
+        "  Adj acro: " + compute_acrobat_evade(me) +
+        "\nStat av: " + (tmp = me->query_average_stat()) +
+        "  Dex: " + me->query_stat(SS_DEX) +
         "  Enc: " + (me->query_encumberance_weight() +
-            me->query_encumberance_volume() / 2) + "\nVol: " +
-        me->query_prop(CONT_I_VOLUME) +
-        sprintf("  Speed: %4.2f", cb_query_speed()) + "  Exp at kill: " +
+            me->query_encumberance_volume() / 2) +
+        "  Vol: " + me->query_prop(CONT_I_VOLUME) +
+        sprintf("\nSpeed: %4.2f", cb_query_speed()) + "  Exp at kill: " +
             F_EXP_ON_KILL(tmp, tmp) +
        (me->query_npc() ? (" at " + me->query_exp_factor() + "%") : "") + "\n";
 
@@ -267,6 +372,7 @@ cb_data()
     }
 
     tmp += me->query_skill(SS_DEFENSE);
+    tmp += compute_acrobat_evade(me);
     val += 4 * fixnorm(70, tmp);
     str += sprintf("%-30s %5d\n", "Defensive tohit:", val);
 
@@ -559,6 +665,18 @@ cb_query_tohit_mod()
 }
 
 /*
+ * Function name: cb_update_acrobat_evade
+ * Description:   Update the evade effectiveness of SS_ACROBAT skill
+ * Arguments:     evade: SS_ACROBAT skill elvel
+ *                vic:   The intended victim
+ */
+public void
+cb_update_acrobat_evade(object vic)
+{
+    acro_evade = compute_acrobat_evade(vic);
+}
+
+/*
  * Function name: cb_tohit
  * Description:   Decide if we hit our victim or not. This should depend
  *                on wchit and skill/stat differences me/victim
@@ -596,6 +714,9 @@ cb_tohit(int aid, int wchit, object vic)
     }
 
     tmp += vic->query_skill(SS_DEFENSE);
+    /* acro_evade is computed and cached for use in cb_hit_me */
+    cb_update_acrobat_evade(attack_ob);
+    tmp += acro_evade;
 
     /*
      * Is it dark or opponent invis? Then how well do we fight?
@@ -838,41 +959,77 @@ cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
     {
         cb_add_panic(1);
 
-	attacker_def_desc = other_def_desc = ((phit < -50) ? "easily " : "");
-
-	if (phurt == -1)
-	{
-	    attacker_def_desc += "dodge";
-	    other_def_desc    += "dodges";
-	}
-	else if (phurt == -2)
-	{
-	    attacker_def_desc += "parry";
-	    other_def_desc    += "parries";
-	}
-
-        if (i_am_real &&
-            !me->query_option(OPT_GAG_MISSES))
+        if (phurt == -3)
         {
-            me->catch_msg("You " + damage_desc + " " +
-                enemy->query_the_possessive_name(me) + " " + hdesc +
-                " with your " + attack_desc + ", but " + enemy->query_pronoun() +
-                " " + other_def_desc + " your attack.\n");
-        }
-        if (interactive(enemy) &&
-            !enemy->query_option(OPT_GAG_MISSES))
-        {
-            enemy->catch_msg(me->query_The_name(enemy) + " " +
-                other_damage_desc + " your " + hdesc + " with " +
-                me->query_possessive() + " " + attack_desc + ", but you " +
-                attacker_def_desc + " " + me->query_possessive() +
-                " attack.\n");
-        }
+            // backflip
+            // groundroll
+            // sommersault
+            // twist
+            attacker_def_desc = ((phit < -50) ? "deftly " : "");
+            attacker_def_desc += cb_did_hit_acrobatic_miss_actions[random(sizeof(cb_did_hit_acrobatic_miss_actions))];
+            other_def_desc = attacker_def_desc + "s";
 
-        tell_watcher_miss(QCTNAME(me) + " " + other_damage_desc + " " +
-            QTPNAME(enemy) + " " + hdesc + " with " + me->query_possessive() +
-            " " + attack_desc + ", but " + QTNAME(enemy) + " " +
-            other_def_desc + " the attack.\n", enemy);
+            if (i_am_real &&
+                !me->query_option(OPT_GAG_MISSES))
+            {
+                me->catch_msg("You " + damage_desc + " " +
+                    enemy->query_the_possessive_name(me) + " " + hdesc +
+                    " with your " + attack_desc + ", but " + enemy->query_pronoun() +
+                    " " + other_def_desc + " away from your attack.\n");
+            }
+            if (interactive(enemy) &&
+                !enemy->query_option(OPT_GAG_MISSES))
+            {
+                enemy->catch_msg(me->query_The_name(enemy) + " " +
+                    other_damage_desc + " your " + hdesc + " with " +
+                    me->query_possessive() + " " + attack_desc + ", but you " +
+                    attacker_def_desc + " away from " + me->query_possessive() +
+                    " attack.\n");
+            }
+
+            tell_watcher_miss(QCTNAME(me) + " " + other_damage_desc + " " +
+                QTPNAME(enemy) + " " + hdesc + " with " + me->query_possessive() +
+                " " + attack_desc + ", but " + QTNAME(enemy) + " " +
+                other_def_desc + " away from the attack.\n", enemy);
+        }
+        else
+        {
+            attacker_def_desc = other_def_desc = ((phit < -50) ? "easily " : "");
+
+            if (phurt == -1)
+            {
+                attacker_def_desc += "dodge";
+                other_def_desc    += "dodges";
+            }
+            else if (phurt == -2)
+            {
+                attacker_def_desc += "parry";
+                other_def_desc    += "parries";
+            }
+
+            if (i_am_real &&
+                !me->query_option(OPT_GAG_MISSES))
+            {
+                me->catch_msg("You " + damage_desc + " " +
+                    enemy->query_the_possessive_name(me) + " " + hdesc +
+                    " with your " + attack_desc + ", but " + enemy->query_pronoun() +
+                    " " + other_def_desc + " your attack.\n");
+            }
+            if (interactive(enemy) &&
+                !enemy->query_option(OPT_GAG_MISSES))
+            {
+                enemy->catch_msg(me->query_The_name(enemy) + " " +
+                    other_damage_desc + " your " + hdesc + " with " +
+                    me->query_possessive() + " " + attack_desc + ", but you " +
+                    attacker_def_desc + " " + me->query_possessive() +
+                    " attack.\n");
+            }
+
+            tell_watcher_miss(QCTNAME(me) + " " + other_damage_desc + " " +
+                QTPNAME(enemy) + " " + hdesc + " with " + me->query_possessive() +
+                " " + attack_desc + ", but " + QTNAME(enemy) + " " +
+                other_def_desc + " the attack.\n", enemy);
+        }
 
         return;
     }
@@ -1670,14 +1827,14 @@ heart_beat()
                 mixed pen = attacks[il][ATT_M_PEN];
 
                 /* Get the base pen */
-		if (sizeof(pen))
-		{
-		    tmp = MATH_FILE->quick_find_exp(dt);
-		    if (tmp < sizeof(pen))
-			pen = pen[tmp];
-		    else
-			pen = pen[0];
-		}
+                if (sizeof(pen))
+                {
+                    tmp = MATH_FILE->quick_find_exp(dt);
+                    if (tmp < sizeof(pen))
+                    pen = pen[tmp];
+                    else
+                    pen = pen[0];
+                }
 
                 if (crit = (!random(10000)))
                 {
@@ -1690,11 +1847,11 @@ heart_beat()
                 {
                     SECURITY->log_syslog("CRITICAL", sprintf("%s: %-11s on %-11s " +
                         "(crit pen = %d; hp - dam = %d - %d%s)\n\t%s on %s\n",
-			ctime(time()),	capitalize(me->query_real_name()),
-			capitalize(attack_ob->query_real_name()), pen,
-			attack_ob->query_hp(), hitresult[3],
-			((attack_ob->query_hp() <= hitresult[3]) ? " LETHAL" : ""),
-			file_name(me), file_name(attack_ob)), LOG_SIZE_100K);
+                        ctime(time()),  capitalize(me->query_real_name()),
+                        capitalize(attack_ob->query_real_name()), pen,
+                        attack_ob->query_hp(), hitresult[3],
+                        ((attack_ob->query_hp() <= hitresult[3]) ? " LETHAL" : ""),
+                        file_name(me), file_name(attack_ob)), LOG_SIZE_100K);
                 }
             }
             else
@@ -1886,13 +2043,13 @@ cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc =
     if (wcpen > 0)
     {
         if (dt == MAGIC_DT)
-	{
+        {
             ac = 0;
             
             /* MAGIC_DT damage has a base damage value of wcpen / 4 */
             phit = wcpen / 4;
             phit += random(phit) + random(phit) + random(phit);
-	}
+        }
         else
         {
             ac = hitloc_ac[hloc][HIT_M_AC];
@@ -1953,35 +2110,50 @@ cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc =
         proc_hurt = 0;
     else
     {
-	attack = attacker->query_combat_object()->query_attack(attack_id);
-	my_weapons = me->query_weapon(-1);
-	
+        attack = attacker->query_combat_object()->query_attack(attack_id);
+        my_weapons = me->query_weapon(-1);
+    
         if (!sizeof(my_weapons))
         {
-            proc_hurt = -1;   /* we dodged */          
-        }
-	else
-	{    
-            tmp = random(me->query_skill(SS_PARRY) + 
-			 me->query_skill(SS_DEFENSE));
-
-	    if (sizeof(attack) && objectp(attack[6]))
-	    {
-		attacker_weapon = attack[6];
-	    }
-		
-	    if (tmp < me->query_skill(SS_PARRY) &&
-		attacker_weapon->query_wt() != W_MISSILE)
+            tmp = random(me->query_skill(SS_DEFENSE) + acro_evade);
+            if (tmp < me->query_skill(SS_DEFENSE))
             {
-	        proc_hurt = -2;   /* we parried */
-		my_weapon = my_weapons[random(sizeof(my_weapons))];
-		my_weapon->did_parry(attacker, attack_id, dt);
-	    }
-	    else
-	    {
-	        proc_hurt = -1;   /* we dodged */
-	    }
-	}
+                proc_hurt = -1;   /* we dodged */
+            }
+            else
+            {
+                proc_hurt = -3;   /* we dodged acrobatically */
+            }
+        }
+        else
+        {    
+            tmp = random(me->query_skill(SS_PARRY) + 
+                me->query_skill(SS_DEFENSE) +
+                acro_evade);
+
+            if (sizeof(attack) && objectp(attack[6]))
+            {
+                attacker_weapon = attack[6];
+            }
+            
+            if (tmp < me->query_skill(SS_PARRY) &&
+                attacker_weapon->query_wt() != W_MISSILE)
+            {
+                proc_hurt = -2;   /* we parried */
+                my_weapon = my_weapons[random(sizeof(my_weapons))];
+                my_weapon->did_parry(attacker, attack_id, dt);
+            }
+            else if (tmp < me->query_skill(SS_PARRY) + 
+                me->query_skill(SS_DEFENSE))
+            {
+                
+                proc_hurt = -1;   /* we dodged */
+            }
+            else
+            {
+                proc_hurt = -3; /* we dodged acrobatically */
+            }
+        }
     }
 
     if (dam > 0)
@@ -2008,11 +2180,11 @@ cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc =
 #endif
         me->interrupt_spell();
 
-	/* Tally the hurt by damage type. In case the living was called by a
-	 * spell, tally the elemnt instead. */
-	if (element = previous_object(-1)->query_spell_element())
+    /* Tally the hurt by damage type. In case the living was called by a
+     * spell, tally the elemnt instead. */
+    if (element = previous_object(-1)->query_spell_element())
             dam_by_dt[element] += dam;
-	else
+    else
             dam_by_dt[dt] += dam;
     }
 
