@@ -45,7 +45,7 @@
 #define LOG_TITLE "SET_TITLE"
 
 /*
- * Define this flag if you want to log when a players aligment title 
+ * Define this flag if you want to log when a players aligment title
  * is changed.
  *
  * Used in: /std/living/savevars.c
@@ -253,6 +253,7 @@
                          "PATTACKS",    \
                          "REDUCE_HP",   \
                          "RESTRICTED",  \
+                         "PATTACKS",    \
                          "PKILLS",      \
                          "STEAL_LOG",   \
                          "SUSPENDED",   \
