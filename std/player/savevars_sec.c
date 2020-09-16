@@ -56,6 +56,7 @@ private mapping m_remember_name,        /* Names of players we have met */
 		m_gift_reject,		/* Players we reject gifts from */
                 m_bits,                 /* The domain bits of the player. */
 		m_vars,                 /* Some less used variables. */
+                m_friends_list,         /* Players we consider friends */
                 m_alias_list,           /* Aliases for the quicktyper */
                 m_nick_list;            /* Nick(name)s for the quicktyper */
 private object  logout_location;        /* The last logout / saving location */
@@ -1625,6 +1626,56 @@ remove_gift_reject(string name)
         return 0;
 
     m_delkey(m_gift_reject, name);
+    return 1;
+}
+
+/*
+ * Function name: query_friendship
+ * Description  : Find out whether we name is a friend of the player, or
+ *                the names of all who we consider friends.
+ * Arguments    : string name - the name to check, or 0
+ * Returns      : int 1/0, or an array of names.
+ */
+public mixed
+query_friendship(string name)
+{
+    if (name)
+        return m_friends_list[lower_case(name)];
+    else
+        return m_indices(m_friends_list);
+}
+
+/*
+ * Function name: add_friendship
+ * Description  : Add a name to the players list of friends.
+ * Arguments    : string name - the name of the player to add.
+ * Returns      : int 1 = added, 0 = already added.
+ */
+public int
+add_friendship(string name)
+{
+    name = lower_case(name);
+    if (m_friends_list[name])
+        return 0;
+
+    m_friends_list[name] = 1;
+    return 1;
+}
+
+/*
+ * Function name: remove_friendship
+ * Description  : Remove a name from the players list of friends.
+ * Arguments    : string name - the name of the player to remove.
+ * Returns      : int 1 = removed, 0 = wasn't present.
+ */
+public int
+remove_friendship(string name)
+{
+    name = lower_case(name);
+    if (!m_friends_list[name])
+        return 0;
+
+    m_delkey(m_friends_list, name);
     return 1;
 }
 
