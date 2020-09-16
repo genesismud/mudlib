@@ -958,6 +958,8 @@ load_player(string pl_name)
         m_gift_reject = ([ ]);
     if (!mappingp(m_gift_today))
         m_gift_today = ([ ]);
+    if (!mappingp(m_friends_list))
+        m_friends_list = ([ ]);
     if (!mappingp(m_bits))
         m_bits = ([ ]);
     if (!mappingp(m_vars))

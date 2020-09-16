@@ -36,7 +36,8 @@ ARGUMENTS
 			      individual players.
 
 	intimate <on/off>   - Indicate whether you are in the mood for the use
-			      of intimate emotes.
+			      of intimate emotes. When "off", you may filter
+			      who you accept them from. See "help friend".
 
 	inventory <on/off>  - Indicate whether you want to view your inventory
 			      in a modern tabulated display, or not.

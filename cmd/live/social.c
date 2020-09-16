@@ -7,6 +7,7 @@
  * - aggressive
  * - assist
  * - emote
+ * - friend
  * - forget
  * - gifts
  * - introduce
@@ -93,6 +94,8 @@ query_cmdlist()
              "assist!":"assist",
 
              "emote":"emote",
+
+             "friend":"friend",
 
              "forget":"forget",
 
@@ -376,6 +379,92 @@ emote(string str)
             UNSEEN_NAME + str + "\n" }) );
 
     return 1;
+}
+
+/*
+ * friend - Grant or deny friend-ship status to someone
+ */
+int
+friend(string str)
+{
+    string *words;
+
+    if (!strlen(str) || str == "list")
+    {
+        CMD_LIVE_STATE->options("intimate");
+        if (sizeof(words = this_player()->query_friendship(0)))
+        {
+            write(HANGING_INDENT("You have granted friendship to: " +
+                    COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
+	    return 1;
+        }
+
+        notify_fail("You have not granted friendship to anyone.\n");
+        return 0;
+    }
+
+    words = explode(lower_case(str), " ");
+    if (sizeof(words) != 2)
+    {
+        notify_fail("Friend what? Syntax: friend add|remove <name>\n");
+        return 0;
+    }
+
+    switch(words[0])
+    {
+    case "add":
+        if (!this_player()->query_met(words[1]))
+        {
+            write("You cannot be friends with someone you haven't "+
+                "been introduced to.\n");
+        }
+        else if (this_player()->add_friendship(words[1]))
+        {
+            write("Added " + capitalize(words[1]) +
+                " to your list of friends.\n");
+        } else {
+            write(capitalize(words[1]) + " is already a friend.\n");
+        }
+        return 1;
+
+    case "remove":
+        if (this_player()->remove_friendship(words[1]))
+        {
+            write("Removed " + capitalize(words[1]) +
+                " from your list of friends.\n");
+        } else {
+            write(capitalize(words[1]) + " wasn't a friend.\n");
+        }
+        return 1;
+
+    case "-l":
+        /* Wizards may see other people's friend lists. */
+        if (SECURITY->query_wiz_rank(this_player()->query_real_name()) < WIZ_NORMAL)
+        {
+            notify_fail("You may only see your own list of friends.\n");
+            return 0;
+        }
+
+        object player = find_player(str = words[1]);
+        if (!objectp(player))
+        {
+            notify_fail("Player " + capitalize(str) + " is not present.\n");
+            return 0;
+        }
+
+        if (sizeof(words = player->query_friendship(0)))
+        {
+            write(HANGING_INDENT("The friends for " + capitalize(str) +
+                    " are: " + COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
+        } else {
+            write(capitalize(str) + " has no friends listed.\n");
+        }
+        return 1;
+
+    default:
+        notify_fail("Friend what?\n");
+        return 0;
+    }
 }
 
 /*

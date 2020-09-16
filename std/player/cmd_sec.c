@@ -500,7 +500,8 @@ change_password(string str)
 public mixed
 block_action(string cmd, object target, object actor, int cmd_type)
 {
-    if ((cmd_type & ACTION_INTIMATE) && query_option(OPT_BLOCK_INTIMATE))
+    if ((cmd_type & ACTION_INTIMATE) && query_option(OPT_BLOCK_INTIMATE) &&
+        !query_friendship(actor->query_real_name()))
     {
         return query_The_name(actor) + " is not in the mood for intimate behaviour.\n";
     }
