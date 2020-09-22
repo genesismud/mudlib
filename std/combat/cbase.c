@@ -715,7 +715,7 @@ cb_tohit(int aid, int wchit, object vic)
 
     tmp += vic->query_skill(SS_DEFENSE);
     /* acro_evade is computed and cached for use in cb_hit_me */
-    cb_update_acrobat_evade(attack_ob);
+    cb_update_acrobat_evade(vic);
     tmp += acro_evade;
 
     /*
