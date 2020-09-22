@@ -122,6 +122,14 @@ compute_acrobat_evade(object vic)
 {
     int a_aid, evade, h = 0;
 
+    /*
+     * Enforce that non-humanoids have 0 effective SS_ACROBAT skill.
+     */
+    if (!vic->query_humanoid())
+    {
+        return 0;
+    }
+
     evade = vic->query_skill(SS_ACROBAT);
     /*
      * No need to proceed further
