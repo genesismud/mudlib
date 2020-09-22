@@ -84,7 +84,7 @@ private static string  mudlib_version;
  * Description  : This is the first function called in this object.
  */
 void
-create() 
+create()
 {
     /* Using a global variable for this is exactly TWICE as fast as using a
      * defined mapping. At this point we only have the default direction
@@ -154,7 +154,7 @@ save_master()
 {
     set_auth(this_object(), "root:root");
 
-    save_object(SAVEFILE); 
+    save_object(SAVEFILE);
 }
 
 /*
@@ -183,8 +183,8 @@ reset_master()
  * Description  : This function returns the short description of this object.
  * Returns      : string - the short description.
  */
-string 
-short() 
+string
+short()
 {
     return "the hole of the donut";
 }
@@ -207,32 +207,32 @@ short()
  *                    driver "-fcall yy xx" "-fshutdown"
  * Arguments    : string str - the command (minus the '-f' prefix).
  */
-static void 
-flag(string str) 
+static void
+flag(string str)
 {
     string file, arg;
 
     if (game_started)
         return;
 
-    if (sscanf(str, "for %d", arg) == 1) 
+    if (sscanf(str, "for %d", arg) == 1)
     {
         return;
     }
 
-    if (str == "shutdown") 
+    if (str == "shutdown")
     {
         do_debug("shutdown");
         return;
     }
 
-    if (sscanf(str, "echo %s", arg) == 1) 
+    if (sscanf(str, "echo %s", arg) == 1)
     {
         write(arg + "\n");
         return;
     }
-    
-    if (sscanf(str, "call %s %s", file, arg) == 2) 
+
+    if (sscanf(str, "call %s %s", file, arg) == 2)
     {
         arg = (string)call_other(file, arg);
         write("Got " + arg + " back.\n");
@@ -250,9 +250,9 @@ flag(string str)
  *                  otherwise the type checker gets allergic reactions.
  */
 mixed
-get_mud_name() 
+get_mud_name()
 {
-#ifdef MUD_NAME    
+#ifdef MUD_NAME
     mixed n;
 
     n = MUD_NAME;
@@ -309,7 +309,7 @@ get_mudlib_version()
     if ((ftime > 0) && (release > 0))
     {
         mudlib_version += TIME2FORMAT(ftime, " mmm -d yyyy ") +
-            ctime(ftime)[11..18] + " - Update " + release; 
+            ctime(ftime)[11..18] + " - Update " + release;
     }
     return mudlib_version;
 }
@@ -320,7 +320,7 @@ get_mudlib_version()
  * Returns      : string - the name of the 'root' user.
  */
 string
-get_root_uid() 
+get_root_uid()
 {
     return ROOT_UID;
 }
@@ -360,7 +360,7 @@ get_vbfc_object()
  * Returns      : object - the login object.
  */
 static object
-connect() 
+connect()
 {
     write("\n");
     set_auth(this_object(), "root:root");
@@ -400,7 +400,7 @@ valid_set_auth(object setter, object getting_set, string value)
     {
         return auth;
     }
-    
+
     oldauth = (stringp(auth) ? explode(auth, ":") : ({ "0", "0"}) );
     if (newauth[0] == "#")
     {
@@ -431,7 +431,7 @@ valid_set_auth(object setter, object getting_set, string value)
  *                well as setting effuserid to 0.
  */
 int
-valid_seteuid(object ob, string str) 
+valid_seteuid(object ob, string str)
 {
     string uid = getuid(ob);
 
@@ -484,7 +484,7 @@ valid_seteuid(object ob, string str)
  * Returns      : int 1/0 - allowed/disallowed.
  */
 int
-valid_write(string file, mixed writer, string func) 
+valid_write(string file, mixed writer, string func)
 {
     string *dirs, *wpath;
     string dname;
@@ -562,7 +562,7 @@ valid_write(string file, mixed writer, string func)
         {
             return (dname != WIZARD_DOMAIN);
         }
-        
+
         /* A Lord and steward can write anywhere in the domain. */
         if ((query_domain_lord(dname) == writer) ||
             (query_domain_steward(dname) == writer))
@@ -678,7 +678,7 @@ valid_write(string file, mixed writer, string func)
  * Returns      : int 1/0 - allowed/disallowed.
  */
 int
-valid_read(string file, mixed reader, string func) 
+valid_read(string file, mixed reader, string func)
 {
     string *dirs, *rpath;
     string dname;
@@ -843,7 +843,7 @@ valid_read(string file, mixed reader, string func)
         }
 
         /* As experiment, mages, stewards and Lords have global read rights. */
-        if (query_wiz_rank(reader) >= WIZ_MAGE)        
+        if (query_wiz_rank(reader) >= WIZ_MAGE)
         {
             return 1;
         }
@@ -917,7 +917,7 @@ valid_read(string file, mixed reader, string func)
               query_team_member("aop", reader)) &&
             IN_ARRAY(dirs[2], AOP_TEAM_LOGS))
         {
-            return 1; 
+            return 1;
         }
 
         return 0;
@@ -1153,7 +1153,7 @@ check_snoop_validity(object snooper, object snoopee, int sanction)
     by_type = query_wiz_rank(by_name);
     on_name = geteuid(snoopee);
     on_type = query_wiz_rank(on_name);
- 
+
     /* Only wizards can snoop. */
     if (by_type == WIZ_MORTAL)
     {
@@ -1170,7 +1170,7 @@ check_snoop_validity(object snooper, object snoopee, int sanction)
      * level lower than their own and they can snoop apprentices too.
      */
     if (((by_type == WIZ_LORD) ||
-         (by_type == WIZ_STEWARD)) && 
+         (by_type == WIZ_STEWARD)) &&
         (((query_wiz_dom(on_name) == query_wiz_dom(by_name)) &&
          (on_type < by_type)) ||
          (on_type == WIZ_APPRENTICE)))
@@ -1295,7 +1295,7 @@ valid_snoop(object initiator, object snooper, object snoopee)
 #endif LOG_SNOOP
         return 1;
     }
-    
+
     /* Ordinary snoop case. A wants to snoop B. Valid if snooper can snoop
      * snoopee. Consider sanctioning in this case.
      */
@@ -1328,7 +1328,7 @@ valid_snoop(object initiator, object snooper, object snoopee)
  * Arguments    : string str - the path to process.
  * Returns      : string - the name of the creator.
  */
-string 
+string
 creator_file(string str)
 {
     string *parts;
@@ -1397,7 +1397,7 @@ valid_compile_path(string path, string filename, string fun)
  * Convert a possibly relative path to an absolute path. We can assume
  * that there is a this_player(). This is called from within the editor.
  */
-string 
+string
 make_path_absolute(string path)
 {
     return FTPATH(this_player()->query_path(), path);
@@ -1490,7 +1490,7 @@ start_boot(int no_preload)
     /* Initialize GMCP. */
     init_gmcp();
 
-    if (no_preload) 
+    if (no_preload)
     {
         write("Not preloading.\n");
         return 0;
@@ -1677,7 +1677,7 @@ final_shutdown()
  * Arguments    : string path  - the path of the object having the error.
  *                string error - the error message.
  */
-static void 
+static void
 log_error(string path, string error)
 {
     int tme;
@@ -1696,7 +1696,7 @@ log_error(string path, string error)
 
     /* Create the log directory if necessary. */
     path = query_wiz_path(creator_file(path)) + "/log";
-    if (file_size(path) != -2) 
+    if (file_size(path) != -2)
     {
         mkdir(path);
     }
@@ -1756,7 +1756,7 @@ define_include_dirs()
  *                0      - the player has no write-rights.
  */
 string
-get_ed_buffer_save_file_name(string file) 
+get_ed_buffer_save_file_name(string file)
 {
     string *path;
 
@@ -1784,7 +1784,7 @@ get_ed_buffer_save_file_name(string file)
  * Don't care to prevent unauthorized access of this file. Only make sure
  * that a number is given as argument.
  */
-int 
+int
 save_ed_setup(object who, int code)
 {
     string file;
@@ -1800,7 +1800,7 @@ save_ed_setup(object who, int code)
  * Retrieve the ed setup. No meaning to defend this file read from
  * unauthorized access.
  */
-int 
+int
 retrieve_ed_setup(object who)
 {
     string file;
@@ -1823,7 +1823,7 @@ retrieve_ed_setup(object who)
  * Arguments    : object target - the object targeted for shadowing.
  * Returns      : int 1/0 - allowed/disallowed.
  */
-int 
+int
 query_allow_shadow(object target)
 {
     return !(target->query_prevent_shadow(previous_object()));
@@ -1843,7 +1843,7 @@ int
 valid_exec(string name, object to, object from)
 {
     name = "/" + name;
-    if ((name == (LOGIN_OBJECT + ".c")) || 
+    if ((name == (LOGIN_OBJECT + ".c")) ||
         (name == (POSSESSION_OBJECT + ".c")) ||
         (name == (LOGIN_TEST_PLAYER + ".c")) ||
         (name == (LOGIN_NEW_PLAYER + ".c")))
@@ -1869,7 +1869,7 @@ valid_exec(string name, object to, object from)
  * Description  : This function sets the authorisation variables for the
  *                simul_efun object.
  */
-void 
+void
 simul_efun_reload()
 {
     set_auth(find_object(SIMUL_EFUN), "root:root");
@@ -1888,7 +1888,7 @@ simul_efun_reload()
 void
 loaded_object(object lob, object ob)
 {
-    string creator = creator_object(ob); 
+    string creator = creator_object(ob);
     string *auth = explode(query_auth(lob), ":");
 
     if (!strlen(creator))
@@ -1950,7 +1950,7 @@ cloned_object(object cob, object ob)
     }
 
     object watcher = find_object("/w/cotillion/tools/clone_watcher");
-    if (objectp(watcher)) 
+    if (objectp(watcher))
     	watcher->object_cloned(cob, ob);
 
     if ((creator == BACKBONE_UID) ||
@@ -2064,14 +2064,18 @@ query_command_substitute(string cmd)
 nomask public int
 query_memory_percentage()
 {
-    string *data = explode(SECURITY->do_debug("malloc"), "\n");
-    int cval;
+    string data = SECURITY->do_debug("malloc");
+    string *rows = explode(data, "\n");
+    int used = 0;
 
-    // This code relies heaviily on the ssbrk line being last. Good enough.
-    if (sscanf(data[-1], "Total heap size: %d", cval) == 1)
-	return (cval / (memory_limit / 100));
-    else
-	return 0;
+    if (data[0] == '<' && sizeof(rows) >= 5) {
+        /* This might not be reliable across systems. We'll see */
+        sscanf(rows[-5], "<system type=\"current\" size=\"%d\"/>", used);
+    } else if (sizeof(rows)) {
+        sscanf(rows[-1], "Total heap size: %d", used);
+    }
+
+	return (used / (memory_limit / 100));
 }
 
 /*
@@ -2218,7 +2222,7 @@ log_incoming_service(string request, string wname, string path)
         500000);
 }
 #endif LOG_FTP
-    
+
 /*
  * Function name: incoming_service
  * Description  : Handle incoming request from other programs. This function
@@ -2314,7 +2318,7 @@ incoming_service(string request)
 	    rval += "w";
 	else
 	    rval += "-";
- 
+
 	return rval + "\n";
 
     case "read":
@@ -2412,7 +2416,7 @@ valid_incoming_service(string host, int port)
  *                be allowed by any and every file so master is asked.
  * Arguments    : string filename - the filename of the object.
  */
-int 
+int
 valid_save_binary(string filename)
 {
     return 1;
@@ -2433,7 +2437,7 @@ valid_inherit(object ob, string inherit_file)
 }
 
 /* ob trying to load file */
-int 
+int
 valid_load(object ob, string file)
 {
     return 1;
@@ -2530,7 +2534,7 @@ mark_quit(object player)
     {
         return;
     }
-    
+
     text = "Current time: " + ctime(time()) + "\nDestructed  : " +
         capitalize(player->query_real_name()) + ".\n";
     if (objectp(this_interactive()))
@@ -2542,7 +2546,7 @@ mark_quit(object player)
     {
         text += "Queried verb: " + query_verb() + "\n";
     }
-    
+
     while(objectp(prev = calling_object(index)))
     {
         text += "    call: " + file_name(prev) + "  " +
@@ -2552,19 +2556,19 @@ mark_quit(object player)
             text += "  [" + capitalize(prev->query_real_name()) + "]";
         }
         text += "\n";
-        
+
         if ((MASTER_OB(prev) + ".c") != ("/" + calling_program(index)))
         {
             text += "    file: /" + calling_program(index) + "\n";
         }
-        
+
         index--;
     }
-    
+
     set_auth(this_object(), "root:root");
     log_file("DESTRUCTED", text + "\n", 1000000);
 }
- 
+
 /*
  * Function name: remove_interactive
  * Description  : Called from GD if a player logs out or goes linkdead. If
@@ -2572,7 +2576,7 @@ mark_quit(object player)
  * Arguments    : object ob    - the player that leaves the game.
  *                int linkdead - true if the player linkdied.
  */
-static void 
+static void
 remove_interactive(object ob, int linkdied)
 {
     string master_ob;
@@ -2652,7 +2656,7 @@ runtime_error(string error, object ob, string prog, string file)
 
     fmt_error =
         "Runtime error: " + error +
-        "       Object: " + fname + 
+        "       Object: " + fname +
         "\n      Program: " + prog +
         "\n         File: " + file + "\n";
 
@@ -2675,7 +2679,7 @@ runtime_error(string error, object ob, string prog, string file)
     set_auth(this_object(), "root:root");
 
     path += "/log";
-    if (file_size(path) != -2) 
+    if (file_size(path) != -2)
     {
         mkdir(path);
     }
@@ -2686,7 +2690,7 @@ runtime_error(string error, object ob, string prog, string file)
         "\n" + fmt_error + "\n");
 }
 
-/* 
+/*
  *    ----------------------------------------------------------------
  *    The code below this divisor is never called from the gamedriver.
  *    ----------------------------------------------------------------
@@ -2875,7 +2879,7 @@ rename_playerfile(string oldname, string newname)
     {
         text += "No mail folder found.\n";
     }
-    
+
     /* Update a wizard. */
     if (query_wiz_rank(oldname))
     {
@@ -2893,7 +2897,7 @@ rename_playerfile(string oldname, string newname)
     /* Rename the PINFO if there is any. */
     if (file_size(PINFO_FILE(oldname)) > 0)
     {
-        rename(PINFO_FILE(oldname), PINFO_FILE(newname));    
+        rename(PINFO_FILE(oldname), PINFO_FILE(newname));
 	write_file(PINFO_FILE(oldname), ctime(time()) +
             " Renamed to " + capitalize(newname) + " by " + wname + ".\n\n");
     }
@@ -3016,7 +3020,7 @@ set_helper_soul_euid()
         set_auth(previous_object(), "root:root");
     }
 }
- 
+
 /*
  * Function name: creator_object
  * Description  : Gives the name of the creator of an object. This is a
@@ -3055,7 +3059,7 @@ domain_object(object obj)
     {
         return 0;
     }
-    
+
     str = file_name(obj);
     if (str[0..2] != "/d/")
     {
@@ -3189,7 +3193,7 @@ log_public(string file, string text)
     string fname = calling_program();
 
     file = OPEN_LOG_DIR + "/" + file;
-    
+
     if ((fname[0..6] != "secure/") &&
         (fname[0..3] != "std/"))
     {
@@ -3210,7 +3214,7 @@ log_public(string file, string text)
 void
 log_restrict(string verb, string arg)
 {
-    string path, 
+    string path,
            dom = query_wiz_dom(getuid(previous_object())),
            wiz = previous_object()->query_real_name();
 
@@ -3572,7 +3576,7 @@ master_shutdown(string reason)
 #ifdef LOG_SHUTDOWN
     log_file(LOG_SHUTDOWN, ctime(time()) + " " + reason, -1);
 #endif LOG_SHUTDOWN
-    
+
     /* This MUST be a this_object()->
      * If it is removed the game wont go down, so hands off!
      */
@@ -3822,7 +3826,7 @@ banish(string name, int what)
 
     name = lower_case(name);
     file = BANISH_FILE(name);
-    
+
     if (file_size(file) > -1)
     {
         info[0] = read_file(file);
@@ -3889,7 +3893,7 @@ do_debug(string icmd, mixed a1, mixed a2, mixed a3)
     string euid = geteuid(previous_object());
 
     /*
-     * Some debug() commands are blocked entirely. 
+     * Some debug() commands are blocked entirely.
      * Usually when they are broken in the GD etc.
      */
     if (IN_ARRAY(icmd, DEBUG_BLOCKED))
@@ -3940,7 +3944,7 @@ int
 send_udp_message(string to_host, int to_port, string msg)
 {
 #ifdef UDP_ENABLED
-    if (stringp(udp_manager) && 
+    if (stringp(udp_manager) &&
         previous_object() == find_object(udp_manager))
     {
         return debug("send_udp", to_host, to_port, msg);
@@ -3974,7 +3978,7 @@ check_memory(int dodecay)
     if (uptime > 3600)
     {
         /* We have to add this 3600 because time() starts counting at 01:00. */
-        if ((((time() + 3600) % 86400) / 3600) == REGULAR_REBOOT) 
+        if ((((time() + 3600) % 86400) / 3600) == REGULAR_REBOOT)
         {
             set_auth(this_object(), "root:root");
             ARMAGEDDON->start_shutdown("It is past " + REGULAR_REBOOT +
@@ -4004,10 +4008,10 @@ check_memory(int dodecay)
  *                have no UDP_MANAGER.
  * Returns:       The message.
  */
-string 
+string
 startup_udp()
 {
-    return 
+    return
         "||NAME:" + get_mud_name() +
         "||VERSION:" + do_debug("version") +
         "||MUDLIB:" + MUDLIB_VERSION +
@@ -4054,7 +4058,7 @@ query_known_muds()
     return 0;
 }
 
-/* 
+/*
  * Function name: query_prevent_shadow
  * Description  : This function will prevent shadowing of this object.
  * Returns      : int 1 - always.

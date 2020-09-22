@@ -16,7 +16,7 @@
  * set_can_deliver_unmet(int bCanDeliver);
  * set_message_object_file(string file);
  * set_number_of_uses(int uses);
- * 
+ *
  * Hooks
  * hook_cannot_deliver_player_unavailable(string who);
  * hook_cannot_deliver_player_linkdead(string who);
@@ -45,14 +45,14 @@
  *          set_number_of_uses(5);
  *      }
  *
- *      public nomask void 
+ *      public nomask void
  *      create_creature()
  *      {
  *          // Call the initialization stuff
  *          init_messenger();
  *      }
  *
- *      public void 
+ *      public void
  *      appraise_object(int num)
  *      {
  *          ::appraise_object(num);
@@ -116,7 +116,7 @@ public int     deliver();
 public void
 create_messenger()
 {
-} 
+}
 #endif 0
 
 /*
@@ -124,7 +124,7 @@ create_messenger()
  * Description: This nomask function defines the defaults for the messenger.
  *              Define any overrides in create_messenger.
  */
-public nomask void 
+public nomask void
 init_messenger()
 {
     /* Since this does not derive from a monster/creature, we need to
@@ -133,7 +133,7 @@ init_messenger()
     this_object()->add_name("messenger");
     this_object()->set_short("base messenger");
     this_object()->set_long("A nondescript messenger.\n");
- 
+
     this_object()->add_prop(OBJ_I_WEIGHT,  1000);
     this_object()->add_prop(CONT_I_WEIGHT, 1500);
     this_object()->add_prop(OBJ_I_VOLUME,  2000);
@@ -156,7 +156,7 @@ init_messenger()
     this_object()->create_messenger();
 }
 
-/* 
+/*
  * Function:    return_messenger_home
  * Description: This function sends a message to the environment to
  *              alert others that the messenger is going home. In
@@ -164,8 +164,8 @@ init_messenger()
  * Arguments:   none
  * Returns:     nothing
  */
-public nomask void 
-return_messenger_home() 
+public nomask void
+return_messenger_home()
 {
     hook_messenger_returns_home();
     this_object()->remove_object();
@@ -219,7 +219,7 @@ do_resend()
  *              to a message that was received.
  * Returns:     0/1 - failure/success in sending
  */
-public int 
+public int
 do_send(string who)
 {
     object target;
@@ -242,7 +242,7 @@ do_send(string who)
 	notify_fail("No point in sending a message to yourself.\n");
 	return 0;
     }
-	
+
     if (who == "reply")
     {
         if (!strlen(gSender) || gSender == this_player()->query_real_name())
@@ -272,7 +272,7 @@ do_send(string who)
     }
 
     if (target->query_wiz_level())
-    { 
+    {
         if (target->query_prop(WIZARD_I_BUSY_LEVEL) & BUSY_M)
         {
             hook_cannot_deliver_wizard_busy(target);
@@ -311,7 +311,7 @@ do_send(string who)
  *                    match the messenger that wishes to be dismissed.
  * Returns:     0/1 - failure/success in dismissing
  */
-public int 
+public int
 do_dismiss(string who)
 {
     if (!strlen(who))
@@ -337,12 +337,15 @@ do_dismiss(string who)
  * Description: The send command is added whenever this messenger
  *              encounters one of these messengers.
  */
-public void 
+public void
 init_living()
 {
-    add_action(do_dismiss, "dismiss");
-    add_action(do_resend,  "resend");
-    add_action(do_send,    "send");
+    if (interactive(this_player()))
+    {
+        add_action(do_dismiss, "dismiss");
+        add_action(do_resend,  "resend");
+        add_action(do_send,    "send");
+    }
 }
 
 /*
@@ -367,7 +370,7 @@ query_delivery_time(object sender, object receiver)
         return random(5);
     }
 
-    if (environment(sender)->query_domain() 
+    if (environment(sender)->query_domain()
         == environment(receiver)->query_domain())
     {
         return 15 + random(15);
@@ -409,20 +412,20 @@ done_editing(string message)
     this_object()->move(VOID_OBJECT, 1);
     set_alarm(itof(query_delivery_time(this_player(), receiver)), 0.0, deliver);
 }
- 
+
 /*
  * Function:    deliver
  * Description: Actual function that creates the message object and
- *              moves it to the receiver. If the receiver is not 
+ *              moves it to the receiver. If the receiver is not
  *              available, then it returns to the sender.
  * Argumetns:   none
  * Returns:     Always returns 1
  */
-public int 
+public int
 deliver()
 {
     object sender, receiver, message_obj;
- 
+
     setuid();
     seteuid(getuid());
 
@@ -438,7 +441,7 @@ deliver()
     /* Does our initial target still exist? */
     receiver = find_player(gReceiver);
     sender = find_player(gSender);
-    if (!objectp(receiver) || receiver->query_linkdead() 
+    if (!objectp(receiver) || receiver->query_linkdead()
         || receiver->query_prop(LIVE_I_NO_MESSAGE)
         || (!query_can_deliver_indoors()
             && environment(receiver)->query_prop(ROOM_I_INSIDE)))
@@ -592,7 +595,7 @@ appraise_messenger(int num)
 {
     write(this_object()->query_The_name(this_player()) + " can be used to "
         + "<send> a message to someone or to <send reply> to whomever "
-        + "sent a message to you. One can also <dismiss> " 
+        + "sent a message to you. One can also <dismiss> "
         + this_object()->query_objective() + ".\n");
 }
 
@@ -623,7 +626,7 @@ public void
 hook_cannot_deliver_player_unavailable(string who)
 {
     notify_fail(this_object()->query_The_name(this_player())
-       + " does not understand who " 
+       + " does not understand who "
        + capitalize(who) + " is!\n");
 }
 
@@ -636,7 +639,7 @@ hook_cannot_deliver_player_unavailable(string who)
 public void
 hook_cannot_deliver_player_linkdead(string who)
 {
-    write(this_object()->query_The_name(this_player()) 
+    write(this_object()->query_The_name(this_player())
         + " looks at you and informs you that "
         + capitalize(who) + " is currently asleep.\n");
 }
@@ -663,7 +666,7 @@ public void
 hook_send_message()
 {
     write("You give your message to " + this_object()->query_the_name(this_player()) + ". "
-        + capitalize(this_object()->query_pronoun()) + " happily takes it and runs off to " 
+        + capitalize(this_object()->query_pronoun()) + " happily takes it and runs off to "
         + "deliver it.\n");
     say(QCTNAME(this_player()) + " gives a message to " + QTNAME(this_object())
         + ". " + capitalize(this_object()->query_pronoun()) + " happily takes it and runs "
@@ -679,7 +682,7 @@ public void
 hook_resend_message()
 {
     write("You convince " + this_object()->query_the_name(this_player()) + " to try again. "
-        + capitalize(this_object()->query_pronoun()) + " happily takes it and runs off to " 
+        + capitalize(this_object()->query_pronoun()) + " happily takes it and runs off to "
         + "deliver the message again.\n");
     say(QCTNAME(this_player()) + " convinces " + QTNAME(this_object())
         + " to try again. " + capitalize(this_object()->query_pronoun()) + " happily "
@@ -711,7 +714,7 @@ hook_deliver_message_failure(object sender)
     sender->catch_tell("Your " + this_object()->short() + " returns, unable to find "
         + capitalize(gReceiver) + ".\n");
     tell_room(environment(sender), QCTNAME(this_object()) + " runs up to "
-        + QTNAME(sender) + ".\n", ({ sender }));   
+        + QTNAME(sender) + ".\n", ({ sender }));
 }
 
 /*

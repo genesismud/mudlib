@@ -616,6 +616,10 @@ set_leftover_list(mixed list)
  *                    ({ objpath, organ, nitems, vbfc, hard, cut})
  * Arguments:     string organ - The organ to search for, or 0 to get the
  *                    whole list.
+ *
+ * Notes:	  We now accept plural form matching. We use plural form
+ * 		  conversion because conversion to singular form does not
+ * 		  currently handle some words correctly, like "bones".
  */
 varargs public mixed
 query_leftover(string organ)
@@ -634,7 +638,8 @@ query_leftover(string organ)
 
     for (i = 0 ; i < sizeof(leftover_list) ; i++)
     {
-        if (leftover_list[i][1] == organ)
+        if ((leftover_list[i][1] == organ) ||
+	    (LANG_PWORD(leftover_list[i][1]) == organ))
         {
             return leftover_list[i];
         }
@@ -678,7 +683,7 @@ get_leftover(string arg)
 {
     mixed       corpses, leftovers;
     object      *found, *weapons, theorgan;
-    int         i, slash;
+    int         i, slash, amount = 1;
     string      organ, vb, fail;
 
     if (this_player()->query_prop(TEMP_STDCORPSE_CHECKED))
@@ -748,16 +753,27 @@ get_leftover(string arg)
         }
     }
 
-    if (leftovers[2]-- == 0)
+    if (leftovers[1] != organ)
     {
-        remove_leftover(leftovers[1]);
+	organ = leftovers[1];
+	amount = leftovers[2];
     }
 
-    make_leftover(leftovers, this_player());
+    for(i = 0; i < amount; i++)
+    {
+	make_leftover(leftovers, this_player());
+	if (--leftovers[2] == 0)
+	    remove_leftover(organ);
+    }
 
-    say(QCTNAME(this_player()) + " " + vb + "s " + LANG_ADDART(organ) +
+    if (i == 1)
+	organ = LANG_ADDART(organ);
+    else
+	organ = LANG_NUM2WORD(i) + " " + LANG_PWORD(organ);
+
+    say(QCTNAME(this_player()) + " " + vb + "s " + organ +
         " from " + QSHORT(found[0]) + ".\n");
-    write("You " + vb + " " + LANG_ADDART(organ) + " from the " +
+    write("You " + vb + " " + organ + " from the " +
         this_object()->short(this_player()) + ".\n");
     return 1;
 }
