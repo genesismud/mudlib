@@ -971,6 +971,7 @@ reset_auto_objects()
             if (clone_count > 15)
             {
                 set_alarm(5.0 * rnd(), 0.0, &reset_auto_objects());
+                data[3] = clones;
                 return;
             }
         }
