@@ -675,14 +675,25 @@ cb_query_tohit_mod()
 /*
  * Function name: cb_update_acrobat_evade
  * Description:   Update the evade effectiveness of SS_ACROBAT skill
- * Arguments:     evade: SS_ACROBAT skill elvel
- *                vic:   The intended victim
  */
 public void
-cb_update_acrobat_evade(object vic)
+cb_update_acrobat_evade()
 {
-    acro_evade = compute_acrobat_evade(vic);
+    acro_evade = compute_acrobat_evade(me);
 }
+
+/*
+ * Function name: query_acrobat_evade
+ * Description:   Query the effective acrobat evade level
+ * Returns:       The effective acrobat evade level taking into account
+ *                items in hand and encumberance level
+ */
+public int
+query_acrobat_evade()
+{
+    return acro_evade;
+}
+
 
 /*
  * Function name: cb_tohit
@@ -698,6 +709,7 @@ public int
 cb_tohit(int aid, int wchit, object vic)
 {
     int tmp, whit;
+    object vic_combat_obj;
     
     /*
      * Four factors are normalized (-50, 50) in the 'to-hit'.
@@ -722,9 +734,11 @@ cb_tohit(int aid, int wchit, object vic)
     }
 
     tmp += vic->query_skill(SS_DEFENSE);
+
     /* acro_evade is computed and cached for use in cb_hit_me */
-    cb_update_acrobat_evade(vic);
-    tmp += acro_evade;
+    vic_combat_obj = vic->query_combat_object();
+    vic_combat_obj->cb_update_acrobat_evade();
+    tmp += vic_combat_obj->query_acrobat_evade();
 
     /*
      * Is it dark or opponent invis? Then how well do we fight?
@@ -1983,7 +1997,7 @@ cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc =
     object      *my_weapons, my_weapon, attacker_weapon;
     int         proc_hurt, hp, proc_block,
                 tmp, dam, phit, element, hloc,
-                j, size;
+                j, size, my_acro_evade;
     string      msg;
     mixed       ac, attack;
 
@@ -2120,10 +2134,11 @@ cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc =
     {
         attack = attacker->query_combat_object()->query_attack(attack_id);
         my_weapons = me->query_weapon(-1);
+        my_acro_evade = me->query_combat_object()->query_acrobat_evade();
     
         if (!sizeof(my_weapons))
         {
-            tmp = random(me->query_skill(SS_DEFENSE) + acro_evade);
+            tmp = random(me->query_skill(SS_DEFENSE) + my_acro_evade);
             if (tmp < me->query_skill(SS_DEFENSE))
             {
                 proc_hurt = -1;   /* we dodged */
@@ -2137,7 +2152,7 @@ cb_hit_me(int wcpen, int dt, object attacker, int attack_id, int target_hitloc =
         {    
             tmp = random(me->query_skill(SS_PARRY) + 
                 me->query_skill(SS_DEFENSE) +
-                acro_evade);
+                my_acro_evade);
 
             if (sizeof(attack) && objectp(attack[6]))
             {
