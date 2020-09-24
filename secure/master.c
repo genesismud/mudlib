@@ -1509,17 +1509,18 @@ start_boot(int no_preload)
     /* In case PRELOAD_FIRST is a single string, it contains the path to a
      * file with the paths to the files to preload, separated by newlines.
      */
-    if (stringp(PRELOAD_FIRST) &&
-        (file_size(PRELOAD_FIRST) > 1))
+    mixed preload_first = PRELOAD_FIRST;
+    if (stringp(preload_first) &&
+        (file_size(preload_first) > 1))
     {
-        prefiles = explode(read_file(PRELOAD_FIRST), "\n");
+        prefiles = explode(read_file(preload_first), "\n");
     }
     /* In case PRELOAD_FIRST is an array, it should be an array of the paths
      * of the files to preload.
      */
-    else if (pointerp(PRELOAD_FIRST))
+    else if (pointerp(preload_first))
     {
-        prefiles = PRELOAD_FIRST + ({ });
+        prefiles = preload_first + ({ });
     }
 #endif PRELOAD_FIRST
 
