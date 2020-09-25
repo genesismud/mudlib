@@ -164,7 +164,7 @@
     SS_UNARM_COMBAT:  ({ "unarmed combat",        90, SS_STR, 110, 30 }), \
     SS_BLIND_COMBAT:  ({ "blindfighting",         95, SS_DEX, 110, 20 }), \
     SS_PARRY:         ({ "parry",                 80, SS_STR, 110,  0 }), \
-    SS_DEFENCE:       ({ "defence",               80, SS_DEX, 110, 30 }), \
+    SS_DEFENCE:       ({ "defence",               80, SS_DEX, 110, 20 }), \
     SS_MOUNTED_COMBAT:({ "mounted combat",       100, SS_STR, 150,  0 }), \
     SS_BLOCK:         ({ "block",                100, SS_STR, 110, 30 }), \
 /* Magic skills */                                                   \
