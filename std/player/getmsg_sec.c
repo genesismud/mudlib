@@ -206,7 +206,7 @@ query_reject_gift(object giver = this_player())
 {
     string name;
 
-    /* Always accept gifts from wizards ane NPC's */
+    /* Always accept gifts from wizards and NPC's */
     if (!giver || giver->query_wiz_level() || giver->query_npc())
     {
         return 0;

@@ -50,6 +50,14 @@ inherit "/cmd/std/command_driver";
 #include <stdproperties.h>
 #include <time.h>
 
+/*
+ * Internal defines to limit membership
+ * lists of the 'gifts' and 'friend' commands.
+ * See check_list_limit() below.
+ */
+#define MAX_GIFTS_ALLOWED       100
+#define MAX_FRIENDS_ALLOWED     100
+
 varargs int team(string str);
 int remembered(string str);
 
@@ -138,6 +146,36 @@ query_cmdlist()
 public void 
 using_soul(object live)
 {
+}
+
+/*
+ * Function name: check_list_limit
+ * Description:   Shared function called by the 'friend' and 'gifts' commands
+ *                to do basic limiter checking.
+ * Arguments:     string who - A persons name to check met status.
+ *                function func - The list function to query.
+ *                int allowed - The max limit to check against.
+ * Returns:       int 0/1. 0 - fail, produces own message.
+ *                         1 - pass, limit not reached.
+ */
+private int
+check_list_limit(string who, function func, int allowed)
+{
+    if (!this_player()->query_met(who) &&
+        !this_player()->query_remembered(who))
+    {
+        write("You have not met anyone named " + capitalize(who) + ".\n");
+        return 0;
+    }
+
+    if (sizeof(func(this_player())) >= allowed)
+    {
+        write("You have reached the limit of the list, " +
+            "try removing some names first.\n");
+        return 0;
+    }
+
+    return 1;
 }
 
 /* **************************************************************************
@@ -413,28 +451,22 @@ friend(string str)
     switch(words[0])
     {
     case "add":
-        if (!this_player()->query_met(words[1]))
-        {
-            write("You cannot be friends with someone you haven't "+
-                "been introduced to.\n");
-        }
-        else if (this_player()->add_friendship(words[1]))
-        {
-            write("Added " + capitalize(words[1]) +
-                " to your list of friends.\n");
-        } else {
+        if (!check_list_limit(words[1], &->query_friendship(0), MAX_FRIENDS_ALLOWED))
+            return 1;
+
+        if (this_player()->add_friendship(words[1]))
+            write("Added " + capitalize(words[1]) + " to your list of friends.\n");
+        else
             write(capitalize(words[1]) + " is already a friend.\n");
-        }
+
         return 1;
 
     case "remove":
         if (this_player()->remove_friendship(words[1]))
-        {
-            write("Removed " + capitalize(words[1]) +
-                " from your list of friends.\n");
-        } else {
+            write("Removed " + capitalize(words[1]) + " from your list of friends.\n");
+        else
             write(capitalize(words[1]) + " wasn't a friend.\n");
-        }
+
         return 1;
 
     case "-l":
@@ -454,8 +486,8 @@ friend(string str)
 
         if (sizeof(words = player->query_friendship(0)))
         {
-            write(HANGING_INDENT("The friends for " + capitalize(str) +
-                    " are: " + COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
+            write(HANGING_INDENT("The friends for " + capitalize(str) + " are: " +
+                    COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
         } else {
             write(capitalize(str) + " has no friends listed.\n");
         }
@@ -520,22 +552,27 @@ gifts(string str)
     string *words;
     int success;
 
-    CMD_LIVE_STATE->options("giftfilter");
     if (!strlen(str) || str == "list")
     {
+        CMD_LIVE_STATE->options("giftfilter");
         if (sizeof(words = this_player()->query_gift_accept(0)))
         {
-            write(HANGING_INDENT("Accepting gifts from: " + COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
+            write(HANGING_INDENT("Accepting gifts from: " +
+                    COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
             success = 1;
         }
+
         if (sizeof(words = this_player()->query_gift_today(0)))
         {
-            write(HANGING_INDENT("Accepting gifts from: " + COMPOSITE_WORDS(map(words, capitalize)) + ", this login only.", 4, 0));
+            write(HANGING_INDENT("Accepting gifts from: " +
+                    COMPOSITE_WORDS(map(words, capitalize)) + ", this login only.", 4, 0));
             success = 1;
         }
+
         if (sizeof(words = this_player()->query_gift_reject(0)))
         {
-            write(HANGING_INDENT("Rejecting gifts from: " + COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
+            write(HANGING_INDENT("Rejecting gifts from: " +
+                    COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
             success = 1;
         }
         if (success)
@@ -555,20 +592,34 @@ gifts(string str)
     switch(words[0])
     {
     case "accept":
+        if (!check_list_limit(words[1], &->query_gift_accept(0), MAX_GIFTS_ALLOWED))
+            return 1;
+
         if (this_player()->add_gift_accept(words[1]))
         {
             write("Accepting gifts from " + capitalize(words[1]) + ".\n");
             return 1;
         }
+
         notify_fail(capitalize(words[1]) + " was already on the list.\n");
         return 0;
 
     case "reject":
+        if (!check_list_limit(words[1], &->query_gift_reject(0), MAX_GIFTS_ALLOWED))
+            return 1;
+
+        if (this_player()->query_gift_accept(words[1]))
+        {
+            write("You already accept gifts from " + capitalize(words[1]) + ".\n");
+            return 1;
+        }
+
         if (this_player()->add_gift_reject(words[1]))
         {
             write("Rejecting gifts from " + capitalize(words[1]) + ".\n");
             return 1;
         }
+
         notify_fail(capitalize(words[1]) + " was already on the list.\n");
         return 0;
 
@@ -578,30 +629,40 @@ gifts(string str)
             write("Removed rejecting of gifts from " + capitalize(words[1]) + ".\n");
             success = 1;
         }
+
         if (this_player()->remove_gift_accept(words[1]))
         {
             write("Removed accepting of gifts from " + capitalize(words[1]) + ".\n");
             success = 1;
         }
+
         if (this_player()->remove_gift_today(words[1]))
         {
             write("Removed accepting of gifts from " + capitalize(words[1]) + ".\n");
             success = 1;
         }
-        if (!success) write(capitalize(words[1]) + " was not on your gifts lists.\n");
+
+        if (!success)
+            write(capitalize(words[1]) + " was not on your gifts lists.\n");
+
         return 1;
 
     case "today":
+        if (!check_list_limit(words[1], &->query_gift_today(0), MAX_GIFTS_ALLOWED))
+            return 1;
+
         if (this_player()->query_gift_accept(words[1]))
         {
-            notify_fail("You already accept gifts from " + capitalize(words[1]) + ".\n");
-            return 0;
+            write("You already accept gifts from " + capitalize(words[1]) + ".\n");
+            return 1;
         }
+
         if (this_player()->add_gift_today(words[1]))
         {
             write("Accepting gifts from " + capitalize(words[1]) + " until logout.\n");
             return 1;
         }
+
         notify_fail(capitalize(words[1]) + " was already on the list.\n");
         return 0;
 
