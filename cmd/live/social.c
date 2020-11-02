@@ -69,7 +69,7 @@ int remembered(string str);
 void
 create()
 {
-    seteuid(getuid(this_object())); 
+    seteuid(getuid(this_object()));
 }
 
 /* **************************************************************************
@@ -143,7 +143,7 @@ query_cmdlist()
  *                sublocations responsible for extra descriptions of the
  *                living object.
  */
-public void 
+public void
 using_soul(object live)
 {
 }
@@ -179,7 +179,7 @@ check_list_limit(string who, function func, int allowed)
 }
 
 /* **************************************************************************
- * Here follows the actual functions. Please add new functions in the 
+ * Here follows the actual functions. Please add new functions in the
  * same order as in the function name list.
  * **************************************************************************/
 
@@ -200,7 +200,7 @@ aggressive(string str)
 /*
  * assist - Help a friend to kill someone else
  */
-int 
+int
 assist(string str)
 {
     object *obs;
@@ -408,7 +408,7 @@ emote(string str)
     /* Allow for "emote 's head..." -> "The monkey's head..." and yes ''' looks
      * funny, but that really is the syntax to get a single quote in int-form.
      */
-    if (str[0] != ''')
+    if (str[0] != '\'')
     {
         str = " " + str;
     }
@@ -756,7 +756,7 @@ intro_live(string str)
             notify_fail("It is way too dark for you to see here.\n");
             return 0;
         }
- 
+
         all_targets = livings;
         vis_targets = FILTER_CAN_SEE(all_targets, this_player());
     }
@@ -798,7 +798,7 @@ intro_live(string str)
     if (!intro_self)
     {
         introducee->catch_msg(this_player()->query_The_name(introducee) +
-            " introduces you to " + 
+            " introduces you to " +
             FO_COMPOSITE_ALL_LIVE(vis_targets, introducee) + ".\n");
     }
 
@@ -864,7 +864,7 @@ invite(string str)
 /*
  * join - Join someones team
  */
-varargs int 
+varargs int
 join(string str)
 {
     return team("join" + (strlen(str) ? (" " + str) : ""));
@@ -873,7 +873,7 @@ join(string str)
 /*
  * kill - Start attacking someone with the purpose to kill
  */
-varargs int 
+varargs int
 kill(string str)
 {
     object victim;
@@ -926,7 +926,7 @@ kill(string str)
        write(capitalize(LANG_THESHORT(victim)) + " isn't alive!\n");
        return 1;
     }
- 
+
     if (victim->query_ghost())
     {
         write(victim->query_The_name(this_player()) + " is already dead!\n");
@@ -1116,7 +1116,14 @@ last(string str)
     player = SECURITY->finger_player(str);
     write("Login time : " + ctime(player->query_login_time()) + "\n");
     duration = (player->query_logout_time() - player->query_login_time());
-    if (duration < 86400)
+
+    int max_duration = 86400;
+
+#ifdef REGULAR_UPTIME
+    max_duration = (REGULAR_UPTIME + UPTIME_VARIATION) * 3600;
+#endif
+
+    if (duration < max_duration)
     {
         write("Logout time: " + ctime(player->query_logout_time()) + "\n");
         write("Duration   : " + TIME2STR(duration, 3) + "\n");
@@ -1133,14 +1140,14 @@ last(string str)
 /*
  * leave - Leave a team or force someone to leave a team
  */
-int 
+int
 leave(string str)
 {
     if (str == "team")
     {
         return team("leave");
     }
-    
+
     notify_fail("Leave what? Your team?\n");
     return 0;
 }
@@ -1153,13 +1160,13 @@ remember_live(string str)
 {
     object ob;
     int num;
-    
+
     if (!strlen(str))
     {
         return remembered("");
     }
-    
-    str = lower_case(str);    
+
+    str = lower_case(str);
 
     /* Silly people remembering themselves can get problems with 'who'. */
     if (this_player()->query_real_name() == str)
@@ -1172,7 +1179,7 @@ remember_live(string str)
     if (objectp(ob = find_living(str)) &&
         ((ob->query_prop(LIVE_I_NON_REMEMBER) ||
 	  ob->query_prop(LIVE_I_NEVERKNOWN))))
-    {   
+    {
         notify_fail("Remember " + ob->query_objective() + "? Never!\n");
         return 0;
     }
@@ -1189,7 +1196,7 @@ remember_live(string str)
         write("You refresh your memory of " + capitalize(str) + ".\n");
         return 1;
     default:
-        notify_fail("You can't remember having been introduced to " + 
+        notify_fail("You can't remember having been introduced to " +
              capitalize(str) + ".\n");
         return 0;
     }
@@ -1611,7 +1618,7 @@ team(string str)
         oblist = parse_this(arg, "[the] %l");
         size = sizeof(oblist);
     }
-    
+
     switch(str)
     {
     case "disband":
@@ -1733,7 +1740,7 @@ team(string str)
         {
             leader->team_join(ob);
         }
-    
+
         brief = this_player()->query_option(OPT_BRIEF);
         write("You make " + leader->query_the_name(this_player()) +
             " the leader of your team" +
@@ -1863,11 +1870,11 @@ team(string str)
                 " already is the rearguard of the team.\n");
             return 1;
         }
-    
+
         this_player()->team_leave(rear);
         this_player()->team_join(rear);
         members -= ({ rear });
-    
+
         write("You alter the formation of the team, placing "+
             rear->query_the_name(this_player()) + " at the rearguard.\n");
         all2actbb(" alters the formation of " + this_player()->query_possessive() +
@@ -1944,7 +1951,7 @@ format_who_name(object player)
  * Arguments    : object a - the playerobject to player a.
  *                object b - the playerobject to player b.
  * Returns      : int -1 - name of player a comes before that of player b.
- *                     1 - name of player b comes before that of player a. 
+ *                     1 - name of player b comes before that of player a.
  */
 nomask int
 sort_name(object a, object b)
@@ -1996,7 +2003,7 @@ print_who(string opts, object *list, object *nonmet, int size)
         {
             write(", of which " + sizeof(list) + " fit" +
 	        ((sizeof(list) == 1) ? "s" : "") + " your selection");
-        }        
+        }
         write(".\n");
     }
 
@@ -2047,7 +2054,7 @@ print_who(string opts, object *list, object *nonmet, int size)
 
         to_write += sprintf("%-*#s\n", scrw, implode(metnames, "\n"));
     }
-    
+
     if (sizeof(nonmet) && show_unmet)
     {
         /* Apply the max length of the met names here for nice tabulation. */
