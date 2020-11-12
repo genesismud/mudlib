@@ -127,7 +127,7 @@ create_object()
 
         if (!function_exists("query_auto_load", this_object()))
         {
-            set_item_expiration(); 
+            set_item_expiration();
         }
     }
 }
@@ -157,50 +157,6 @@ reset_object()
 }
 
 /*
- * Function name: short
- * Description  : The short description. We modify it when the weapon is
- *                broken. There is a little caveat if the wizard has not
- *                set a short description since it will double the
- *                adjective 'broken'.
- * Arguments    : object for_obj - the object that wants to know.
- * Returns      : string - the description.
- */
-public varargs string
-short(object for_obj)
-{
-    if (query_prop(OBJ_I_BROKEN))
-    {
-        return "broken " + ::short(for_obj);
-    }
-
-    return ::short(for_obj);
-}
-
-/*
- * Function name: plural_short
- * Description  : The plural short description. When the weapon is broken,
- *                we alter it. See 'short' for details.
- * Arguments    : object for_obj - the object that wants to know.
- * Returns      : string - the description.
- */
-public varargs string
-plural_short(object for_obj)
-{
-    string str = ::plural_short(for_obj);
-
-    /* We make this additional check for stringp(str) because if no plural
-     * short has been set, we shoudln't alter it. The plural short will
-     * be generated if no plural short has been set.
-     */
-    if (query_prop(OBJ_I_BROKEN) && stringp(str))
-    {
-        return "broken " + str;
-    }
-
-    return str;
-}
-
-/*
  * Function name: long
  * Description  : The long description. We add the information about the
  *                condition to it.
@@ -208,9 +164,9 @@ plural_short(object for_obj)
  *                object for_obj - the object that wants to know.
  * Returns      : string - the long description.
  */
-public varargs string   
+public varargs string
 long(string str, object for_obj)
-{ 
+{
     return ::long(str, for_obj) + (str ? "" : wep_condition_desc());
 }
 
@@ -238,13 +194,13 @@ wield_me()
 
     wielder = this_player();
 
-    /* 
+    /*
      * Check for a hand to wield the weapon in.
      */
     wielded_in_hand = wep_hands;
     if (wep_hands != W_ANYH)
     {
-        /* 
+        /*
          * Anything in both hands
          */
         if (wielder->query_tool(W_BOTH) && wep_hands < W_FOOTR)
@@ -252,7 +208,7 @@ wield_me()
             return "Your hands seem busy with other things.\n";
         }
 
-        /* 
+        /*
          * Anything in the specified hand
          */
         if (wielder->query_tool(wep_hands))
@@ -260,19 +216,19 @@ wield_me()
             return "The " + wielder->query_tool(wep_hands)->short() +
                 " is in the way.\n";
         }
-    
+
         if ((wep_hands == W_BOTH) &&
             (wielder->query_tool(W_RIGHT) || wielder->query_tool(W_LEFT)))
         {
             return "You need both hands to wield it.\n";
         }
     }
-    else if (!wielder->query_tool(W_BOTH) && 
+    else if (!wielder->query_tool(W_BOTH) &&
              !wielder->query_tool(W_RIGHT))
     {
         wielded_in_hand = W_RIGHT;
     }
-    else if (!wielder->query_tool(W_BOTH) && 
+    else if (!wielder->query_tool(W_BOTH) &&
              !wielder->query_tool(W_LEFT))
     {
         wielded_in_hand = W_LEFT;
@@ -299,14 +255,14 @@ wield_me()
 		" in both your hands.\n");
         else if (wielded_in_hand < W_FOOTR)
             write("You wield " + LANG_THESHORT(this_object()) + " in your " +
-                (wielded_in_hand == W_RIGHT ? "right" : "left") + 
+                (wielded_in_hand == W_RIGHT ? "right" : "left") +
                 " hand.\n");
         else
             write("You wield " + LANG_THESHORT(this_object()) + " on your " +
-                (wielded_in_hand == W_FOOTR ? "right" : "left") + 
+                (wielded_in_hand == W_FOOTR ? "right" : "left") +
                 " foot.\n");
 
-        say(QCTNAME(this_player()) + " wields " + 
+        say(QCTNAME(this_player()) + " wields " +
             this_player()->query_possessive() + " " +
             QSHORT(this_object()) + ".\n");
     }
@@ -316,7 +272,7 @@ wield_me()
         set_adj("wielded");
         remove_adj("unwielded");
         this_object()->add_expiration_combat_hook(wielder);
-        
+
         return 1;
     }
 
@@ -336,7 +292,7 @@ wield_me()
      */
     if (stringp(wret))
         return wret;
-    else 
+    else
         return "You cannot wield " + LANG_THESHORT(this_object()) + ".\n";
 }
 
@@ -690,7 +646,7 @@ query_protects()
  *                either in this object, or in an external object.
  *
  *                mixed wield(object weapon) { }
- *                mixed unwield(object weapon) { } 
+ *                mixed unwield(object weapon) { }
  *
  *                Note that while wield() may operate on this_player(), the
  *                unwield() routine cannot rely on that. In unwield(), use
@@ -740,7 +696,7 @@ invoke_wf(function func)
 }
 
 #if 0
-/* 
+/*
  * Function name: wield
  * Description  : This function might be called when someone tries to wield
  *                this weapon. To have this function called, use the function
@@ -817,7 +773,7 @@ int query_corroded()
 
 /*
  * Function name: set_likely_corr
- * Description:   Set how likely it is this weapon will corrode when in acid 
+ * Description:   Set how likely it is this weapon will corrode when in acid
  *                or something like that. 0 means it won't corrode at all.
  * Arguments:     i - how likely it will corrode, probably corrode if random(i)
  *                    [0, 20] recommended
@@ -853,7 +809,7 @@ set_dull(int du)
     return 0;
 }
 
-/* 
+/*
  * Function name: query_dull
  * Description  : Returns how many times this weapon has become duller.
  * Returns      : int - The number of times.
@@ -895,7 +851,7 @@ int query_likely_break() { return likely_break; }
  * Argumensts   : string p: Possessive description of wielder
  * Returns      : string - the description.
  */
-public nomask string 
+public nomask string
 query_wield_desc(string p)
 {
     string str;
@@ -1088,14 +1044,14 @@ query_repair_cost_dull()
  * Description  : Returns the cost to repair this weapon from one level of
  *                corrosion
  * Returns      : int - the cost in cc
- */ 
+ */
 int
 query_repair_cost_corr()
 {
     return max(max_value, F_VALUE_WEAPON(query_hit(), query_pen())) *
         F_WEAPON_REPAIR_COST_FACTOR / 100;
 }
-    
+
 /*
  * Function name: query_wf
  * Description  : Query if/what object defines wield/unwield functions.
@@ -1184,7 +1140,7 @@ set_default_weapon(int hit, int pen, int wt, int dt, int hands, object obj)
 
     /* Set the hand(s) used to wield the weapon. */
     set_hands(hands ? hands : W_NONE);
-    
+
     /* Sets the name of the object that contains the function to call for
      * extra defined wield() and unwield() functions. */
     if (obj) set_wf(obj);
@@ -1200,7 +1156,7 @@ update_prop_settings()
     if (query_prop(OBJ_I_VALUE) < F_VALUE_WEAPON(wep_hit, wep_pen) &&
             !query_prop(OBJ_I_IS_MAGIC_WEAPON))
         add_prop(OBJ_I_VALUE, F_VALUE_WEAPON(wep_hit, wep_pen));
- 
+
     if (F_WEIGHT_FAULT_WEAPON(query_prop(OBJ_I_WEIGHT), wep_pen, wep_wt) &&
             !query_prop(OBJ_I_IS_MAGIC_WEAPON))
         add_prop(OBJ_I_WEIGHT, F_WEIGHT_DEFAULT_WEAPON(wep_pen, wep_wt));
@@ -1464,7 +1420,7 @@ init_wep_recover(string arg)
 
 
     init_item_expiration_recover(arg);
-    
+
     sscanf(arg, "%s#WEP#%d#%d#%d#%d#%d#%d#%s", foobar,
         hits, dull, corroded, repair_dull, repair_corr, broken, foobar);
 

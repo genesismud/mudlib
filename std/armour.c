@@ -81,7 +81,7 @@ static int      arm_ac,         /* Armour class */
  *                etcetera.
  */
 void
-create_armour() 
+create_armour()
 {
 }
 
@@ -153,50 +153,6 @@ nomask void
 reset_object()
 {
     reset_armour();
-}
-
-/*
- * Function name: short
- * Description  : If the armour is broken, we add the adjective broken to
- *                the short description. There is a little caveat it the
- *                short description has not been explicitly set. In that
- *                case, the adjective broken may appear twice.
- * Arguments    : object for_obj - the object that wants to know.
- * Returns      : string - the short description.
- */
-public varargs string
-short(object for_obj)
-{
-    if (query_prop(OBJ_I_BROKEN))
-    {
-        return "broken " + ::short(for_obj);
-    }
-
-    return ::short(for_obj);
-}
-
-/*
- * Function name: plural_short
- * Description  : If the armour is broken, we add the adjective broken
- *                to the plural short description.
- * Arguments    : object for_obj - the object that wants to know.
- * Returns      : string - the plural short description.
- */
-public varargs string
-plural_short(object for_obj)
-{
-    string str = ::plural_short(for_obj);
-
-    /* We make this additional check for stringp(str) because if no plural
-     * short has been set, we shoudln't alter it. The plural short will
-     * be generated if no plural short has been set.
-     */
-    if (query_prop(OBJ_I_BROKEN) && stringp(str))
-    {
-        return "broken " + str;
-    }
-
-    return str;
 }
 
 /*
@@ -491,7 +447,7 @@ query_repair()
  * Function Name: query_repair_cost
  * Description  : Returns the cost to repair this armour one level.
  * Returns      : int - the cost in cc
- */ 
+ */
 int
 query_repair_cost()
 {
@@ -502,7 +458,7 @@ query_repair_cost()
 /*
  * Function name: set_armour_hits
  * Description:   By setting the hits counter you will have influence over how
- *                likely the armour is to get in a worse condition. The hits 
+ *                likely the armour is to get in a worse condition. The hits
  *                variable keeps track of how many times this piece of armour
  *                has been hit.
  * Argument:      new_hits - integer
@@ -566,9 +522,9 @@ query_value()
  *              0 - No affect the armour can be worn / removed
  *              1 - It can be worn / removed but no text should be printed
  *                  (it was done in the function)
- *              -1  It can not be worn / removed default failmsg will be 
+ *              -1  It can not be worn / removed default failmsg will be
  *                  written
- *             string  It can not be worn / removed 'string' is the 
+ *             string  It can not be worn / removed 'string' is the
  *                     fail message to print
  */
 void
@@ -607,7 +563,7 @@ got_hit(int hid, int ph, object att, int dt, int dam)
         set_condition(query_condition() + 1);
 
         tell_object(wearer, "The " + short(wearer) + " took the full " +
-            one_of_list( ({ "brunt", "force", "impact" }) ) + 
+            one_of_list( ({ "brunt", "force", "impact" }) ) +
             " of that last hit and looks a bit more damaged than before.\n");
     }
 
@@ -637,13 +593,13 @@ public varargs void
 set_default_armour(int ac, int at, int *am, object af)
 {
     /* Sets the armour class. */
-    if (ac) set_ac(ac); 
+    if (ac) set_ac(ac);
     else set_ac(1);
 
     /* Set the armour type. */
     if (at) set_at(at);
     else set_at(A_BODY);
-    
+
     /* Set armour modifier vs weapon damage type. */
     if (am) set_am(am);
     else set_am(A_NAKED_MOD);
@@ -653,7 +609,7 @@ set_default_armour(int ac, int at, int *am, object af)
        functions. */
     if (af) set_af(af);
 }
-    
+
 
 /*
  * Function name: set_shield_slot
@@ -700,14 +656,14 @@ query_protects()
 
              TORSO HEAD LEGS R_ARM L_ARM ROBE SHIELD
 
-    TORSO      X      
+    TORSO      X
     HEAD            X
     LEGS                 X
     R_ARM                      X
     L_ARM                            X
-    ROBE       X         X                
-    SHIELD                     X     X                          
-    MAGIC      X    X    X     X     X          
+    ROBE       X         X
+    SHIELD                     X     X
+    MAGIC      X    X    X     X     X
 
         Max ac is 100 for all hitlocations. If the sum of the ac for a
         given hitlocation is > 100 then it is set to 100.
@@ -719,15 +675,15 @@ query_protects()
             switch (abit)
             {
                 case A_CHEST:
-                    chid = ({ A_TORSO });    
+                    chid = ({ A_TORSO });
                     break;
-                case A_HEAD:    
+                case A_HEAD:
                 case A_LEGS:
                 case A_R_ARM:
                 case A_L_ARM:
                     chid = ({ abit });
                     break;
-                case A_ROBE:  
+                case A_ROBE:
                     chid = ({ A_TORSO, A_LEGS });
                     break;
                 case W_LEFT:
@@ -744,7 +700,7 @@ query_protects()
 
     return hids;
 }
- 
+
 /*
  * Function name: update_prop_settings
  * Description:   Will uppdate weight and value of this object to be legal
@@ -755,7 +711,7 @@ update_prop_settings()
     if (query_prop(OBJ_I_VALUE) < F_VALUE_ARMOUR(arm_ac) &&
                         !query_prop(OBJ_I_IS_MAGIC_ARMOUR))
         add_prop(OBJ_I_VALUE, F_VALUE_ARMOUR(arm_ac));
- 
+
     if (F_WEIGHT_FAULT_ARMOUR(query_prop(OBJ_I_WEIGHT), arm_ac, arm_at) &&
                         !query_prop(OBJ_I_IS_MAGIC_ARMOUR))
         add_prop(OBJ_I_WEIGHT, F_WEIGHT_DEFAULT_ARMOUR(arm_ac, arm_at));
@@ -867,7 +823,7 @@ init_arm_recover(string arg)
 {
     string foobar;
     int    broken;
-    
+
     init_item_expiration_recover(arg);
 
     sscanf(arg, "%s#ARM#%d#%d#%d#%d#%s", foobar,

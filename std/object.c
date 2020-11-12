@@ -58,7 +58,7 @@ public  mixed   query_prop(string prop);
 public  int     search_hidden(object obj, object who);
         int     is_live_dead(object obj, int what);
 
-/* 
+/*
  * PARSE_COMMAND
  *
  * These lfuns are called from within the efun parse_command() to get the
@@ -68,8 +68,8 @@ public  int     search_hidden(object obj, object who);
  * If no normal ids are returned then parse_command will never find the object.
  */
 public string *
-parse_command_id_list()         
-{ 
+parse_command_id_list()
+{
     return obj_names;
 }
 
@@ -77,8 +77,8 @@ parse_command_id_list()
  * Description: This function is used by the efun parse_command()
  */
 public string *
-parse_command_plural_id_list() 
-{ 
+parse_command_plural_id_list()
+{
     return obj_pnames;
 }
 
@@ -86,7 +86,7 @@ parse_command_plural_id_list()
  * Description: This function is used by the efun parse_command()
  */
 public string *
-parse_command_adjectiv_id_list() 
+parse_command_adjectiv_id_list()
 {
     return (sizeof(obj_adjs) ? obj_adjs : (stringp(obj_adjs) ? ({ obj_adjs }) : 0));
 }
@@ -103,7 +103,7 @@ set_heart_beat(mixed repeat, string func = "heart_beat")
     float delay;
     int ret;
     object tp;
-    
+
     if (intp(repeat))
         delay = itof(repeat * 2);
     else if (floatp(repeat))
@@ -151,14 +151,14 @@ create()
 
     /* Add the name based on the object number. */
     add_name(OB_NAME(this_object()), 1);
-    
+
     if (query_item_expiration())
         update_item_expiration_alarm();
 }
 
 /*
  * Function name: random_reset
- * Description  : This routine is used internally to determine the reset 
+ * Description  : This routine is used internally to determine the reset
  *                interval based on the value set with enable_reset.
  * Returns      : float - the interval in seconds.
  */
@@ -170,10 +170,10 @@ random_reset()
     if (!reset_interval)
         return 0.0;
 
-    /* Default interval factor 100 leads to 90 minutes. */ 
+    /* Default interval factor 100 leads to 90 minutes. */
     mean = 540000.0 / itof(reset_interval);
     reset_time = -log(rnd()) * mean;
-    
+
     if (reset_time < (mean * 0.5))
         reset_time = mean * 0.5;
 
@@ -414,7 +414,7 @@ check_seen(object for_obj)
  * Arguments    : object for_obj - the object that wants to know the short.
  * Returns      : string - the short description.
  */
-public varargs string 
+public varargs string
 short(object for_obj)
 {
     if (!obj_short)
@@ -427,7 +427,13 @@ short(object for_obj)
             return 0;
     }
 
-    return check_call(obj_short, for_obj);
+    string desc = check_call(obj_short, for_obj);
+    if (stringp(desc) && query_prop(OBJ_I_BROKEN))
+    {
+        return "broken " + desc;
+    }
+
+    return desc;
 }
 
 /*
@@ -445,8 +451,8 @@ vbfc_short(object pobj)
     {
         pobj = previous_object(-1);
     }
-    if (!this_object()->check_seen(pobj) ||
-        !CAN_SEE_IN_ROOM(pobj))
+
+    if (!this_object()->check_seen(pobj) || !CAN_SEE_IN_ROOM(pobj))
     {
         return "something";
     }
@@ -491,7 +497,14 @@ plural_short(object for_obj)
     if (!check_seen((objectp(for_obj) ? for_obj : this_player())))
         return 0;
 
-    return check_call(obj_pshort, for_obj);
+    string pshort = check_call(obj_pshort, for_obj);
+
+    if (stringp(pshort) && query_prop(OBJ_I_BROKEN))
+    {
+        return "broken " + pshort;
+    }
+
+    return pshort;
 }
 
 /*
@@ -529,7 +542,7 @@ adjectiv_id(string str)
  *                If the property already exist, the value is replaced
  *                If a function "add_prop" + propname is declared or
  *                is shadowing this_object then that function is called
- *                prior to the setting of the property. 
+ *                prior to the setting of the property.
  *                NOTE
  *                  If the optional function above returns something other
  *                  than 0. The property will NOT be set.
@@ -640,7 +653,7 @@ query_prop(string prop)
 }
 #endif
 
-/* 
+/*
  * Function name: inc_prop
  * Description  : Increase the value of a property. This works on integer
  *                properties only (and assumes no VBFC has been applied).
@@ -658,7 +671,7 @@ inc_prop(string prop, int delta = 1)
     }
 }
 
-/* 
+/*
  * Function name: dec_prop
  * Description  : Decrease the value of a property. This works on integer
  *                properties only (and assumes no VBFC has been applied).
@@ -678,7 +691,7 @@ dec_prop(string prop, int delta = 1)
  * Returns:       An array of property names or 0.
  */
 public nomask mixed
-query_props() 
+query_props()
 {
     if (mappingp(obj_props))
         return m_indexes(obj_props);
@@ -741,7 +754,7 @@ update_state()
     /* More properties can be added here if need be. */
     if (environment(this_object()))
     {
-        l = query_prop(OBJ_I_LIGHT); 
+        l = query_prop(OBJ_I_LIGHT);
         w = query_prop(OBJ_I_WEIGHT);
         v = query_prop(OBJ_I_VOLUME);
 
@@ -750,7 +763,7 @@ update_state()
                                                     v - obj_state[2]);
     }
 }
-    
+
 /*
  * Function name: move
  * Description:   Move this object to the destination given by string /
@@ -826,10 +839,10 @@ move(mixed dest, mixed subloc)
             else if (is_live_old && this_object()->query_prop(OBJ_M_NO_GIVE))
                 return 3;
         }
-        
+
         if (!is_room)
         {
-            rw = dest->query_prop(CONT_I_MAX_WEIGHT) - 
+            rw = dest->query_prop(CONT_I_MAX_WEIGHT) -
                 dest->query_prop(OBJ_I_WEIGHT);
             rv = dest->volume_left();
             if (!query_prop(HEAP_I_IS))
@@ -848,7 +861,7 @@ move(mixed dest, mixed subloc)
                     uw = query_prop(HEAP_I_UNIT_WEIGHT);
                     if (uw > rw)
                         return 1;
-                
+
                     sw = rw / uw; /* This amount of the heap can be carried */
                     sv = sw;
                 }
@@ -870,7 +883,7 @@ move(mixed dest, mixed subloc)
 
         if (old && old->prevent_leave(this_object()))
             return 7;
-       
+
         if (dest && dest->prevent_enter(this_object()))
             return 7;
 
@@ -881,7 +894,7 @@ move(mixed dest, mixed subloc)
 
     if (old != dest)
     {
-        if (old) 
+        if (old)
         {
             this_object()->leave_env(old, dest);
             old->leave_inv(this_object(), dest);
@@ -902,9 +915,9 @@ move(mixed dest, mixed subloc)
  * Description:   Get the current sub location's name
  */
 mixed
-query_subloc() 
-{ 
-    return obj_subloc; 
+query_subloc()
+{
+    return obj_subloc;
 }
 
 /*
@@ -916,7 +929,7 @@ query_subloc()
  *                object old - wherever 'ob' came from. This can be 0.
  */
 void
-enter_inv(object ob, object old) 
+enter_inv(object ob, object old)
 {
 }
 
@@ -929,7 +942,7 @@ enter_inv(object ob, object old)
  *                object old  - the location we came from. This can be 0.
  */
 void
-enter_env(object dest, object old) 
+enter_env(object dest, object old)
 {
 }
 
@@ -942,7 +955,7 @@ enter_env(object dest, object old)
  *                object dest - wherever 'ob' goes to. This can be 0.
  */
 void
-leave_inv(object ob, object dest) 
+leave_inv(object ob, object dest)
 {
 }
 
@@ -955,7 +968,7 @@ leave_inv(object ob, object dest)
  *                object dest - the destination we are going to. Can be 0.
  */
 void
-leave_env(object old, object dest) 
+leave_env(object old, object dest)
 {
 }
 
@@ -997,9 +1010,9 @@ remove_object()
  * Returns:       The object who wants a vbfc
  */
 public object
-vbfc_caller() 
-{ 
-    return obj_previous; 
+vbfc_caller()
+{
+    return obj_previous;
 }
 
 /*
@@ -1064,9 +1077,9 @@ check_call(mixed retval, object for_obj = previous_object())
  *                object. All it does is: seteuid(getuid(this_object()));
  */
 public void
-reset_euid() 
-{ 
-    seteuid(getuid()); 
+reset_euid()
+{
+    seteuid(getuid());
 }
 
 /*
@@ -1089,7 +1102,7 @@ add_list(string *list, mixed elem, int first)
         e = elem;
     else
         e = ({ elem });
-    
+
     if (!pointerp(list))
         list = ({ }) + e;
     else if (first)
@@ -1155,9 +1168,9 @@ query_list(mixed list, int arg)
  *                    with the name(s) to add as plural name.
  */
 public void
-set_pname(mixed pname) 
-{ 
-    obj_pnames = add_list(obj_pnames, pname, 1); 
+set_pname(mixed pname)
+{
+    obj_pnames = add_list(obj_pnames, pname, 1);
 }
 
 /*
@@ -1174,9 +1187,9 @@ set_pname(mixed pname)
  *                    with the name(s) to add as plural name.
  */
 public void
-add_pname(mixed pname) 
-{ 
-    obj_pnames = add_list(obj_pnames, pname, 0); 
+add_pname(mixed pname)
+{
+    obj_pnames = add_list(obj_pnames, pname, 0);
 }
 
 /*
@@ -1192,9 +1205,9 @@ add_pname(mixed pname)
  *                    with the name(s) to remove as plural name.
  */
 public void
-remove_pname(mixed pname) 
-{ 
-    obj_pnames = del_list(obj_pnames, pname); 
+remove_pname(mixed pname)
+{
+    obj_pnames = del_list(obj_pnames, pname);
 }
 
 /*
@@ -1205,7 +1218,7 @@ remove_pname(mixed pname)
  * Returns:       A string or an array as described above.
  */
 varargs public mixed
-query_pname(int arg) 
+query_pname(int arg)
 {
     if (!sizeof(obj_pnames))
     {
@@ -1219,18 +1232,18 @@ query_pname(int arg)
 
     }
     return query_list(obj_pnames, arg);
-} 
+}
 
-/* 
+/*
  * Function name: query_pnames
  * Description  : This function returns all plural names of this object.
  * Returns      : string * - the plural names of this object or 0 if there
  *                           are no plural names.
  */
 public string *
-query_pnames() 
-{ 
-    return query_list(obj_pnames, 1); 
+query_pnames()
+{
+    return query_list(obj_pnames, 1);
 }
 
 /*
@@ -1248,11 +1261,11 @@ query_pnames()
  *                    for these names.
  */
 varargs void
-set_name(mixed name, int noplural) 
+set_name(mixed name, int noplural)
 {
     int index;
- 
-    obj_names = add_list(obj_names, name, 1); 
+
+    obj_names = add_list(obj_names, name, 1);
 
     if (!noplural)
     {
@@ -1283,11 +1296,11 @@ set_name(mixed name, int noplural)
  *                    for these names.
  */
 varargs void
-add_name(mixed name, int noplural) 
+add_name(mixed name, int noplural)
 {
     int index;
 
-    obj_names = add_list(obj_names, name, 0); 
+    obj_names = add_list(obj_names, name, 0);
 
     if (!noplural)
     {
@@ -1316,7 +1329,7 @@ add_name(mixed name, int noplural)
  *                    with the name(s) to as name.
  */
 public void
-remove_name(mixed name) 
+remove_name(mixed name)
 {
     int index;
 
@@ -1342,18 +1355,18 @@ remove_name(mixed name)
  * Returns:       A string or an array as described above.
  */
 varargs public mixed
-query_name(int arg) 
-{ 
-    return query_list(obj_names, arg); 
+query_name(int arg)
+{
+    return query_list(obj_names, arg);
 }
 
 /*
  * Description: Returns all names of the object
  */
 public string *
-query_names() 
-{ 
-    return query_list(obj_names, 1); 
+query_names()
+{
+    return query_list(obj_names, 1);
 }
 
 /*
@@ -1365,9 +1378,9 @@ query_names()
  *                            adjectives to add.
  */
 public void
-set_adj(mixed adj) 
-{ 
-    obj_adjs = add_list(obj_adjs, adj, 1); 
+set_adj(mixed adj)
+{
+    obj_adjs = add_list(obj_adjs, adj, 1);
 }
 
 /*
@@ -1379,9 +1392,9 @@ set_adj(mixed adj)
  *                            adjectives to add.
  */
 public void
-add_adj(mixed adj) 
-{ 
-    obj_adjs = add_list(obj_adjs, adj, 0); 
+add_adj(mixed adj)
+{
+    obj_adjs = add_list(obj_adjs, adj, 0);
 }
 
 /*
@@ -1392,11 +1405,11 @@ add_adj(mixed adj)
  *                            adjectives to remove.
  */
 public void
-remove_adj(mixed adj) 
-{ 
-    obj_adjs = del_list(obj_adjs, adj); 
+remove_adj(mixed adj)
+{
+    obj_adjs = del_list(obj_adjs, adj);
 }
-  
+
 /*
  * Function name: query_adj
  * Description  : Gives the adjective(s) of the object.
@@ -1408,9 +1421,9 @@ remove_adj(mixed adj)
  *                                     'arg' is true.
  */
 varargs public mixed
-query_adj(int arg) 
-{ 
-    return query_list(obj_adjs, arg); 
+query_adj(int arg)
+{
+    return query_list(obj_adjs, arg);
 }
 
 /*
@@ -1421,9 +1434,9 @@ query_adj(int arg)
  *                           or 0 if there are no adjectives.
  */
 public string *
-query_adjs() 
-{ 
-    return query_list(obj_adjs, 1); 
+query_adjs()
+{
+    return query_list(obj_adjs, 1);
 }
 
 /*
@@ -1509,9 +1522,9 @@ set_no_show()
  *                to since it is automatically set when setting no_show.
  */
 public void
-unset_no_show() 
-{ 
-    obj_no_show = 0; 
+unset_no_show()
+{
+    obj_no_show = 0;
 }
 
 /*
@@ -1531,9 +1544,9 @@ query_no_show()
  * Arguments:     1 - don't show, 0 - show it again
  */
 void
-set_no_show_composite(int i) 
-{ 
-    obj_no_show_c = i; 
+set_no_show_composite(int i)
+{
+    obj_no_show_c = i;
 }
 
 /*
@@ -1541,9 +1554,9 @@ set_no_show_composite(int i)
  * Description:   Show an object in compisite descriptions again.
  */
 void
-unset_no_show_composite() 
-{ 
-    obj_no_show_c = 0; 
+unset_no_show_composite()
+{
+    obj_no_show_c = 0;
 }
 
 /*
@@ -1551,9 +1564,9 @@ unset_no_show_composite()
  * Description:   Return status if to be shown in composite descriptions
  */
 int
-query_no_show_composite() 
-{ 
-    return obj_no_show_c; 
+query_no_show_composite()
+{
+    return obj_no_show_c;
 }
 
 /*
@@ -1561,7 +1574,7 @@ query_no_show_composite()
  * Description:    Notifies this object that it has been placed
  *                 a magical effect upon it.
  * Arguments:      The effect object, or the filename of
- *                 the code which handles the magical 
+ *                 the code which handles the magical
  *                 effect. (Filename for a shadow.)
  */
 varargs void
@@ -1644,7 +1657,7 @@ query_magic_res(string prop)
     object *list;
 
     list = this_object()->query_magic_effects();
-    
+
     if (!sizeof(list))
         return (int)this_object()->query_prop(PRE_OBJ_MAGIC_RES + prop);
 
@@ -1676,10 +1689,10 @@ query_magic_res(string prop)
 /*
  * Function name:  query_magic_protection
  * Description:    This function should return the
- *                 amount of protection versus an 
+ *                 amount of protection versus an
  *                 attack of 'prop' on 'obj'.
  * Arguments:      prop - The element property to defend.
- *                 protectee  - Magic protection for who or what? 
+ *                 protectee  - Magic protection for who or what?
  */
 varargs mixed
 query_magic_protection(string prop, object protectee = previous_object())
@@ -1726,7 +1739,7 @@ public int
 item_id(string str)
 {
     int size;
-    
+
     if (!obj_items)
     {
         return 0;
@@ -1746,13 +1759,13 @@ item_id(string str)
 
 /*
  * Function name: add_item
- * Description:   Adds an additional item to the object. The first 
- *                argument is a single string or an array of 
+ * Description:   Adds an additional item to the object. The first
+ *                argument is a single string or an array of
  *                strings holding the possible name(s) of the item.
- *                The second argument is the long description of 
- *                the item. add_item can be repeatedly called with 
+ *                The second argument is the long description of
+ *                the item. add_item can be repeatedly called with
  *                new items. The second argument can be VBFC.
- * Arguments:     names: Alternate names for the item, 
+ * Arguments:     names: Alternate names for the item,
  *                mixed desc: desc of the item (string or VBFC)
  * Returns:       True or false.
  */
@@ -1795,9 +1808,9 @@ set_add_item(mixed pseudo_items)
      [1] "This is the description of the item2."
 */
 public mixed
-query_item() 
-{ 
-    return obj_items; 
+query_item()
+{
+    return obj_items;
 }
 
 /*
@@ -1816,10 +1829,10 @@ public int
 remove_item(string name)
 {
     int index, removed = 0;
-    
+
     if (!pointerp(obj_items))
         return 0;
-    
+
     if (query_prop(ROOM_I_NO_EXTRA_ITEM))
         return 0;
 
@@ -1842,9 +1855,9 @@ static string gExcmd;
  *                command, ie 'from stream' when 'get flower from stream'
  * Returns:       The rest of the command
  */
-public string query_item_rest_command() 
-{ 
-    return gExcmd; 
+public string query_item_rest_command()
+{
+    return gExcmd;
 }
 
 /*
@@ -1901,13 +1914,13 @@ cmditem_action(string str)
  * Description:   Adds a specific item with associated commands to the
  *                object. These are similar to the normal items but
  *                they add commands which can then executed by players.
- *                The first argument is a single string or an array of 
+ *                The first argument is a single string or an array of
  *                strings holding the possible name(s) of the item.
- *                The second argument is the command / description array of 
- *                the item. add_cmd_item can be repeatedly called with 
+ *                The second argument is the command / description array of
+ *                the item. add_cmd_item can be repeatedly called with
  *                new items. You should _not_ use this to redefine mudlib
  *                commands, especially not get/take/put/drop.
- * Arguments:     names: Alternate names for the item, 
+ * Arguments:     names: Alternate names for the item,
  *                cmd_arr:  Commands to give to get the desc
  *                desc_arr: descs of the item for each command
  * Returns:       True or false.
@@ -1930,7 +1943,7 @@ add_cmd_item(mixed names, string *cmd_arr, mixed desc_arr)
     if (!pointerp(obj_commands))
         obj_commands = ({ });
 
-    if (obj_cmd_items) 
+    if (obj_cmd_items)
         obj_cmd_items = obj_cmd_items + ({ ({ names, cmd_arr, desc_arr }) });
     else
         obj_cmd_items = ({ ({ names, cmd_arr, desc_arr }) });
@@ -1947,7 +1960,7 @@ add_cmd_item(mixed names, string *cmd_arr, mixed desc_arr)
   [0] = array
      [0] ({ "name1 of item1", "name2 of item1",... })
      [1] ({ "command1", "command2", .... "commandN" })
-     [2] ({ 
+     [2] ({
             "string to print if command1 given",
             "string to print if command2 given",
                    ......
@@ -1955,19 +1968,19 @@ add_cmd_item(mixed names, string *cmd_arr, mixed desc_arr)
          })
 
   Example:
-        ({ 
-            ({ "flower", "viola" }), 
+        ({
+            ({ "flower", "viola" }),
             ({ "smell", "taste", "get" }),
             ({ "It smells nice", "It tastes awful!", "@@tryget" }),
         })
 
 */
 public mixed
-query_cmd_item() 
-{  
-    return obj_cmd_items; 
+query_cmd_item()
+{
+    return obj_cmd_items;
 }
-    
+
 /*
  * Function name: remove_cmd_item
  * Description:   Removes one command item from the command item list
@@ -1979,9 +1992,9 @@ remove_cmd_item(string name)
 {
     int i, il;
     string *cmd_arr;
-    
+
     if ( !pointerp(obj_cmd_items) ) return 0;
-    
+
     if (query_prop(ROOM_I_NO_EXTRA_ITEM)) return 0;
     for ( i = 0; i<sizeof(obj_cmd_items); i++)
         if ( member_array(name, obj_cmd_items[i][0])>=0 )
@@ -2009,7 +2022,7 @@ query_objective()
 {
     return "it";
 }
- 
+
 /*
  * Function name: query_possessive
  * Description  : All nonlivings have possessive 'its'.
@@ -2020,7 +2033,7 @@ query_possessive()
 {
     return "its";
 }
- 
+
 /*
  * Function name: query_pronoun
  * Description  : All nonlivings have pronoun 'it'.
@@ -2031,7 +2044,7 @@ query_pronoun()
 {
     return "it";
 }
- 
+
 /*
  * Function name: set_trusted
  * Description:   Sets the effuserid to the userid of this object. This is
@@ -2040,7 +2053,7 @@ query_pronoun()
  *                      0 = remove the euid.
  */
 public void
-set_trusted(int arg) 
+set_trusted(int arg)
 {
     object cobj;
 
@@ -2056,7 +2069,7 @@ set_trusted(int arg)
     }
 
     if (arg)
-        seteuid(getuid(this_object())); 
+        seteuid(getuid(this_object()));
     else
         seteuid(0);
 }
@@ -2268,7 +2281,7 @@ appraise_object(int num)
         write(this_object()->appraise_keep(num));
     }
     write("\n");
-    
+
     if (this_object()->query_item_expiration())
         write(appraise_item_expiration() + "\n");
 }
@@ -2357,16 +2370,16 @@ check_recoverable(int flag)
  * Returns:       The value
  */
 int
-query_value() 
-{ 
-    return query_prop(OBJ_I_VALUE); 
+query_value()
+{
+    return query_prop(OBJ_I_VALUE);
 }
 
 /*
  * Function name: search_now
  * Description  : Perform the search now.
  * Arguments    : object player - the player searching
- *                string str - the 
+ *                string str - the
  */
 void
 search_now(object player, string str)
@@ -2381,7 +2394,7 @@ search_now(object player, string str)
 	{
             found = all_inventory(this_object()) - ({ player });
             found = filter(found, &search_hidden(, player));
-    
+
             if (sizeof(found))
             {
         	deadobjs = filter(found, &is_live_dead(, 0));
@@ -2517,13 +2530,13 @@ stop_search(mixed arg)
     remove_prop(OBJ_I_SEARCH_ALARM_ID);
     if (alarm_id)
         remove_alarm(alarm_id);
-    
+
     return 0;
 }
 
 /*
  * Function name: stat_object
- * Description:   This function is called when a wizard wants to get more 
+ * Description:   This function is called when a wizard wants to get more
  *                information about an object.
  * Returns:       str - The string to write..
  */
@@ -2533,8 +2546,8 @@ stat_object()
     string str, tstr;
     mixed tmp;
 
-    str = "File: " + file_name(this_object()) + ", Creator: " + 
-        creator(this_object()) + ", Uid: " + getuid(this_object()) + 
+    str = "File: " + file_name(this_object()) + ", Creator: " +
+        creator(this_object()) + ", Uid: " + getuid(this_object()) +
         ", Euid: " + geteuid(this_object()) + "\n";
     if (tstr = query_prop(OBJ_S_WIZINFO))
         str += "Special info:\n\t" + tstr;
