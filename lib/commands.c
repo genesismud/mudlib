@@ -6,10 +6,7 @@
  * /cmd/std/command_driver.c to allow access from souls, but you can also
  * inherit it from any other object.
  */
-
 #pragma no_clone
-#pragma no_shadow
-#pragma save_binary
 #pragma strict_types
 
 #include <adverbs.h>
