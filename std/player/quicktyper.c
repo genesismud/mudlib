@@ -10,7 +10,7 @@
 #include <options.h>
 
 #define ALIAS_LENGTH (query_wiz_level() ? 75 : 50)
-#define NICK_LENGTH  (query_wiz_level() ? 45 : 30)
+#define NICK_LENGTH  (query_wiz_level() ? 75 : 50)
 
 #define DEFAULT_ALIASES ([ "dc":"deposit coins", "ha":"health all", \
     "hp":"health", "im":"introduce me", "r":"read" ])
@@ -24,7 +24,7 @@ static private int    paused       = 0;
 static private string do_sequence  = "";
 static private int    do_alarm     = 0;
 
-/* 
+/*
  * Prototypes.
  */
 static nomask int alias(string str);
@@ -292,7 +292,7 @@ do_chain()
     do_sequence = "";
 }
 
-/* 
+/*
  * Function name: doit
  * Description  : Do a sequence of commands.
  * Arguments    : string str - the command line argument.
@@ -352,7 +352,7 @@ doit(string str)
     return 1;
 }
 
-/* 
+/*
  * Function name: resume
  * Description  : Resume the processing of the commands in the do chain.
  * Arguments    : string str - the command line argument.
@@ -409,7 +409,7 @@ unalias(string str)
 	return 0;
     }
 
-    if (!m_alias_list[str]) 
+    if (!m_alias_list[str])
     {
 	notify_fail("Alias \"" + str + "\" does not exist!\n");
 	return 0;
@@ -525,7 +525,7 @@ unnick(string str)
     if (!strlen(str))
 	return notify_fail("Syntax: unnick <nickname>\n");
 
-    if (!m_nick_list[str]) 
+    if (!m_nick_list[str])
 	return notify_fail("Nickname \""+ str +"\" does not exist!\n");
 
     write("Nickname \""+ str +"\" removed. Used to be: "+ m_nick_list[str] +".\n");
