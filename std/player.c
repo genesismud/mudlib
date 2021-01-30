@@ -574,9 +574,9 @@ load_auto_shadows()
             else
             {
                 ob->autoload_shadow(0);
-            } 
-        } 
-        catch (mixed err) 
+            }
+        }
+        catch (mixed err)
         {
             write("An error occured while loading a shadow.\n");
             SECURITY->log_syslog(LOG_FAILED_RECOVERY,
@@ -807,9 +807,10 @@ enter_game(string pl_name, string pwd)
 
     object location = query_logout_location();
 
-    if (!query_ghost() && location && (time() - query_logout_time() < RETURN_TO_LOCATION_TIME) && 
-        !location->query_prop(ROOM_M_NO_TELEPORT) && 
-        !location->query_prop(ROOM_M_NO_TELEPORT_TO)) 
+    if (!query_ghost() && location &&
+        (time() - query_logout_time() < RETURN_TO_LOCATION_TIME) &&
+        !location->query_prop(ROOM_M_NO_TELEPORT) &&
+        !location->query_prop(ROOM_M_NO_TELEPORT_TO))
     {
         catch(move_living(0, location));
     }
@@ -818,30 +819,25 @@ enter_game(string pl_name, string pwd)
     if (!environment() && VALID_TEMP_START_LOCATION(query_temp_start_location()))
     {
         try_start_location(query_temp_start_location());
-	/* If you used a temporary start location, you will heal through
-	 * your time away from the realms. Healing rate is 50% of normal. */
-	savetime = (file_time(PLAYER_FILE(pl_name) + ".o") + time()) / 2;
-	save_vars_reset(savetime);
+
+        /* If you used a temporary start location, you will heal through
+         * your time away from the realms. Healing rate is 50% of normal.
+         */
+        savetime = (file_time(PLAYER_FILE(pl_name) + ".o") + time()) / 2;
+        save_vars_reset(savetime);
         set_temp_start_location(0);
     }
 
     /* For juniors, try the wizard workroom, but not if they are dead. */
     if (!environment() && wildmatch("*jr", pl_name) && !query_ghost())
     {
-        /* Jr may be a registered Jr with a funny name, or otherwise
-         * default to the regular name WizardJr. */
-        wname = SECURITY->query_find_first(pl_name);
-        if (!wname)
-        {
-            wname = extract(pl_name, 0, -3);
-        }
-        try_start_location(SECURITY->wiz_home(wname));
+        try_start_location(SECURITY->wiz_home(pl_name));
     }
 
     /* Try the default start location if necessary. */
     if (!environment())
     {
-	/* Reset the default if there is no (valid) current default location. */
+        /* Reset the default if there is no (valid) current default location. */
         if (!query_wiz_level() &&
             !VALID_DEF_START_LOCATION(query_default_start_location()))
         {
@@ -874,8 +870,7 @@ enter_game(string pl_name, string pwd)
     set_login_from();
 
     /* Let players start even if their start location is bad */
-    if (!environment() &&
-        !query_wiz_level())
+    if (!environment() && !query_wiz_level())
     {
         if (catch(move_living(0, query_def_start())))
         {

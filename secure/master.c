@@ -3691,20 +3691,37 @@ cancel_shutdown()
 }
 /*
  * Function name:  wiz_home
- * Description:    Gives a default 'home' for a wizard, domain or a player
+ * Description:    Gives a default 'home' for a wizard, domain or a player.
+ *                 If the player is junior the responsible wizard is looked up.
  * Arguments:      wiz: The wizard name.
  * Returns:        A filename for the 'home' room.
  */
 string
 wiz_home(string wiz)
 {
-    string path;
+    if (wildmatch("*jr", wiz))
+    {
+        /* Correctly named Jr? */
+        if (query_wiz_rank(wiz[..-3]) != WIZ_MORTAL)
+        {
+            wiz = wiz[..-3];
+        } else {
+            /* Check if the Jr has a wiz registered as a second */
+            foreach (string second: this_object()->query_seconds(wiz))
+            {
+                if (query_wiz_rank(second) != WIZ_MORTAL)
+                {
+                    wiz = second;
+                    break;
+                }
+            }
+        }
+    }
 
-    if (query_wiz_rank(wiz) == WIZ_MORTAL)
-        if (query_domain_number(wiz) < 0)        /* Not even a domain */
-            return "";
+    if (query_wiz_rank(wiz) == WIZ_MORTAL && query_domain_number(wiz) < 0)
+        return "";
 
-    path = query_wiz_path(wiz) + "/workroom.c";
+    string path = query_wiz_path(wiz) + "/workroom.c";
     set_auth(this_object(), "#:root");
     if (file_size(path) <= 0)
     {
