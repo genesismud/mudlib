@@ -51,6 +51,7 @@ static private mapping history = ([ ]);
 #define CHANNEL_HIDDEN  (2) /* the hidden users of the channel.           */
 #define CHANNEL_STATUS  (3) /* the status of the channel (open/closed).   */
 #define CHANNEL_OWNER   (4) /* the owner of the channel.                  */
+#define CHANNEL_HISTORY 50  /* how much line history to keep.             */
 
 #define CHANNEL_WIZRANK ({ WIZNAME_APPRENTICE, WIZNAME_LORD, WIZNAME_ARCH })
 #define CHANNEL_RESERVED ({ "add", "hadd", "config", "create", "expel", \
@@ -931,7 +932,7 @@ historize_line(string lname, string text)
 {
     if (pointerp(history[lname]))
     {
-	history[lname] = history[lname][-14..] + ({ text });
+	history[lname] = history[lname][-CHANNEL_HISTORY..] + ({ text });
     }
     else
     {
