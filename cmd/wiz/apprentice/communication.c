@@ -51,7 +51,7 @@ static private mapping history = ([ ]);
 #define CHANNEL_HIDDEN  (2) /* the hidden users of the channel.           */
 #define CHANNEL_STATUS  (3) /* the status of the channel (open/closed).   */
 #define CHANNEL_OWNER   (4) /* the owner of the channel.                  */
-#define CHANNEL_HISTORY 50  /* how much line history to keep.             */
+#define CHANNEL_HISTORY (50) /* how much line history to keep.            */
 
 #define CHANNEL_WIZRANK ({ WIZNAME_APPRENTICE, WIZNAME_LORD, WIZNAME_ARCH })
 #define CHANNEL_RESERVED ({ "add", "hadd", "config", "create", "expel", \
@@ -169,7 +169,7 @@ audience(string who)
         index = -1;
         while(++index < size)
         {
-            if (member_array(this_interactive()->query_real_name(), 
+            if (member_array(this_interactive()->query_real_name(),
                 obs[index]->query_queue_list()) == -1)
             {
                 obs[index] = 0;
@@ -187,7 +187,7 @@ audience(string who)
         return 1;
     }
 
-    if (sscanf(who, "cancel %s", name) == 1) 
+    if (sscanf(who, "cancel %s", name) == 1)
     {
         name = lower_case(name);
         ob = find_player(name);
@@ -208,7 +208,7 @@ audience(string who)
             return 1;
         }
 
-        write("You cancel your request for audience with " + 
+        write("You cancel your request for audience with " +
               capitalize(name) + ".\n");
         tell_object(ob, this_interactive()->query_cap_name() +
             " canceled " + this_interactive()->query_possessive() +
@@ -242,7 +242,7 @@ audience(string who)
     }
 
     if ((idle = query_idle(ob)) > 300)
-    { 
+    {
         write(capitalize(ob->query_real_name()) + " is idle for " +
             CONVTIME(idle) + " and may not react instantly.\n");
     }
@@ -372,7 +372,7 @@ cat_string(mixed org, string what, object pl, int up)
             (up == 1 ? QCTNAME(pl) : QTNAME(pl)));
     else
         org[1] += what;
-    
+
     return org;
 }
 
@@ -411,11 +411,8 @@ emote(string arg)
         return 0;
     }
 
-    /* Allows "emote 's head ..." -> "Mrpr's head ..." and yes the ''' does
-     * look funny, but that's the syntax for getting the integer value of a
-     * single quote.
-     */
-    if (arg[0] != ''')
+    /* Allows "emote 's head ..." -> "Mrpr's head ..." */
+    if (arg[0] != '\'')
     {
         arg = " " + arg;
     }
@@ -932,11 +929,11 @@ historize_line(string lname, string text)
 {
     if (pointerp(history[lname]))
     {
-	history[lname] = history[lname][-CHANNEL_HISTORY..] + ({ text });
+        history[lname] = history[lname][-(CHANNEL_HISTORY - 1)..] + ({ text });
     }
     else
     {
-	history[lname] = ({ text });
+        history[lname] = ({ text });
     }
 }
 
@@ -986,7 +983,7 @@ line(string str, int emotion = 0, int busy_level = 0)
         {
             write("You do not hold the rank to speak on the " + lname + " line.\n");
             return 1;
-        }        
+        }
         members = map(users() - ({ this_player() }), geteuid);
         members = filter(members, &operator( >= )(, rank) @
             SECURITY->query_wiz_rank);
@@ -1001,7 +998,7 @@ line(string str, int emotion = 0, int busy_level = 0)
         {
             write("You are not a member of the domain " + lname + ".\n");
             return 1;
-        }        
+        }
         members &= map(users() - ({ this_player() }), geteuid);
     }
     /* Channel is an arch team channel. */
@@ -1018,7 +1015,7 @@ line(string str, int emotion = 0, int busy_level = 0)
         {
             write("You are not a member of the " + lname + " team.\n");
             return 1;
-        }        
+        }
         members = SECURITY->query_team_list(lname);
         members &= map(users() - ({ this_player() }), geteuid);
     }
@@ -1033,7 +1030,7 @@ line(string str, int emotion = 0, int busy_level = 0)
         {
             write("You are not a subscriber to the " + lname + " line.\n");
             return 1;
-        }        
+        }
         members &= map(users() - ({ this_player() }), geteuid);
     }
     else
@@ -1050,7 +1047,7 @@ line(string str, int emotion = 0, int busy_level = 0)
         {
             return finger("-l " + lname);
         }
-    
+
         if (line_list(lower_case(lname)))
         {
             return 1;
@@ -1077,7 +1074,7 @@ line(string str, int emotion = 0, int busy_level = 0)
     receivers = filter(members, not @ &operator(&)(busy_level | BUSY_F) @
         &->query_prop(WIZARD_I_BUSY_LEVEL) @ find_player);
     receivers = filter(receivers, &interactive() @ find_player);
-    
+
     if (!(size = sizeof(receivers)))
     {
         notify_fail("There is no one listening to the channel '" + lname +
@@ -1124,7 +1121,7 @@ line_shortcut(string str)
 {
     if (!this_interactive()->query_option(OPT_AUTOLINECMD))
         return 0;
-    
+
     return line(query_verb() + (strlen(str) ? (" " + str) : ""), 0);
 }
 
@@ -1140,7 +1137,7 @@ linee_shortcut(string str)
 {
     if (!this_interactive()->query_option(OPT_AUTOLINECMD))
         return 0;
-    
+
     return line(extract(query_verb(), 0, -2) +
         (strlen(str) ? (" " + str) : ""), 1);
 }
@@ -1253,11 +1250,11 @@ tell(string str)
             write(capitalize(player->query_real_name()) + " is idle for " +
                 CONVTIME(idle) + " and may not react instantly.\n");
         }
-    
+
         if (player->query_wiz_level())
         {
             tell_who = capitalize(this_player()->query_real_name());
-            tell_text = (player->query_option(OPT_TIMESTAMP) ? timestamp : "") + 
+            tell_text = (player->query_option(OPT_TIMESTAMP) ? timestamp : "") +
                 tell_who + " tells you: " + msg;
         }
         else if ((environment(player) != environment(this_player())) ||
@@ -1348,13 +1345,13 @@ wsay(string str)
 {
     object *wizards;
     string who, text;
-    
+
     if (!strlen(str))
     {
         notify_fail("Say what in the way of the wizards?\n");
         return 0;
     }
-    
+
     wizards = filter(all_inventory(environment(this_player())),
         &->query_wiz_level()) - ({ this_player() });
     if (!sizeof(wizards))
@@ -1367,7 +1364,7 @@ wsay(string str)
     text = who + " wizard-speaks: " + str;
     wizards->catch_tell(text + "\n");
     wizards->gmcp_comms("wsay", who, text);
-    
+
     if (this_player()->query_option(OPT_ECHO))
     {
         text = "You wizard-speak: " + str;
@@ -1378,5 +1375,5 @@ wsay(string str)
     {
         write("Ok.\n");
     }
-    return 1;  
+    return 1;
 }
