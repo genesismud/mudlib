@@ -2387,6 +2387,17 @@ incoming_service(string request)
         }
         return "TOKEN " + query_gmcp_token_user(tmp[1]) + "\n";
 
+    case "exists":
+        if (sizeof(tmp) != 2)
+        {
+            return "ERROR Wrong number of parameters\n";
+        }
+
+        if (!exist_player(tmp[1]))
+        {
+            return "NOT FOUND\n";
+        }
+        return "EXISTS\n";
     default:
         return "ERROR Unknown request\n";
 	break;
