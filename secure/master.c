@@ -1045,6 +1045,28 @@ valid_query_ip_ident(object actor, object target)
 }
 
 /*
+ * Function name: valid_query_ip_number_name
+ * Description  : This function is called to check whether the actor is
+ *                allowed to call the efun query_ip_number() or _name() on
+ *                a particular target.
+ * Arguments    : int name      - True for query_ip_name
+ *                object actor  - the actor that wants to call the efun.
+ *                object target - the object the actor wants to know about.
+ * Returns      : int 1/0 - allowed/ disallowed.
+ */
+int
+valid_query_ip_number_name(int name, object actor, object target)
+{
+    string euid = geteuid(actor);
+
+    /* You can always check yourself, and root sees all */
+    if (actor == target || euid == ROOT_UID)
+        return 1;
+
+    return valid_query_ip(euid, target);
+}
+
+/*
  * Function name: valid_query_ip
  * Description  : This function is called to check whether the actor is
  *                allowed to call the efun query_ip_number() or _name() on
@@ -2591,15 +2613,13 @@ mark_quit(object player)
 static void
 remove_interactive(object ob, int linkdied)
 {
-    string master_ob;
-
     QUEUE->dequeue(ob);
 
     /* If someone who is logging in linkdies, we just dispose of it. Also,
      * people who are trying to create a character, will have to start
      * over again.
      */
-    master_ob = MASTER_OB(ob);
+    string master_ob = MASTER_OB(ob);
     if ((master_ob == LOGIN_OBJECT) ||
         (master_ob == LOGIN_NEW_PLAYER) ||
         (master_ob == LOGIN_TEST_PLAYER) ||
