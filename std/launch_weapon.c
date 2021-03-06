@@ -30,7 +30,7 @@ inherit "/std/weapon";
 string Valid_projectile,    /* The type of projectiles we use. */
        Shoot_command,       /* The command word used to shoot. */
        Aim_command,         /* The command word used to aim. */
-       Fire_command,        /* The command word used to fire. */ 
+       Fire_command,        /* The command word used to fire. */
        Unload_command,      /* The command word used to unload. */
        Adj_room_desc,       /* Description of room we shoot too. */
        Org_room_desc,       /* Description of room we shoot from. */
@@ -48,10 +48,10 @@ mixed  Hitloc_id;           /* The hitloc we aim on. */
 int    Shoot_alarm,         /* Alarm used between aim and fire. */
        Fatigue_alarm,       /* Alarm used to unload a bow if not fired. */
        Ready,               /* Flag signifying we have aimed and can shoot. */
-       Next_round,          /* The time we can shoot once more. */       
+       Next_round,          /* The time we can shoot once more. */
        Drawn_wep;           /* Flag signifying that is weapon must be held
 			     * in drawn position by hand. A bow is a drawn
-			     * weapon, a crossbow is not.            
+			     * weapon, a crossbow is not.
 			     */
 
 // Prototypes
@@ -111,7 +111,7 @@ create_launch_weapon()
 /*
  * Function name: create_weapon
  * Description  : Create the launch_weapon. As this function is declared
- *                nomask you must use the function launch_create_weapon 
+ *                nomask you must use the function launch_create_weapon
  *                to actually construct it. This function does some basic
  *                initializing.
  */
@@ -127,7 +127,7 @@ create_weapon()
     /* Allow redefinition of a sling to be a single handed weapon, like a sling. */
     set_hands(W_BOTH);
     set_wt(W_MISSILE);
-    
+
     create_launch_weapon();
 
     set_wf(this_object());
@@ -166,8 +166,8 @@ leave_env(object from, object to)
 /*
  * Function name: set_shoot_command;
  * Description  : Sets the command used to aim and fire this launch weapon.
- *                
- * Arguments    : String command - Command that is used to aim and fire 
+ *
+ * Arguments    : String command - Command that is used to aim and fire
  *                this weapon.
  */
 public nomask void
@@ -179,7 +179,7 @@ set_shoot_command(string command)
 /*
  * Function name: set_aim_command;
  * Description  : Sets the command used to aim this launch weapon.
- *                
+ *
  * Arguments    : String command - Command that is used to aim this weapon.
  */
 public nomask void
@@ -191,7 +191,7 @@ set_aim_command(string command)
 /*
  * Function name: set_fire_command;
  * Description  : Sets the command used to fire this launch weapon.
- *                
+ *
  * Arguments    : String command - Command that is used to fire this weapon.
  */
 public nomask void
@@ -203,7 +203,7 @@ set_fire_command(string command)
 /*
  * Function name: set_unload_command;
  * Description  : Sets the command used to unload this launch weapon.
- *                
+ *
  * Arguments    : String command - Command that is used to unload this weapon.
  */
 public nomask void
@@ -214,9 +214,9 @@ set_unload_command(string command)
 
 /*
  * Function name: set_valid_projectile_function
- * Description  : Sets the name of the function used to filter valid 
+ * Description  : Sets the name of the function used to filter valid
  *                projectiles that can be used with this weapon.
- *                
+ *
  * Arguments    : String function_name
  */
 
@@ -231,7 +231,7 @@ set_valid_projectile_function(string function_name)
  * Description  : Sets that this weapon is held in a loaded position by
  *                the archer. Bows are typically drawn weapons, while
  *                crossbows are not.
- *                
+ *
  * Arguments    : int 1 - Drawn, 0 - Not drawn.
  */
 
@@ -247,9 +247,9 @@ set_drawn_weapon(int drawn)
  *                find the valid projetiles in the specified container.
  *                This function does only search the specified container
  *                not any containers within the specified container.
- *                
+ *
  * Arguments    : object container - Container to search for projectiles.
- * Returns      : An array of the valid projectiles found in this container. 
+ * Returns      : An array of the valid projectiles found in this container.
  */
 public nomask object *
 query_valid_projectiles(object container)
@@ -263,7 +263,7 @@ query_valid_projectiles(object container)
     {
 	return 0;
     }
-    
+
     return filter(filter(all_inventory(container),
 			 &call_other( , Valid_projectile)),
 		  &not() @ &->query_broken());
@@ -273,7 +273,7 @@ query_valid_projectiles(object container)
  * Function name: set_projectile_stack
  * Description  : Set which stack of projectile we draw projectiles from
  *                when we shoot.
- *                
+ *
  * Arguments    : object ps - The stack of projectiles to use.
  */
 public nomask void
@@ -328,7 +328,7 @@ load_desc()
  * Function name: secondary_wep_cmd
  * Description  : Parses the input from the player when he wants to set the
  *                command to perform to wield his secondary weapon.
- *                
+ *
  * Arguments    : string args - User input.
  * Returns      :  1  - Successful parse.
  *                 0  - No match.
@@ -348,10 +348,10 @@ secondary_wep_cmd(string args)
 	    notify_fail("secondary <command to wield secondary weapon>\n" +
 			"Example: secondary draw sword from scabbard\n");
 	}
-	
+
 	return 0;
     }
-    
+
     set_secondary_wep_cmd(args);
     write("Ok. Set to '" + args + "'.\n");
 
@@ -364,7 +364,7 @@ secondary_wep_cmd(string args)
  * Description  : Sets the command to wield the secondary weapon to use
  *                when we run out of projectiles or use the launch_weapon
  *                for parries.
- *                
+ *
  * Arguments    : string - command to wield secondary weapon.
  */
 public nomask void
@@ -377,7 +377,7 @@ set_secondary_wep_cmd(string command)
  * Function name: query_secondary_wep_cmd
  * Description  : Gives the command to use when we want to wield a secondary
  *                weapon.
- *                
+ *
  * Returns      :  string - command to wield secondary weapon.
  */
 public nomask string
@@ -390,7 +390,7 @@ query_secondary_wep_cmd()
 /*
  * Function name: parse_aim
  * Description  : Parses the user input for the aim and shoot commands.
- *                
+ *
  * Arguments    : string args - User input.
  * Returns      :  1  - Successful parse.
  *                 0  - No match.
@@ -415,9 +415,9 @@ parse_aim(string args)
 	notify_fail("Wield the " + short() + " first.\n");
 	return 0;
     }
-    
+
     Archer = query_wielded();
-    people = FILTER_CAN_SEE(FILTER_LIVE(all_inventory(environment(Archer))), Archer) - 
+    people = FILTER_CAN_SEE(FILTER_LIVE(all_inventory(environment(Archer))), Archer) -
       ({ Archer });
     Archer_env = environment(Archer);
 
@@ -438,7 +438,7 @@ parse_aim(string args)
 	hitloc = 0;
 	return 1;
     }
-    
+
     // Perhaps the target stands in an adjecent room?
     if ((other_rooms = Archer_env->query_range_targets(Archer)))
     {
@@ -454,8 +454,8 @@ parse_aim(string args)
 	    {
 	        continue;
 	    }
-	    
-	    if (parse_command(args, 
+
+	    if (parse_command(args,
 			      FILTER_CAN_SEE(FILTER_LIVE(room->subinventory()),
 					     Archer),
 			      " [at] [the] %l " + pattern + " [in] [the] %s ",
@@ -483,18 +483,18 @@ parse_aim(string args)
 				    " to " + query_verb() + " at.\n");
 			return -1;
 		    }
-	
+
 		    for (i = 0; i < sizeof(hitlocs); i++)
 		    {
 		        hitloc = Target->query_combat_object()->query_hitloc(hitlocs[i]);
-	    
+
 			if (location == hitloc[2])
 			{
                             Hitloc_id = hitlocs[i];
 		            break;
 			}
-		    }	
-	
+		    }
+
 		    if (i >= sizeof(hitlocs))
 		    {
 		        tell_object(Archer, "You don't find any " + location +
@@ -529,21 +529,21 @@ parse_aim(string args)
 			" to " + query_verb() + " at.\n");
 	    return -1;
 	}
-	
+
 	for (i = 0; i < sizeof(hitlocs); i++)
 	{
             hitloc = Target->query_combat_object()->query_hitloc(hitlocs[i]);
-	    
+
 	    if (location == hitloc[2])
 	    {
                 Hitloc_id = hitlocs[i];
 	        break;
 	    }
-	}	
-	
+	}
+
 	if (i >= sizeof(hitlocs))
 	{
-	    tell_object(Archer, "You don't find any " + location + " on " + 
+	    tell_object(Archer, "You don't find any " + location + " on " +
 			Target->query_the_name(Archer) +
 			" to " + query_verb() + " at.\n");
 	    return -1;
@@ -562,7 +562,7 @@ parse_aim(string args)
 /*
  * Function name: shoot
  * Description  : Handles a single shot from a player.
- *                
+ *
  * Arguments    : string - Person we shoot at.
  * Returns      : 1 - command handled, 0 parse failed.
  */
@@ -575,12 +575,12 @@ shoot(string args)
     {
         return 0;
     }
-    
+
     if (Ready)
     {
         return fire(args);
     }
-    
+
     switch (parse_aim(args))
     {
     case 0:
@@ -588,7 +588,7 @@ shoot(string args)
     case -1:
       return 1;
     }
-   
+
     // Run the usual sanity checks.
     if (!setup_sane(Shoot_command, args))
     {
@@ -600,12 +600,12 @@ shoot(string args)
     {
         return 1;
     }
-    
+
     // Thou shallt possess missiles.
     if (!Projectile)
     {
 	try_load();
-	
+
 	if (!Projectile)
 	{
 	    this_object()->tell_archer_no_missiles();
@@ -620,16 +620,16 @@ shoot(string args)
     this_object()->tell_target_load(archer, Target, Projectile);
 
     archer->query_combat_object()->cb_calc_speed();
-    
+
     Shoot_alarm = set_alarm(archer->query_combat_object()->cb_query_speed(),
 			    0.0, &do_fire());
     return 1;
-}  
+}
 
 /*
  * Function name: aim
  * Description  : Handles when the archer aims this weapon.
- *                
+ *
  * Arguments    : string - Person we aim at.
  * Returns      : 1 command handled, 0 parse failed.
  */
@@ -667,22 +667,22 @@ aim(string args)
     if (!Projectile)
     {
 	try_load();
-	
+
 	if (!Projectile)
 	{
 	    this_object()->tell_archer_no_missiles();
 	    return 1;
 	}
     }
-         
+
     this_object()->tell_archer_load(archer, Target, Projectile, Adj_room_desc);
-    
+
     this_object()->tell_others_load(archer, Target, Projectile, Adj_room_desc);
 
     this_object()->tell_target_load(archer, Target, Projectile);
-    
+
     archer->query_combat_object()->cb_calc_speed();
-    
+
     Shoot_alarm = set_alarm(archer->query_combat_object()->cb_query_speed(),
 			    0.0, &ready_to_fire());
 
@@ -692,7 +692,7 @@ aim(string args)
 /*
  * Function name: fire
  * Description  : Fires an missile when archer has aimed.
- *                
+ *
  * Arguments    : string - Dummy string.
  * Returns      : 1 - fired, 0 command not handled.
  */
@@ -706,11 +706,11 @@ fire(string args)
 
     if (args)
     {
-        notify_fail("Just " + query_verb() + " would suffice to " + 
+        notify_fail("Just " + query_verb() + " would suffice to " +
 		    query_verb() + " the " + short() + ".\n");
 	return 0;
     }
-  
+
     if (Ready)
     {
         do_fire();
@@ -720,14 +720,14 @@ fire(string args)
         tell_object(this_player(), "You are not ready to " + query_verb() +
 		    " yet.\n");
     }
-  
+
     return 1;
 }
 
 /*
  * Function name: unload
  * Description  : Lets the player unload a missile.
- *                
+ *
  * Arguments    : string - Player input.
  * Returns      : 1 command handled, 0 parse failed.
  */
@@ -741,7 +741,7 @@ unload(string args)
 
     if (args)
     {
-        notify_fail("Just " + Unload_command + " would suffice to " + 
+        notify_fail("Just " + Unload_command + " would suffice to " +
 		    Unload_command + " the " + short() + ".\n");
 	return 0;
     }
@@ -753,7 +753,7 @@ unload(string args)
     else
     {
         // Replace with something prettier.
-        tell_object(this_player(), "You don't have anything to " + 
+        tell_object(this_player(), "You don't have anything to " +
 		    Unload_command + ".\n");
     }
     return 1;
@@ -762,7 +762,7 @@ unload(string args)
 /*
  * Function name: ready_to_fire
  * Description  : Tells the player he is ready to fire and enables fire.
- *                
+ *
  */
 private void
 ready_to_fire()
@@ -773,7 +773,7 @@ ready_to_fire()
 	tell_object(query_wielded(),
 		    "You are ready to " + Fire_command + ".\n");
     }
-    
+
     Shoot_alarm = 0;
 }
 
@@ -784,10 +784,10 @@ ready_to_fire()
  *
  * Arguments    : action (string) - Action the archer performs.
  *              : args (string)   - Arguments the archer supplies.
- *                
+ *
  * Returns      : 1 - Setup is sane. 0 - Setup fishy.
  */
-private nomask int 
+private nomask int
 setup_sane(string action, string args)
 {
     mixed tmp;
@@ -806,7 +806,7 @@ setup_sane(string action, string args)
     {
         if (Target)
 	{
-            tell_object(Archer, "No need to do that. " + 
+            tell_object(Archer, "No need to do that. " +
 			Target->query_The_name(Archer) +
 			" is already dead.\n");
 	}
@@ -823,7 +823,7 @@ setup_sane(string action, string args)
     if (interactive(Target) && Target->query_linkdead())
     {
         tell_object(Archer, "You will have to wait for " +
-		    Target->query_the_name(Archer) + 
+		    Target->query_the_name(Archer) +
 		    " to return from link death first.\n");
 	return 0;
     }
@@ -832,7 +832,7 @@ setup_sane(string action, string args)
 
     if (Archer->query_prop(LIVE_I_STUNNED))
     {
-        tell_object(Archer, "You can not " + action + 
+        tell_object(Archer, "You can not " + action +
 		    " when you are stunned.\n");
         return 0;
     }
@@ -854,7 +854,7 @@ setup_sane(string action, string args)
 		    "endeavour, you would not hit a barn from the inside.\n");
         return 0;
     }
-    
+
     // Thou shalt not kill on sacred ground.
 
     if ((tmp = environment(Target)->query_prop(ROOM_M_NO_ATTACK)) ||
@@ -878,7 +878,7 @@ setup_sane(string action, string args)
         }
         else
         {
-            tell_object(Archer, "You feel a divine force protecting this " + 
+            tell_object(Archer, "You feel a divine force protecting this " +
 			"being, your attack fails.\n");
         }
 
@@ -889,7 +889,7 @@ setup_sane(string action, string args)
 
     if (!F_DARE_ATTACK(Archer, Target))
     {
-        tell_object(Archer, "Umm... no. You do not have enough " + 
+        tell_object(Archer, "Umm... no. You do not have enough " +
 		    "self-discipline to dare!\n");
         return 0;
     }
@@ -898,21 +898,21 @@ setup_sane(string action, string args)
 
     if (Shoot_alarm)
     {
-        tell_object(Archer, "You are busy " + Aim_command + "ing at " + 
+        tell_object(Archer, "You are busy " + Aim_command + "ing at " +
 		    Target->query_the_name(Archer) + ".\n");
 	return 0;
     }
 
     if ((tmp = Archer->query_attack()))
     {
-        tell_object(Archer, "You are busy " + Shoot_command + "ing at " + 
+        tell_object(Archer, "You are busy " + Shoot_command + "ing at " +
 		    tmp->query_the_name(Archer) + ".\n");
 	return 0;
     }
 
     if (time() <= Next_round)
     {
-        tell_object(Archer, "You have to relax for a bit longer before " + 
+        tell_object(Archer, "You have to relax for a bit longer before " +
 		    "you can " + action + " again.\n");
 	return 0;
     }
@@ -941,7 +941,7 @@ setup_sane(string action, string args)
  *                is more or less and modified version of heart_beat() in
  *                /std/combat/cbase.c
  */
-public void 
+public void
 do_fire()
 {
     object combat_ob;
@@ -963,13 +963,13 @@ do_fire()
     }
 
     /*
-     * If we are in combat we silently return and let combat 
+     * If we are in combat we silently return and let combat
      * take care of the shooting.
      */
     if (Archer->query_attack())
     {
         return;
-    }     
+    }
 
     // Archer should not move while aiming.
     if (environment(Archer) != Archer_env)
@@ -1000,7 +1000,7 @@ do_fire()
     {
         if (Target)
 	{
-            tell_object(Archer, "You give up shooting at " + 
+            tell_object(Archer, "You give up shooting at " +
 			Target->query_The_name(Archer) + " since " +
 			Target->query_pronoun() + " is already dead.\n");
 	}
@@ -1018,7 +1018,7 @@ do_fire()
     if (interactive(Target) && Target->query_linkdead())
     {
         tell_object(Archer, "You will have to wait for " +
-		    Target->query_the_name(Archer) + 
+		    Target->query_the_name(Archer) +
 		    " to return from link death first.\n");
 	unload_projectile();
 	return;
@@ -1081,7 +1081,7 @@ do_fire()
     *
     if (Archer->query_prop(LIVE_I_CONCENTRATE))
     {
-        tell_object(Archer, 
+        tell_object(Archer,
 		    "You are too busy with other things to shoot right now.\n");
 	unload_projectile();
         return;
@@ -1104,15 +1104,15 @@ do_fire()
     }
     else
     {
-        // Give a small message even if OPT_GAG_MISSES is on.	    
+        // Give a small message even if OPT_GAG_MISSES is on.
         if (Archer->query_option(OPT_GAG_MISSES))
 	{
             tell_object(Archer, "You shoot at " +
 			Target->query_the_name(Archer) +".\n");
 	}
     }
-	    
-    
+
+
     // This fine piece of code finds the attack location of our launch_weapon.
 
     attack_location = filter(combat_ob->query_attack_id(),
@@ -1129,7 +1129,7 @@ do_fire()
 
     set_this_player(Archer);
     hitsuc = combat_ob->cb_try_hit(attack_location);
-    
+
     // Make sure there is a proper delay where you can not fire after you
     // have fired an arrow.
     // And make sure you are not attacked if the target can not see you.
@@ -1148,23 +1148,22 @@ do_fire()
     {
         return;
     }
-    
+
     hitsuc = combat_ob->cb_tohit(attack_location, query_hit(), Target);
 
     if (hitsuc > 0)
     {
         // [0] here means we allways use the impale pen.
         pen = combat_ob->query_attack(attack_location)[ATT_M_PEN][0];
-  
-        // Choose one damage type //
-        if (crit = (!random(10000)))
-	{
-	    // Critical hit!
-	    pen *= 5;
-	}
+
+
+    if (crit = (!random(F_CRIT_FREQUENCY)))
+    {
+        pen = F_CRIT_MOD(pen);
+    }
 
 	dt = W_IMPALE;
-	
+
 	if (Hitloc_id)
 	{
             hitresult = (mixed*)Target->hit_me(pen, dt, Archer,
@@ -1215,20 +1214,20 @@ do_fire()
 	combat_ob->cb_did_hit(attack_location, hitresult[1], hitresult[4],
 			      hitresult[0], Target, dt, hitsuc, hitresult[3]);
     }
-    
+
     if (!Target || Target->query_ghost())
     {
-        tell_object(Archer, Target->query_The_name(Archer) + 
+        tell_object(Archer, Target->query_The_name(Archer) +
 		    " is already dead.\n");
 	unload_projectile();
     }
-    
+
     // Oops, lifeform turned into a deadform. Reward the killer. //
     if ((int)Target->query_hp() <= 0)
     {
         Target->do_die(Archer);
     }
-    
+
     /*
      * Fighting is quite tiresome you know
      */
@@ -1244,12 +1243,12 @@ do_fire()
         Archer->set_fatigue(0);
         Archer->reduce_hit_point(ftg);
     }
-    
+
     /*
      * Fighting is frightening, we might panic!
      */
     combat_ob->cb_may_panic();
-    
+
     return;
 }
 
@@ -1263,7 +1262,7 @@ public nomask int
 try_load()
 {
     object stack_env;
-    
+
     if (!objectp(Projectile_stack) && !find_projectiles())
     {
         return 0;
@@ -1271,7 +1270,7 @@ try_load()
 
     set_this_player(query_wielded());
     stack_env = environment(Projectile_stack);
-    
+
     if (stack_env == query_wielded() ||
 	(stack_env->query_prop(CONT_I_IS_QUIVER) &&
 	 !stack_env->query_prop(CONT_I_CLOSED) &&
@@ -1312,7 +1311,7 @@ long(string str, object for_obj)
     }
     if (obj_long)
     {
-        return check_call(obj_long, for_obj) + 
+        return check_call(obj_long, for_obj) +
             this_object()->load_desc() + wep_condition_desc();
     }
     return "You see a non-descript object.\n";
@@ -1324,35 +1323,35 @@ long(string str, object for_obj)
  *                fights. Since a bow only shoots every second round it
  *                tries to load a missile first round and fires the missile
  *                the second round.
- *                
+ *
  * Arguments    : object - target we shoot at.
  * Returns      : int - 1 Fire. 0 Load (or try to load).
  */
-int 
-try_hit(object target) 
+int
+try_hit(object target)
 {
     ::try_hit();
 
     Archer = query_wielded();
-    
+
     if (!Archer)
     {
         return 0;
     }
- 
+
     if (!Projectile)
     {
         if (try_load())
         {
 	    this_object()->tell_archer_load(query_wielded(), target,
 					    Projectile, "");
-	    
+
 	    this_object()->tell_others_load(query_wielded(), target,
 					    Projectile, "");
-	    
+
 	    this_object()->tell_target_load(query_wielded(), target,
 					    Projectile);
-	    return 0;	    
+	    return 0;
 	}
 	else
 	{
@@ -1367,7 +1366,7 @@ try_hit(object target)
     }
     else
     {
-        Next_round = time() + 
+        Next_round = time() +
 	  ftoi(query_wielded()->query_combat_object()->cb_query_speed());
         return 1;
     }
@@ -1406,11 +1405,11 @@ load_projectile()
     Projectile->load();
     Projectile->move(query_wielded(), 1);
     Projectile_stack->move(env, 1);
-    
+
     // Set an alarm that forces the player to unload a drawn weapon eventually.
     if (Drawn_wep)
     {
-        Fatigue_alarm = set_alarm(F_LAUNCH_W_FATIGUE_TIME(Archer), 0.0, 
+        Fatigue_alarm = set_alarm(F_LAUNCH_W_FATIGUE_TIME(Archer), 0.0,
 				  &fatigue_unload());
     }
 }
@@ -1420,7 +1419,7 @@ load_projectile()
  * Description  : Forces an unload of the launch_weapon if it has been held
  *                in drawn position for too long.
  */
-private nomask void 
+private nomask void
 fatigue_unload()
 {
     if (Fatigue_alarm && Archer && Archer == query_wielded() && Projectile)
@@ -1458,24 +1457,24 @@ unwield(object obj)
 /*
  * Function name: unload_projectile
  * Description  : Unloads a loaded projectile and resets the launch_weapon.
- */   
+ */
 public nomask void
 unload_projectile()
 {
     if (objectp(Projectile))
     {
         Projectile->unload();
-	
+
         this_object()->tell_archer_unload(query_wielded(), Target, Projectile);
         this_object()->tell_others_unload(query_wielded(), Target, Projectile);
-	
+
 	if (Projectile_stack)
 	{
 	    Projectile_stack->set_heap_size(Projectile_stack->num_heap() + 1);
 	    Projectile->remove_object();
 	}
     }
-    
+
     reset_launch_weapon();
 }
 
@@ -1493,12 +1492,12 @@ find_projectiles()
 {
     object *projectiles, *quivers;
     int i;
-    
+
     projectiles = query_valid_projectiles(query_wielded());
 
     if (!sizeof(projectiles))
     {
-        quivers = filter(all_inventory(query_wielded()), 
+        quivers = filter(all_inventory(query_wielded()),
 			 &->query_prop(CONT_I_IS_QUIVER));
 
 	if (!sizeof(quivers))
@@ -1515,23 +1514,23 @@ find_projectiles()
 	        break;
 	    }
 	}
-	
+
 	if (!sizeof(projectiles))
 	    return 0;
     }
 
     set_projectile_stack(projectiles[0]);
-    tell_object(query_wielded(), "Using " + Projectile_stack->short() + 
+    tell_object(query_wielded(), "Using " + Projectile_stack->short() +
 		(sizeof(quivers) ? " from the " + quivers[i]->short() : "") +
 		".\n");
-    
-    return 1;      
+
+    return 1;
 }
 
 /*
  * Function name: query_hit
  * Description  : Returns the average of launcher and projectile hit values.
- *                
+ *
  * Returns      : int - Returns the average of launcher and projectile
  *                hit values.
  */
@@ -1547,7 +1546,7 @@ query_hit()
 /*
  * Function name: query_pen
  * Description  : Returns the average of launcher and projectile pen values.
- *                
+ *
  * Returns      : int - Returns the average of launcher and projectile
  *                pen values.
  */
@@ -1614,10 +1613,10 @@ did_hit(int aid, string hdesc, int phurt, object target, int dt,
         this_object()->
 	    tell_target_bounce_armour(query_wielded(), target, Projectile,
 				      Adj_room_desc, Org_room_desc, armour);
-	
+
         this_object()->
 	    tell_others_bounce_armour(query_wielded(), target, Projectile,
-				      Adj_room_desc, Org_room_desc, armour);  
+				      Adj_room_desc, Org_room_desc, armour);
     }
     // Hit.
     else
@@ -1625,7 +1624,7 @@ did_hit(int aid, string hdesc, int phurt, object target, int dt,
 	this_object()->
 	    tell_archer_hit(query_wielded(), target, Projectile,
 			    Adj_room_desc, hdesc, dt, phurt, dam, hid);
-	
+
 	this_object()->
 	    tell_target_hit(query_wielded(), target, Projectile, Adj_room_desc,
 			    Org_room_desc, hdesc, dt, phurt, dam, hid);
@@ -1642,8 +1641,8 @@ did_hit(int aid, string hdesc, int phurt, object target, int dt,
         this_object()->
 	    tell_all_projectile_break(Projectile, target, environment(target));
 	Projectile->set_broken(1);
-    }  
-    
+    }
+
     if (phurt < 5)
     {
         move_projectile_to_env(environment(target), Projectile);
@@ -1670,7 +1669,7 @@ did_hit(int aid, string hdesc, int phurt, object target, int dt,
  * Function name: reset_launch_weapon
  * Description  : Resets the launch weapon so it can be aimed and fired again.
  */
-private nomask void 
+private nomask void
 reset_launch_weapon()
 {
     Projectile = 0;
@@ -1695,7 +1694,7 @@ reset_launch_weapon()
  *                This function is meant to be overridden by launch_weapon
  *                implementations.
  */
-public void 
+public void
 tell_archer_no_missiles()
 {
     tell_object(query_wielded(), "You are out of projectiles!\n");
@@ -1703,18 +1702,18 @@ tell_archer_no_missiles()
 
 /*
  * Function name: tell_archer_fatigue_unload
- * Description  : Produces a message to the wielder that he is too tired to 
+ * Description  : Produces a message to the wielder that he is too tired to
  *                keep his launch_weapon drawn. This function is meant to be
  *                overridden by launch_weapon implementations.
- *                
+ *
  * Arguments    : archer:      The tired archer.
  *                target:      The person the wilder aimed at.
  *                projectile:  The projectile we unload in the proccess.
  */
-public void 
+public void
 tell_archer_fatigue_unload(object archer, object target, object projectile)
 {
-    tell_object(archer, "You are too tired to keep the " + short() + 
+    tell_object(archer, "You are too tired to keep the " + short() +
 		" loaded, you unload your " + short() + ".\n");
 }
 
@@ -1723,7 +1722,7 @@ tell_archer_fatigue_unload(object archer, object target, object projectile)
  * Description  : Produces messages to the wielder when he unloads his
  *                launch_weapon. This function is meant to be overridden
  *                by launch_weapon implementations.
- *                
+ *
  * Arguments    : archer:      The archer unloading a projectile.
  *                target:      The person the wilder aimed at.
  *                projectile:  The projectile he unloads.
@@ -1739,7 +1738,7 @@ tell_archer_unload(object archer, object target, object projectile)
  * Description  : Produces messages to bystanders that the wielder unloads
  *                his launch_weapon. This function is meant to be
  *                overridden by launch_weapon implementaions.
- *                
+ *
  * Arguments    : archer:      The archer unloading a projectile.
  *                target:      The person the wilder aimed at.
  *                projectile:  The projectile he unloads.
@@ -1758,29 +1757,29 @@ tell_others_unload(object archer, object target, object projectile)
  * Description  : Produces messages to bystanders when the archer wields
  *                his launch_weapon. This function is meant to be
  *                overridden by launch_weapon implementations.
- *                
+ *
  * Arguments    : archer:      The archer loading a projectile.
  *                target:      The soon to be target!
  *                projectile:  Projectile beeing loaded.
  *                adj_desc:    Description of the adjecent room.
  */
-public void 
+public void
 tell_archer_load(object archer, object target,
 		 object projectile, string adj_desc)
 {
     if (environment(archer) == environment(target))
     {
         archer->catch_msg("You load your " + short() + " with " +
- 			  LANG_ADDART(Projectile->singular_short()) + 
-			  " and take careful aim at " + 
+ 			  LANG_ADDART(Projectile->singular_short()) +
+			  " and take careful aim at " +
 			  target->query_the_name(archer) + ".\n");
     }
     else
     {
-        archer->catch_msg("You load your " + short() + " with " + 
-			  LANG_ADDART(Projectile->singular_short()) + 
-			  " and take careful aim at " + 
-			  target->query_the_name(archer) + " " + 
+        archer->catch_msg("You load your " + short() + " with " +
+			  LANG_ADDART(Projectile->singular_short()) +
+			  " and take careful aim at " +
+			  target->query_the_name(archer) + " " +
 			  adj_desc + ".\n");
     }
 }
@@ -1790,34 +1789,34 @@ tell_archer_load(object archer, object target,
  * Description  : Produces messages to spectators when the player loads his
  *                launch_weapon. This method is meant to be overridden by
  *                launch_weapon implementations.
- *                
+ *
  * Arguments    : archer:     The player loading his weapon.
  *                target:     The target player is aiming at.
  *                projectile: The projectile we are loading.
  *                adj_string: Description of the adjecent location.
  */
-public void 
+public void
 tell_others_load(object archer,  object target,
 		 object projectile, string adj_desc)
 {
     if (environment(archer) == environment(target))
     {
         // X loads his weapon and aims at Y.
-        tell_bystanders_miss(QCTNAME(archer) + " loads " + 
-			     archer->query_possessive() + " " + short() + 
+        tell_bystanders_miss(QCTNAME(archer) + " loads " +
+			     archer->query_possessive() + " " + short() +
 			     " and aims at " + QTNAME(target) + ".\n",
-			     QCTNAME(archer) + " loads " + 
-			     archer->query_possessive() + " " + short() + 
+			     QCTNAME(archer) + " loads " +
+			     archer->query_possessive() + " " + short() +
 			     " and aims at something.\n",
 			     0, 0, archer, target, environment(archer));
     }
     else
     {
-        tell_bystanders_miss(QCTNAME(archer) + " loads " + 
-			     archer->query_possessive() + " " + short() + 
+        tell_bystanders_miss(QCTNAME(archer) + " loads " +
+			     archer->query_possessive() + " " + short() +
 			     " and aims at something " + adj_desc + ".\n",
-			     QCTNAME(archer) + " loads " + 
-			     archer->query_possessive() + " " + short() + 
+			     QCTNAME(archer) + " loads " +
+			     archer->query_possessive() + " " + short() +
 			     " and aims at something " + adj_desc + ".\n",
 			     0, 0, archer, target, environment(archer));
     }
@@ -1828,7 +1827,7 @@ tell_others_load(object archer,  object target,
  * Description  : Produces a message to the player when he is loading his
  *                launch_weapon. This method is intended to be overridden
  *                by implementations of launch_weapon.
- *                
+ *
  * Arguments    : archer:     The player loading his weapon.
  *                target:     The target player is aiming at.
  *                projectile: The projectile we are loading.
@@ -1839,8 +1838,8 @@ tell_target_load(object archer,  object target, object projectile)
     if (environment(target) == environment(archer))
     {
         tell_object(target, archer->query_The_name(target) + " loads " +
-		    archer->query_possessive() + " " + short() + " with " + 
-		    LANG_ADDART(Projectile->singular_short()) + 
+		    archer->query_possessive() + " " + short() + " with " +
+		    LANG_ADDART(Projectile->singular_short()) +
 		    "and takes careful aim at you.\n");
     }
 }
@@ -1848,12 +1847,12 @@ tell_target_load(object archer,  object target, object projectile)
 /*
  * Function name: tell_all_projectile_break
  * Description  : Tells everyone when a projectile breaks.
- *                
+ *
  * Arguments    : projectile:  The projectile that breaks.
  *                enemy:       The enemy the projectile was shot at.
  *                enemy_env:   The environment of the enemy.
  */
-public void 
+public void
 tell_all_projectile_break(object projectile, object target)
 {
     tell_room(environment(target), "The " +
@@ -1864,7 +1863,7 @@ tell_all_projectile_break(object projectile, object target)
  * Function name: tell_watcher
  * Description  : Tells those players that watch the fight what happens. This
  *                function uses catch_msg which take care of met/nomet.
- *                
+ *
  * Arguments    : see_both:   Message seen by those that see player and target.
  *                see_archer: Message seen by those that see the archer only.
  *                see_target: Message seen by those that see target only.
@@ -1879,14 +1878,14 @@ tell_bystanders(string see_both, string see_archer,
 		object archer, object target, object *bystanders)
 {
     object *current_bystanders;
-    
+
     if (!sizeof(bystanders))
     {
 	return;
     }
-    
+
     // Bystanders that see both the archer and the target.
-    
+
     current_bystanders =
 	filter(FILTER_IS_SEEN(target, FILTER_IS_SEEN(archer, bystanders)),
 	       &->can_see_in_room());
@@ -1925,7 +1924,7 @@ tell_bystanders(string see_both, string see_archer,
     // Bystanders that niether see in room nor any of the combatants.
 
     bystanders -= current_bystanders;
-    
+
     if (sizeof(bystanders) && stringp(see_noone))
     {
         bystanders->catch_msg(see_noone);
@@ -1936,7 +1935,7 @@ tell_bystanders(string see_both, string see_archer,
  * Function name: tell_bystander_miss
  * Description:   Send the appropriate string to interactive bystanders
  *                that want to see misses and want to see others fight.
- *                
+ *
  * Arguments:     see_both:   The string to send to those that see both
  *                            target and archer.
  *                see_archer: The string to send to those that see the
@@ -1958,9 +1957,9 @@ tell_bystanders_miss(string see_both, string see_archer,
 
     bystanders = all_inventory(env) - ({ archer, target });
     bystanders = filter(bystanders, &interactive());
-    bystanders = filter(bystanders, &filter_gag_misses());   
+    bystanders = filter(bystanders, &filter_gag_misses());
     bystanders = filter(bystanders, &filter_see_blood());
-    
+
     tell_bystanders(see_both, see_archer, see_target, see_noone,
 		    archer, target, bystanders);
 }
@@ -1969,7 +1968,7 @@ tell_bystanders_miss(string see_both, string see_archer,
  * Function name: tell_bystanders_hit
  * Description:   Send the appropriate string to interactive bystanders
  *                that want to see misses and want to see others fight.
- *                
+ *
  * Arguments:     see_both:   The string to send to those that see both
  *                            target and archer.
  *                see_archer: The string to send to those that see the
@@ -1992,7 +1991,7 @@ tell_bystanders_hit(string see_both, string see_archer,
     bystanders = all_inventory(env) - ({ archer, target });
     bystanders = filter(bystanders, &interactive());
     bystanders = filter(bystanders, &filter_see_blood());
-    
+
     tell_bystanders(see_both, see_archer, see_target, see_noone,
 		    archer, target, bystanders);
 }
@@ -2000,11 +1999,11 @@ tell_bystanders_hit(string see_both, string see_archer,
 /*
  * Function name: filter_see_blood
  * Description  : Returns true if the person don't want to see the message.
- *                
+ *
  * Arguments    : person: Player to check for OPT_NO_FIGHTS.
  * Returns      : int:    True if the person don't want to see blood.
  */
-private int 
+private int
 filter_see_blood(object person)
 {
     return !(person->query_option(OPT_NO_FIGHTS));
@@ -2013,11 +2012,11 @@ filter_see_blood(object person)
 /*
  * Function name: filter_gag_misses
  * Description  : Returns true if player wants to see misses..
- *                
+ *
  * Arguments    : person: Player to check for OPT_GAG_MISSES.
  * Returns      : int:    True if player wants to see misses.
  */
-private int 
+private int
 filter_gag_misses(object person)
 {
     return !(person->query_option(OPT_GAG_MISSES));
@@ -2035,7 +2034,7 @@ public nomask object
 find_protecting_armour(object target, int hid)
 {
     object *armours;
-  
+
     armours = target->query_combat_object()->cb_query_armour(hid);
 
     if (sizeof(armours = filter(armours,
@@ -2095,7 +2094,7 @@ check_remote_seen(object spectator, object target)
 	// Obj does not exist or is no_show.
 	return 0;
     }
-    
+
     if (spectator->query_prop(LIVE_I_SEE_INVIS) <
 	target->query_prop(OBJ_I_INVIS) ||
 	spectator->query_skill(SS_AWARENESS) <
@@ -2104,7 +2103,7 @@ check_remote_seen(object spectator, object target)
 	// Obj is too well hidden.
         return 0;
     }
-    
+
     if (environment(spectator)->quey_prop(OBJ_I_LIGHT) >
 	-(spectator->query_prop(LIVE_I_SEE_DARK)))
     {
@@ -2171,7 +2170,7 @@ tell_target_miss(object archer, object target, object projectile,
  *                his target. This function take visual conditions in
  *                consideration as well as shoots across rooms. This function
  *                is meant to be overridden in launch_weapon implementations.
- *                
+ *
  * Arguments    : archer:        The player loading his weapon.
  *                target:        The target player is aiming at.
  *                projectile:    The projectile we are loading.
@@ -2193,7 +2192,7 @@ tell_others_miss(object archer, object target, object projectile,
  *                target without causing any harm. This is described as
  *                the arrow bouncing off his armour. This function is meant
  *                to be overridden by launch_weapon implementations.
- *                
+ *
  * Arguments    : archer:        The player loading his weapon.
  *                target:        The target player is aiming at.
  *                projectile:    The projectile we are loading.
@@ -2204,7 +2203,7 @@ tell_others_miss(object archer, object target, object projectile,
  *                armour:        The armour that deflects the arrow. armour
  *                               may be 0 if no armour covers the hid.
  */
-public void 
+public void
 tell_archer_bounce_armour(object archer, object target, object projectile,
 			  string adj_room_desc, object armour)
 {
@@ -2217,7 +2216,7 @@ tell_archer_bounce_armour(object archer, object target, object projectile,
  *                an arrow that do no dammage. This is described as
  *                the arrow bouncing off his armour. This function is
  *                meant to be overridden by launch_weapon implementations.
- *                
+ *
  * Arguments    : archer:        The player loading his weapon.
  *                target:        The target player is aiming at.
  *                projectile:    The projectile we are loading.
@@ -2228,7 +2227,7 @@ tell_archer_bounce_armour(object archer, object target, object projectile,
  *                armour:        The armour that deflects the arrow. armour
  *                               may be 0 if no armour covers the hid.
  */
-public void 
+public void
 tell_target_bounce_armour(object archer, object target, object projectile,
 			  string adj_room_desc, string org_room_desc,
 			  object armour)
@@ -2242,7 +2241,7 @@ tell_target_bounce_armour(object archer, object target, object projectile,
  *                harmlessly hits the target. This is described as
  *                the arrow bouncing off the target's armour. This method
  *                is meant to be overridden by launch weapon implementations.
- *                
+ *
  * Arguments    : archer:        The player loading his weapon.
  *                target:        The target player is aiming at.
  *                projectile:    The projectile we are loading.
@@ -2254,7 +2253,7 @@ tell_target_bounce_armour(object archer, object target, object projectile,
  *                               be 0 if no piece of armour protects the
  *                               location.
  */
-public void 
+public void
 tell_others_bounce_armour(object archer, object target, object projectile,
 			  string adj_room_desc, string org_room_desc,
 			  object armour)
@@ -2268,7 +2267,7 @@ tell_others_bounce_armour(object archer, object target, object projectile,
  *                This function takes visual conditions as well as shoots
  *                across rooms in consideration. This method is meant to be
  *                overridden by launch_weapon implementations.
- *                
+ *
  * Arguments    : archer:        The player loading his weapon.
  *                target:        The target player is aiming at.
  *                projectile:    The projectile we are loading.
@@ -2282,7 +2281,7 @@ tell_others_bounce_armour(object archer, object target, object projectile,
  *                dam:           The damage caused by this weapon in hit points
  *                hid:           The hitlocation we hit.
  */
-public void 
+public void
 tell_archer_hit(object archer, object target,
 		object projectile, string adj_room_desc,
 		string hdesc, int dt, int phurt, int dam, int hid)
@@ -2296,7 +2295,7 @@ tell_archer_hit(object archer, object target,
  *                archer. This function takes visual conditions as well as
  *                shoots across rooms in consideration. This method is meant
  *                to be overriddent by launch_weapon implementations.
- *                
+ *
  * Arguments    : archer:        The player loading his weapon.
  *                target:        The target player is aiming at.
  *                projectile:    The projectile we are loading.
@@ -2325,7 +2324,7 @@ tell_target_hit(object archer, object target, object projectile,
  *                archer's and target's environment if they are not the
  *                same. This method is meant to be overridden by
  *                launch_weapon implementations.
- *                
+ *
  * Arguments    : archer:        The player loading his weapon.
  *                target:        The target player is aiming at.
  *                projectile:    The projectile we are loading.
@@ -2353,13 +2352,13 @@ tell_others_hit(object archer, object target, object projectile,
  * Description  : Verifies that the archer and his environment are suited
  *                for aiming or shooting. This function is meant to be
  *                overloaded by subclasses.
- *                
+ *
  * Arguments    : action (string) - Action the archer performs.
  *              : args (string)   - Arguments the archer supplies.
  *
  * Returns      : 1 - Setup is sane. 0 - Setup fishy.
  */
-public int 
+public int
 extra_sanity_checks(string action, string args)
 {
     return 1;
