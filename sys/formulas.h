@@ -218,7 +218,8 @@
 #define F_SOBER_RATE                    1
 #define F_UNSTUFF_RATE                  1
 #define F_UNSOAK_RATE                   16
-#define F_HEAL_FORMULA(con, intox) (((con) * 5 + (intox) * 2 + 100) / 20)
+
+#define F_HEAL_FORMULA(con, intox)      (((con) * 5 + (intox) * 2 + 100) / 16)
 #define F_FATIGUE_FORMULA(stuffed, max) (5 + (stuffed) * 45 / (max))
 
 #define F_MANA_HEAL_RATE                1
@@ -285,7 +286,7 @@
 /*
  * Combat
  */
-#define F_MAX_HP(con)  (((con) < 10) ? ((con) * 10) : (((con) * 20) - 100))
+#define F_MAX_HP(con)   (((con) < 10) ? ((con) * 12) : (((con) * 25) - 125))
 
 /* F_PENMOD
  *
