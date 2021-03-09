@@ -1932,7 +1932,7 @@ heart_beat()
     {
         tell_object(me, "You are so tired that every move drains your health.\n");
         me->set_fatigue(0);
-        me->reduce_hit_point(ftg);
+        me->reduce_hit_point(me->query_max_hp() / 100);
     }
 
     /* Fighting is frightening, we might panic!  */
