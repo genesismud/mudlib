@@ -2426,11 +2426,22 @@ incoming_service(string request)
         return "ERROR No access\n";
 
     case "gmcp_token":
-        if (sizeof(tmp) != 2)
+        if (sizeof(tmp) < 2)
         {
             return "ERROR Wrong number of parameters\n";
         }
-        return "TOKEN " + query_gmcp_token_user(tmp[1]) + "\n";
+
+        string user = query_gmcp_token_user(tmp[1]);
+        if (user != "unknown" && sizeof(tmp) == 3)
+        {
+            object player = find_player(user);
+            if (objectp(player) && query_ip_number(player) != tmp[2])
+            {
+                set_ip_number(player, tmp[2]);
+            }
+        }
+
+        return "TOKEN " + user + "\n";
 
     case "exists":
         if (sizeof(tmp) != 2)
