@@ -53,7 +53,7 @@ create()
  * Description  : Identify the object by a nice short description.
  * Returns      : string - the short description.
  */
-string 
+string
 short()
 {
     return "the archive of maps";
@@ -82,7 +82,7 @@ save_mapdata()
 void
 add_maplink(string path, string mapfile)
 {
-    if ((file_size(path + ".c") < 1) || !maps[mapfile])
+    if (!maps[mapfile] || ((file_size(path + ".c") < 1) && !find_object(path)))
     {
 	return;
     }
