@@ -1045,6 +1045,29 @@ valid_query_ip_ident(object actor, object target)
 }
 
 /*
+ * Function name: valid_set_ip_number
+ * Description  : This function is called to check whether the actor is
+ *                allowed to call the efun set_ip_number() on a particular
+ *                target.
+ * Arguments    : object actor  - the actor that wants to call the efun.
+ *                object target - the object the actor wants to know about.
+ *                string ip - the ip being set
+ * Returns      : int 1/0 - allowed / disallowed.
+ */
+int
+valid_set_ip_number(object actor, object target , string ip)
+{
+    string euid = geteuid(actor);
+    /* Root, arches and keepers can do as they please. */
+    if ((euid == ROOT_UID) || query_wiz_rank(euid) >= WIZ_ARCH)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+/*
  * Function name: valid_query_ip_number_name
  * Description  : This function is called to check whether the actor is
  *                allowed to call the efun query_ip_number() or _name() on
@@ -1052,7 +1075,7 @@ valid_query_ip_ident(object actor, object target)
  * Arguments    : int name      - True for query_ip_name
  *                object actor  - the actor that wants to call the efun.
  *                object target - the object the actor wants to know about.
- * Returns      : int 1/0 - allowed/ disallowed.
+ * Returns      : int 1/0 - allowed / disallowed.
  */
 int
 valid_query_ip_number_name(int name, object actor, object target)
