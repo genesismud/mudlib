@@ -2435,7 +2435,8 @@ incoming_service(string request)
         if (user != "unknown" && sizeof(tmp) == 3)
         {
             object player = find_player(user);
-            if (objectp(player) && query_ip_number(player) != tmp[2])
+            if (objectp(player) && interactive(player) &&
+                query_ip_number(player) != tmp[2])
             {
                 set_ip_number(player, tmp[2]);
             }
