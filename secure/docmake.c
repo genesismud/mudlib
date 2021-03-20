@@ -550,7 +550,7 @@ doc_makepath(string path)
  *                   put.
  *              [2]: euid
  */
-void
+static void
 doc_create(mixed *arr, string path, string new_euid)
 {
     string file, data, *lines, cmt, euid;
@@ -675,4 +675,73 @@ doc_clean_obsolete(string *functions, string path, string new_euid)
 
     seteuid(euid);
     set_alarm(1.0, 0.0, doc_next);
+}
+
+static string *
+refresh_path(string base, string path)
+{
+    string *updated = ({ });
+    int refresh = 0;
+    string *entries = get_dir(base + path + "/");
+
+    foreach (string entry: entries) {
+        if (entry == ".obsolete") {
+            continue;
+        }
+
+        string absolute = base + path + "/" + entry;
+        int size = file_size(absolute);
+
+        /* Directory? */
+        if (size == -2) {
+            updated += refresh_path(base, path + "/" + entry);
+        }
+
+        /* File! */
+        if (size >= 0 && !refresh) {
+            string header = read_file(absolute, 0, 1);
+
+            mixed foo;
+            string component;
+            if (sscanf(header, "%d:%s (%s)", foo, component, foo)) {
+                if (file_time(component) > file_time(absolute)) {
+                    write("Docscribe tells you: Scheduling refresh of " + path + ".c" +
+                        " due to update of component " + component + "\n");
+                    updated += ({ path + ".c" });
+                    refresh = 1;
+                }
+            }
+        }
+    }
+
+    return updated;
+}
+
+/*
+ * Function name: doc_refresh
+ * Description  : Initiate a refresh of all documented files which have been
+ *                changed since the doc was created for a directory.
+ * Arguments    : string dir - the docdir
+ */
+public int
+doc_refresh(string dir)
+{
+    string euid = geteuid(calling_object());
+    seteuid(euid);
+
+    if (file_size(dir) != -2) {
+        return 0;
+    }
+
+    mixed updated = refresh_path(dir, "");
+
+    write("Docscribe tells you: Scheduling refresh of " + sizeof(updated) +
+        " updated files.\n");
+
+    foreach (string file: updated)
+    {
+        doc_file(dir, file);
+    }
+
+    return 1;
 }
