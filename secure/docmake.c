@@ -639,11 +639,12 @@ doc_clean_obsolete(string *functions, string path, string new_euid)
 
     if (pointerp(mfiles) && pointerp(dfiles))
     {
-        /* Get the obsolete files in dfiles
-         */
+        /* Get the obsolete files in dfiles */
         dfiles -= ({ "..", ".", ".obsolete" });
         dfiles -= mfiles;
 
+        /* Directories need to be left alone */
+        dfiles = filter(dfiles, &operator(>)(, 0) @ file_size @ &operator(+)(path + "/", ));
 
         if (sizeof(dfiles))
         {
@@ -653,9 +654,8 @@ doc_clean_obsolete(string *functions, string path, string new_euid)
             if (file_size(path + "/.obsolete") != -2)
                 mkdir(path + "/.obsolete");
 
-            for (il = 0; il < sizeof(dfiles); il++)
-            {
-                rename(path + "/" + dfiles[il], path + "/.obsolete/" + dfiles[il]);
+            foreach (string file: dfiles) {
+                rename(path + "/" + file, path + "/.obsolete/" + file);
             }
         }
     }
@@ -681,7 +681,6 @@ static string *
 refresh_path(string base, string path)
 {
     string *updated = ({ });
-    int refresh = 0;
     string *entries = get_dir(base + path + "/");
 
     foreach (string entry: entries) {
@@ -689,8 +688,8 @@ refresh_path(string base, string path)
             continue;
         }
 
-        string absolute = base + path + "/" + entry;
-        int size = file_size(absolute);
+        string doc = base + path + "/" + entry;
+        int size = file_size(doc);
 
         /* Directory? */
         if (size == -2) {
@@ -698,17 +697,20 @@ refresh_path(string base, string path)
         }
 
         /* File! */
-        if (size >= 0 && !refresh) {
-            string header = read_file(absolute, 0, 1);
+        if (size >= 0) {
+            string header = read_file(doc, 0, 1);
 
             mixed foo;
-            string component;
-            if (sscanf(header, "%d:%s (%s)", foo, component, foo)) {
-                if (file_time(component) > file_time(absolute)) {
-                    write("Docscribe tells you: Scheduling refresh of " + path + ".c" +
-                        " due to update of component " + component + "\n");
-                    updated += ({ path + ".c" });
-                    refresh = 1;
+            string component, source;
+            if (sscanf(header, "%d:%s (%s)", foo, component, source)) {
+                if (file_size(source) == -1 ||
+                    member_array(source, updated) >= 0)
+                    continue;
+
+                if (file_time(component) > file_time(doc)) {
+                    write("Docscribe tells you: Scheduling refresh of " + source
+                        + " due to update of component " + component + "\n");
+                    updated |= ({ source });
                 }
             }
         }
