@@ -1949,9 +1949,8 @@ nomask static string
 fix_skill_desc(int sknum, object ob, mapping sk_desc)
 {
     string desc;
-    string value = "" + ob->query_base_skill(sknum);
-    int    len = strlen(value);
-    int    extra = ob->query_skill_extra(sknum);
+    int    value = ob->query_base_skill(sknum);
+    int    extra = ob->query_skill(sknum) - value;
 
     if (pointerp(sk_desc[sknum]))
     {
@@ -1959,16 +1958,18 @@ fix_skill_desc(int sknum, object ob, mapping sk_desc)
     }
     else if (!strlen(desc = ob->query_skill_name(sknum)))
     {
-	/* Turns the skill number into a domain name. */
-	desc = "(" + SECURITY->query_domain_name((sknum / 1000) % 100) +
-	    " #" + (sknum % 1000) + ")";
+        /* Turns the skill number into a domain name. */
+        desc = "(" + SECURITY->query_domain_name((sknum / 1000) % 100) +
+            " #" + (sknum % 1000) + ")";
     }
 
-    desc = sprintf("%6d - %-20s: %3s%s", sknum, capitalize(desc[..19]),
-        value, (extra != 0 ? ("+" + extra) : "   "));
+    desc = sprintf("%6d - %-20s: %3d%s", sknum, capitalize(desc[..19]),
+        value, (extra != 0 ? sprintf("%+d", extra) : "   "));
+
+    int len = strlen(value + "");
     if (len > 3)
     {
-	desc = desc[..(31-len)] + desc[(29)..];
+        desc = desc[..(31-len)] + desc[(29)..];
     }
     return desc;
 }
