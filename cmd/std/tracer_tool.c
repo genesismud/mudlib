@@ -92,26 +92,26 @@ query_cmdlist()
              "Call"     : "Call",
              "Cat"      : "Cat",
              "Clean"    : "Clean",
-             
+
              "Dump"     : "Dump",
              "Destruct" : "Destruct",
-             
+
              "Ed"       : "Ed",
-             
+
              "Goto"     : "Goto",
-             
+
              "I"        : "Inventory",	/* Pointless alias, remove later */
              "Inventory": "Inventory",	/* Pointless alias, remove later */
              "In"       : "In",
 	     "Items"	: "Items",	/* Pointless alias, remove later */
 
 	     "Light"	: "Light",	/* Pointless alias, remove later */
-             
+
              "More"     : "More",
              "Move"     : "Move",
 
 	     "Reload"	: "Reload",
-             
+
              "Set"      : "Set",
 
 	     "Tail"	: "Tail",
@@ -122,7 +122,7 @@ query_cmdlist()
 }
 
 /* **************************************************************************
- * Here follows the actual functions. Please add new functions in the 
+ * Here follows the actual functions. Please add new functions in the
  * same order as in the function name list.
  * **************************************************************************/
 
@@ -492,7 +492,7 @@ Dump(string str)
     int     i, query_list, calls, etime;
     object  ob, *ob_list;
     string  *args, flag, extra, *props, path, tmp;
-    mixed   *data, *vars, *funcs;
+    mixed   *data, *vars, funcs;
 
     CHECK_SO_WIZ;
 
@@ -566,7 +566,7 @@ Dump(string str)
         data = ob->query_alarms();
         for (i = 0; i < sizeof(data);  i++)
         {
-            write("Id        : " + data[i][0] + "\n"); 
+            write("Id        : " + data[i][0] + "\n");
             write("Function  : " + data[i][1] + "\n");
             write("Time Left : " + ftoa(data[i][2]) + "\n");
             write("Repeat    : " + ftoa(data[i][3]) + "\n");
@@ -581,7 +581,7 @@ Dump(string str)
         write("\n");
 	break;
 
-    case "flags":        
+    case "flags":
         write(SECURITY->do_debug("object_info", 0, ob));
         write("\n");
 	break;
@@ -623,16 +623,16 @@ Dump(string str)
 
     case "profile":
 	extra = strip(extra);
-	if (!strlen(extra) || 
+	if (!strlen(extra) ||
 	    (member_array(extra, ({ "time", "calls", "average", "function"})) < 0 &&
 	     member_array(extra[0..0], ({ "t", "c", "a", "f" })) < 0))
 	    extra = "time";
 
         funcs = SECURITY->do_debug("getprofile", ob);
-	if (stringp(funcs)) 
-	{ 
-	    write(funcs + "\n"); 
-	    break; 
+	if (stringp(funcs))
+	{
+	    write(funcs + "\n");
+	    break;
 	}
 
 	data = ({ });
@@ -657,15 +657,15 @@ Dump(string str)
 
     case "profile_avg":
 	extra = strip(extra);
-	if (!strlen(extra) || 
+	if (!strlen(extra) ||
 	    member_array(extra[0..0], ({ "t", "c", "a", "f" })) < 0)
 	    extra = "time";
 
 	funcs = SECURITY->do_debug("getprofile_avg", ob);
-	if (stringp(funcs)) 
-	{ 
-	    write(funcs + "\n"); 
-	    break; 
+	if (stringp(funcs))
+	{
+	    write(funcs + "\n");
+	    break;
 	}
 
 	data = ({ });
@@ -853,9 +853,9 @@ In(string str)
 
 /*
  * Inventory - list the inventory of an object
- * I (short for Inventory) 
+ * I (short for Inventory)
  *
- * Just an undocumented wrapper for Dump, 
+ * Just an undocumented wrapper for Dump,
  * for old dogs with seating problems.
  *
  */
@@ -870,7 +870,7 @@ Inventory(string str)
 /*
  * Items - list the pseudo items of an object
  *
- * Just an undocumented wrapper for Dump, 
+ * Just an undocumented wrapper for Dump,
  * for old dogs with seating problems.
  *
  */
@@ -885,7 +885,7 @@ Items(string str)
 /*
  * Light - list the light status of an object
  *
- * Just an undocumented wrapper for Dump, 
+ * Just an undocumented wrapper for Dump,
  * for old dogs with seating problems.
  *
  */
@@ -1424,8 +1424,8 @@ Top(string arg)
         }
 
         if (calls)
-            criteria = 4 + latest; 
-        else 
+            criteria = 4 + latest;
+        else
             criteria = 6 * per_call + 2 * total + latest;
 
         show = min(max(0, show), 1000);
@@ -1522,7 +1522,7 @@ Top(string arg)
          string one, five, fifteen;
          string name = implode(a[1..], " ");
          sscanf(a[0], "%f/%f/%f", one, five, fifteen);
-         write(sprintf("%9.2f %9.2f %9.2f %s\n", 
+         write(sprintf("%9.2f %9.2f %9.2f %s\n",
                one, five, fifteen, name));
     }
     return 1;
@@ -1596,7 +1596,7 @@ profile_sort(string item, mixed a, mixed b)
 
     if(a[p] < b[p])
 	return -1;
-    
+
     if (a[p] > b[p])
 	return 1;
 

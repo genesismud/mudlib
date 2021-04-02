@@ -78,6 +78,10 @@ remove_shadow()
 /*
  * Function name: shadow_me
  * Description  : Called from object to make us shadow it.
+ *
+ *                WARNING: When shadow_me fails you must remove the shadow
+ *                manually with remove_shadow()
+ *
  * Arguments    : mixed to_shadow - either a string or object. If it is
  *                a string, use find_player to find the player to shadow.
  * Returns      : int - True if shadowed.

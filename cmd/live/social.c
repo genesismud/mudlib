@@ -7,6 +7,7 @@
  * - aggressive
  * - assist
  * - emote
+ * - friend
  * - forget
  * - gifts
  * - introduce
@@ -49,6 +50,14 @@ inherit "/cmd/std/command_driver";
 #include <stdproperties.h>
 #include <time.h>
 
+/*
+ * Internal defines to limit membership
+ * lists of the 'gifts' and 'friend' commands.
+ * See check_list_limit() below.
+ */
+#define MAX_GIFTS_ALLOWED       100
+#define MAX_FRIENDS_ALLOWED     100
+
 varargs int team(string str);
 int remembered(string str);
 
@@ -60,7 +69,7 @@ int remembered(string str);
 void
 create()
 {
-    seteuid(getuid(this_object())); 
+    seteuid(getuid(this_object()));
 }
 
 /* **************************************************************************
@@ -93,6 +102,8 @@ query_cmdlist()
              "assist!":"assist",
 
              "emote":"emote",
+
+             "friend":"friend",
 
              "forget":"forget",
 
@@ -132,13 +143,43 @@ query_cmdlist()
  *                sublocations responsible for extra descriptions of the
  *                living object.
  */
-public void 
+public void
 using_soul(object live)
 {
 }
 
+/*
+ * Function name: check_list_limit
+ * Description:   Shared function called by the 'friend' and 'gifts' commands
+ *                to do basic limiter checking.
+ * Arguments:     string who - A persons name to check met status.
+ *                function func - The list function to query.
+ *                int allowed - The max limit to check against.
+ * Returns:       int 0/1. 0 - fail, produces own message.
+ *                         1 - pass, limit not reached.
+ */
+private int
+check_list_limit(string who, function func, int allowed)
+{
+    if (!this_player()->query_met(who) &&
+        !this_player()->query_remembered(who))
+    {
+        write("You have not met anyone named " + capitalize(who) + ".\n");
+        return 0;
+    }
+
+    if (sizeof(func(this_player())) >= allowed)
+    {
+        write("You have reached the limit of the list, " +
+            "try removing some names first.\n");
+        return 0;
+    }
+
+    return 1;
+}
+
 /* **************************************************************************
- * Here follows the actual functions. Please add new functions in the 
+ * Here follows the actual functions. Please add new functions in the
  * same order as in the function name list.
  * **************************************************************************/
 
@@ -159,7 +200,7 @@ aggressive(string str)
 /*
  * assist - Help a friend to kill someone else
  */
-int 
+int
 assist(string str)
 {
     object *obs;
@@ -367,7 +408,7 @@ emote(string str)
     /* Allow for "emote 's head..." -> "The monkey's head..." and yes ''' looks
      * funny, but that really is the syntax to get a single quote in int-form.
      */
-    if (str[0] != ''')
+    if (str[0] != '\'')
     {
         str = " " + str;
     }
@@ -376,6 +417,86 @@ emote(string str)
             UNSEEN_NAME + str + "\n" }) );
 
     return 1;
+}
+
+/*
+ * friend - Grant or deny friend-ship status to someone
+ */
+int
+friend(string str)
+{
+    string *words;
+
+    if (!strlen(str) || str == "list")
+    {
+        CMD_LIVE_STATE->options("intimate");
+        if (sizeof(words = this_player()->query_friendship(0)))
+        {
+            write(HANGING_INDENT("You have granted friendship to: " +
+                    COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
+	    return 1;
+        }
+
+        notify_fail("You have not granted friendship to anyone.\n");
+        return 0;
+    }
+
+    words = explode(lower_case(str), " ");
+    if (sizeof(words) != 2)
+    {
+        notify_fail("Friend what? Syntax: friend add|remove <name>\n");
+        return 0;
+    }
+
+    switch(words[0])
+    {
+    case "add":
+        if (!check_list_limit(words[1], &->query_friendship(0), MAX_FRIENDS_ALLOWED))
+            return 1;
+
+        if (this_player()->add_friendship(words[1]))
+            write("Added " + capitalize(words[1]) + " to your list of friends.\n");
+        else
+            write(capitalize(words[1]) + " is already a friend.\n");
+
+        return 1;
+
+    case "remove":
+        if (this_player()->remove_friendship(words[1]))
+            write("Removed " + capitalize(words[1]) + " from your list of friends.\n");
+        else
+            write(capitalize(words[1]) + " wasn't a friend.\n");
+
+        return 1;
+
+    case "-l":
+        /* Wizards may see other people's friend lists. */
+        if (SECURITY->query_wiz_rank(this_player()->query_real_name()) < WIZ_NORMAL)
+        {
+            notify_fail("You may only see your own list of friends.\n");
+            return 0;
+        }
+
+        object player = find_player(str = words[1]);
+        if (!objectp(player))
+        {
+            notify_fail("Player " + capitalize(str) + " is not present.\n");
+            return 0;
+        }
+
+        if (sizeof(words = player->query_friendship(0)))
+        {
+            write(HANGING_INDENT("The friends for " + capitalize(str) + " are: " +
+                    COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
+        } else {
+            write(capitalize(str) + " has no friends listed.\n");
+        }
+        return 1;
+
+    default:
+        notify_fail("Friend what?\n");
+        return 0;
+    }
 }
 
 /*
@@ -431,22 +552,27 @@ gifts(string str)
     string *words;
     int success;
 
-    CMD_LIVE_STATE->options("giftfilter");
     if (!strlen(str) || str == "list")
     {
+        CMD_LIVE_STATE->options("giftfilter");
         if (sizeof(words = this_player()->query_gift_accept(0)))
         {
-            write(HANGING_INDENT("Accepting gifts from: " + COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
+            write(HANGING_INDENT("Accepting gifts from: " +
+                    COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
             success = 1;
         }
+
         if (sizeof(words = this_player()->query_gift_today(0)))
         {
-            write(HANGING_INDENT("Accepting gifts from: " + COMPOSITE_WORDS(map(words, capitalize)) + ", this login only.", 4, 0));
+            write(HANGING_INDENT("Accepting gifts from: " +
+                    COMPOSITE_WORDS(map(words, capitalize)) + ", this login only.", 4, 0));
             success = 1;
         }
+
         if (sizeof(words = this_player()->query_gift_reject(0)))
         {
-            write(HANGING_INDENT("Rejecting gifts from: " + COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
+            write(HANGING_INDENT("Rejecting gifts from: " +
+                    COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
             success = 1;
         }
         if (success)
@@ -466,20 +592,34 @@ gifts(string str)
     switch(words[0])
     {
     case "accept":
+        if (!check_list_limit(words[1], &->query_gift_accept(0), MAX_GIFTS_ALLOWED))
+            return 1;
+
         if (this_player()->add_gift_accept(words[1]))
         {
             write("Accepting gifts from " + capitalize(words[1]) + ".\n");
             return 1;
         }
+
         notify_fail(capitalize(words[1]) + " was already on the list.\n");
         return 0;
 
     case "reject":
+        if (!check_list_limit(words[1], &->query_gift_reject(0), MAX_GIFTS_ALLOWED))
+            return 1;
+
+        if (this_player()->query_gift_accept(words[1]))
+        {
+            write("You already accept gifts from " + capitalize(words[1]) + ".\n");
+            return 1;
+        }
+
         if (this_player()->add_gift_reject(words[1]))
         {
             write("Rejecting gifts from " + capitalize(words[1]) + ".\n");
             return 1;
         }
+
         notify_fail(capitalize(words[1]) + " was already on the list.\n");
         return 0;
 
@@ -489,30 +629,40 @@ gifts(string str)
             write("Removed rejecting of gifts from " + capitalize(words[1]) + ".\n");
             success = 1;
         }
+
         if (this_player()->remove_gift_accept(words[1]))
         {
             write("Removed accepting of gifts from " + capitalize(words[1]) + ".\n");
             success = 1;
         }
+
         if (this_player()->remove_gift_today(words[1]))
         {
             write("Removed accepting of gifts from " + capitalize(words[1]) + ".\n");
             success = 1;
         }
-        if (!success) write(capitalize(words[1]) + " was not on your gifts lists.\n");
+
+        if (!success)
+            write(capitalize(words[1]) + " was not on your gifts lists.\n");
+
         return 1;
 
     case "today":
+        if (!check_list_limit(words[1], &->query_gift_today(0), MAX_GIFTS_ALLOWED))
+            return 1;
+
         if (this_player()->query_gift_accept(words[1]))
         {
-            notify_fail("You already accept gifts from " + capitalize(words[1]) + ".\n");
-            return 0;
+            write("You already accept gifts from " + capitalize(words[1]) + ".\n");
+            return 1;
         }
+
         if (this_player()->add_gift_today(words[1]))
         {
             write("Accepting gifts from " + capitalize(words[1]) + " until logout.\n");
             return 1;
         }
+
         notify_fail(capitalize(words[1]) + " was already on the list.\n");
         return 0;
 
@@ -606,7 +756,7 @@ intro_live(string str)
             notify_fail("It is way too dark for you to see here.\n");
             return 0;
         }
- 
+
         all_targets = livings;
         vis_targets = FILTER_CAN_SEE(all_targets, this_player());
     }
@@ -648,7 +798,7 @@ intro_live(string str)
     if (!intro_self)
     {
         introducee->catch_msg(this_player()->query_The_name(introducee) +
-            " introduces you to " + 
+            " introduces you to " +
             FO_COMPOSITE_ALL_LIVE(vis_targets, introducee) + ".\n");
     }
 
@@ -714,7 +864,7 @@ invite(string str)
 /*
  * join - Join someones team
  */
-varargs int 
+varargs int
 join(string str)
 {
     return team("join" + (strlen(str) ? (" " + str) : ""));
@@ -723,7 +873,7 @@ join(string str)
 /*
  * kill - Start attacking someone with the purpose to kill
  */
-varargs int 
+varargs int
 kill(string str)
 {
     object victim;
@@ -776,7 +926,7 @@ kill(string str)
        write(capitalize(LANG_THESHORT(victim)) + " isn't alive!\n");
        return 1;
     }
- 
+
     if (victim->query_ghost())
     {
         write(victim->query_The_name(this_player()) + " is already dead!\n");
@@ -966,7 +1116,14 @@ last(string str)
     player = SECURITY->finger_player(str);
     write("Login time : " + ctime(player->query_login_time()) + "\n");
     duration = (player->query_logout_time() - player->query_login_time());
-    if (duration < 86400)
+
+    int max_duration = 86400;
+
+#ifdef REGULAR_UPTIME
+    max_duration = (REGULAR_UPTIME + UPTIME_VARIATION) * 3600;
+#endif
+
+    if (duration < max_duration)
     {
         write("Logout time: " + ctime(player->query_logout_time()) + "\n");
         write("Duration   : " + TIME2STR(duration, 3) + "\n");
@@ -983,14 +1140,14 @@ last(string str)
 /*
  * leave - Leave a team or force someone to leave a team
  */
-int 
+int
 leave(string str)
 {
     if (str == "team")
     {
         return team("leave");
     }
-    
+
     notify_fail("Leave what? Your team?\n");
     return 0;
 }
@@ -1003,13 +1160,13 @@ remember_live(string str)
 {
     object ob;
     int num;
-    
+
     if (!strlen(str))
     {
         return remembered("");
     }
-    
-    str = lower_case(str);    
+
+    str = lower_case(str);
 
     /* Silly people remembering themselves can get problems with 'who'. */
     if (this_player()->query_real_name() == str)
@@ -1022,7 +1179,7 @@ remember_live(string str)
     if (objectp(ob = find_living(str)) &&
         ((ob->query_prop(LIVE_I_NON_REMEMBER) ||
 	  ob->query_prop(LIVE_I_NEVERKNOWN))))
-    {   
+    {
         notify_fail("Remember " + ob->query_objective() + "? Never!\n");
         return 0;
     }
@@ -1039,7 +1196,7 @@ remember_live(string str)
         write("You refresh your memory of " + capitalize(str) + ".\n");
         return 1;
     default:
-        notify_fail("You can't remember having been introduced to " + 
+        notify_fail("You can't remember having been introduced to " +
              capitalize(str) + ".\n");
         return 0;
     }
@@ -1461,7 +1618,7 @@ team(string str)
         oblist = parse_this(arg, "[the] %l");
         size = sizeof(oblist);
     }
-    
+
     switch(str)
     {
     case "disband":
@@ -1583,7 +1740,7 @@ team(string str)
         {
             leader->team_join(ob);
         }
-    
+
         brief = this_player()->query_option(OPT_BRIEF);
         write("You make " + leader->query_the_name(this_player()) +
             " the leader of your team" +
@@ -1713,11 +1870,11 @@ team(string str)
                 " already is the rearguard of the team.\n");
             return 1;
         }
-    
+
         this_player()->team_leave(rear);
         this_player()->team_join(rear);
         members -= ({ rear });
-    
+
         write("You alter the formation of the team, placing "+
             rear->query_the_name(this_player()) + " at the rearguard.\n");
         all2actbb(" alters the formation of " + this_player()->query_possessive() +
@@ -1794,7 +1951,7 @@ format_who_name(object player)
  * Arguments    : object a - the playerobject to player a.
  *                object b - the playerobject to player b.
  * Returns      : int -1 - name of player a comes before that of player b.
- *                     1 - name of player b comes before that of player a. 
+ *                     1 - name of player b comes before that of player a.
  */
 nomask int
 sort_name(object a, object b)
@@ -1846,7 +2003,7 @@ print_who(string opts, object *list, object *nonmet, int size)
         {
             write(", of which " + sizeof(list) + " fit" +
 	        ((sizeof(list) == 1) ? "s" : "") + " your selection");
-        }        
+        }
         write(".\n");
     }
 
@@ -1897,7 +2054,7 @@ print_who(string opts, object *list, object *nonmet, int size)
 
         to_write += sprintf("%-*#s\n", scrw, implode(metnames, "\n"));
     }
-    
+
     if (sizeof(nonmet) && show_unmet)
     {
         /* Apply the max length of the met names here for nice tabulation. */

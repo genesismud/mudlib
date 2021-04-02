@@ -152,19 +152,19 @@
 
 #define SS_SKILL_DESC ([ \
 /* Weapon skills */                                                    \
-    SS_WEP_SWORD:     ({ "sword",                 95, SS_DEX, 125, 30 }), \
+    SS_WEP_SWORD:     ({ "sword",                 80, SS_DEX, 125, 30 }), \
     SS_WEP_POLEARM:   ({ "polearm",               80, SS_STR, 125, 30 }), \
-    SS_WEP_AXE:       ({ "axe",                   70, SS_STR, 125, 30 }), \
-    SS_WEP_KNIFE:     ({ "knife",                 46, SS_DEX, 125, 30 }), \
-    SS_WEP_CLUB:      ({ "club",                  50, SS_STR, 125, 30 }), \
-    SS_WEP_MISSILE:   ({ "missiles",              70, SS_DEX, 125, 30 }), \
-    SS_WEP_JAVELIN:   ({ "javelin",               70, SS_STR, 125, 30 }), \
+    SS_WEP_AXE:       ({ "axe",                   80, SS_STR, 125, 30 }), \
+    SS_WEP_KNIFE:     ({ "knife",                 60, SS_DEX, 125, 30 }), \
+    SS_WEP_CLUB:      ({ "club",                  80, SS_STR, 125, 30 }), \
+    SS_WEP_MISSILE:   ({ "missiles",              80, SS_DEX, 125, 30 }), \
+    SS_WEP_JAVELIN:   ({ "javelin",               80, SS_STR, 125, 30 }), \
 /* General fighting skills */                                           \
     SS_2H_COMBAT:     ({ "two handed combat",    100, SS_DEX, 110,  0 }), \
-    SS_UNARM_COMBAT:  ({ "unarmed combat",        90, SS_STR, 110, 30 }), \
+    SS_UNARM_COMBAT:  ({ "unarmed combat",        80, SS_STR, 110, 30 }), \
     SS_BLIND_COMBAT:  ({ "blindfighting",         95, SS_DEX, 110, 20 }), \
     SS_PARRY:         ({ "parry",                 80, SS_STR, 110,  0 }), \
-    SS_DEFENCE:       ({ "defence",               80, SS_DEX, 110, 30 }), \
+    SS_DEFENCE:       ({ "defence",               80, SS_DEX, 110, 20 }), \
     SS_MOUNTED_COMBAT:({ "mounted combat",       100, SS_STR, 150,  0 }), \
     SS_BLOCK:         ({ "block",                100, SS_STR, 110, 30 }), \
 /* Magic skills */                                                   \
@@ -172,22 +172,22 @@
     SS_HERBALISM:     ({ "herbalism",             70, SS_WIS, 125, 20 }), \
     SS_ALCHEMY:       ({ "alchemy",               70, SS_INT, 125, 20 }), \
 \
-    SS_FORM_TRANSMUTATION: ({ "transmutation",    90, SS_INT, 110, 20 }), \
-    SS_FORM_ILLUSION:    ({ "illusion",           70, SS_INT, 110, 20 }), \
-    SS_FORM_DIVINATION:  ({ "divination",         70, SS_INT, 110, 20 }), \
+    SS_FORM_TRANSMUTATION: ({ "transmutation",    80, SS_INT, 110, 20 }), \
+    SS_FORM_ILLUSION:    ({ "illusion",           80, SS_INT, 110, 20 }), \
+    SS_FORM_DIVINATION:  ({ "divination",         80, SS_INT, 110, 20 }), \
     SS_FORM_ENCHANTMENT: ({ "enchantment",        80, SS_INT, 110, 20 }), \
     SS_FORM_CONJURATION: ({ "conjuration",        80, SS_INT, 110, 20 }), \
-    SS_FORM_ABJURATION:  ({ "abjuration",         70, SS_INT, 110, 20 }), \
-    SS_ELEMENT_FIRE:     ({ "fire spells",        70, SS_WIS, 110, 20 }), \
-    SS_ELEMENT_AIR:      ({ "air spells",         70, SS_WIS, 110, 20 }), \
-    SS_ELEMENT_EARTH:    ({ "earth spells",       70, SS_WIS, 110, 20 }), \
-    SS_ELEMENT_WATER:    ({ "water spells",       70, SS_WIS, 110, 20 }), \
-    SS_ELEMENT_LIFE:     ({ "life spells",        80, SS_WIS, 110, 20 }), \
-    SS_ELEMENT_DEATH:    ({ "death spells",       90, SS_WIS, 110, 20 }), \
+    SS_FORM_ABJURATION:  ({ "abjuration",         80, SS_INT, 110, 20 }), \
+    SS_ELEMENT_FIRE:     ({ "fire spells",        75, SS_WIS, 110, 20 }), \
+    SS_ELEMENT_AIR:      ({ "air spells",         75, SS_WIS, 110, 20 }), \
+    SS_ELEMENT_EARTH:    ({ "earth spells",       75, SS_WIS, 110, 20 }), \
+    SS_ELEMENT_WATER:    ({ "water spells",       75, SS_WIS, 110, 20 }), \
+    SS_ELEMENT_LIFE:     ({ "life spells",        75, SS_WIS, 110, 20 }), \
+    SS_ELEMENT_DEATH:    ({ "death spells",       75, SS_WIS, 110, 20 }), \
 /* Thief skills */                                                  \
     SS_OPEN_LOCK:     ({ "open lock",             70, SS_DEX, 110, 20 }), \
     SS_PICK_POCKET:   ({ "pick pocket",           70, SS_DEX, 110, 20 }), \
-    SS_ACROBAT:       ({ "acrobat",               70, SS_DEX, 110, 20 }), \
+    SS_ACROBAT:       ({ "acrobat",               80, SS_DEX, 110, 20 }), \
     SS_FR_TRAP:       ({ "find/remove traps",     70, SS_DEX, 110, 20 }), \
     SS_SNEAK:         ({ "sneak",                 70, SS_DEX, 125, 20 }), \
     SS_HIDE:          ({ "hide",                  70, SS_DEX, 125, 20 }), \

@@ -2,7 +2,7 @@
  * /sys/stdproperties.h
  *
  * This file hold definition of all the standard properties that an object
- * can have. The documentation for the properties can all be found in the 
+ * can have. The documentation for the properties can all be found in the
  * directory /doc/man/properties.
  *
  * The following prefixes are used:
@@ -77,10 +77,10 @@
  */
 #define HEAP_I_IS          	"_heap_i_is"
 #define HEAP_S_UNIQUE_ID   	"_heap_s_unique_id"
-#define HEAP_I_UNIT_LIGHT  	"_heap_i_unit_light" 
-#define HEAP_I_UNIT_VALUE  	"_heap_i_unit_value" 
-#define HEAP_I_UNIT_VOLUME 	"_heap_i_unit_volume" 
-#define HEAP_I_UNIT_WEIGHT 	"_heap_i_unit_weight" 
+#define HEAP_I_UNIT_LIGHT  	"_heap_i_unit_light"
+#define HEAP_I_UNIT_VALUE  	"_heap_i_unit_value"
+#define HEAP_I_UNIT_VOLUME 	"_heap_i_unit_volume"
+#define HEAP_I_UNIT_WEIGHT 	"_heap_i_unit_weight"
 
 /* *********************************************************
  * Living properties
@@ -90,7 +90,7 @@
 #define LIVE_AO_SPARRING        "_live_ao_sparring"
 #define LIVE_AO_THIEF           "_live_ao_thief"
 #define LIVE_AS_ATTACK_FUMBLE	"_live_as_attack_fumble"
-#define LIVE_AS_POTION_ID       "_live_as_potion_id" 
+#define LIVE_AS_POTION_ID       "_live_as_potion_id"
 #define LIVE_I_ALWAYSKNOWN      "_live_i_alwaysknown"
 #define LIVE_I_ATTACK_DELAY     "_live_i_attack_delay"
 #define LIVE_I_ATTACK_THIEF     "_live_m_attack_thief"
@@ -101,6 +101,7 @@
 #define LIVE_I_GOT_BACKSTABBED  "_live_i_got_backstabbed"
 #define LIVE_I_HERB_EFFECT      "_live_i_herb_effect"
 #define LIVE_I_LAST_STEAL       "_live_i_last_steal"
+#define LIVE_I_LAST_PEEK       "_live_i_last_peek"
 #define LIVE_I_MAX_DRINK	"_live_i_max_drink"
 #define LIVE_I_MAX_EAT		"_live_i_max_eat"
 #define LIVE_I_MAX_INTOX	"_live_i_max_intox"
@@ -177,8 +178,8 @@
 /* *********************************************************
  * Object properties
  */
-#define OBJ_I_LIGHT		"_obj_i_light" 
-#define OBJ_I_VALUE		"_obj_i_value" 
+#define OBJ_I_LIGHT		"_obj_i_light"
+#define OBJ_I_VALUE		"_obj_i_value"
 #define OBJ_I_VOLUME		"_obj_i_volume"
 #define OBJ_I_WEIGHT		"_obj_i_weight"
 

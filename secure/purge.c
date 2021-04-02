@@ -31,8 +31,8 @@ inherit "/std/object";
 #define MAX_PURGE       (50)
 #define PURGE_LOG       ("/syslog/log/purge/PURGE")
 #define PLAYER_FILES(c) (PLAYER_FILE_DIR + (c) + "/*")
-/* One year of idleness for each day of playing age. */
-#define AGE_PLAY_FACTOR (365)
+/* Two years of idleness for each day of playing age. */
+#define AGE_PLAY_FACTOR (365 * 2)
 
 #define LOGIN_365_DAYS  (31536000) /* seconds */
 #define LOGIN_180_DAYS  (15552000) /* seconds */
@@ -314,31 +314,10 @@ purge_one(string filename)
      */
     level = player_average();
 
-    /* Player has been logged in recently or is old/big enough, so hands off.
-    high_limit = LOGIN_365_DAYS + (((level / 3) + (age_heart / AGE_ONE_DAY)) * SECS_PER_DAY);
-    if ((age_heart > AGE_ONE_DAY) && (last_login < high_limit))
-     */
-
-    /* Age related checks. */
-    if ((age_heart > AGE_ONE_DAY) && (last_login < LOGIN_365_DAYS))
-    {
-	return;
-    }
-    if ((age_heart > AGE_SIX_HOURS) && (last_login < LOGIN_180_DAYS))
-    {
-        return;
-    }
-    if ((age_heart > AGE_ONE_HOUR) && (last_login < LOGIN_90_DAYS))
-    {
-        return;
-    }
-    if ((age_heart > AGE_TEN_MINUTES) && (last_login < LOGIN_30_DAYS))
-    {
-        return;
-    }
-
-    /* Play for a day ... idle for a year. */
-    if (last_login < (age_heart * F_SECONDS_PER_BEAT * AGE_PLAY_FACTOR))
+    /* Age related checks, Play for a day ... idle for a year.  */
+    if (((age_heart > AGE_ONE_HOUR) && (last_login < LOGIN_365_DAYS)) ||
+        ((age_heart > AGE_TEN_MINUTES) && (last_login < LOGIN_180_DAYS)) ||
+        (last_login < (age_heart * F_SECONDS_PER_BEAT * AGE_PLAY_FACTOR)))
     {
         notpurged += sprintf("%-11s %-13s = %6s | %3d stat | %5s age | NoPurge Age\n",
             capitalize(name), last_date(login_time), TIME2STR(last_login, 1),

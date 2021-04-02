@@ -5,9 +5,8 @@
  * It is called from cmdhooks.c in the living object that performs the
  * command.
  */
-
 #pragma no_clone
-#pragma save_binary
+#pragma no_shadow
 #pragma strict_types
 
 inherit "/lib/commands";

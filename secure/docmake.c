@@ -2,7 +2,7 @@
    docmake.c
 
 ----------------------------------------------------------------------------
-               THIS FILE MISUSES READ_FILE IN A MAJOR WAY. 
+               THIS FILE MISUSES READ_FILE IN A MAJOR WAY.
 
     DO NOT DO ANYTHING EVEN REMOTELY LIKE THIS ANYWHERE ELSE IN THE MUD
 ----------------------------------------------------------------------------
@@ -26,7 +26,7 @@
         doc_file(string docdir, string file)
 
    This object is also used directly by 'sman' and 'lman' when the
-   sourcefiles are newer than the documentation files. 
+   sourcefiles are newer than the documentation files.
 
    Mainfile is the name of the file to document and also the name in
    the documentation directory. If the mainfile includes other ".c" files
@@ -35,20 +35,20 @@
 
    NOTE!
          If the beginning of the pathnames 'docdir' and 'mainfile' are the
-	 same that common part will be deleted from 'mainfile' when put
-	 under 'docdir'. This ensures for example:
+         same that common part will be deleted from 'mainfile' when put
+         under 'docdir'. This ensures for example:
 
-	    sdoc /d/Genesis/doc /d/Genesis/obj/knife
-	        ^^^^^^^^^^^^^^ ^^^^^^^^^^^^^^^^^^^^
-		    docdir           mainfile
+            sdoc /d/Genesis/doc /d/Genesis/obj/knife
+                ^^^^^^^^^^^^^^ ^^^^^^^^^^^^^^^^^^^^
+                    docdir           mainfile
 
-	 will end up under /d/Genesis/doc/obj/knife and
-         NOT: /d/Genesis/doc/d/Genesis/obj/knife 
+         will end up under /d/Genesis/doc/obj/knife and
+         NOT: /d/Genesis/doc/d/Genesis/obj/knife
 
    Example:  To document "/std/npc.c" which includes "/std/seqaction.c" and
              "/std/trigaction.c" in /doc/sman we would do:
-    
-	  doc_file("/doc/sman", "/std/npc")
+
+          doc_file("/doc/sman", "/std/npc")
 
    This would give us the subdir entry "/doc/sman/std/npc".
    This subdir would include one file for each commented function in
@@ -70,7 +70,7 @@
 #define READ_CHUNK 1000                /* Lines / read when funcsearching */
 #define FIND_TRIES 10                  /* Number of tries to find funcs */
 #define WRITE_CHUNK 16                 /* Number of files to write / turn */
-#define MAX_FUNHEAD_LINES 4	       /* Max lines in a function head */ 
+#define MAX_FUNHEAD_LINES 4            /* Max lines in a function head */
 
 #define DOC_TRIG "/*"
 
@@ -79,14 +79,14 @@
 #include <std.h>
 #include <stdproperties.h>
 
-static 	mixed 	*acc_func;             /* Accumulated functions */
-static	string	*left_lines;	       /* Lines left from last read */
-static	string	*files_left;	       /* #included files left to search */
-static  string	mainobfile;	       /* Current obj being documented */
-static  string  *who_told_us;	       /* Who should be told that doc ready */
-static	mixed	*order_stack;          /* docorders, each entry on the form:
-					 ({ docdir, mainfile, ({ wiznames }) })
-    				        */
+static  mixed   *acc_func;             /* Accumulated functions */
+static  string  *left_lines;           /* Lines left from last read */
+static  string  *files_left;           /* #included files left to search */
+static  string  mainobfile;            /* Current obj being documented */
+static  string  *who_told_us;          /* Who should be told that doc ready */
+static  mixed   *order_stack;          /* docorders, each entry on the form:
+                                         ({ docdir, mainfile, ({ wiznames }) })
+                                        */
 
 void find_funcs(string file, function call_back_fun, string arg);
 int check_comment(string *lines, int lin, int start, string src);
@@ -104,12 +104,15 @@ public void doc_next();
 void
 create()
 {
-    acc_func = 0; 
+    acc_func = 0;
     order_stack = ({});
 }
 
-public void
-reset_euid(string e) { seteuid(e); }
+static void
+reset_euid(string e)
+{
+    seteuid(e);
+}
 
 /*
  * Call this to get a copy of the orders pending
@@ -118,9 +121,9 @@ public mixed *
 doc_query_orders()
 {
     if (!pointerp(order_stack))
-	return ({});
+        return ({});
     else
-	return order_stack + ({});
+        return order_stack + ({});
 }
 
 /*
@@ -130,10 +133,10 @@ public string
 doc_query_status()
 {
     if (pointerp(acc_func))
-	return "Documenting: " + mainobfile + " in " + order_stack[0][0] +
-	    " " + sizeof(acc_func) + " functions found.\n";
+        return "Documenting: " + mainobfile + " in " + order_stack[0][0] +
+            " " + sizeof(acc_func) + " functions found.\n";
     else
-	return "No ongoing documentation.\n";
+        return "No ongoing documentation.\n";
 }
 
 /*
@@ -148,23 +151,23 @@ doc_reset()
 
     if (pointerp(acc_func))
     {
-	for (i = 0; i < sizeof(who_told_us); i++)
-	{
-	    player = find_player(who_told_us[i]);
-	    if (player && this_interactive())
-		tell_object(player,
-			    "Docscribe tells you: Documentation of: " +
-			    mainobfile + " aborted by " + 
-			    this_interactive()->query_real_name() + "\n");
-	}
+        for (i = 0; i < sizeof(who_told_us); i++)
+        {
+            player = find_player(who_told_us[i]);
+            if (player && this_interactive())
+                tell_object(player,
+                    "Docscribe tells you: Documentation of: " +
+                    mainobfile + " aborted by " +
+                    this_interactive()->query_real_name() + "\n");
+        }
     }
 
     for (i=0 ; i<sizeof(calls) ; i++)
-	if (calls[i][1] == "accumul_funs" ||
-	    calls[i][1] == "doc_next" ||
-	    calls[i][1] == "doc_create")
-	    remove_alarm(calls[i][0]);
-    
+        if (calls[i][1] == "accumul_funs" ||
+            calls[i][1] == "doc_next" ||
+            calls[i][1] == "doc_create")
+            remove_alarm(calls[i][0]);
+
     acc_func = 0;
     order_stack = ({});
 }
@@ -175,28 +178,28 @@ doc_reset()
 public void
 doc_file(string docdir, string mainfile)
 {
-    int i;
+    string euid = geteuid(calling_object());
 
     docdir = FTPATH((string)this_player()->query_path() + "/", docdir);
     mainfile = FTPATH((string)this_player()->query_path() + "/", mainfile);
 
+    int i;
     for (i = 0; i < sizeof(order_stack); i++)
     {
-	if (order_stack[i][0] == docdir &&
-	    order_stack[i][1] == mainfile)
-	{	    
-	    order_stack[i][2] += ({ this_player()->query_real_name() });
-	    return;
-	}
+        if (order_stack[i][0] == docdir && order_stack[i][1] == mainfile)
+        {
+            order_stack[i][2] += ({ euid });
+            return;
+        }
     }
 
     if (!pointerp(order_stack))
-	order_stack = ({});
-    order_stack += 
-	({ ({ docdir, mainfile, ({ this_player()->query_real_name() }) }) });
+        order_stack = ({});
+
+    order_stack += ({ ({ docdir, mainfile, ({ euid }) }) });
 
     if (!pointerp(acc_func))
-	doc_next();
+        doc_next();
 }
 
 /*
@@ -212,17 +215,17 @@ doc_next()
     /* Can not doc another one until this one is ready
     */
     if (pointerp(acc_func))
-	return;
+        return;
 
     if (!sizeof(order_stack))
-	return;
+        return;
 
     who_told_us = order_stack[0][2];
     file = order_stack[0][1];
 
     if (sscanf(file, "%s.c", mainpath) != 1)
     {
-	mainpath = file; file += ".c";
+        mainpath = file; file += ".c";
     }
 
     dd = explode(order_stack[0][0], "/");
@@ -230,64 +233,64 @@ doc_next()
 
     while (sizeof(dd) && sizeof(fpath) && (dd[0] == fpath[0]))
     {
-	fpath = fpath[1..sizeof(fpath)];
-	dd = dd[1..sizeof(dd)];
+        fpath = fpath[1..sizeof(fpath)];
+        dd = dd[1..sizeof(dd)];
     }
 
     mainpath = order_stack[0][0] + "/" + implode(fpath, "/");
     okeffuser = 0;
     if (file_size(file) >= 0)
-	msg = break_string("Docscribe tells you: Starting to document: " +
-	    file + ", in: " + mainpath, 76) + "\n" ;
+        msg = "Docscribe tells you: Starting to document: " + file + ", in: "
+        + mainpath + "\n" ;
     else
-	msg = "Docscribe tells you: No such file: " + file + "\n";
+        msg = "Docscribe tells you: No such file: " + file + "\n";
 
     for (i = 0; i < sizeof(who_told_us); i++)
     {
-	player = find_player(who_told_us[i]);
-	if (player)
-	    tell_object(player,msg);
-			
-	if (!okeffuser &&
-	    SECURITY->valid_write(mainpath, who_told_us[i], "write_file") &&
-	    SECURITY->valid_read(file, who_told_us[i], "read_file"))
-	{
-	    okeffuser = 1;
-	    seteuid(who_told_us[i]);
-	}
+        player = find_player(who_told_us[i]);
+        if (player)
+            tell_object(player,msg);
+
+        if (!okeffuser &&
+            SECURITY->valid_write(mainpath, who_told_us[i], "write_file") &&
+            SECURITY->valid_read(file, who_told_us[i], "read_file"))
+        {
+            okeffuser = 1;
+            seteuid(who_told_us[i]);
+        }
     }
     if (!okeffuser || file_size(file) < 0)
     {
-	for (i = 0; i < sizeof(who_told_us); i++)
-	{
-	    player = find_player(who_told_us[i]);
-	    if (player)
-		tell_object(player,
-			    break_string("Docscribe tells you: Can't document: " + file + ", in: " + mainpath + ", no access.\n", 76));
-	}
-	order_stack = order_stack[1..sizeof(order_stack)];
+        for (i = 0; i < sizeof(who_told_us); i++)
+        {
+            player = find_player(who_told_us[i]);
+            if (player)
+                tell_object(player, "Docscribe tells you: Can't document: "
+                    + file + ", in: " + mainpath + ", no access.\n");
+        }
+        order_stack = order_stack[1..sizeof(order_stack)];
     }
     else
     {
-	mainobfile = file;
-	files_left = ({});
-	find_funcs(file, doc_found, mainpath);
+        mainobfile = file;
+        files_left = ({});
+        find_funcs(file, doc_found, mainpath);
     }
 }
 
 
 /*
  * Description:   Finds the commented functions in a file.
- * Returns:	  Gives an array of arrays: public/static, funcname, startlin,
+ * Returns:       Gives an array of arrays: public/static, funcname, startlin,
  *                comment.
- *		  The array is constructed and returned
- *		  to a given callback function.
+ *                The array is constructed and returned
+ *                to a given callback function.
  */
-void
+static void
 find_funcs(string file, function call_back_fun, string call_back_arg)
 {
-    string 	*lines;
-    int		start;
+    string      *lines;
+    int         start;
 
     acc_func = ({});
     left_lines = ({});
@@ -296,27 +299,27 @@ find_funcs(string file, function call_back_fun, string call_back_arg)
 }
 
 /*
- * Description:   Accumulates functions  
+ * Description:   Accumulates functions
  * Arguments:
  *       arg_arr[0] == The file to document
  *       arg_arr[1] == The callback function
  *       arg_arr[2] == The line to start reading from in the file
  *       arg_arr[3] == The argument to the callback function (doc subdirname)
  */
-void
+static void
 accumul_funcs(string file, function fun, int line, mixed arg)
 {
     /* The docmaker has been reset, we assume the reset took care of
        starting up for the next file
     */
     if (!pointerp(acc_func))
-	return;
+        return;
 
     /* Read the file */
     string text = "";
-    int start = line;    
+    int start = line;
     string data;
-    while (data = read_file(file, start, READ_CHUNK)) 
+    while (data = read_file(file, start, READ_CHUNK))
     {
         text += data;
         start += READ_CHUNK;
@@ -344,8 +347,8 @@ accumul_funcs(string file, function fun, int line, mixed arg)
     /* Search for functions after comments that start first on a line */
     for (lin = 0; lin < sizeof(lines); lin++)
     {
-	if (extract(lines[lin], 0, 1) == "/*")
-	    lin = check_comment(lines, lin, 0, file);
+        if (extract(lines[lin], 0, 1) == "/*")
+            lin = check_comment(lines, lin, 0, file);
     }
 
     /* If we are ready, tell the callback function */
@@ -357,7 +360,7 @@ accumul_funcs(string file, function fun, int line, mixed arg)
  * Description: Find the end of a comment
  * Returns:     The last line looked at
  */
-int 
+static int
 check_comment(string *lines, int lin, int start, string src)
 {
     int il;
@@ -365,11 +368,11 @@ check_comment(string *lines, int lin, int start, string src)
 
     for (il = lin; il < sizeof(lines); il ++)
     {
-	if (sizeof(explode("dummy" + lines[il] + "dummy", "*/")) > 1)
-	{
-	    cmt = implode(slice_array(lines, lin, il), "\n");
-	    return potential_func(lines, il + 1, lin, start, cmt, src);
-	}
+        if (sizeof(explode("dummy" + lines[il] + "dummy", "*/")) > 1)
+        {
+            cmt = implode(slice_array(lines, lin, il), "\n");
+            return potential_func(lines, il + 1, lin, start, cmt, src);
+        }
     }
 
     left_lines = slice_array(lines, lin, sizeof(lines));
@@ -378,9 +381,9 @@ check_comment(string *lines, int lin, int start, string src)
 
 
 /*
- * Description: Try to parse a function trailing a comment. If the comment is 
+ * Description: Try to parse a function trailing a comment. If the comment is
  *              incomplete its first part is stored in 'left_lines' and is
- *		then added first on the next readchunk (in accumul_funcs).
+ *              then added first on the next readchunk (in accumul_funcs).
  * Arguments:
  *             lines - All the current source lines under scrutiny
  *             flin  - Line to start looking for a function
@@ -388,12 +391,12 @@ check_comment(string *lines, int lin, int start, string src)
  *             start - Line number in file of lines[0]
  *             cmt   - The comment as one string
  *             src   - The filename of the file under scrutiny
- * Returns: 
+ * Returns:
  *             The last line in lines looked at
  */
-int 
-potential_func(string *lines, int flin, int clin, 
-	       int start, string cmt, string src)
+static int
+potential_func(string *lines, int flin, int clin, int start, string cmt,
+    string src)
 {
     int il, max;
     string str, a, b, c, d, *e;
@@ -402,49 +405,50 @@ potential_func(string *lines, int flin, int clin,
 
     if (flin >= sizeof(lines))
     {
-	left_lines = slice_array(lines, clin, sizeof(lines));
-	return sizeof(lines);
+        left_lines = slice_array(lines, clin, sizeof(lines));
+        return sizeof(lines);
     }
 
 
     if (sscanf(lines[flin], "%s(%s)%s{%s", a, b, c, d) != 4)
     {
-	for (max = flin + 1; ((max - flin) < MAX_FUNHEAD_LINES); max++)
-	{
-	    if (max < sizeof(lines) && (strlen(lines[max]) > 1) &&
-		lines[max][0] == '/' && lines[max][1] == '*')
-	    {
-		max--;
-		break;
-	    }
-	}
+        for (max = flin + 1; ((max - flin) < MAX_FUNHEAD_LINES); max++)
+        {
+            if (max < sizeof(lines) && (strlen(lines[max]) > 1) &&
+                    lines[max][0] == '/' && lines[max][1] == '*')
+            {
+                max--;
+                break;
+            }
+        }
 
-	if (max >= sizeof(lines))
-	{
+        if (max >= sizeof(lines))
+        {
             max = sizeof(lines) - 1;
-	}
-	str = implode(slice_array(lines, flin, max), " ");
+        }
+
+        str = implode(slice_array(lines, flin, max), " ");
     }
     else
     {
-	str = lines[flin];
-	max = flin;
+        str = lines[flin];
+        max = flin;
     }
 
     if (sscanf(str, "%s(%s)%s{%s", a, b, c, d) == 4)
     {
-	e = explode(a + " ", " "); /* type and name */
-	a = e[sizeof(e) - 1]; 	   /* last one is the name */
-	if (sizeof(e) > 1)
-	    c = implode(slice_array(e, 0, sizeof(e) - 2), " ");
-	else
-	    c = "untyped";
+        e = explode(a + " ", " "); /* type and name */
+        a = e[sizeof(e) - 1];      /* last one is the name */
+        if (sizeof(e) > 1)
+            c = implode(slice_array(e, 0, sizeof(e) - 2), " ");
+        else
+            c = "untyped";
 
-	/* Add an entry to the accumulated functions on the form:
-	 *   ({ type, name, args, startlin in file, comment text, srcfile })
-	*/
-    
-        if (strlen(a)) 
+        /* Add an entry to the accumulated functions on the form:
+        *   ({ type, name, args, startlin in file, comment text, srcfile })
+        */
+
+        if (strlen(a))
         {
             acc_func += ({ ({ c, a, b, start + clin, cmt, src }) });
             return max;
@@ -452,18 +456,18 @@ potential_func(string *lines, int flin, int clin,
     }
 
     return --max;
-}    
+}
 
 
 /*
  * Description: Handle a batch of accumulated functions.
- *		
+ *
  * Arguments:  arr: All the accumulated functions. Each on the form:
  *              ({ type, name, args, startlin in file, comment text, srcfile })
- *             mainpath: The path to the dir where the documentation should be 
+ *             mainpath: The path to the dir where the documentation should be
  *                       put.
  */
-void
+static void
 doc_found(mixed *arr, string mainpath)
 {
     object player;
@@ -477,40 +481,36 @@ doc_found(mixed *arr, string mainpath)
      */
     if (sizeof(files_left))
     {
-	set_alarm(1.0, 0.0, &accumul_funcs(files_left[0], doc_found, 0, mainpath));
-	files_left = slice_array(files_left, 1, sizeof(files_left));
-	left_lines = ({});
-	
-	return;
+        set_alarm(1.0, 0.0, &accumul_funcs(files_left[0], doc_found, 0, mainpath));
+        files_left = slice_array(files_left, 1, sizeof(files_left));
+        left_lines = ({});
+        return;
     }
 
 
     il = 0; pause = 1.0;
     while (il < sizeof(arr))
     {
-	set_alarm(pause, 0.0, &doc_create(slice_array(arr, il, il + (WRITE_CHUNK-1)), mainpath,
-		    geteuid(this_object())));
-	il += WRITE_CHUNK;
-	pause+=0.25;
+        set_alarm(pause, 0.0, &doc_create(slice_array(arr, il, il + (WRITE_CHUNK-1)), mainpath,
+                    geteuid(this_object())));
+        il += WRITE_CHUNK;
+        pause+=0.25;
     }
-    
+
     for (il = 0, files = ({}); il < sizeof(arr); il++)
-	files += ({ arr[il][1] });
+        files += ({ arr[il][1] });
 
     set_alarm(pause + 1.0, 0.0, &doc_clean_obsolete(files, mainpath, geteuid(this_object())));
 
     for (il = 0; il < sizeof(who_told_us); il++)
     {
-	player = find_player(who_told_us[il]);
-	if (player)
-	    tell_object(player, 
-			break_string("Docscribe tells you: " +
-				     "Documentation of: " +
-				     mainobfile + ", " + sizeof(arr) +
-				     " documentation files will " +
-				     "be created under: " + 
-				     mainpath, 76) + "\n");
+            player = find_player(who_told_us[il]);
+            if (player)
+                tell_object(player, "Docscribe tells you: Documentation of: " +
+                mainobfile + ", " + sizeof(arr) + " documentation files will " +
+                            "be created under: " + mainpath + "\n");
     }
+
     seteuid(0);
     acc_func = 0;
     order_stack = order_stack[1..sizeof(order_stack)];
@@ -519,22 +519,23 @@ doc_found(mixed *arr, string mainpath)
 /*
  * Make necessary subdirs upon creation of documentation path
  */
-int doc_makepath(string path)
+static int
+doc_makepath(string path)
 {
     string *split,file;
     int il;
 
     split = explode(path + "/", "/");
-    
+
     for (file = "", il = 1; il < sizeof(split); il++)
     {
-	file += "/" + split[il];
-	if (file_size(file) == -1)
-	    mkdir(file);
-	else if (file_size(file) > 0)
-	{
-	    return 0;
-	}
+        file += "/" + split[il];
+        if (file_size(file) == -1)
+            mkdir(file);
+        else if (file_size(file) > 0)
+        {
+            return 0;
+        }
     }
     return 1;
 }
@@ -542,14 +543,14 @@ int doc_makepath(string path)
 /*
  * Description: Create a batch of documentation files
  * Arguments:  argarr
- *		[0]: All the accumulated functions. Each on the form:
+ *              [0]: All the accumulated functions. Each on the form:
  *              ({ type, name, args, startlin in file, comment text, srcfile })
- *		  
- *              [1]: The path to the dir where the documentation should be 
+ *
+ *              [1]: The path to the dir where the documentation should be
  *                   put.
- *              [2]: euid 
+ *              [2]: euid
  */
-void
+static void
 doc_create(mixed *arr, string path, string new_euid)
 {
     string file, data, *lines, cmt, euid;
@@ -563,65 +564,65 @@ doc_create(mixed *arr, string path, string new_euid)
 
     if (file_size(path) != -2)
     {
-	if (!doc_makepath(path))    /* Could not create path */
-	{
-	    for (il = 0; il < sizeof(who_told_us); il++)
-	    {
-		player = find_player(who_told_us[il]);
-		if (player)
-		    tell_object(player, "Docscribe tells you: " +
-				"I can't use the path: " + path + 
-				" using the euid: " + geteuid(this_object()) +
-				"\n");
-	    }
-	    return;
-	}
+        if (!doc_makepath(path))    /* Could not create path */
+        {
+            for (il = 0; il < sizeof(who_told_us); il++)
+            {
+                player = find_player(who_told_us[il]);
+                if (player)
+                    tell_object(player, "Docscribe tells you: " +
+                                "I can't use the path: " + path +
+                                " using the euid: " + geteuid(this_object()) +
+                                "\n");
+            }
+            return;
+        }
     }
 
     path += "/";
 
     for (il = 0; il < sizeof(arr); il++)
     {
-	file = path + arr[il][1];
+        file = path + arr[il][1];
 
-	if (file_size(file) > 0)
-	{
-	    data = read_file(file);
-	    lines = explode(data, "\n");
-	    if ((sizeof(lines) > 2) && extract(lines[2], 0, 1) != "/*")
-		cmt = implode(slice_array(lines, 2, sizeof(lines)), "\n");
-	    else
-		cmt = arr[il][4];
-	    rm(file);
-	}
-	else
-	    cmt = arr[il][4];
+        if (file_size(file) > 0)
+        {
+            data = read_file(file);
+            lines = explode(data, "\n");
+            if ((sizeof(lines) > 2) && extract(lines[2], 0, 1) != "/*")
+                cmt = implode(slice_array(lines, 2, sizeof(lines)), "\n");
+            else
+                cmt = arr[il][4];
+            rm(file);
+        }
+        else
+            cmt = arr[il][4];
 
-	write_file(file,arr[il][3] + ":" + arr[il][5] +
-		   " (" + mainobfile + ")\n(" + arr[il][0] + ") " +
-		   arr[il][1] +  "(" + arr[il][2] + ")\n" + cmt + "\n");
+        write_file(file,arr[il][3] + ":" + arr[il][5] +
+                   " (" + mainobfile + ")\n(" + arr[il][0] + ") " +
+                   arr[il][1] +  "(" + arr[il][2] + ")\n" + cmt + "\n");
     }
 
     calls = get_all_alarms();
     for (il=0 ; il<sizeof(calls) ; il++)
-	if (calls[il][1] == "reset_euid")
-	    remove_alarm(calls[il][0]);
+        if (calls[il][1] == "reset_euid")
+            remove_alarm(calls[il][0]);
 
     seteuid(euid);
 }
 
 /*
- * Function name:	doc_clean_obsolete
- * Description: 	Clean up Create a batch of documentation files
- * Arguments:  		argarr
- *			  [0]: All the accumulated functions.
- *              	     ({ fun1, fun2, fun3 .... funN })
- *		  
- *              	  [1]: The path to the dir where the
- *			       documentation has been put.
- *              	  [2]: euid 
+ * Function name:       doc_clean_obsolete
+ * Description:         Clean up Create a batch of documentation files
+ * Arguments:           argarr
+ *                        [0]: All the accumulated functions.
+ *                           ({ fun1, fun2, fun3 .... funN })
+ *
+ *                        [1]: The path to the dir where the
+ *                             documentation has been put.
+ *                        [2]: euid
  */
-void
+static void
 doc_clean_obsolete(string *functions, string path, string new_euid)
 {
     string euid, msg;
@@ -633,46 +634,116 @@ doc_clean_obsolete(string *functions, string path, string new_euid)
     set_alarm(1.0, 0.0, &reset_euid(euid));
     seteuid(new_euid);
 
-    string *dfiles = get_dir(path + "/*"); 
+    string *dfiles = get_dir(path + "/*");
     string *mfiles = functions;
 
     if (pointerp(mfiles) && pointerp(dfiles))
     {
-	/* Get the obsolete files in dfiles
-	 */
-
+        /* Get the obsolete files in dfiles */
         dfiles -= ({ "..", ".", ".obsolete" });
-	dfiles -= mfiles;
-    
+        dfiles -= mfiles;
 
-	if (sizeof(dfiles))
-	{
+        /* Directories need to be left alone */
+        dfiles = filter(dfiles, &operator(>)(, 0) @ file_size @ &operator(+)(path + "/", ));
+
+        if (sizeof(dfiles))
+        {
             object *players = map(who_told_us, find_player);
             players->catch_tell("Docscribe tells you: Removing " + sizeof(dfiles) + " obsolete functions.\n");
 
-	    if (file_size(path + "/.obsolete") != -2)
-		mkdir(path + "/.obsolete");
+            if (file_size(path + "/.obsolete") != -2)
+                mkdir(path + "/.obsolete");
 
-	    for (il = 0; il < sizeof(dfiles); il++)
-	    {
-		rename(path + "/" + dfiles[il], path + "/.obsolete/" + dfiles[il]);
-	    }
-	}
+            foreach (string file: dfiles) {
+                rename(path + "/" + file, path + "/.obsolete/" + file);
+            }
+        }
     }
 
     for (il = 0; il < sizeof(who_told_us); il++)
     {
-	player = find_player(who_told_us[il]);
-	if (player)
-	    tell_object(player, "Docscribe tells you: Done!\n"); 
+        player = find_player(who_told_us[il]);
+        if (player)
+            tell_object(player, "Docscribe tells you: Done!\n");
     }
 
     calls = get_all_alarms();
+
     for (il=0 ; il<sizeof(calls) ; il++)
-	if (calls[il][1] == "reset_euid")
-	    remove_alarm(calls[il][0]);
+        if (calls[il][1] == "reset_euid")
+            remove_alarm(calls[il][0]);
 
     seteuid(euid);
-
     set_alarm(1.0, 0.0, doc_next);
+}
+
+static string *
+refresh_path(string base, string path)
+{
+    string *updated = ({ });
+    string *entries = get_dir(base + path + "/");
+
+    foreach (string entry: entries) {
+        if (entry == ".obsolete") {
+            continue;
+        }
+
+        string doc = base + path + "/" + entry;
+        int size = file_size(doc);
+
+        /* Directory? */
+        if (size == -2) {
+            updated += refresh_path(base, path + "/" + entry);
+        }
+
+        /* File! */
+        if (size >= 0) {
+            string header = read_file(doc, 0, 1);
+
+            mixed foo;
+            string component, source;
+            if (sscanf(header, "%d:%s (%s)", foo, component, source)) {
+                if (file_size(source) == -1 ||
+                    member_array(source, updated) >= 0)
+                    continue;
+
+                if (file_time(component) > file_time(doc)) {
+                    write("Docscribe tells you: Scheduling refresh of " + source
+                        + " due to update of component " + component + "\n");
+                    updated |= ({ source });
+                }
+            }
+        }
+    }
+
+    return updated;
+}
+
+/*
+ * Function name: doc_refresh
+ * Description  : Initiate a refresh of all documented files which have been
+ *                changed since the doc was created for a directory.
+ * Arguments    : string dir - the docdir
+ */
+public int
+doc_refresh(string dir)
+{
+    string euid = geteuid(calling_object());
+    seteuid(euid);
+
+    if (file_size(dir) != -2) {
+        return 0;
+    }
+
+    mixed updated = refresh_path(dir, "");
+
+    write("Docscribe tells you: Scheduling refresh of " + sizeof(updated) +
+        " updated files.\n");
+
+    foreach (string file: updated)
+    {
+        doc_file(dir, file);
+    }
+
+    return 1;
 }

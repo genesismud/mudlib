@@ -194,9 +194,9 @@ query_cmdlist()
              "vis":"vis",
              ]);
 }
- 
+
 /* **************************************************************************
- * Here follows the actual functions. Please add new functions in the 
+ * Here follows the actual functions. Please add new functions in the
  * same order as in the function name list.
  * **************************************************************************/
 
@@ -228,7 +228,7 @@ banish(string arg)
         what = "-i";
         name = argv[0];
     }
-    
+
     if (SECURITY->exist_player(name))
     {
         notify_fail(capitalize(name) + " is a player in the game.\n");
@@ -245,7 +245,7 @@ banish(string arg)
          */
         if (wtype < WIZ_ARCH)
         {
-            if (function_exists("create_workroom", 
+            if (function_exists("create_workroom",
                 environment(this_interactive())) != ADMIN_HOME)
             {
                 notify_fail("You can only banish names in the " +
@@ -254,20 +254,20 @@ banish(string arg)
                 return 0;
             }
         }
-            
+
         /*
          * Try to banish.
          */
         rval = SECURITY->banish(name, 2);
-        
+
         if (sizeof(rval) != 0)
-            write(capitalize(name) + " was banished by " + 
+            write(capitalize(name) + " was banished by " +
                   capitalize(rval[0]) + " at " + ctime(rval[1]) + ".\n");
         else
             write("You have banished: " + capitalize(name) + ".\n");
-        
+
         break;
-        
+
     case "-i":
     case "-info":
         /*
@@ -275,12 +275,12 @@ banish(string arg)
          */
         rval = SECURITY->banish(name, 0);
         if (sizeof(rval) != 0)
-            write(capitalize(name) + " was banished by " + 
+            write(capitalize(name) + " was banished by " +
                   capitalize(rval[0]) + " at " + ctime(rval[1]) + ".\n");
         else
             write(capitalize(name) + " has not been banished.\n");
         break;
-        
+
     case "-r":
     case "-remove":
         /*
@@ -293,7 +293,7 @@ banish(string arg)
             {
                 if (rval[0] != this_interactive()->query_real_name())
                 {
-                    notify_fail("You have not banished " + 
+                    notify_fail("You have not banished " +
                                 capitalize(name) + ".\n");
                     return 0;
                 }
@@ -308,14 +308,14 @@ banish(string arg)
         rval = SECURITY->banish(name, 1);
         if (sizeof(rval) != 0)
         {
-            write(capitalize(name) + " was banished by " + 
+            write(capitalize(name) + " was banished by " +
                   capitalize(rval[0]) + " at " + ctime(rval[1]) + ".\n");
-            write("You have removed the banishment of " + 
+            write("You have removed the banishment of " +
                   capitalize(name) + ".\n");
         }
 
         break;
-        
+
     default:
         break;
     }
@@ -326,9 +326,9 @@ banish(string arg)
  * buglog - list a buglog
  */
 nomask int
-buglog(string str) 
-{ 
-    return somelog(str, "bug log", "/bugs"); 
+buglog(string str)
+{
+    return somelog(str, "bug log", "/bugs");
 }
 
 /* **************************************************************************
@@ -486,18 +486,18 @@ control(string npc)
  * donelog - list donelog
  */
 nomask int
-donelog(string str) 
-{ 
-    return somelog(str, "done log", "/done"); 
+donelog(string str)
+{
+    return somelog(str, "done log", "/done");
 }
 
 /* **************************************************************************
  * errlog - list an error log
  */
 nomask int
-errlog(string str) 
-{ 
-    return somelog(str, "error log", "/errors"); 
+errlog(string str)
+{
+    return somelog(str, "error log", "/errors");
 }
 
 /* **************************************************************************
@@ -559,9 +559,9 @@ force(string str)
  * idealog - read the idea log
  */
 nomask int
-idealog(string str) 
-{ 
-    return somelog(str, "idea log", "/ideas"); 
+idealog(string str)
+{
+    return somelog(str, "idea log", "/ideas");
 }
 
 /* **************************************************************************
@@ -598,7 +598,7 @@ leave(string str)
 
     if (str != "domain")
     {
-        notify_fail("Syntax: leave domain\n");  
+        notify_fail("Syntax: leave domain\n");
         return 0;
     }
 
@@ -645,7 +645,7 @@ magic_map(string str)
      * exist anymore. Also allow "list here" */
     mapfile = lines[1];
     if ((str != "remove") &&
-        (mapfile != "here") && 
+        (mapfile != "here") &&
         (file_size(mapfile) <= 0))
     {
 	notify_fail("No such file: " + mapfile + "\n");
@@ -780,7 +780,7 @@ magic_map(string str)
 
     default:
 	notify_fail("Map what?\n");
-	return 0;    
+	return 0;
     }
 }
 
@@ -945,7 +945,7 @@ money(string str)
         write(sprintf("%-11s: %6d\n", capitalize(MONEY_TYPES[index]),
             coins[index]));
     }
-        
+
     write(sprintf("%11s: %6d\n", "Total value", MONEY_MERGE(coins)));
     return 1;
 }
@@ -1008,7 +1008,7 @@ msecond(string str)
         {
             return 0;
         }
-	
+
 	write("Marked " + capitalize(args[1]) + " as main character.\n");
 	return msecond(args[1]);
 
@@ -1023,7 +1023,7 @@ msecond(string str)
         {
             return 0;
         }
-	
+
 	write("Removed second " + capitalize(args[1]) + " from " + capitalize(args[3]) + ".\n");
 	return msecond(args[3]);
 
@@ -1136,7 +1136,7 @@ possess(string arg)
         v_name = lower_case(argv[1]);
 
     victim = present(v_name, environment(this_interactive()));
-        
+
     if (!victim)
         victim = find_living(v_name);
 
@@ -1290,9 +1290,9 @@ valid_possess(object demon, object possessed)
  * praiselog - list your praise log
  */
 nomask int
-praiselog(string str) 
-{ 
-    return somelog(str, "praise log", "/praise"); 
+praiselog(string str)
+{
+    return somelog(str, "praise log", "/praise");
 }
 
 /* **************************************************************************
@@ -1453,7 +1453,7 @@ restrict(string str)
             notify_fail("restrict: Unknown restriction.\n");
             return 0;
         }
-            
+
         if ((res & setres) == 0 &&
             SECURITY->query_wiz_rank(args[0]) > WIZ_MAGE)
         {
@@ -1531,7 +1531,7 @@ sdoc(string str)
         return 0;
     }
 
-    argv = explode(str, " "); 
+    argv = explode(str, " ");
     argc = sizeof(argv);
 
     switch (argv[0])
@@ -1541,6 +1541,25 @@ sdoc(string str)
         write("Ok.\n");
         return 1;
         break;
+    case "-u":
+        if (argc < 2)
+        {
+            notify_fail("Syntax error: sdoc -u <doc path>\n");
+            return 0;
+        }
+
+        string dir = FTPATH(this_player()->query_path(), argv[1]);
+
+        if (file_size(dir) != -2) {
+            notify_fail("The doc path must be a directory.\n");
+            return 0;
+        }
+
+        write("The Docscribe will be told of your request to refresh " + dir +
+            ".\n");
+        DOCMAKER->doc_refresh(dir);
+        return 1;
+
     case "-?":
         write(DOCMAKER->doc_query_status());
         ord = DOCMAKER->doc_query_orders();
@@ -1550,7 +1569,7 @@ sdoc(string str)
                   implode(ord[i][2], ", ") + "\n");
         }
         return 1;
-        break;
+
     default:
         if (argc < 2)
         {
@@ -1575,16 +1594,16 @@ sdoc(string str)
             {
                 path = "/" + implode(parts[0..sizeof(parts) - 2], "/") + "/";
             }
-            else 
+            else
                 path = "/";
         }
-        
+
         if (!sizeof(files))
         {
             notify_fail("No such file(s): " + argv[1] + "\n");
             return 0;
         }
-                
+
         write("The Docscribe will be told of your request.\n");
 
         for (i = 0; i < sizeof(files); i++)
@@ -1595,8 +1614,6 @@ sdoc(string str)
                 write(path + files[i] + " is a directory.\n");
         }
         return 1;
-        
-        break;
     }
 }
 
@@ -1608,7 +1625,7 @@ shutdown_game(string str)
 {
     string *argv;
     int     grace;
-    
+
     CHECK_SO_WIZ;
 
     if (!stringp(str))
@@ -1863,7 +1880,7 @@ stat(string str)
     else if (ob = parse_list(str))
     {
         if (IS_PLAYER_OBJECT(ob))
-        {        
+        {
              flags = STAT_PLAYER | STAT_LIVING;
         }
         else if (living(ob))
@@ -1932,9 +1949,8 @@ nomask static string
 fix_skill_desc(int sknum, object ob, mapping sk_desc)
 {
     string desc;
-    string value = "" + ob->query_base_skill(sknum);
-    int    len = strlen(value);
-    int    extra = ob->query_skill_extra(sknum);
+    int    value = ob->query_base_skill(sknum);
+    int    extra = ob->query_skill(sknum) - value;
 
     if (pointerp(sk_desc[sknum]))
     {
@@ -1942,16 +1958,18 @@ fix_skill_desc(int sknum, object ob, mapping sk_desc)
     }
     else if (!strlen(desc = ob->query_skill_name(sknum)))
     {
-	/* Turns the skill number into a domain name. */
-	desc = "(" + SECURITY->query_domain_name((sknum / 1000) % 100) +
-	    " #" + (sknum % 1000) + ")";
+        /* Turns the skill number into a domain name. */
+        desc = "(" + SECURITY->query_domain_name((sknum / 1000) % 100) +
+            " #" + (sknum % 1000) + ")";
     }
 
-    desc = sprintf("%6d - %-20s: %3s%s", sknum, capitalize(desc[..19]),
-        value, (extra != 0 ? ("+" + extra) : "   "));
+    desc = sprintf("%6d - %-20s: %3d%s", sknum, capitalize(desc[..19]),
+        value, (extra != 0 ? sprintf("%+d", extra) : "   "));
+
+    int len = strlen(value + "");
     if (len > 3)
     {
-	desc = desc[..(31-len)] + desc[(29)..];
+        desc = desc[..(31-len)] + desc[(29)..];
     }
     return desc;
 }
@@ -1978,7 +1996,7 @@ skillstat(string str)
         notify_fail("No such living thing.\n");
         return 0;
     }
-    
+
     int *obj_skills = sort_array(ob->query_all_skill_types());
     if (!sizeof(obj_skills))
     {
@@ -1988,7 +2006,7 @@ skillstat(string str)
 
     mixed sk_desc = SS_SKILL_DESC;
     string *skills = map(obj_skills, &fix_skill_desc(, ob, sk_desc));
-    
+
     write("Skills of " + capitalize(ob->query_real_name()) + ":\n" +
         sprintf("%-*#s\n", 79, implode(skills, "\n")));
     return 1;
@@ -2148,7 +2166,7 @@ trans(string str)
         notify_fail("Trans who?\n");
         return 0;
     }
-    
+
     args = explode(str, " ");
     if (args[0] == "-r")
     {
@@ -2202,7 +2220,7 @@ trans(string str)
                 " back to.\n");
             return 0;
         }
-        
+
         tell_object(ob, "You feel yourself magically transferred.\n");
         if (this_player()->query_option(OPT_ECHO))
         {
@@ -2220,9 +2238,9 @@ trans(string str)
  * typolog - read the typolog
  */
 nomask int
-typolog(string str) 
-{ 
-    return somelog(str, "typo log", "/typos"); 
+typolog(string str)
+{
+    return somelog(str, "typo log", "/typos");
 }
 
 /* **************************************************************************
@@ -2263,7 +2281,7 @@ somelog(string str, string logname, string log)
     {
         str = extract(str, 3);
     }
-    
+
     file = (string)SECURITY->query_wiz_path(str) + "/log";
     if (!strlen(file))
     {

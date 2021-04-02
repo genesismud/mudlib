@@ -1045,6 +1045,51 @@ valid_query_ip_ident(object actor, object target)
 }
 
 /*
+ * Function name: valid_set_ip_number
+ * Description  : This function is called to check whether the actor is
+ *                allowed to call the efun set_ip_number() on a particular
+ *                target.
+ * Arguments    : object actor  - the actor that wants to call the efun.
+ *                object target - the object the actor wants to know about.
+ *                string ip - the ip being set
+ * Returns      : int 1/0 - allowed / disallowed.
+ */
+int
+valid_set_ip_number(object actor, object target , string ip)
+{
+    string euid = geteuid(actor);
+    /* Root, arches and keepers can do as they please. */
+    if ((euid == ROOT_UID) || query_wiz_rank(euid) >= WIZ_ARCH)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+/*
+ * Function name: valid_query_ip_number_name
+ * Description  : This function is called to check whether the actor is
+ *                allowed to call the efun query_ip_number() or _name() on
+ *                a particular target.
+ * Arguments    : int name      - True for query_ip_name
+ *                object actor  - the actor that wants to call the efun.
+ *                object target - the object the actor wants to know about.
+ * Returns      : int 1/0 - allowed / disallowed.
+ */
+int
+valid_query_ip_number_name(int name, object actor, object target)
+{
+    string euid = geteuid(actor);
+
+    /* You can always check yourself, and root sees all */
+    if (actor == target || euid == ROOT_UID)
+        return 1;
+
+    return valid_query_ip(euid, target);
+}
+
+/*
  * Function name: valid_query_ip
  * Description  : This function is called to check whether the actor is
  *                allowed to call the efun query_ip_number() or _name() on
@@ -1509,17 +1554,18 @@ start_boot(int no_preload)
     /* In case PRELOAD_FIRST is a single string, it contains the path to a
      * file with the paths to the files to preload, separated by newlines.
      */
-    if (stringp(PRELOAD_FIRST) &&
-        (file_size(PRELOAD_FIRST) > 1))
+    mixed preload_first = PRELOAD_FIRST;
+    if (stringp(preload_first) &&
+        (file_size(preload_first) > 1))
     {
-        prefiles = explode(read_file(PRELOAD_FIRST), "\n");
+        prefiles = explode(read_file(preload_first), "\n");
     }
     /* In case PRELOAD_FIRST is an array, it should be an array of the paths
      * of the files to preload.
      */
-    else if (pointerp(PRELOAD_FIRST))
+    else if (pointerp(preload_first))
     {
-        prefiles = PRELOAD_FIRST + ({ });
+        prefiles = preload_first + ({ });
     }
 #endif PRELOAD_FIRST
 
@@ -2380,12 +2426,35 @@ incoming_service(string request)
         return "ERROR No access\n";
 
     case "gmcp_token":
+        if (sizeof(tmp) < 2)
+        {
+            return "ERROR Wrong number of parameters\n";
+        }
+
+        string user = query_gmcp_token_user(tmp[1]);
+        if (user != "unknown" && sizeof(tmp) == 3)
+        {
+            object player = find_player(user);
+            if (objectp(player) && interactive(player) &&
+                query_ip_number(player) != tmp[2])
+            {
+                set_ip_number(player, tmp[2]);
+            }
+        }
+
+        return "TOKEN " + user + "\n";
+
+    case "exists":
         if (sizeof(tmp) != 2)
         {
             return "ERROR Wrong number of parameters\n";
         }
-        return "TOKEN " + query_gmcp_token_user(tmp[1]) + "\n";
 
+        if (!exist_player(tmp[1]))
+        {
+            return "NOT FOUND\n";
+        }
+        return "EXISTS\n";
     default:
         return "ERROR Unknown request\n";
 	break;
@@ -2579,15 +2648,13 @@ mark_quit(object player)
 static void
 remove_interactive(object ob, int linkdied)
 {
-    string master_ob;
-
     QUEUE->dequeue(ob);
 
     /* If someone who is logging in linkdies, we just dispose of it. Also,
      * people who are trying to create a character, will have to start
      * over again.
      */
-    master_ob = MASTER_OB(ob);
+    string master_ob = MASTER_OB(ob);
     if ((master_ob == LOGIN_OBJECT) ||
         (master_ob == LOGIN_NEW_PLAYER) ||
         (master_ob == LOGIN_TEST_PLAYER) ||
@@ -3690,20 +3757,37 @@ cancel_shutdown()
 }
 /*
  * Function name:  wiz_home
- * Description:    Gives a default 'home' for a wizard, domain or a player
+ * Description:    Gives a default 'home' for a wizard, domain or a player.
+ *                 If the player is junior the responsible wizard is looked up.
  * Arguments:      wiz: The wizard name.
  * Returns:        A filename for the 'home' room.
  */
 string
 wiz_home(string wiz)
 {
-    string path;
+    if (wildmatch("*jr", wiz))
+    {
+        /* Correctly named Jr? */
+        if (query_wiz_rank(wiz[..-3]) != WIZ_MORTAL)
+        {
+            wiz = wiz[..-3];
+        } else {
+            /* Check if the Jr has a wiz registered as a second */
+            foreach (string second: this_object()->query_seconds(wiz))
+            {
+                if (query_wiz_rank(second) != WIZ_MORTAL)
+                {
+                    wiz = second;
+                    break;
+                }
+            }
+        }
+    }
 
-    if (query_wiz_rank(wiz) == WIZ_MORTAL)
-        if (query_domain_number(wiz) < 0)        /* Not even a domain */
-            return "";
+    if (query_wiz_rank(wiz) == WIZ_MORTAL && query_domain_number(wiz) < 0)
+        return "";
 
-    path = query_wiz_path(wiz) + "/workroom.c";
+    string path = query_wiz_path(wiz) + "/workroom.c";
     set_auth(this_object(), "#:root");
     if (file_size(path) <= 0)
     {

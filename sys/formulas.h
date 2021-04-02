@@ -26,7 +26,7 @@
 #ifndef MATH_FILE
 #define MATH_FILE "/sys/global/math"
 #endif  MATH_FILE
- 
+
 /*
  * Stats
  *
@@ -80,7 +80,7 @@
 #define F_WEIGHT_FAULT_ARMOUR(w, ac, at)\
     (F_WEIGHT_DEFAULT_ARMOUR(ac, at) * 800 / 1000 > (w))
 
-/* 
+/*
  * Weapon
  *
  * Note also that these are only valid for humanoid weapons.
@@ -119,14 +119,12 @@
 #define F_LEGAL_WCPEN(wc, type)      (F_LEGAL_TYPE(type)       && \
 			       ((wc) <= W_MAX_PEN[type]))
 
-/* 
- * 2015-03-08 - Set to 100 for new unique.c
- * #define F_DEFAULT_CLONE_UNIQUE_CHANCE 33
- */
+
 #define F_DEFAULT_CLONE_UNIQUE_CHANCE 100
 
 /* Spread distribution of unique items over a week. */
 #define F_UNIQUE_DISTRIBUTION_TIME 604800
+
 /* Reach maximum number of items after X% of the time. */
 #define F_UNIQUE_MAX_TIME_PROC        40
 
@@ -159,7 +157,7 @@
 /*
  * Alchemy
  */
-#define F_CAN_ID_POTION(id_diff, alchemy)       ((id_diff) <= (alchemy)) 
+#define F_CAN_ID_POTION(id_diff, alchemy)       ((id_diff) <= (alchemy))
 
 /*
  * Thievery.
@@ -183,7 +181,7 @@
  */
 #define F_HEAP_SEE_COUNT(intel) ((intel) / 3)
 
-/* 
+/*
  * Living
  */
 #define F_KILL_NEUTRAL_ALIGNMENT        (10)
@@ -220,7 +218,8 @@
 #define F_SOBER_RATE                    1
 #define F_UNSTUFF_RATE                  1
 #define F_UNSOAK_RATE                   16
-#define F_HEAL_FORMULA(con, intox) (((con) * 5 + (intox) * 2 + 100) / 20)
+
+#define F_HEAL_FORMULA(con, intox)      (((con) * 5 + (intox) * 2 + 100) / 16)
 #define F_FATIGUE_FORMULA(stuffed, max) (5 + (stuffed) * 45 / (max))
 
 #define F_MANA_HEAL_RATE                1
@@ -233,7 +232,7 @@
  */
 #define F_TMP_STAT_MAX_TIME 30
 
-/* 
+/*
  * Cost to track something
  */
 #define F_TRACK_MANA_COST	4
@@ -252,12 +251,12 @@
 
 /*
  * Recovery limit. How long can you keep your items if you have been away
- * from the realms. 
+ * from the realms.
  * 94608000 = 3 years
  */
 #define F_RECOVERY_LIMIT	(94608000)
 
-/* 
+/*
  * Death
  */
 #define F_DEATH_MESSAGE      "\nYou die.\n" + 				     \
@@ -285,15 +284,32 @@
 #define F_EXP_TEAM_BONUS(size)          (100 + ((size) * 10))
 
 /*
- * Combat 
+ * Combat
  */
-#define F_MAX_HP(con)  (((con) < 10) ? ((con) * 10) : (((con) * 20) - 100))
+#define F_MAX_HP(con)   (((con) < 10) ? ((con) * 12) : (((con) * 25) - 125))
 
+/* F_PENMOD
+ *
+ * Calculates the base attack pen given a weapon pen and a weapon skill
+ */
 #define F_PENMOD(pen, skill) ((((pen) > (skill) ? (skill) : (pen)) + 50) * \
 	(((skill) > (pen) ? (pen) + ((skill) - (pen)) / 2 : (skill)) + 50) / \
 	30 - 80)
 
-#define F_STR_FACTOR(str) ((600 + (str) * 4) / 10)
+/*
+* F_ATTACK_PEN_MODIFER
+ *
+ * Modifies the penetration value for combat system attacks.
+ * Currently used to compensate for misses.
+ */
+#define F_ATTACK_PEN_MOD(pen)   (pen * 100 / 39)
+
+/*
+ * F_STR_FACTOR
+ *
+ * Gives a scaling factor for a stat, used in pen calculations
+ */
+#define F_STR_FACTOR(str)   ((600 + (str) * 4) / 10)
 
 #define F_AC_MOD(ac) (100.0 - (100.0 / pow (2.0, itof((ac)) / 50.0)))
 
@@ -317,6 +333,10 @@
 #define F_MAX_QUICKNESS			(250)
 #define F_SPEED_MOD(quickness)          ((5.0 - (itof(quickness) / 100.0)) / 5.0)
 
+/* Crits */
+#define F_CRIT_FREQUENCY        (10000)
+#define F_CRIT_MOD(pen)         ((pen) * 2)
+
 /*
  * Food and drink
  */
@@ -329,7 +349,7 @@
 		 : ((curam + amount) >= 0))
 
 /*
- * Magic 
+ * Magic
  */
 #define F_VALUE_MAGICOB_HEAL(hp)	(5 * (hp) + (hp) * (hp) / 4)
 #define F_VALUE_MAGIC_COMP(hp)		((hp) * 20)
