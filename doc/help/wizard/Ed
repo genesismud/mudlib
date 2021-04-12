@@ -1,19 +1,16 @@
 NAME
-	Ed - ed a file.
+	ed - edit a file
 
 SYNOPSIS
-	Ed
-	Ed <object>
+	ed filename
 
 DESCRIPTION
-	With this command you can easily edity the file that composes an
-	object. With this tracer-command, you can edit the file of an object
-	without having to type its filename. Just use a tracer argument to
-	point at the object you want to edit.
+	ed is the most basic line editor of the UNIX system. The
+	ed available to you is compatible to the UNIX ed and also
+	offers some extra features. See the special documentation
+	on ed in order to use it.
 
-ARGUMENTS
-	<none>   - ed the room you are in.
-	<object> - the object to ed.
+MANUAL
+	If you do 'man ed' you get the manual page on the ed() efun.
 
-SEE ALSO
-	ed and tracer
+        To read the user manual on 'ed', do: 'man general ed'.
