@@ -596,8 +596,6 @@ load_auto_shadows()
 private static nomask int
 setup_player(string pl_name)
 {
-    string *souls;
-
     set_name(pl_name);
 
     /* No adjectives and no default */
@@ -667,9 +665,10 @@ setup_player(string pl_name)
     else
     /* Non wizards should not have a lot of souls */
     {
+        string *souls;
         if (sizeof(souls = query_cmdsoul_list()))
         {
-	    foreach(string soul: souls)
+            foreach(string soul: souls)
             {
                 remove_cmdsoul(soul);
             }

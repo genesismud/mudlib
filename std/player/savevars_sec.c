@@ -105,19 +105,19 @@ player_save_vars_reset()
  * Name of the player.
  * This can only be called from player_sec.
  */
-static /* private */ nomask void
+static nomask void
 set_name(string n)
 {
     name = n;
     cap_name = capitalize(n);
 
-    ::set_name(name);
+    ::set_name(name, 1);
 }
 
-static void
-add_name(mixed name)
+static varargs void
+add_name(mixed name, int noplural)
 {
-    ::add_name(name);
+    ::add_name(name, noplural);
 }
 
 /*
@@ -604,7 +604,7 @@ set_path(string str)
  * Description:     Sets the Email address of a player
  * Arguments:       addr: The Email address string
  */
-public nomask int 
+public nomask int
 set_mailaddr(string addr)
 {
     string *parts = explode(addr, "\n");
@@ -802,6 +802,7 @@ query_logout_location()
 {
     return logout_location;
 }
+
 
 /*
  * Function name:   set_login_from
