@@ -1,24 +1,32 @@
 NAME
-	goto - go somewhere
+	Goto
 
 SYNOPSIS
-	goto
-	goto <dest>
-	goto set
-	goto set <arg>
+	Goto <object>
 
 DESCRIPTION
-	The command goto will teleport you to another location. It can
-	be used to teleport to another player, to an NPC with its living
-	name set, to a room the you know the path of. There are some
-	useful options for easy moving.
+	Enter the inventory of an object.
 
-OPTIONS
-	<none>	- return to your prior location;
-	<dest>	- either a player name, a living name or a path;
-	set	- go to a location that was set before;
-	<arg>	- a tracer-argument pointing at the room you want to
-		  'set' to use with the command 'goto set'.
+ARGUMENTS
+	<object> - the object to enter
+
+EXAMPLES
+	Goto /d/Genesis/wiz/discuss
+		Go to the room with the discussion board.
+	Goto *edchakom:^
+		Go to the room Edchakom is in.
+
+ADVICE
+	This command is rather obsoluete. It is much easier to use the
+	command 'goto' in the apprentice soul.
+
+WARNING
+	It's possible but not recommendable to enter the inventory of a
+	player. This not only causes a lot of (technical) trouble, but
+	will CERTAINLY earn you a severe reprimand by any archwizard if
+	he should see you doing this. If you enter the inventory of an
+	archwizard you will probably be removed from the game without
+	any discussion.
 
 SEE ALSO
-	review, setmmin, setmmout
+	tracer, goto

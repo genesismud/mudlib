@@ -1,16 +1,20 @@
 NAME
-	tail - display the last part of a file
+	Tail - Tail a file.
 
 SYNOPSIS
-	tail [-r] <path>
+	Tail
+	Tail <object>
 
 DESCRIPTION
-	Display the last part of a file.
+	With this command you can easily display the end of a file that
+	composes an object. Tail prints the last part of a file to your
+	screen without more. With this tracer-command, you can see the
+	file of an object without having to type its filename. Just use a
+	tracer argument to point at the object you want to see.
 
 ARGUMENTS
-	<path> - the path to the file to display the end of.
-	-r     - gives a prompt after displaying the last part of the
-                 file, allowing you to scroll up in it.
+	<none>   - tail the room you are in.
+	<object> - the object to tail.
 
 SEE ALSO
-	cat, head, more
+	Cat, More, tail and tracer

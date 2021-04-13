@@ -1,35 +1,21 @@
 NAME
-	more - browse or page through a text file
+	More - more a file.
 
 SYNOPSIS
-	more filename
-	more -l pagelength
+	More
+	More <object>
 
 DESCRIPTION
-	more is a filter that displays the contents of a text file
-	on the screen, a selected number of rows are scrolled before
-	pausing. The text "More: --xx-- <cr>,d,u,b,#,q> " is then 
-	displayed where "xx" denotes the last displayed line-number.
-	'more' now expects you to enter one of the following commands:
+	With this command you can easily display the file linked to an
+	object without having to know its filename. The contents are
+	displayed in pages so they don't scroll your screen too fast.
+	Just use the tracer tool argument to display the file. Use the
+	command 'morelen' to set the number of lines you want to be
+	displayed in one page.
 
-	<cr> 	- display the next page of text
-
-	d	- display just 4 lines more of text
-
-	u	- back one page
-
-	#	- display text from the given line number
-
-	q	- quit more.
-
-OPTIONS
-	filename 	- see description above
-
-	-l pagelength	- set more to display text in 'pagelength' 
-			  line chunks. This information is stored 
-			  when you type "save". You can also set
-		          this value with the command 'wizopt'.
+ARGUMENTS
+	<none>   - more the file of the room you are in.
+	<object> - the object to more.
 
 SEE ALSO
-	cat, head, wizopt, tail
-
+	Cat, more, morelen, Tail and tracer
