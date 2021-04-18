@@ -97,7 +97,7 @@ wcommunicate(string str)
 }
 
 /*
- * Function name: query_say_string 
+ * Function name: query_say_string
  * Description  : This function returns the text the player last spoke using
  *                the say command. This can only be queried with this person
  *                being the interactive party for security reasons.
@@ -203,6 +203,10 @@ start_souls(string *souls)
         for (replace_souls = ({}), il = 0; il < sizeof(souls); il++)
         {
             ob = souls[il];
+
+            if (!stringp(ob))
+                continue;
+
             catch(ob->teleledningsanka());
             ob = find_object(ob);
             if (ob)
@@ -227,7 +231,7 @@ start_souls(string *souls)
                     if (member_array(souls[il], tmp) >= 0)
                         tmp = 0;
                 }
-                
+
                 if ((tmp == 0) && (member_array(souls[il], used_souls) < 0))
                 {
                     ob->using_soul(this_object());
