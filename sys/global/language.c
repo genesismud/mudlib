@@ -4,7 +4,6 @@
  * This file holds some standard natural language functions and routines
  * to translate a numerical value to an associated state description.
  */
-
 #pragma save_binary
 #pragma strict_types
 
@@ -18,6 +17,8 @@ static string *nums, *numt, *numnt, *numo;
 int    *stat_levels, *exp_levels;
 string *exp_titles;
 mixed  stat_strings;
+mapping irregular_plural;
+string *plurals;
 
 void
 create()
@@ -34,6 +35,158 @@ create()
               "eighty", "ninety"});
     numnt = ({ "twent", "thirt", "fort", "fift", "sixt", "sevent", "eight",
 	       "ninet" });
+
+    irregular_plural = ([
+        "addendum": "addenda",
+        "aircraft": "aircraft",
+        "alga": "algae",
+        "alumna": "alumnae",
+        "alumnus": "alumni",
+        "amoeba": "amoebae",
+        "analysis": "analyses",
+        "antenna": "antennae",
+        "antithesis": "antitheses",
+        "apex": "apices",
+        "appendix": "appendices",
+        "automaton": "automata",
+        "axis": "axes",
+        "bacillus": "bacilli",
+        "bacterium": "bacteria",
+        "barracks": "barracks",
+        "basis": "bases",
+        "beau": "beaux",
+        "bison": "bison",
+        "buffalo": "buffalo",
+        "bureau": "bureaus",
+        "cactus": "cacti",
+        "calf": "calves",
+        "carp": "carp",
+        "census": "censuses",
+        "cestus": "cesti",
+        "chassis": "chassis",
+        "cherub": "cherubim",
+        "child": "children",
+        "château": "châteaus",
+        "cod": "cod",
+        "codex": "codices",
+        "concerto": "concerti",
+        "corpus": "corpora",
+        "crisis": "crises",
+        "criterion": "criteria",
+        "curriculum": "curricula",
+        "datum": "data",
+        "deer": "deer",
+        "diagnosis": "diagnoses",
+        "die": "dice",
+        "dwarf": "dwarves",         /* We use the tolkien plural */
+        "drow": "drow",
+        "echo": "echoes",
+        "elf": "elves",
+        "elk": "elk",
+        "ellipsis": "ellipses",
+        "embargo": "embargoes",
+        "emphasis": "emphases",
+        "erratum": "errata",
+        "faux pas": "faux pas",
+        "fez": "fezes",
+        "firmware": "firmware",
+        "fish": "fish",
+        "focus": "foci",
+        "foot": "feet",
+        "formula": "formulae",
+        "fungus": "fungi",
+        "gallows": "gallows",
+        "genus": "genera",
+        "goose": "geese",
+        "graffito": "graffiti",
+        "grouse": "grouse",
+        "half": "halves",
+        "hero": "heroes",
+        "hoof": "hooves",
+        "hovercraft": "hovercraft",
+        "hypothesis": "hypotheses",
+        "index": "indices",
+        "kakapo": "kakapo",
+        "knife": "knives",
+        "larva": "larvae",
+        "leaf": "leaves",
+        "libretto": "libretti",
+        "life": "lives",
+        "loaf": "loaves",
+        "locus": "loci",
+        "louse": "lice",
+        "man": "men",
+        "matrix": "matrices",
+        "means": "means",
+        "medium": "media",
+        "media": "media",
+        "memorandum": "memoranda",
+        "millennium": "millennia",
+        "minutia": "minutiae",
+        "moose": "moose",
+        "mouse": "mice",
+        "nebula": "nebulae",
+        "nemesis": "nemeses",
+        "neurosis": "neuroses",
+        "news": "news",
+        "nucleus": "nuclei",
+        "oasis": "oases",
+        "offspring": "offspring",
+        "opus": "opera",
+        "ovum": "ova",
+        "ox": "oxen",
+        "paralysis": "paralyses",
+        "parenthesis": "parentheses",
+        "person": "people",
+        "phenomenon": "phenomena",
+        "phylum": "phyla",
+        "pike": "pikes",            /* We use the plural form of the weapon */
+        "polyhedron": "polyhedra",
+        "potato": "potatoes",
+        "prognosis": "prognoses",
+        "quiz": "quizzes",
+        "radius": "radii",
+        "referendum": "referenda",
+        "salmon": "salmon",
+        "scarf": "scarves",
+        "self": "selves",
+        "series": "series",
+        "sheep": "sheep",
+        "shelf": "shelves",
+        "shrimp": "shrimp",
+        "spacecraft": "spacecraft",
+        "species": "species",
+        "spectrum": "spectra",
+        "squid": "squid",
+        "stimulus": "stimuli",
+        "stratum": "strata",
+        "swine": "swine",
+        "syllabus": "syllabi",
+        "symposium": "symposia",
+        "synopsis": "synopses",
+        "synthesis": "syntheses",
+        "tableau": "tableaus",
+        "that": "those",
+        "thesis": "theses",
+        "thief": "thieves",
+        "this": "these",
+        "tomato": "tomatoes",
+        "tooth": "teeth",
+        "trout": "trout",
+        "tuna": "tuna",
+        "vertebra": "vertebrae",
+        "vertex": "vertices",
+        "veto": "vetoes",
+        "vita": "vitae",
+        "vortex": "vortices",
+        "watercraft": "watercraft",
+        "wharf": "wharves",
+        "wife": "wives",
+        "wolf": "wolves",
+        "woman": "women",
+    ]);
+
+    plurals = m_values(irregular_plural);
 
     stat_levels  = SD_STATLEVELS;
     stat_strings = ({ SD_STATLEV_STR, SD_STATLEV_DEX, SD_STATLEV_CON,
@@ -72,7 +225,7 @@ article(string str)
 #endif
 
 string
-add_article(string str) 
+add_article(string str)
 {
     string s;
 
@@ -81,7 +234,7 @@ add_article(string str)
 }
 
 string
-strip_article(string str) 
+strip_article(string str)
 {
     int len = strlen(str);
 
@@ -101,7 +254,7 @@ string
 word_number(int num)
 {
     int tmp;
-    
+
     if (num < 1) return "no";
     if (num < 20) return nums[num-1];
     if (num > 99)
@@ -225,7 +378,7 @@ number_ord_word(string str)
     if ((j = member_array(nt[0], numt)) == -1)
         return 0;
 
-    return (j+2)*10 + (i+1); 
+    return (j+2)*10 + (i+1);
 }
 
 /* lpc singular to plural converter
@@ -237,32 +390,17 @@ plural_word(string str) = "plural_word";
 string
 plural_word(string str)
 {
+    string pl;
     string tmp, slask;
     int sl, ch;
-    
+
     if (!str) return 0;
 
-    switch (str)
+    if (pl = irregular_plural[str])
     {
-    case "tooth":
-	return "teeth";
-    case "foot":
-	return "feet";
-    case "man":
-	return "men";
-    case "woman":
-	return "women";
-    case "child":
-	return "children";
-    case "sheep":
-	return "sheep";
-    case "pants":
-        return "pants";
-    case "dwarf":
-	return "dwarves";
-    case "elf":
-        return "elves";
-    }  
+        return pl;
+    }
+
     sl = strlen(str) - 1;
     if (sl < 2)
 	return str;
@@ -295,10 +433,10 @@ plural_sentence(string str)
 {
     int  c;
     string *a;
-    
+
     if (!str)
 	return 0;
-    
+
     a = explode(str + " ", " ");
     if ((!a) || (sizeof(a) < 1))
 	return 0;
@@ -312,6 +450,21 @@ plural_sentence(string str)
     }
     a[sizeof(a) - 1] = plural_word(a[sizeof(a) - 1]);
     return implode(a, " ");
+}
+
+/*
+ * Naively check if this word is likely to be a plural
+ */
+int
+is_plural(string str)
+{
+    if (wildmatch("*s", str) && !wildmatch("*ss", str))
+        return 1;
+
+    if (member_array(str, plurals) >= 0)
+        return 1;
+
+    return 0;
 }
 
 /* Verb in present tence (not ready yet)
@@ -423,7 +576,7 @@ singular_form(string str)
 	return "elf";
     case "dwarves":
 	return "dwarf";
-    }  
+    }
 
     last = strlen(str);
     one  = extract(str, last - 1, last - 1);
@@ -559,10 +712,10 @@ get_num_desc(int value, int maximum, string *maindescs, string *subdescs = 0, in
         mainindex = (value * sizeof(maindescs)) / maximum;
         return maindescs[mainindex];
     }
-    
+
     /* Distribute the value of the range of main and sub-descriptions. */
     value = (value * sizeof(maindescs) * sizeof(subdescs)) / maximum;
-        
+
     /* Extract the main and sub-indices. */
     mainindex = value / sizeof(subdescs);
     subindex = value % sizeof(subdescs);
@@ -576,19 +729,19 @@ get_num_desc(int value, int maximum, string *maindescs, string *subdescs = 0, in
     return subdescs[subindex] + maindescs[mainindex];
 }
 
-/* 
+/*
  * Function name: get_num_desc_centered
  * Description  : A wrapper around get_num_desc which distributes the descriptions
- *                around a center value. 
+ *                around a center value.
  * Arguments    : value    - The value
  *                maximum  - The max, the minimum will be calculated from this
- *                center   - The value which correspons to the center desc. 
+ *                center   - The value which correspons to the center desc.
  *                center_width - The range for the center:
  *                               [center - center_width <-> center + center_width]
  *                *descs   - The descriptions, must be odd sized.
  */
-string 
-get_num_desc_centered(int value, int maximum, int center, int center_width, string *descs) 
+string
+get_num_desc_centered(int value, int maximum, int center, int center_width, string *descs)
 {
     int center_desc = sizeof(descs) / 2;
 
@@ -596,14 +749,14 @@ get_num_desc_centered(int value, int maximum, int center, int center_width, stri
     {
         return get_num_desc(value - (center + center_width), maximum - (center + center_width), descs[(center_desc + 1)..]);
     }
-    
+
     if (value < (center - center_width))
     {
         /* Remap values to 0-max, reverse descs */
         value = abs(value - (center - center_width));
         string *reversed = allocate(sizeof(descs) / 2 - 1);
         for (int i = 0; i < sizeof(reversed); i++) {
-            reversed[i] = descs[center_desc - (1 + i)]; 
+            reversed[i] = descs[center_desc - (1 + i)];
         }
         return get_num_desc(value - (center + center_width), maximum - (center + center_width), reversed);
     }

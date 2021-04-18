@@ -54,6 +54,13 @@
 #define LANG_ORD2EXT(x)  ((string)LANG_FILE->word_ord_ext(x))
 
 /*
+ * LANG_IS_PLURAL(x)
+ *
+ * Returns true if the word is likely to be a plural.
+ */
+#define LANG_IS_PLURAL(x)   ((string)LANG_FILE->is_plural(x))
+
+/*
  * LANG_IS_OFFENSIVE(x) -- Returns true if the term contains offensive words
  *                         or sub-words.
  */
@@ -75,7 +82,7 @@
  * that runs from 0-100% instead of an arbitrary maximum.
  */
 #define GET_NUM_DESC(v, mx, md)              ((string)LANG_FILE->get_num_desc((v), (mx), (md)))
-#define GET_NUM_DESC_CENTER(v, mx, ce, cew, md) (LANG_FILE->get_num_desc_centered((v), (mx), (ce), (cew), (md))) 
+#define GET_NUM_DESC_CENTER(v, mx, ce, cew, md) (LANG_FILE->get_num_desc_centered((v), (mx), (ce), (cew), (md)))
 #define GET_NUM_DESC_SUB(v, mx, md, sd, ti)  ((string)LANG_FILE->get_num_desc((v), (mx), (md), (sd), (ti)))
 #define GET_PROC_DESC(v, md)                 ((string)LANG_FILE->get_num_desc((v), 100, (md)))
 #define GET_PROC_DESC_SUB(v, md, sd, ti)     ((string)LANG_FILE->get_num_desc((v), 100, (md), (sd), (ti)))
@@ -96,7 +103,7 @@
 
 /* LANG_PRETITLES - list of (mostly) chivalrous pretitles that we don't want
  * as part of names of new players.
- */   
+ */
 #define LANG_PRETITLES ({ "sir*", "*count*", "duke*", "*lord*", "*lady*", \
     "*prince*", "*king*", "*queen*", "*master*", "mr*", "miss*", "*dude*", \
     "*boy*", "*man", "ms*", "*guy" })

@@ -1135,6 +1135,7 @@ del_list(string *list_old, mixed list_del)
     return (list_old - (string *)list_del);
 }
 
+
 /*
  * Function name: query_list
  * Description:   Gives the return of a query on a list.
@@ -1153,6 +1154,7 @@ query_list(mixed list, int arg)
     else
         return list + ({});
 }
+
 
 /*
  * Function name: set_pname
@@ -1247,6 +1249,21 @@ query_pnames()
 }
 
 /*
+ * Function name: pluralize_name
+ * Description  : Convert to a name to plural if it appears to not be plural
+ *                already.
+ */
+ private string
+ pluralize_name(string name)
+ {
+    if (LANG_IS_PLURAL(name)) {
+        return name;
+    }
+
+    return LANG_PWORD(name);
+ }
+
+/*
  * Function name: set_name
  * Description  : Sets the name(s) of the object. This is the name that
  *                the object can be referenced by. set_name can be called
@@ -1261,25 +1278,18 @@ query_pnames()
  *                    for these names.
  */
 varargs void
-set_name(mixed name, int noplural)
+set_name(mixed names, int noplural)
 {
-    int index;
+    obj_names = add_list(obj_names, names, 1);
 
-    obj_names = add_list(obj_names, name, 1);
+    if (!pointerp(names))
+    {
+        names = ({ names });
+    }
 
     if (!noplural)
     {
-        if (pointerp(name))
-        {
-            for (index = (sizeof(name) - 1); index >= 0; index--)
-            {
-                set_pname(LANG_PWORD(name[index]));
-            }
-        }
-        else
-        {
-            set_pname(LANG_PWORD(name));
-        }
+        set_pname(map(names, pluralize_name));
     }
 }
 
@@ -1296,25 +1306,18 @@ set_name(mixed name, int noplural)
  *                    for these names.
  */
 varargs void
-add_name(mixed name, int noplural)
+add_name(mixed names, int noplural)
 {
-    int index;
+    obj_names = add_list(obj_names, names, 0);
 
-    obj_names = add_list(obj_names, name, 0);
+    if (!pointerp(names))
+    {
+        names = ({ names });
+    }
 
     if (!noplural)
     {
-        if (pointerp(name))
-        {
-            for (index = (sizeof(name) - 1); index >= 0; index--)
-            {
-                add_pname(LANG_PWORD(name[index]));
-            }
-        }
-        else
-        {
-            add_pname(LANG_PWORD(name));
-        }
+        add_pname(map(names, pluralize_name));
     }
 }
 
@@ -1328,23 +1331,19 @@ add_name(mixed name, int noplural)
  * Arguments    : mixed name - accepts both a string or an array of string
  *                    with the name(s) to as name.
  */
-public void
-remove_name(mixed name)
+varargs void
+remove_name(mixed names, int noplural)
 {
-    int index;
+    obj_names = del_list(obj_names, names);
 
-    obj_names = del_list(obj_names, name);
-
-    if (pointerp(name))
+    if (!pointerp(names))
     {
-        for (index = (sizeof(name) - 1); index >= 0; index--)
-        {
-            remove_pname(LANG_PWORD(name[index]));
-        }
+        names = ({ names });
     }
-    else
+
+    if (!noplural)
     {
-        remove_pname(LANG_PWORD(name));
+        remove_pname(map(names, pluralize_name));
     }
 }
 
