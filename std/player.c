@@ -990,17 +990,21 @@ linkdeath_hook(int linkdeath)
 static nomask void
 actual_linkdeath()
 {
-#ifdef STATUE_WHEN_LINKDEAD
-#ifdef OWN_STATUE
-    OWN_STATUE->linkdie(this_object());
-#else
-    tell_room(environment(), LD_STATUE_TURN(this_object()), ({ }) );
-#endif OWN_STATUE
-#endif STATUE_WHEN_LINKDEAD
+    try {
+        /* Allow a shadow to take notice of the linkdeath. */
+        this_object()->linkdeath_hook(1);
+
+        /* Allow items in the top level inventory of the player to take notice
+         * of the linkdeath.
+         */
+        all_inventory(this_object())->linkdeath_hook(this_object(), 1);
+    } catch (mixed err) {
+    }
 
     /* People should not autosave while they are linkdead. */
     stop_autosave();
 
+    /* Is this a delayed linkdeath due to combat */
     if (ld_alarm)
     {
         SECURITY->notify(this_object(), CONNECT_REAL_LD);
@@ -1009,12 +1013,14 @@ actual_linkdeath()
     }
     set_linkdead(1);
 
-    /* Allow a shadow to take notice of the linkdeath. */
-    this_object()->linkdeath_hook(1);
-    /* Allow items in the top level inventory of the player to take notice
-     * of the linkdeath.
-     */
-    all_inventory(this_object())->linkdeath_hook(this_object(), 1);
+    /* Create the statue, this might destruct this_object() */
+#ifdef STATUE_WHEN_LINKDEAD
+#ifdef OWN_STATUE
+    OWN_STATUE->linkdie(this_object());
+#else
+    tell_room(environment(), LD_STATUE_TURN(this_object()), ({ }) );
+#endif OWN_STATUE
+#endif STATUE_WHEN_LINKDEAD
 }
 
 /*
