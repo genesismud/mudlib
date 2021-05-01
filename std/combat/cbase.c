@@ -1660,12 +1660,11 @@ cb_update_speed()
     float oldspeed = speed;
 
     cb_calc_speed();
-    if ((speed != oldspeed) &&
-        alarm_id &&
-        (alarm = get_alarm(alarm_id)))
+    if ((speed != oldspeed) && alarm_id && (alarm = get_alarm(alarm_id)))
     {
+        float next = speed * (alarm[2] / alarm[3]);
         remove_alarm(alarm_id);
-        alarm_id = set_alarm(alarm[2], speed, heart_beat);
+        alarm_id = set_alarm(next, speed, heart_beat);
     }
 }
 
