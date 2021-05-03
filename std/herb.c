@@ -1,7 +1,7 @@
 /*
  *  The standard herb.
  *
- *  The original made by Elessar Telcontar of Gondor, 
+ *  The original made by Elessar Telcontar of Gondor,
  *		Genesis, April to July 1992.
  */
 
@@ -31,7 +31,9 @@ static int     find_diff,      /* the difficulty of finding the herb */
                dried,          /* whether the herb is dried or not */
                dryable;        /* whether the herb can be dried */
 static string  herb_name,      /* the unique herb name of the object */
-               herb_pname,     /* the unique herb name of the object */
+               herb_id_name,   /* the additional name for the herb */
+               herb_id_pname,  /* the plural form of the added name */
+               *herb_id_adjs,  /* additional adjs for identified herbs */
                id_long,        /* the description of identified herb */
                unid_long,      /* the description of unidentif. herb */
                ingest_verb;    /* the verb used for a herb injesting */
@@ -80,9 +82,8 @@ public string *
 parse_command_id_list()
 {
     if (can_id_herb())
-        return ::parse_command_id_list() + ({ herb_name });
-    else
-        return ::parse_command_id_list();
+        return ::parse_command_id_list() + ({ herb_id_name });
+    return ::parse_command_id_list();
 }
 
 /*
@@ -95,9 +96,22 @@ public string *
 parse_command_plural_id_list()
 {
     if (can_id_herb())
-        return ::parse_command_plural_id_list() + ({ herb_pname });
-    else
-        return ::parse_command_plural_id_list();
+        return ::parse_command_plural_id_list() + ({ herb_id_pname });
+    return ::parse_command_plural_id_list();
+}
+
+/*
+ * Function Name: parse_command_adjectiv_id_list
+ * Description  : Used by parse_command to find the adjectives of this item. It
+ *                verifies whether the player can identify this herb.
+ * Returns      : string * - An array of the adjectives for this herb.
+ */
+public string *
+parse_command_adjectiv_id_list()
+{
+    if (can_id_herb())
+        return ::parse_command_adjectiv_id_list() + herb_id_adjs;
+    return ::parse_command_adjectiv_id_list();
 }
 
 /*
@@ -167,7 +181,7 @@ dry() {}
  * Function name: force_dry
  * Description:   Call this function if you want to make the herb
  *                dry after creation. E.g. if you have some tool that
- *                makes a herb dry. If you want to set the herb 
+ *                makes a herb dry. If you want to set the herb
  *                to dried at creation, use set_dried.
  */
 void
@@ -223,7 +237,7 @@ singular_short(object for_obj)
     {
         return "dried " + ::singular_short(for_obj);
     }
-    return ::singular_short(for_obj); 
+    return ::singular_short(for_obj);
 }
 
 /*
@@ -251,8 +265,13 @@ plural_short(object for_obj)
 void
 set_herb_name(string str)
 {
+    mixed *parts = explode(str, " ");
+
     herb_name = str;
-    herb_pname = LANG_PWORD(str);
+    herb_id_name = parts[-1];
+    herb_id_pname = LANG_IS_PLURAL(herb_id_name) ? herb_id_name
+        : LANG_PWORD(herb_id_name);
+    herb_id_adjs = parts[..-2];
 }
 
 /*
@@ -384,9 +403,9 @@ query_herb_value()
  * Arguments:     int a: The amount of food.
  */
 public void
-set_amount(int a) 
-{ 
-    food_amount = a; 
+set_amount(int a)
+{
+    food_amount = a;
     add_prop(OBJ_I_VOLUME, max(1, (a / 5)));
     add_prop(OBJ_I_WEIGHT, a);
 }
@@ -444,13 +463,13 @@ create_heap()
 
     add_prop(OBJ_I_VALUE, 0);
 
-    set_heap_size(1); 
+    set_heap_size(1);
     create_herb();
     set_long(long_description);
 
-    if (!query_prop(HEAP_S_UNIQUE_ID)) 
-        add_prop(HEAP_S_UNIQUE_ID, MASTER + "_" + herb_name); 
-    add_prop(HEAP_I_UNIT_VALUE, 0); 
+    if (!query_prop(HEAP_S_UNIQUE_ID))
+        add_prop(HEAP_S_UNIQUE_ID, MASTER + "_" + herb_name);
+    add_prop(HEAP_I_UNIT_VALUE, 0);
 }
 
 /*
@@ -510,7 +529,7 @@ command_eat()
     }
 
     /* Eat only a single herb at a time. */
-    split_heap(1); 
+    split_heap(1);
     if (!this_player()->eat_food(query_amount()))
     {
         return capitalize(LANG_THESHORT(this_object())) +
@@ -574,7 +593,7 @@ remove_food()
 /*
  * Function name: config_split
  * Description  : This is called before inserting this heap into the game
- *                It configures the split copy. 
+ *                It configures the split copy.
  * Arguments    : int new_num - the number to split off.
  *                object orig - the original object.
  */
@@ -588,17 +607,17 @@ config_split(int new_num, object orig)
 
     /* Set the long again because it's overwritten in config_split. */
     set_long(long_description);
-    set_amount(orig->query_amount());  
+    set_amount(orig->query_amount());
 
     if (orig->query_dried())
     {
         force_dry();
     }
-    else 
-    { 
-        dried = 0; 
-        dryable = orig->query_dryable(); 
-    } 
+    else
+    {
+        dried = 0;
+        dryable = orig->query_dryable();
+    }
 }
 
 /*
@@ -656,8 +675,8 @@ query_recover()
 /*
  * Function name: init_recover
  * Description  : When the object recovers, this function is called to set
- *                the necessary variables. If you redefine the function, 
- *                you must add a call to init_herb_recover with the string 
+ *                the necessary variables. If you redefine the function,
+ *                you must add a call to init_herb_recover with the string
  *                that you got after querying query_herb_recover or simply
  *                call ::init_recover(arg).
  * Arguments    : string arg - the arguments to parse
