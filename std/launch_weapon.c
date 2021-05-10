@@ -50,9 +50,9 @@ int    Shoot_alarm,         /* Alarm used between aim and fire. */
        Ready,               /* Flag signifying we have aimed and can shoot. */
        Next_round,          /* The time we can shoot once more. */
        Drawn_wep;           /* Flag signifying that is weapon must be held
-			     * in drawn position by hand. A bow is a drawn
-			     * weapon, a crossbow is not.
-			     */
+                 * in drawn position by hand. A bow is a drawn
+                 * weapon, a crossbow is not.
+                 */
 
 // Prototypes
 
@@ -60,6 +60,7 @@ public int shoot(string args);
 public int aim(string args);
 public int fire(string args);
 public int unload(string args);
+public int select(string args);
 public int secondary_wep_cmd(string args);
 public int extra_sanity_checks(string action, string args);
 private void ready_to_fire();
@@ -145,6 +146,7 @@ init()
     add_action(aim, Aim_command);
     add_action(fire, Fire_command);
     add_action(unload, Unload_command);
+    add_action(select, "select");
     add_action(secondary_wep_cmd, "secondary");
 }
 
@@ -256,17 +258,37 @@ query_valid_projectiles(object container)
 {
     if (!objectp(container) || !stringp(Valid_projectile))
     {
-	return 0;
+    return 0;
     }
 
     if (container->query_prop(CONT_I_CLOSED))
     {
-	return 0;
+    return 0;
     }
 
     return filter(filter(all_inventory(container),
-			 &call_other( , Valid_projectile)),
-		  &not() @ &->query_broken());
+             &call_other( , Valid_projectile)),
+          &not() @ &->query_broken());
+}
+
+/*
+ * Function name: query_is_valid_projectile
+ * Description  : Uses the function name set with set_valid_projectile to
+ *                find the valid projetiles in the specified container.
+ *                This function does only search the specified container
+ *                not any containers within the specified container.
+ *
+ * Arguments    : object container - Container to search for projectiles.
+ * Returns      : An array of the valid projectiles found in this container.
+ */
+public nomask int
+query_is_valid_projectile(object projectile)
+{
+    if (!objectp(projectile) || !stringp(Valid_projectile))
+    {
+        return 0;
+    }
+    return call_other(projectile, Valid_projectile) && !projectile->query_broken();
 }
 
 /*
@@ -321,7 +343,7 @@ public string
 load_desc()
 {
     return (Projectile ? "It has been loaded with " +
-	    LANG_ADDART(Projectile->singular_short()) + "\n": "");
+        LANG_ADDART(Projectile->singular_short()) + "\n": "");
 }
 
 /*
@@ -338,18 +360,18 @@ secondary_wep_cmd(string args)
 {
     if (!args)
     {
-	if (Sec_wep_cmd)
-	{
-	    notify_fail("secondary <command to wield secondary weapon>\n" +
-			"Currently set to: '" + Sec_wep_cmd + "'\n");
-	}
-	else
-	{
-	    notify_fail("secondary <command to wield secondary weapon>\n" +
-			"Example: secondary draw sword from scabbard\n");
-	}
+    if (Sec_wep_cmd)
+    {
+        notify_fail("secondary <command to wield secondary weapon>\n" +
+            "Currently set to: '" + Sec_wep_cmd + "'\n");
+    }
+    else
+    {
+        notify_fail("secondary <command to wield secondary weapon>\n" +
+            "Example: secondary draw sword from scabbard\n");
+    }
 
-	return 0;
+    return 0;
     }
 
     set_secondary_wep_cmd(args);
@@ -412,8 +434,8 @@ parse_aim(string args)
 
     if (!query_wielded())
     {
-	notify_fail("Wield the " + short() + " first.\n");
-	return 0;
+    notify_fail("Wield the " + short() + " first.\n");
+    return 0;
     }
 
     Archer = query_wielded();
@@ -423,20 +445,20 @@ parse_aim(string args)
 
     // Parse patterns matching: shoot black orc
     if (parse_command(args, people, " [at] [the] %l ", livings) &&
-	pointerp(livings))
+    pointerp(livings))
     {
         if (livings[0] == 0)
         {
-	    tell_object(Archer, "You must select one target.\n");
-	    return -1;
-	}
+        tell_object(Archer, "You must select one target.\n");
+        return -1;
+    }
 
-	Target = livings[ABS(livings[0])];
-	Target_env = environment(Target);
-	Adj_room_desc = 0;
-	Org_room_desc = 0;
-	hitloc = 0;
-	return 1;
+    Target = livings[ABS(livings[0])];
+    Target_env = environment(Target);
+    Adj_room_desc = 0;
+    Org_room_desc = 0;
+    hitloc = 0;
+    return 1;
     }
 
     // Perhaps the target stands in an adjecent room?
@@ -445,117 +467,205 @@ parse_aim(string args)
         // Loop through the adjecent rooms.
         for (i = 0; i < sizeof(other_rooms); i += 4)
         {
-	    room = other_rooms[i];
-	    pattern = other_rooms[i + 1];
+        room = other_rooms[i];
+        pattern = other_rooms[i + 1];
 
-	    // Skip the room if we can't see in it.
-	    if (!room || (room->query_prop(OBJ_I_LIGHT) +
-			  (Archer->query_prop(LIVE_I_SEE_DARK)) <= 0))
-	    {
-	        continue;
-	    }
+        // Skip the room if we can't see in it.
+        if (!room || (room->query_prop(OBJ_I_LIGHT) +
+              (Archer->query_prop(LIVE_I_SEE_DARK)) <= 0))
+        {
+            continue;
+        }
 
-	    if (parse_command(args,
-			      FILTER_CAN_SEE(FILTER_LIVE(room->subinventory()),
-					     Archer),
-			      " [at] [the] %l " + pattern + " [in] [the] %s ",
-			      livings, location) && pointerp(livings))
-	    {
-	        if (livings[0] == 0)
-		{
-		    tell_object(Archer, "You must select one target.\n");
-		    return -1;
-		}
+        if (parse_command(args,
+                  FILTER_CAN_SEE(FILTER_LIVE(room->subinventory()),
+                         Archer),
+                  " [at] [the] %l " + pattern + " [in] [the] %s ",
+                  livings, location) && pointerp(livings))
+        {
+            if (livings[0] == 0)
+        {
+            tell_object(Archer, "You must select one target.\n");
+            return -1;
+        }
 
-		Target = livings[ABS(livings[0])];
-		Adj_room_desc = other_rooms[i + 2];
-		Org_room_desc = other_rooms[i + 3];
-		Target_env = environment(Target);
+        Target = livings[ABS(livings[0])];
+        Adj_room_desc = other_rooms[i + 2];
+        Org_room_desc = other_rooms[i + 3];
+        Target_env = environment(Target);
 
-		if (strlen(location))
-		{
-		    hitlocs = Target->query_combat_object()->query_hitloc_id();
+        if (strlen(location))
+        {
+            hitlocs = Target->query_combat_object()->query_hitloc_id();
 
-		    if (!sizeof(hitlocs))
-		    {
-		        tell_object(Archer, "You don't find any " + location +
-				    " on " + Target->query_the_name(Archer) +
-				    " to " + query_verb() + " at.\n");
-			return -1;
-		    }
+            if (!sizeof(hitlocs))
+            {
+                tell_object(Archer, "You don't find any " + location +
+                    " on " + Target->query_the_name(Archer) +
+                    " to " + query_verb() + " at.\n");
+            return -1;
+            }
 
-		    for (i = 0; i < sizeof(hitlocs); i++)
-		    {
-		        hitloc = Target->query_combat_object()->query_hitloc(hitlocs[i]);
+            for (i = 0; i < sizeof(hitlocs); i++)
+            {
+                hitloc = Target->query_combat_object()->query_hitloc(hitlocs[i]);
 
-			if (location == hitloc[2])
-			{
+            if (location == hitloc[2])
+            {
                             Hitloc_id = hitlocs[i];
-		            break;
-			}
-		    }
+                    break;
+            }
+            }
 
-		    if (i >= sizeof(hitlocs))
-		    {
-		        tell_object(Archer, "You don't find any " + location +
-				    " on " + Target->query_the_name(Archer) +
-				    " to " + query_verb() + " at.\n");
-			return -1;
-		    }
-		}
+            if (i >= sizeof(hitlocs))
+            {
+                tell_object(Archer, "You don't find any " + location +
+                    " on " + Target->query_the_name(Archer) +
+                    " to " + query_verb() + " at.\n");
+            return -1;
+            }
+        }
 
-		return 1;
-	    }
-	}
+        return 1;
+        }
+    }
     }
 
     // Parse patterns matching: shoot black orc in the head
     if (parse_command(args, people, " [at] [the] %l 'in' [the] %s ",
-		      livings, location) && pointerp(livings))
+              livings, location) && pointerp(livings))
     {
         if (livings[0] == 0)
         {
-	    tell_object(Archer, "You must select one target.\n");
-	    return -1;
-	}
+        tell_object(Archer, "You must select one target.\n");
+        return -1;
+    }
 
-	Target = livings[ABS(livings[0])];
-	hitlocs = Target->query_combat_object()->query_hitloc_id();
+    Target = livings[ABS(livings[0])];
+    hitlocs = Target->query_combat_object()->query_hitloc_id();
 
-	if (!sizeof(hitlocs))
-	{
+    if (!sizeof(hitlocs))
+    {
             tell_object(Archer, "You don't find any " + location + " on " +
-			Target->query_the_name(Archer) +
-			" to " + query_verb() + " at.\n");
-	    return -1;
-	}
+            Target->query_the_name(Archer) +
+            " to " + query_verb() + " at.\n");
+        return -1;
+    }
 
-	for (i = 0; i < sizeof(hitlocs); i++)
-	{
+    for (i = 0; i < sizeof(hitlocs); i++)
+    {
             hitloc = Target->query_combat_object()->query_hitloc(hitlocs[i]);
 
-	    if (location == hitloc[2])
-	    {
+        if (location == hitloc[2])
+        {
                 Hitloc_id = hitlocs[i];
-	        break;
-	    }
-	}
+            break;
+        }
+    }
 
-	if (i >= sizeof(hitlocs))
-	{
-	    tell_object(Archer, "You don't find any " + location + " on " +
-			Target->query_the_name(Archer) +
-			" to " + query_verb() + " at.\n");
-	    return -1;
-	}
+    if (i >= sizeof(hitlocs))
+    {
+        tell_object(Archer, "You don't find any " + location + " on " +
+            Target->query_the_name(Archer) +
+            " to " + query_verb() + " at.\n");
+        return -1;
+    }
 
-	Target_env = environment(Target);
-	Adj_room_desc = 0;
-	Org_room_desc = 0;
-	return 1;
+    Target_env = environment(Target);
+    Adj_room_desc = 0;
+    Org_room_desc = 0;
+    return 1;
     }
 
     notify_fail(capitalize(query_verb()) + " at whom [where]?\n");
+    return 0;
+}
+
+/*
+ * Function name: parse_select
+ * Description  : Parses the user input for select command.
+ *
+ * Arguments    : string args - User input.
+ * Returns      :  1  - Successful parse.
+ *                 0  - No match.
+ *                -1  - Faulty input.
+ */
+private nomask int
+parse_select(string args)
+{
+    object projectile, quiver, *projectiles;
+    string projectile_name;
+    int i;
+
+    if (!args)
+    {
+        notify_fail(capitalize(query_verb()) + " what [from] [container] to load?\n");
+        return 0;
+    }
+
+    if (!query_wielded())
+    {
+        notify_fail("Wield the " + short() + " first.\n");
+        return 0;
+    }
+
+    Archer = query_wielded();
+
+    // Parse patterns matching: select feathered arrow
+    if (parse_command(args, all_inventory(Archer), " %o", projectile))
+    {
+        if (!query_is_valid_projectile(projectile))
+        {
+            tell_object(Archer, "The " + LANG_STRIPART(projectile->short()) + " " +
+                (projectile->num_heap() > 1 ? "are" : "is") +
+                " not valid ammunition for the " + short() + ".\n");
+            return 1;
+        }
+        set_projectile_stack(projectile);
+        tell_object(Archer, "You remember to use the " +
+            Projectile_stack->short() + " as ammunition for the " +
+            "next firing.\n");
+        return 1;
+    }
+
+    // Parse patterns matching: select feathered arrow from black quiver
+    if (parse_command(args, Archer, " %s 'in' / 'inside' / 'from' %o",
+        projectile_name, quiver))
+    {
+        if (quiver->query_prop(CONT_I_CLOSED))
+        {
+            tell_object(Archer, "The " + quiver->short() + " is closed.\n");
+            return 1;
+        }
+        if (!quiver->query_prop(CONT_I_IS_QUIVER))
+        {
+            tell_object(Archer, "The " + quiver->short() + " is " +
+                "not a projectile container.\n");
+            return 1;   
+        }
+
+        projectiles = all_inventory(quiver);
+        if (!parse_command(projectile_name, projectiles, "%o", projectile)) {
+            notify_fail(capitalize(query_verb()) + " what from what to load?\n");
+            return 0;
+        }
+
+        if (!query_is_valid_projectile(projectile))
+        {
+            tell_object(Archer, "The " + LANG_STRIPART(projectile->short()) + " " +
+                (projectile->num_heap() > 1 ? "are" : "is") + " not valid ammunition " +
+                "for the " + short() + ".\n");
+            return 1;
+        }
+
+        set_projectile_stack(projectile);
+        tell_object(Archer, "You remember to use the " +
+            Projectile_stack->short() + " from your " +
+            quiver->short() + " as ammunition for the next firing.\n");
+        return 1;
+    }
+
+    notify_fail(capitalize(query_verb()) + " what to load?\n");
     return 0;
 }
 
@@ -604,13 +714,13 @@ shoot(string args)
     // Thou shallt possess missiles.
     if (!Projectile)
     {
-	try_load();
+    try_load();
 
-	if (!Projectile)
-	{
-	    this_object()->tell_archer_no_missiles();
-	    return 1;
-	}
+    if (!Projectile)
+    {
+        this_object()->tell_archer_no_missiles();
+        return 1;
+    }
     }
 
     this_object()->tell_archer_load(archer, Target, Projectile, Adj_room_desc);
@@ -622,7 +732,7 @@ shoot(string args)
     archer->query_combat_object()->cb_calc_speed();
 
     Shoot_alarm = set_alarm(archer->query_combat_object()->cb_query_speed(),
-			    0.0, &do_fire());
+                0.0, &do_fire());
     return 1;
 }
 
@@ -666,13 +776,13 @@ aim(string args)
     // Thou shalt possess missiles.
     if (!Projectile)
     {
-	try_load();
+    try_load();
 
-	if (!Projectile)
-	{
-	    this_object()->tell_archer_no_missiles();
-	    return 1;
-	}
+    if (!Projectile)
+    {
+        this_object()->tell_archer_no_missiles();
+        return 1;
+    }
     }
 
     this_object()->tell_archer_load(archer, Target, Projectile, Adj_room_desc);
@@ -684,7 +794,7 @@ aim(string args)
     archer->query_combat_object()->cb_calc_speed();
 
     Shoot_alarm = set_alarm(archer->query_combat_object()->cb_query_speed(),
-			    0.0, &ready_to_fire());
+                0.0, &ready_to_fire());
 
     return 1;
 }
@@ -707,8 +817,8 @@ fire(string args)
     if (args)
     {
         notify_fail("Just " + query_verb() + " would suffice to " +
-		    query_verb() + " the " + short() + ".\n");
-	return 0;
+            query_verb() + " the " + short() + ".\n");
+    return 0;
     }
 
     if (Ready)
@@ -718,7 +828,7 @@ fire(string args)
     else
     {
         tell_object(this_player(), "You are not ready to " + query_verb() +
-		    " yet.\n");
+            " yet.\n");
     }
 
     return 1;
@@ -742,8 +852,8 @@ unload(string args)
     if (args)
     {
         notify_fail("Just " + Unload_command + " would suffice to " +
-		    Unload_command + " the " + short() + ".\n");
-	return 0;
+            Unload_command + " the " + short() + ".\n");
+    return 0;
     }
 
     if (Projectile)
@@ -754,9 +864,34 @@ unload(string args)
     {
         // Replace with something prettier.
         tell_object(this_player(), "You don't have anything to " +
-		    Unload_command + ".\n");
+            Unload_command + ".\n");
     }
     return 1;
+}
+
+/*
+ * Function name: select
+ * Description  : Handles when the archer selects the arrow to load next.
+ *
+ * Arguments    : string - command to parse.
+ * Returns      : 1 command handled, 0 parse failed.
+ */
+public int
+select(string args)
+{
+    object archer = query_wielded();
+
+    if (!living(environment(this_object())) || query_prop(OBJ_I_BROKEN))
+    {
+        return 0;
+    }
+
+    if (parse_select(args) != 0)
+    {
+        return 1;
+    }
+
+    return 0;
 }
 
 /*
@@ -770,8 +905,8 @@ ready_to_fire()
     if (Projectile)
     {
         Ready = 1;
-	tell_object(query_wielded(),
-		    "You are ready to " + Fire_command + ".\n");
+    tell_object(query_wielded(),
+            "You are ready to " + Fire_command + ".\n");
     }
 
     Shoot_alarm = 0;
@@ -805,15 +940,15 @@ setup_sane(string action, string args)
     if (Target->query_ghost())
     {
         if (Target)
-	{
+    {
             tell_object(Archer, "No need to do that. " +
-			Target->query_The_name(Archer) +
-			" is already dead.\n");
-	}
-	else
-	{
-	    tell_object(Archer, "Your target is already dead.\n");
-	}
+            Target->query_The_name(Archer) +
+            " is already dead.\n");
+    }
+    else
+    {
+        tell_object(Archer, "Your target is already dead.\n");
+    }
 
         return 0;
     }
@@ -823,9 +958,9 @@ setup_sane(string action, string args)
     if (interactive(Target) && Target->query_linkdead())
     {
         tell_object(Archer, "You will have to wait for " +
-		    Target->query_the_name(Archer) +
-		    " to return from link death first.\n");
-	return 0;
+            Target->query_the_name(Archer) +
+            " to return from link death first.\n");
+    return 0;
     }
 
     // Thou shalt not be stunned.
@@ -833,7 +968,7 @@ setup_sane(string action, string args)
     if (Archer->query_prop(LIVE_I_STUNNED))
     {
         tell_object(Archer, "You can not " + action +
-		    " when you are stunned.\n");
+            " when you are stunned.\n");
         return 0;
     }
 
@@ -851,20 +986,20 @@ setup_sane(string action, string args)
     if (interactive(Archer) && !Archer->query_skill(SS_WEP_MISSILE))
     {
         tell_object(Archer, "You lack the training for such an " +
-		    "endeavour, you would not hit a barn from the inside.\n");
+            "endeavour, you would not hit a barn from the inside.\n");
         return 0;
     }
 
     // Thou shalt not kill on sacred ground.
 
     if ((tmp = environment(Target)->query_prop(ROOM_M_NO_ATTACK)) ||
-	(tmp = environment(Archer)->query_prop(ROOM_M_NO_ATTACK)))
+    (tmp = environment(Archer)->query_prop(ROOM_M_NO_ATTACK)))
     {
         if (stringp(tmp))
             tell_object(Archer, tmp);
         else
             tell_object(Archer, "You sense a divine force preventing " +
-			"your attack.\n");
+            "your attack.\n");
         return 0;
     }
 
@@ -879,7 +1014,7 @@ setup_sane(string action, string args)
         else
         {
             tell_object(Archer, "You feel a divine force protecting this " +
-			"being, your attack fails.\n");
+            "being, your attack fails.\n");
         }
 
         return 0;
@@ -890,7 +1025,7 @@ setup_sane(string action, string args)
     if (!F_DARE_ATTACK(Archer, Target))
     {
         tell_object(Archer, "Umm... no. You do not have enough " +
-		    "self-discipline to dare!\n");
+            "self-discipline to dare!\n");
         return 0;
     }
 
@@ -899,22 +1034,22 @@ setup_sane(string action, string args)
     if (Shoot_alarm)
     {
         tell_object(Archer, "You are busy " + Aim_command + "ing at " +
-		    Target->query_the_name(Archer) + ".\n");
-	return 0;
+            Target->query_the_name(Archer) + ".\n");
+    return 0;
     }
 
     if ((tmp = Archer->query_attack()))
     {
         tell_object(Archer, "You are busy " + Shoot_command + "ing at " +
-		    tmp->query_the_name(Archer) + ".\n");
-	return 0;
+            tmp->query_the_name(Archer) + ".\n");
+    return 0;
     }
 
     if (time() <= Next_round)
     {
         tell_object(Archer, "You have to relax for a bit longer before " +
-		    "you can " + action + " again.\n");
-	return 0;
+            "you can " + action + " again.\n");
+    return 0;
     }
 
     // Thou shall not shoot your friends unwillingly.
@@ -926,8 +1061,8 @@ setup_sane(string action, string args)
         if (lower_case(args != Target->query_real_name()))
         {
             tell_object(Archer, "Attack " +
-			Target->query_the_name(Archer) +
-			"?!? Please confirm by trying again.\n");
+            Target->query_the_name(Archer) +
+            "?!? Please confirm by trying again.\n");
             return 0;
         }
     }
@@ -953,13 +1088,13 @@ do_fire()
     if (!objectp(Archer) || Archer != query_wielded())
     {
         if (Projectile)
-	{
+    {
             Projectile->unload();
-	    Projectile->move(environment(this_object()), 1);
-	}
+        Projectile->move(environment(this_object()), 1);
+    }
 
-	reset_launch_weapon();
-	return;
+    reset_launch_weapon();
+    return;
     }
 
     /*
@@ -975,15 +1110,15 @@ do_fire()
     if (environment(Archer) != Archer_env)
     {
         tell_object(Archer, "The movement made you lose your target.\n");
-	unload_projectile();
-	return;
+    unload_projectile();
+    return;
     }
 
     // The target should not move away from the archer while he is aiming.
     if (!(Target && (environment(Target) == Target_env || environment(Target) == Archer_env)))
     {
         tell_object(Archer, "Your target has dissapeared.\n");
-	unload_projectile();
+    unload_projectile();
         return;
     }
 
@@ -991,7 +1126,7 @@ do_fire()
     if (Archer->query_ghost())
     {
         tell_object(Archer, "You can not do that. You are... eh. Dead!\n");
-	unload_projectile();
+    unload_projectile();
         return;
     }
 
@@ -999,17 +1134,17 @@ do_fire()
     if (Target->query_ghost())
     {
         if (Target)
-	{
+    {
             tell_object(Archer, "You give up shooting at " +
-			Target->query_The_name(Archer) + " since " +
-			Target->query_pronoun() + " is already dead.\n");
-	}
-	else
-	{
-	    tell_object(Archer, "Your target is already dead.\n");
-	}
+            Target->query_The_name(Archer) + " since " +
+            Target->query_pronoun() + " is already dead.\n");
+    }
+    else
+    {
+        tell_object(Archer, "Your target is already dead.\n");
+    }
 
-	unload_projectile();
+    unload_projectile();
         return;
     }
 
@@ -1018,10 +1153,10 @@ do_fire()
     if (interactive(Target) && Target->query_linkdead())
     {
         tell_object(Archer, "You will have to wait for " +
-		    Target->query_the_name(Archer) +
-		    " to return from link death first.\n");
-	unload_projectile();
-	return;
+            Target->query_the_name(Archer) +
+            " to return from link death first.\n");
+    unload_projectile();
+    return;
     }
 
     // Thou shalt not be stunned.
@@ -1029,7 +1164,7 @@ do_fire()
     if (Archer->query_prop(LIVE_I_STUNNED))
     {
         tell_object(Archer, "You can not " + Shoot_command +
-		    " when you are stunned.\n");
+            " when you are stunned.\n");
         return;
     }
 
@@ -1050,7 +1185,7 @@ do_fire()
             Archer->catch_msg(fail[0]);
         }
 
-	set_alarm(combat_ob->cb_query_speed(), 0.0, &do_fire());
+    set_alarm(combat_ob->cb_query_speed(), 0.0, &do_fire());
         return;
     }
 
@@ -1059,7 +1194,7 @@ do_fire()
         if ((tmp -= ftoi(combat_ob->cb_query_speed())) > 0)
         {
             Archer->add_prop(LIVE_I_ATTACK_DELAY, tmp);
-	    set_alarm(combat_ob->cb_query_speed(), 0.0, &do_fire());
+        set_alarm(combat_ob->cb_query_speed(), 0.0, &do_fire());
             return;
         }
         else
@@ -1082,8 +1217,8 @@ do_fire()
     if (Archer->query_prop(LIVE_I_CONCENTRATE))
     {
         tell_object(Archer,
-		    "You are too busy with other things to shoot right now.\n");
-	unload_projectile();
+            "You are too busy with other things to shoot right now.\n");
+    unload_projectile();
         return;
     }
     */
@@ -1096,29 +1231,29 @@ do_fire()
     {
         Archer->attack_object(Target);
         tell_object(Archer,
-		    "You attack " + Target->query_the_name(Archer) +".\n");
-	tell_object(Target, Archer->query_The_name(Target) +
-		    " attacks you.\n");
-	tell_room(environment(Archer), QCTNAME(Archer) + " attacks " +
-		  QTNAME(Target) + ".\n", ({ Archer, Target }), Archer);
+            "You attack " + Target->query_the_name(Archer) +".\n");
+    tell_object(Target, Archer->query_The_name(Target) +
+            " attacks you.\n");
+    tell_room(environment(Archer), QCTNAME(Archer) + " attacks " +
+          QTNAME(Target) + ".\n", ({ Archer, Target }), Archer);
     }
     else
     {
         // Give a small message even if OPT_GAG_MISSES is on.
         if (Archer->query_option(OPT_GAG_MISSES))
-	{
+    {
             tell_object(Archer, "You shoot at " +
-			Target->query_the_name(Archer) +".\n");
-	}
+            Target->query_the_name(Archer) +".\n");
+    }
     }
 
 
     // This fine piece of code finds the attack location of our launch_weapon.
 
     attack_location = filter(combat_ob->query_attack_id(),
-			     &operator(==)(, this_object()) @
-			     &operator([])(, 6) @
-			     &combat_ob->query_attack())[0];
+                 &operator(==)(, this_object()) @
+                 &operator([])(, 6) @
+                 &combat_ob->query_attack())[0];
 
 
     /*
@@ -1162,30 +1297,30 @@ do_fire()
         pen = F_CRIT_MOD(pen);
     }
 
-	dt = W_IMPALE;
+    dt = W_IMPALE;
 
-	if (Hitloc_id)
-	{
+    if (Hitloc_id)
+    {
             hitresult = (mixed*)Target->hit_me(pen, dt, Archer,
-					       attack_location, Hitloc_id);
-	}
-	else
-	{
+                           attack_location, Hitloc_id);
+    }
+    else
+    {
             hitresult = (mixed*)Target->hit_me(pen, dt, Archer,
-					       attack_location);
-	}
+                           attack_location);
+    }
 
-	if (crit)
-	{
-	    log_file("CRITICAL", sprintf("%s: %-11s on %-11s " +
-					 "(dam = %4d(%4d))\n\t%s on %s\n",
-					 ctime(time()),
-					 Archer->query_real_name(),
-					 Target->query_real_name(),
-					 hitresult[3], pen,
-					 file_name(Archer),
-					 file_name(Target)), -1);
-	}
+    if (crit)
+    {
+        log_file("CRITICAL", sprintf("%s: %-11s on %-11s " +
+                     "(dam = %4d(%4d))\n\t%s on %s\n",
+                     ctime(time()),
+                     Archer->query_real_name(),
+                     Target->query_real_name(),
+                     hitresult[3], pen,
+                     file_name(Archer),
+                     file_name(Target)), -1);
+    }
     }
     else
     {
@@ -1198,28 +1333,28 @@ do_fire()
      */
     if (hitsuc > 0)
     {
-	hitsuc = query_pen();
-	if (hitsuc > 0)
-	{
-	    hitsuc = 100 * hitresult[2] / hitsuc;
-	}
-	else
-	{
-	    hitsuc = 0;
-	}
+    hitsuc = query_pen();
+    if (hitsuc > 0)
+    {
+        hitsuc = 100 * hitresult[2] / hitsuc;
+    }
+    else
+    {
+        hitsuc = 0;
+    }
     }
 
     if (hitresult[1])
     {
-	combat_ob->cb_did_hit(attack_location, hitresult[1], hitresult[4],
-			      hitresult[0], Target, dt, hitsuc, hitresult[3]);
+    combat_ob->cb_did_hit(attack_location, hitresult[1], hitresult[4],
+                  hitresult[0], Target, dt, hitsuc, hitresult[3]);
     }
 
     if (!Target || Target->query_ghost())
     {
         tell_object(Archer, Target->query_The_name(Archer) +
-		    " is already dead.\n");
-	unload_projectile();
+            " is already dead.\n");
+    unload_projectile();
     }
 
     // Oops, lifeform turned into a deadform. Reward the killer. //
@@ -1239,7 +1374,7 @@ do_fire()
     else
     {
         tell_object(Archer,
-		    "You are so tired that every move drains your health.\n");
+            "You are so tired that every move drains your health.\n");
         Archer->set_fatigue(0);
         Archer->reduce_hit_point(ftg);
     }
@@ -1272,25 +1407,25 @@ try_load()
     stack_env = environment(Projectile_stack);
 
     if (stack_env == query_wielded() ||
-	(stack_env->query_prop(CONT_I_IS_QUIVER) &&
-	 !stack_env->query_prop(CONT_I_CLOSED) &&
-	 environment(stack_env) == query_wielded()))
+    (stack_env->query_prop(CONT_I_IS_QUIVER) &&
+     !stack_env->query_prop(CONT_I_CLOSED) &&
+     environment(stack_env) == query_wielded()))
     {
-	    // We still have the stack present.
-	    load_projectile();
-	    return 1;
+        // We still have the stack present.
+        load_projectile();
+        return 1;
     }
     else
     {
         // We do not have projectiles nearby anymore.
         if (!find_projectiles())
-	{
+    {
             return 0;
-	}
-	else
-	{
-	    return 1;
-	}
+    }
+    else
+    {
+        return 1;
+    }
     }
 }
 
@@ -1343,31 +1478,31 @@ try_hit(object target)
     {
         if (try_load())
         {
-	    this_object()->tell_archer_load(query_wielded(), target,
-					    Projectile, "");
+        this_object()->tell_archer_load(query_wielded(), target,
+                        Projectile, "");
 
-	    this_object()->tell_others_load(query_wielded(), target,
-					    Projectile, "");
+        this_object()->tell_others_load(query_wielded(), target,
+                        Projectile, "");
 
-	    this_object()->tell_target_load(query_wielded(), target,
-					    Projectile);
-	    return 0;
-	}
-	else
-	{
-	    this_object()->tell_archer_no_missiles();
-	    set_this_player(query_wielded());
-	    unwield_me();
-	    if (Sec_wep_cmd)
-	    {
-		wield_secondary_weapon();
-	    }
-	}
+        this_object()->tell_target_load(query_wielded(), target,
+                        Projectile);
+        return 0;
+    }
+    else
+    {
+        this_object()->tell_archer_no_missiles();
+        set_this_player(query_wielded());
+        unwield_me();
+        if (Sec_wep_cmd)
+        {
+        wield_secondary_weapon();
+        }
+    }
     }
     else
     {
         Next_round = time() +
-	  ftoi(query_wielded()->query_combat_object()->cb_query_speed());
+      ftoi(query_wielded()->query_combat_object()->cb_query_speed());
         return 1;
     }
 }
@@ -1410,7 +1545,7 @@ load_projectile()
     if (Drawn_wep)
     {
         Fatigue_alarm = set_alarm(F_LAUNCH_W_FATIGUE_TIME(Archer), 0.0,
-				  &fatigue_unload());
+                  &fatigue_unload());
     }
 }
 
@@ -1425,9 +1560,9 @@ fatigue_unload()
     if (Fatigue_alarm && Archer && Archer == query_wielded() && Projectile)
     {
         this_object()->tell_archer_fatigue_unload(Archer, Target, Projectile);
-	this_object()->tell_others_unload(Archer, Target, Projectile);
-	Projectile->unload();
-	reset_launch_weapon();
+    this_object()->tell_others_unload(Archer, Target, Projectile);
+    Projectile->unload();
+    reset_launch_weapon();
         Archer->add_fatigue(-10);
     }
 }
@@ -1468,11 +1603,11 @@ unload_projectile()
         this_object()->tell_archer_unload(query_wielded(), Target, Projectile);
         this_object()->tell_others_unload(query_wielded(), Target, Projectile);
 
-	if (Projectile_stack)
-	{
-	    Projectile_stack->set_heap_size(Projectile_stack->num_heap() + 1);
-	    Projectile->remove_object();
-	}
+    if (Projectile_stack)
+    {
+        Projectile_stack->set_heap_size(Projectile_stack->num_heap() + 1);
+        Projectile->remove_object();
+    }
     }
 
     reset_launch_weapon();
@@ -1498,31 +1633,31 @@ find_projectiles()
     if (!sizeof(projectiles))
     {
         quivers = filter(all_inventory(query_wielded()),
-			 &->query_prop(CONT_I_IS_QUIVER));
+             &->query_prop(CONT_I_IS_QUIVER));
 
-	if (!sizeof(quivers))
-	{
+    if (!sizeof(quivers))
+    {
             return 0;
-	}
+    }
 
-	for (i = 0; i < sizeof(quivers); i++)
+    for (i = 0; i < sizeof(quivers); i++)
         {
-	    projectiles = query_valid_projectiles(quivers[i]);
+        projectiles = query_valid_projectiles(quivers[i]);
 
-	    if (sizeof(projectiles))
-	    {
-	        break;
-	    }
-	}
+        if (sizeof(projectiles))
+        {
+            break;
+        }
+    }
 
-	if (!sizeof(projectiles))
-	    return 0;
+    if (!sizeof(projectiles))
+        return 0;
     }
 
     set_projectile_stack(projectiles[0]);
     tell_object(query_wielded(), "Using " + Projectile_stack->short() +
-		(sizeof(quivers) ? " from the " + quivers[i]->short() : "") +
-		".\n");
+        (sizeof(quivers) ? " from the " + quivers[i]->short() : "") +
+        ".\n");
 
     return 1;
 }
@@ -1590,48 +1725,48 @@ did_hit(int aid, string hdesc, int phurt, object target, int dt,
     if (phurt == -1)
     {
         this_object()->
-	    tell_archer_miss(query_wielded(), target,
-			     Projectile, Adj_room_desc);
+        tell_archer_miss(query_wielded(), target,
+                 Projectile, Adj_room_desc);
 
         this_object()->
-	    tell_target_miss(query_wielded(), target,
-			     Projectile, Adj_room_desc, Org_room_desc);
+        tell_target_miss(query_wielded(), target,
+                 Projectile, Adj_room_desc, Org_room_desc);
 
         this_object()->
-	    tell_others_miss(query_wielded(), target,
-			     Projectile, Adj_room_desc, Org_room_desc);
+        tell_others_miss(query_wielded(), target,
+                 Projectile, Adj_room_desc, Org_room_desc);
     }
     // Hit, but target is protected by his armour.
     else if (dam == 0)
     {
         armour = find_protecting_armour(target, hid);
 
-	this_object()->
-	    tell_archer_bounce_armour(query_wielded(), target,
-				      Projectile, Adj_room_desc, armour);
+    this_object()->
+        tell_archer_bounce_armour(query_wielded(), target,
+                      Projectile, Adj_room_desc, armour);
 
         this_object()->
-	    tell_target_bounce_armour(query_wielded(), target, Projectile,
-				      Adj_room_desc, Org_room_desc, armour);
+        tell_target_bounce_armour(query_wielded(), target, Projectile,
+                      Adj_room_desc, Org_room_desc, armour);
 
         this_object()->
-	    tell_others_bounce_armour(query_wielded(), target, Projectile,
-				      Adj_room_desc, Org_room_desc, armour);
+        tell_others_bounce_armour(query_wielded(), target, Projectile,
+                      Adj_room_desc, Org_room_desc, armour);
     }
     // Hit.
     else
     {
-	this_object()->
-	    tell_archer_hit(query_wielded(), target, Projectile,
-			    Adj_room_desc, hdesc, dt, phurt, dam, hid);
+    this_object()->
+        tell_archer_hit(query_wielded(), target, Projectile,
+                Adj_room_desc, hdesc, dt, phurt, dam, hid);
 
-	this_object()->
-	    tell_target_hit(query_wielded(), target, Projectile, Adj_room_desc,
-			    Org_room_desc, hdesc, dt, phurt, dam, hid);
+    this_object()->
+        tell_target_hit(query_wielded(), target, Projectile, Adj_room_desc,
+                Org_room_desc, hdesc, dt, phurt, dam, hid);
 
-	this_object()->
-	    tell_others_hit(query_wielded(), target, Projectile, Adj_room_desc,
-			    Org_room_desc, hdesc, dt, phurt, dam, hid);
+    this_object()->
+        tell_others_hit(query_wielded(), target, Projectile, Adj_room_desc,
+                Org_room_desc, hdesc, dt, phurt, dam, hid);
     }
 
     Projectile->unload();
@@ -1639,8 +1774,8 @@ did_hit(int aid, string hdesc, int phurt, object target, int dt,
     if (!random(F_PROJECTILE_BREAK_CHANCE))
     {
         this_object()->
-	    tell_all_projectile_break(Projectile, target, environment(target));
-	Projectile->set_broken(1);
+        tell_all_projectile_break(Projectile, target, environment(target));
+    Projectile->set_broken(1);
     }
 
     if (phurt < 5)
@@ -1655,8 +1790,8 @@ did_hit(int aid, string hdesc, int phurt, object target, int dt,
     if (dam > 0)
     {
         target->heal_hp((F_LAUNCH_W_DAM_FACTOR * -dam) / 100);
-	Projectile->projectile_hit_target(query_wielded(), aid, hdesc, phurt,
-					  target, dt, phit, dam, hid);
+    Projectile->projectile_hit_target(query_wielded(), aid, hdesc, phurt,
+                      target, dt, phit, dam, hid);
     }
 
     /* Reset launch weapon only after all other processing. */
@@ -1678,13 +1813,13 @@ reset_launch_weapon()
     if (Shoot_alarm)
     {
         remove_alarm(Shoot_alarm);
-	Shoot_alarm = 0;
+    Shoot_alarm = 0;
     }
 
     if (Fatigue_alarm)
     {
         remove_alarm(Fatigue_alarm);
-	Fatigue_alarm = 0;
+    Fatigue_alarm = 0;
     }
 }
 
@@ -1714,7 +1849,7 @@ public void
 tell_archer_fatigue_unload(object archer, object target, object projectile)
 {
     tell_object(archer, "You are too tired to keep the " + short() +
-		" loaded, you unload your " + short() + ".\n");
+        " loaded, you unload your " + short() + ".\n");
 }
 
 /*
@@ -1748,8 +1883,8 @@ public void
 tell_others_unload(object archer, object target, object projectile)
 {
     tell_room(environment(archer), QCTNAME(archer) + " unloads " +
-	      archer->query_possessive() + " " + short() + ".\n",
-	      ({ archer }), archer);
+          archer->query_possessive() + " " + short() + ".\n",
+          ({ archer }), archer);
 }
 
 /*
@@ -1765,22 +1900,22 @@ tell_others_unload(object archer, object target, object projectile)
  */
 public void
 tell_archer_load(object archer, object target,
-		 object projectile, string adj_desc)
+         object projectile, string adj_desc)
 {
     if (environment(archer) == environment(target))
     {
         archer->catch_msg("You load your " + short() + " with " +
- 			  LANG_ADDART(Projectile->singular_short()) +
-			  " and take careful aim at " +
-			  target->query_the_name(archer) + ".\n");
+              LANG_ADDART(Projectile->singular_short()) +
+              " and take careful aim at " +
+              target->query_the_name(archer) + ".\n");
     }
     else
     {
         archer->catch_msg("You load your " + short() + " with " +
-			  LANG_ADDART(Projectile->singular_short()) +
-			  " and take careful aim at " +
-			  target->query_the_name(archer) + " " +
-			  adj_desc + ".\n");
+              LANG_ADDART(Projectile->singular_short()) +
+              " and take careful aim at " +
+              target->query_the_name(archer) + " " +
+              adj_desc + ".\n");
     }
 }
 
@@ -1797,28 +1932,28 @@ tell_archer_load(object archer, object target,
  */
 public void
 tell_others_load(object archer,  object target,
-		 object projectile, string adj_desc)
+         object projectile, string adj_desc)
 {
     if (environment(archer) == environment(target))
     {
         // X loads his weapon and aims at Y.
         tell_bystanders_miss(QCTNAME(archer) + " loads " +
-			     archer->query_possessive() + " " + short() +
-			     " and aims at " + QTNAME(target) + ".\n",
-			     QCTNAME(archer) + " loads " +
-			     archer->query_possessive() + " " + short() +
-			     " and aims at something.\n",
-			     0, 0, archer, target, environment(archer));
+                 archer->query_possessive() + " " + short() +
+                 " and aims at " + QTNAME(target) + ".\n",
+                 QCTNAME(archer) + " loads " +
+                 archer->query_possessive() + " " + short() +
+                 " and aims at something.\n",
+                 0, 0, archer, target, environment(archer));
     }
     else
     {
         tell_bystanders_miss(QCTNAME(archer) + " loads " +
-			     archer->query_possessive() + " " + short() +
-			     " and aims at something " + adj_desc + ".\n",
-			     QCTNAME(archer) + " loads " +
-			     archer->query_possessive() + " " + short() +
-			     " and aims at something " + adj_desc + ".\n",
-			     0, 0, archer, target, environment(archer));
+                 archer->query_possessive() + " " + short() +
+                 " and aims at something " + adj_desc + ".\n",
+                 QCTNAME(archer) + " loads " +
+                 archer->query_possessive() + " " + short() +
+                 " and aims at something " + adj_desc + ".\n",
+                 0, 0, archer, target, environment(archer));
     }
 }
 
@@ -1838,9 +1973,9 @@ tell_target_load(object archer,  object target, object projectile)
     if (environment(target) == environment(archer))
     {
         tell_object(target, archer->query_The_name(target) + " loads " +
-		    archer->query_possessive() + " " + short() + " with " +
-		    LANG_ADDART(Projectile->singular_short()) +
-		    "and takes careful aim at you.\n");
+            archer->query_possessive() + " " + short() + " with " +
+            LANG_ADDART(Projectile->singular_short()) +
+            "and takes careful aim at you.\n");
     }
 }
 
@@ -1856,7 +1991,7 @@ public void
 tell_all_projectile_break(object projectile, object target)
 {
     tell_room(environment(target), "The " +
-	      Projectile->singular_short() + " breaks!\n");
+          Projectile->singular_short() + " breaks!\n");
 }
 
 /*
@@ -1874,21 +2009,21 @@ tell_all_projectile_break(object projectile, object target)
  */
 nomask void
 tell_bystanders(string see_both, string see_archer,
-		string see_target, string see_noone,
-		object archer, object target, object *bystanders)
+        string see_target, string see_noone,
+        object archer, object target, object *bystanders)
 {
     object *current_bystanders;
 
     if (!sizeof(bystanders))
     {
-	return;
+    return;
     }
 
     // Bystanders that see both the archer and the target.
 
     current_bystanders =
-	filter(FILTER_IS_SEEN(target, FILTER_IS_SEEN(archer, bystanders)),
-	       &->can_see_in_room());
+    filter(FILTER_IS_SEEN(target, FILTER_IS_SEEN(archer, bystanders)),
+           &->can_see_in_room());
 
     if (sizeof(current_bystanders))
     {
@@ -1904,7 +2039,7 @@ tell_bystanders(string see_both, string see_archer,
 
     bystanders -= current_bystanders;
     current_bystanders = filter(FILTER_IS_SEEN(archer, bystanders),
-				&->can_see_in_room());
+                &->can_see_in_room());
 
     if (sizeof(current_bystanders) && stringp(see_archer))
     {
@@ -1915,7 +2050,7 @@ tell_bystanders(string see_both, string see_archer,
 
     bystanders -= current_bystanders;
     current_bystanders = filter(FILTER_IS_SEEN(target, bystanders),
-				&->can_see_in_room());
+                &->can_see_in_room());
     if (sizeof(current_bystanders) && stringp(see_target))
     {
         current_bystanders->catch_msg(see_target);
@@ -1950,8 +2085,8 @@ tell_bystanders(string see_both, string see_archer,
  */
 nomask void
 tell_bystanders_miss(string see_both, string see_archer,
-		     string see_target, string see_noone,
-		     object archer, object target, object env)
+             string see_target, string see_noone,
+             object archer, object target, object env)
 {
     object *bystanders;
 
@@ -1961,7 +2096,7 @@ tell_bystanders_miss(string see_both, string see_archer,
     bystanders = filter(bystanders, &filter_see_blood());
 
     tell_bystanders(see_both, see_archer, see_target, see_noone,
-		    archer, target, bystanders);
+            archer, target, bystanders);
 }
 
 /*
@@ -1983,8 +2118,8 @@ tell_bystanders_miss(string see_both, string see_archer,
  */
 nomask void
 tell_bystanders_hit(string see_both, string see_archer,
-		    string see_target, string see_noone,
-		    object archer, object target, object env)
+            string see_target, string see_noone,
+            object archer, object target, object env)
 {
     object *bystanders;
 
@@ -1993,7 +2128,7 @@ tell_bystanders_hit(string see_both, string see_archer,
     bystanders = filter(bystanders, &filter_see_blood());
 
     tell_bystanders(see_both, see_archer, see_target, see_noone,
-		    archer, target, bystanders);
+            archer, target, bystanders);
 }
 
 /*
@@ -2038,7 +2173,7 @@ find_protecting_armour(object target, int hid)
     armours = target->query_combat_object()->cb_query_armour(hid);
 
     if (sizeof(armours = filter(armours,
-				&operator(!=)(A_MAGIC) @ &->query_at())))
+                &operator(!=)(A_MAGIC) @ &->query_at())))
     {
         return armours[random(sizeof(armours))];
     }
@@ -2091,30 +2226,30 @@ check_remote_seen(object spectator, object target)
 {
     if (!objectp(spectator) || !objectp(target) || target->query_no_show())
     {
-	// Obj does not exist or is no_show.
-	return 0;
+    // Obj does not exist or is no_show.
+    return 0;
     }
 
     if (spectator->query_prop(LIVE_I_SEE_INVIS) <
-	target->query_prop(OBJ_I_INVIS) ||
-	spectator->query_skill(SS_AWARENESS) <
-	target->query_prop(OBJ_I_HIDE))
+    target->query_prop(OBJ_I_INVIS) ||
+    spectator->query_skill(SS_AWARENESS) <
+    target->query_prop(OBJ_I_HIDE))
     {
-	// Obj is too well hidden.
+    // Obj is too well hidden.
         return 0;
     }
 
     if (environment(spectator)->quey_prop(OBJ_I_LIGHT) >
-	-(spectator->query_prop(LIVE_I_SEE_DARK)))
+    -(spectator->query_prop(LIVE_I_SEE_DARK)))
     {
-	// You can not see in your own room.
+    // You can not see in your own room.
         return 0;
     }
 
     if (environment(target)->quey_prop(OBJ_I_LIGHT) >
-	-(spectator->query_prop(LIVE_I_SEE_DARK)))
+    -(spectator->query_prop(LIVE_I_SEE_DARK)))
     {
-	// You can not see in target's room.
+    // You can not see in target's room.
         return 0;
     }
 
@@ -2136,7 +2271,7 @@ check_remote_seen(object spectator, object target)
  */
 public void
 tell_archer_miss(object archer, object target,
-		 object projectile, string adj_room_desc)
+         object projectile, string adj_room_desc)
 {
     return;
 }
@@ -2159,7 +2294,7 @@ tell_archer_miss(object archer, object target,
  */
 public void
 tell_target_miss(object archer, object target, object projectile,
-		 string adj_room_desc, string org_room_desc)
+         string adj_room_desc, string org_room_desc)
 {
     return;
 }
@@ -2181,7 +2316,7 @@ tell_target_miss(object archer, object target, object projectile,
  */
 public void
 tell_others_miss(object archer, object target, object projectile,
-		 string adj_room_desc, string org_room_desc)
+         string adj_room_desc, string org_room_desc)
 {
     return;
 }
@@ -2205,7 +2340,7 @@ tell_others_miss(object archer, object target, object projectile,
  */
 public void
 tell_archer_bounce_armour(object archer, object target, object projectile,
-			  string adj_room_desc, object armour)
+              string adj_room_desc, object armour)
 {
     return;
 }
@@ -2229,8 +2364,8 @@ tell_archer_bounce_armour(object archer, object target, object projectile,
  */
 public void
 tell_target_bounce_armour(object archer, object target, object projectile,
-			  string adj_room_desc, string org_room_desc,
-			  object armour)
+              string adj_room_desc, string org_room_desc,
+              object armour)
 {
     return;
 }
@@ -2255,8 +2390,8 @@ tell_target_bounce_armour(object archer, object target, object projectile,
  */
 public void
 tell_others_bounce_armour(object archer, object target, object projectile,
-			  string adj_room_desc, string org_room_desc,
-			  object armour)
+              string adj_room_desc, string org_room_desc,
+              object armour)
 {
     return;
 }
@@ -2283,8 +2418,8 @@ tell_others_bounce_armour(object archer, object target, object projectile,
  */
 public void
 tell_archer_hit(object archer, object target,
-		object projectile, string adj_room_desc,
-		string hdesc, int dt, int phurt, int dam, int hid)
+        object projectile, string adj_room_desc,
+        string hdesc, int dt, int phurt, int dam, int hid)
 {
     return;
 }
@@ -2311,8 +2446,8 @@ tell_archer_hit(object archer, object target,
  */
 public void
 tell_target_hit(object archer, object target, object projectile,
-		string adj_room_desc, string org_room_desc, string hdesc,
-		int dt, int phurt, int dam, int hid)
+        string adj_room_desc, string org_room_desc, string hdesc,
+        int dt, int phurt, int dam, int hid)
 {
     return;
 }
@@ -2340,8 +2475,8 @@ tell_target_hit(object archer, object target, object projectile,
  */
 public void
 tell_others_hit(object archer, object target, object projectile,
-		string adj_room_desc, string org_room_desc, string hdesc,
-		int dt, int phurt, int dam, int hid)
+        string adj_room_desc, string org_room_desc, string hdesc,
+        int dt, int phurt, int dam, int hid)
 {
     return;
 }
