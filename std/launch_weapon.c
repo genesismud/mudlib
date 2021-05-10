@@ -645,7 +645,8 @@ parse_select(string args)
         }
 
         projectiles = all_inventory(quiver);
-        if (!parse_command(projectile_name, projectiles, "%o", projectile)) {
+        if (!parse_command(projectile_name, projectiles, "%o", projectile))
+        {
             notify_fail(capitalize(query_verb()) + " what from what to load?\n");
             return 0;
         }
@@ -665,7 +666,7 @@ parse_select(string args)
         return 1;
     }
 
-    notify_fail(capitalize(query_verb()) + " what to load?\n");
+    notify_fail(capitalize(query_verb()) + " what [from] [container] to load?\n");
     return 0;
 }
 
