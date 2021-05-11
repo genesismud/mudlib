@@ -38,6 +38,7 @@ string Valid_projectile,    /* The type of projectiles we use. */
 
 object Projectile_stack,    /* The currently used stack of projectiles. */
        Projectile,          /* The currently loaded projectile. */
+       Projectile_ret_stack,/* The projectile stack to return to */
        Archer,              /* A sneeky chap in green tights. */
        Target,              /* The current target. */
        Archer_env,          /* The archer's environment. */
@@ -1533,6 +1534,7 @@ load_projectile()
     Projectile_stack->split_heap(1);
     Projectile = Projectile_stack;
     Projectile_stack = Projectile_stack->make_leftover_heap();
+    Projectile_ret_stack = Projectile_stack;
 
     /*
      * Move the projectile to the inventory of the player and make it
@@ -1604,9 +1606,9 @@ unload_projectile()
         this_object()->tell_archer_unload(query_wielded(), Target, Projectile);
         this_object()->tell_others_unload(query_wielded(), Target, Projectile);
 
-	if (Projectile_stack)
+	if (Projectile_ret_stack)
 	{
-	    Projectile_stack->set_heap_size(Projectile_stack->num_heap() + 1);
+	    Projectile_ret_stack->set_heap_size(Projectile_stack->num_heap() + 1);
 	    Projectile->remove_object();
 	}
     }
