@@ -130,13 +130,10 @@ cb_modify_procuse()
 
         if (total_weight && weight > 0)
         {
-            int weight = calc_attack_weight(attack);
             puse = (use * weight) / total_weight;
-
             use -= puse;
             total_weight -= weight;
         }
-
 
         ::add_attack(attack[ATT_WCHIT], attack[ATT_WCPEN],
                      attack[ATT_DAMT], puse, aid,
