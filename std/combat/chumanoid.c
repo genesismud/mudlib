@@ -1,9 +1,9 @@
 /*
   /std/combat/chumanoid.c
 
-  This is the externalized combat routines for humanoids. 
+  This is the externalized combat routines for humanoids.
 
-  This combat object predefines a set of attacks and hitlocations 
+  This combat object predefines a set of attacks and hitlocations
   for humanoid living objects. It also keeps track of the total percentage
   of attacks that can be made each turn and distributes those percentages
   over the attacks depending on effectiveness of weapon wielded.
@@ -64,15 +64,25 @@ cb_configure()
     add_attack(0, 0, 0, 0, W_BOTH);  me->cr_reset_attack(W_BOTH);
     add_attack(0, 0, 0, 0, W_FOOTR); me->cr_reset_attack(W_FOOTR);
     add_attack(0, 0, 0, 0, W_FOOTL); me->cr_reset_attack(W_FOOTL);
-    
+
     add_hitloc(0, 0, 0, A_HEAD);  me->cr_reset_hitloc(A_HEAD);
     add_hitloc(0, 0, 0, A_L_ARM); me->cr_reset_hitloc(A_L_ARM);
     add_hitloc(0, 0, 0, A_R_ARM); me->cr_reset_hitloc(A_R_ARM);
     add_hitloc(0, 0, 0, A_TORSO); me->cr_reset_hitloc(A_TORSO);
     add_hitloc(0, 0, 0, A_LEGS);  me->cr_reset_hitloc(A_LEGS);
- 
+
     map(qme()->query_weapon(-1), cb_wield_weapon);
     map(qme()->query_armour(-1), cb_wear_arm);
+}
+
+/*
+ * Function name: calc_attack_weight
+ * Description:   Returns a weight used for attack use priority
+ */
+static int
+calc_attack_weight(mixed attack)
+{
+    return attack[ATT_WCHIT] * reduce(&operator(+)(,), attack[ATT_M_PEN]) / 3;
 }
 
 /*
@@ -80,70 +90,58 @@ cb_configure()
  *              attacks are modified. (If maxuse is set)
  *              The distribution formula is:
  *
- *                       %use = %maxuse * (wchit*wcpen) / ( sum(wchit*wcpen) )
+ *  %use = %maxuse * (wchit*wcpen) / ( sum(wchit*wcpen) )
  */
 public void
 cb_modify_procuse()
 {
-    int il, *attid, *enabled_attacks, swc, puse, weapon_no;
-    int unarmed_off;
-    mixed *att;
-    object tool;
-
     if (!attuse)
         return;
 
-    attid = query_attack_id();
-    att = allocate(sizeof(attid));
-    enabled_attacks = allocate(sizeof(attid));
-    weapon_no = sizeof(cb_query_weapon(-1));
-    unarmed_off = me->query_option(OPT_UNARMED_OFF);
+    mapping attack_map = mkmapping(query_attack_id(), map(query_attack_id(), query_attack));
+    mapping attack_weights = ([ ]);
+    int unarmed = me->query_option(OPT_UNARMED_OFF) && sizeof(cb_query_weapon(-1)) > 0;
+    int total_weight;
 
-    for (swc = 0, il = 0; il < sizeof(attid); il++)
+    foreach (int aid, mixed attack: attack_map)
     {
-        att[il] = query_attack(attid[il]);
-
-        if (!att[il][ATT_OBJ])
-	{
-	    /* No weapon in this slot.  See if unarmed is off
-             * and there is a weapon wielded elsewhere.
-             */
-            if (unarmed_off && (weapon_no > 0))
-	    {
-                continue;
-	    }
-
-            /* See if there is another kind of tool in the slot
-             * that might prevent us from using it to attack.
-             */
-            if ((tool = (object)qme()->query_tool(attid[il])) &&
-                tool->query_attack_blocked(attid[il]))
-	    {
-                continue;
-	    }
+        /* Do we want to use the unarmed attacks? */
+        if (!attack[ATT_OBJ] && unarmed) {
+            continue;
         }
 
-        enabled_attacks[il] = 1;
-        swc += att[il][ATT_WCHIT] * F_PENMOD(att[il][ATT_WCHIT], 
-            att[il][ATT_SKILL]);
+        /* See if there is another kind of tool in the slot
+         * that might prevent us from using it to attack.
+         */
+        object tool = qme()->query_tool(aid);
+        if (tool && tool->query_attack_blocked(aid)) {
+            continue;
+        }
+
+        attack_weights[aid] = calc_attack_weight(attack);
+        total_weight += attack_weights[aid];
     }
 
-    for (il = 0; il < sizeof(attid); il++)
+    int use = attuse;
+    foreach (int aid, mixed attack: attack_map)
     {
-        if (swc && enabled_attacks[il])
+        int puse = 0;
+        int weight = attack_weights[aid];
+
+        if (total_weight && weight > 0)
         {
-            puse = (attuse * att[il][ATT_WCHIT] * 
-                    F_PENMOD(att[il][ATT_WCHIT], att[il][ATT_SKILL])) / swc;
-        }
-        else
-        {
-            puse = 0;
+            int weight = calc_attack_weight(attack);
+            puse = (use * weight) / total_weight;
+
+            use -= puse;
+            total_weight -= weight;
         }
 
-        ::add_attack(att[il][ATT_WCHIT], att[il][ATT_WCPEN], 
-                     att[il][ATT_DAMT], puse, attid[il],
-                     (att[il][ATT_SKILL] ? att[il][ATT_SKILL] : -1),
-                     att[il][ATT_OBJ] );
+
+        ::add_attack(attack[ATT_WCHIT], attack[ATT_WCPEN],
+                     attack[ATT_DAMT], puse, aid,
+                     (attack[ATT_SKILL] ? attack[ATT_SKILL] : -1),
+                     attack[ATT_OBJ]);
     }
 }
 
@@ -168,15 +166,22 @@ cb_query_attackuse() { return attuse; }
 /*
  * Description: Add an attack, see /std/combat/cbase.c
  */
-varargs int
-add_attack(int wchit, mixed wcpen, int damtype, int prcuse, int id, int skill,
-    object wep)
+int
+cb_add_attack(int wchit, mixed wcpen, int damtype, int prcuse, int id, int skill)
 {
-    int ret;
-
-    ret = ::add_attack(wchit, wcpen, damtype, prcuse, id, skill, wep);
+    int ret = ::cb_add_attack(wchit, wcpen, damtype, prcuse, id, skill);
     cb_modify_procuse();
+    return ret;
+}
 
+/*
+ * Description: Add an attack, see /std/combat/cbase.c
+ */
+varargs int
+add_attack(int wchit, mixed wcpen, int damtype, int prcuse, int id, int skill, object wep)
+{
+    int ret = ::add_attack(wchit, wcpen, damtype, prcuse, id, skill, wep);
+    cb_modify_procuse();
     return ret;
 }
 
@@ -200,7 +205,7 @@ cb_wield_weapon(object wep)
     {
 	return "The " + wep->short() + " is not a true weapon!\n";
     }
-    
+
     if (stringp(str = ::cb_wield_weapon(wep)))
     {
 	return str;
@@ -213,8 +218,7 @@ cb_wield_weapon(object wep)
     	/*
          * We get no more use of the weapon than our skill with it allows.
 	 */
-	wcskill = (int)me->query_skill(SS_WEP_FIRST + 
-				       ((int)wep->query_wt() - W_FIRST));
+	wcskill = (int)me->query_skill(SS_WEP_FIRST + ((int)wep->query_wt() - W_FIRST));
 	if (wcskill < 1)
 	    wcskill = -1;
 	add_attack(att[0], att[1], att[2], att[3], aid, wcskill, wep);
