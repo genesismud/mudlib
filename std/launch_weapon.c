@@ -38,6 +38,7 @@ string Valid_projectile,    /* The type of projectiles we use. */
 
 object Projectile_stack,    /* The currently used stack of projectiles. */
        Projectile,          /* The currently loaded projectile. */
+       Projectile_ret_stack,/* The projectile stack to return to */
        Archer,              /* A sneeky chap in green tights. */
        Target,              /* The current target. */
        Archer_env,          /* The archer's environment. */
@@ -60,6 +61,7 @@ public int shoot(string args);
 public int aim(string args);
 public int fire(string args);
 public int unload(string args);
+public int select(string args);
 public int secondary_wep_cmd(string args);
 public int extra_sanity_checks(string action, string args);
 private void ready_to_fire();
@@ -145,6 +147,7 @@ init()
     add_action(aim, Aim_command);
     add_action(fire, Fire_command);
     add_action(unload, Unload_command);
+    add_action(select, "select");
     add_action(secondary_wep_cmd, "secondary");
 }
 
@@ -267,6 +270,26 @@ query_valid_projectiles(object container)
     return filter(filter(all_inventory(container),
 			 &call_other( , Valid_projectile)),
 		  &not() @ &->query_broken());
+}
+
+/*
+ * Function name: query_is_valid_projectile
+ * Description  : Uses the function name set with set_valid_projectile to
+ *                find the valid projetiles in the specified container.
+ *                This function does only search the specified container
+ *                not any containers within the specified container.
+ *
+ * Arguments    : object container - Container to search for projectiles.
+ * Returns      : An array of the valid projectiles found in this container.
+ */
+public nomask int
+query_is_valid_projectile(object projectile)
+{
+    if (!objectp(projectile) || !stringp(Valid_projectile))
+    {
+        return 0;
+    }
+    return call_other(projectile, Valid_projectile) && !projectile->query_broken();
 }
 
 /*
@@ -560,6 +583,95 @@ parse_aim(string args)
 }
 
 /*
+ * Function name: parse_select
+ * Description  : Parses the user input for select command.
+ *
+ * Arguments    : string args - User input.
+ * Returns      :  1  - Successful parse.
+ *                 0  - No match.
+ *                -1  - Faulty input.
+ */
+private nomask int
+parse_select(string args)
+{
+    object projectile, quiver, *projectiles;
+    string projectile_name;
+    int i;
+
+    if (!args)
+    {
+        notify_fail(capitalize(query_verb()) + " what [from] [container] to load?\n");
+        return 0;
+    }
+
+    if (!query_wielded())
+    {
+        notify_fail("Wield the " + short() + " first.\n");
+        return 0;
+    }
+
+    Archer = query_wielded();
+
+    // Parse patterns matching: select feathered arrow
+    if (parse_command(args, all_inventory(Archer), " %o", projectile))
+    {
+        if (!query_is_valid_projectile(projectile))
+        {
+            tell_object(Archer, "The " + LANG_STRIPART(projectile->short()) + " " +
+                (projectile->num_heap() > 1 ? "are" : "is") +
+                " not valid ammunition for the " + short() + ".\n");
+            return 1;
+        }
+        set_projectile_stack(projectile);
+        tell_object(Archer, "You remember to use the " +
+            Projectile_stack->short() + " as ammunition for the " +
+            "next firing.\n");
+        return 1;
+    }
+
+    // Parse patterns matching: select feathered arrow from black quiver
+    if (parse_command(args, Archer, " %s 'in' / 'inside' / 'from' %o",
+        projectile_name, quiver))
+    {
+        if (quiver->query_prop(CONT_I_CLOSED))
+        {
+            tell_object(Archer, "The " + quiver->short() + " is closed.\n");
+            return 1;
+        }
+        if (!quiver->query_prop(CONT_I_IS_QUIVER))
+        {
+            tell_object(Archer, "The " + quiver->short() + " is " +
+                "not a projectile container.\n");
+            return 1;   
+        }
+
+        projectiles = all_inventory(quiver);
+        if (!parse_command(projectile_name, projectiles, "%o", projectile))
+        {
+            notify_fail(capitalize(query_verb()) + " what from what to load?\n");
+            return 0;
+        }
+
+        if (!query_is_valid_projectile(projectile))
+        {
+            tell_object(Archer, "The " + LANG_STRIPART(projectile->short()) + " " +
+                (projectile->num_heap() > 1 ? "are" : "is") + " not valid ammunition " +
+                "for the " + short() + ".\n");
+            return 1;
+        }
+
+        set_projectile_stack(projectile);
+        tell_object(Archer, "You remember to use the " +
+            Projectile_stack->short() + " from your " +
+            quiver->short() + " as ammunition for the next firing.\n");
+        return 1;
+    }
+
+    notify_fail(capitalize(query_verb()) + " what [from] [container] to load?\n");
+    return 0;
+}
+
+/*
  * Function name: shoot
  * Description  : Handles a single shot from a player.
  *
@@ -757,6 +869,31 @@ unload(string args)
 		    Unload_command + ".\n");
     }
     return 1;
+}
+
+/*
+ * Function name: select
+ * Description  : Handles when the archer selects the arrow to load next.
+ *
+ * Arguments    : string - command to parse.
+ * Returns      : 1 command handled, 0 parse failed.
+ */
+public int
+select(string args)
+{
+    object archer = query_wielded();
+
+    if (!living(environment(this_object())) || query_prop(OBJ_I_BROKEN))
+    {
+        return 0;
+    }
+
+    if (parse_select(args) != 0)
+    {
+        return 1;
+    }
+
+    return 0;
 }
 
 /*
@@ -1397,6 +1534,7 @@ load_projectile()
     Projectile_stack->split_heap(1);
     Projectile = Projectile_stack;
     Projectile_stack = Projectile_stack->make_leftover_heap();
+    Projectile_ret_stack = Projectile_stack;
 
     /*
      * Move the projectile to the inventory of the player and make it
@@ -1468,9 +1606,9 @@ unload_projectile()
         this_object()->tell_archer_unload(query_wielded(), Target, Projectile);
         this_object()->tell_others_unload(query_wielded(), Target, Projectile);
 
-	if (Projectile_stack)
+	if (Projectile_ret_stack)
 	{
-	    Projectile_stack->set_heap_size(Projectile_stack->num_heap() + 1);
+	    Projectile_ret_stack->set_heap_size(Projectile_stack->num_heap() + 1);
 	    Projectile->remove_object();
 	}
     }
