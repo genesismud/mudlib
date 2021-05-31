@@ -26,6 +26,8 @@ inherit "/std/combat/unarmed";
 #define QEXC (this_object()->query_combat_object())
 
 static mapping hitloc_propagation = HITLOC_PROPAGATION;
+static mapping attack_to_slot_propagation = ATTACK_TO_SLOT_PROPAGATION;
+static mapping slot_to_attack_propagation = SLOT_TO_ATTACK_PROPAGATION;
 
 /*
  * Function name: cr_configure
@@ -186,6 +188,28 @@ cr_got_hit(int hid, int ph, object att, int aid, int dt, int dam)
             armour->got_hit(hid, ph, att, dt, dam);
         }
     }
+}
+
+/*
+ * Function name; cb_convert_attack_id_to_hitloc_id
+ * Arguments:     aid - The attack id
+ * Returns:       0 if aid cannot be mapped to a slot, else slot
+ */
+public int
+cr_convert_attack_id_to_slot(int aid)
+{
+    return attack_to_slot_propagation[aid];
+}
+
+/*
+ * Function name; cb_convert_hitloc_id_to_attack_id
+ * Arguments:     slot - The slot id
+ * Returns:       0 if slot id cannot be mapped to a attack id, else attack_id
+ */
+public int
+cr_convert_slot_to_attack_id(int slot)
+{
+    return slot_to_attack_propagation[slot];
 }
 
 /*
