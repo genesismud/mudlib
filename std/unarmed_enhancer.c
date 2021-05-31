@@ -49,7 +49,7 @@ create_unarmed_enhancer()
 
 /*
  * Function name: query_enhanced_attack_ids
- * Description  : When word, this returns in which attack ids the enhancer is
+ * Description  : When worn, this returns in which attack ids the enhancer is
  *                actually being used.
  * Returns      : int array - the attack ids, or 0 if not worn.
  */
