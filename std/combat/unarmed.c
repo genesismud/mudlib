@@ -217,3 +217,25 @@ public void
 cr_attacked_by(object ob)
 {
 }
+
+/*
+ * Function name; cb_convert_attack_id_to_hitloc_id
+ * Arguments:     aid - The attack id
+ * Returns:       0 if aid cannot be mapped to a slot, else slot
+ */
+public int
+cr_convert_attack_id_to_slot(int aid)
+{
+    return 0;
+}
+
+/*
+ * Function name; cb_convert_hitloc_id_to_attack_id
+ * Arguments:     slot - The slot id
+ * Returns:       0 if slot id cannot be mapped to a attack id, else attack_id
+ */
+public int
+cr_convert_slot_to_attack_id(int slot)
+{
+    return 0;
+}
