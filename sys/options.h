@@ -49,12 +49,14 @@
 #define OPT_ALWAYS_KNOWN        23  /* Be known to all mortals. */
 
 /* Variables used in the m_vars variable in the player save file. */
-#define SAVEVAR_VARS     "m_vars"
-#define SAVEVAR_HEIGHT   "height"
-#define SAVEVAR_WEIGHT   "weight"
-#define SAVEVAR_VOLUME   "volume"
-#define SAVEVAR_BUSY     "busy"
-#define SAVEVAR_NOTIFY   "notify"
-#define SAVEVAR_RESTRICT "restrict"
-		      
+#define SAVEVAR_VARS            "m_vars"
+#define SAVEVAR_HEIGHT          "height"
+#define SAVEVAR_WEIGHT          "weight"
+#define SAVEVAR_VOLUME          "volume"
+#define SAVEVAR_BUSY            "busy"
+#define SAVEVAR_NOTIFY          "notify"
+#define SAVEVAR_RESTRICT        "restrict"
+#define SAVEVARS_LAST_HERB      "herb"
+#define SAVEVARS_LAST_STEAL     "steal"
+#define SAVEVARS_LAST_PEEK      "peek"
 #endif /* _options_h */

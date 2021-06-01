@@ -109,8 +109,9 @@ parse_command_plural_id_list()
 public string *
 parse_command_adjectiv_id_list()
 {
-    if (can_id_herb())
-        return ::parse_command_adjectiv_id_list() + herb_id_adjs;
+    if (can_id_herb()) {
+        return (::parse_command_adjectiv_id_list() || ({ })) + herb_id_adjs;
+    }
     return ::parse_command_adjectiv_id_list();
 }
 
@@ -522,7 +523,7 @@ command_eat()
             return "You are unable to " + query_verb() + " anything.\n";
     }
 
-    if (this_player()->query_prop(LIVE_I_HERB_EFFECT) > time() - F_HERB_INTERVAL)
+    if (this_player()->query_prop(LIVE_I_LAST_HERB) > time() - F_HERB_INTERVAL)
     {
         return capitalize(LANG_THESHORT(this_object())) +
             " is too much for you.\n";
@@ -537,7 +538,7 @@ command_eat()
     }
 
     force_heap_split();
-    this_player()->add_prop(LIVE_I_HERB_EFFECT, time());
+    this_player()->add_prop(LIVE_I_LAST_HERB, time());
     return 1;
 }
 
