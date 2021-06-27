@@ -401,7 +401,7 @@ cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
             if (sizeof(arms) > 0)
             {
                 enhancers = filter(arms, 
-                    &operator(!=)(0) @ &function_exists("create_unarmed_enhancer",));
+                    &operator(!=)(0) @ &function_exists("did_hit",));
                 num_enhancers = sizeof(enhancers);
                 if (num_enhancers > 0)
                 {

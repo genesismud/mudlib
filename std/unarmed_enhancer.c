@@ -195,13 +195,26 @@ set_dt(int type)
 }
 
 /*
+ * Function name: check_unarmed_enhancer
+ * Description:   Check file for security.
+ */
+nomask int
+check_unarmed_enhancer()
+{
+    return 1;
+}
+
+/*
  * Function name: set_default_enhancer
  * Description  : Configures the enhancer by replacing up to six calls with
  *                just one. For details, see the respective functions.
  * Arguments    : int hit    - set_hit(hit)
  *                int pen    - set_pen(pen)
  *                int dt     - set_dt(dt)
- *                object obj - set_wf(obj)
+ *                int ac     - set_ac(ac)
+ *                int at     - set_at(at)
+ *                int* am    - set_am(am)
+ *                object af  - set_wf(af)
  */
 varargs void
 set_default_enhancer(int hit, int pen, int dt, int ac, int at, int *am, object af)
@@ -250,7 +263,7 @@ did_hit(int aid, string hdesc, int phurt, object enemy, int dt,
         return 0;
 
     hits++;
-    if (F_ARMOUR_CONDITION_WORSE(hits, arm_ac, likely_cond))
+    if (F_WEAPON_CONDITION_DULL(hits, enh_pen, likely_cond))
     {
         hits = 0;
         set_condition(query_condition() + 1);
