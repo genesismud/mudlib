@@ -2359,7 +2359,8 @@ wizard_change_rank(string wname, int rank)
     case WIZ_RETIRED:
         if (strlen(dname))
             add_wizard_to_domain("", wname, cmder);
-
+        if (rank < old_rank)
+            remove_all_sanctions(wname);
         break;
     }
 
