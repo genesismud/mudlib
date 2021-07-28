@@ -2437,6 +2437,7 @@ add_attack(int wchit, mixed wcpen, int dt, int prcuse, int id, int skill,
     object wep)
 {
     int pos, *pen, *m_pen;
+    int unarmed_extra_hit, unarmed_extra_pen;
 
     if (sizeof(attacks) >= MAX_ATTACK)
     {
@@ -2454,6 +2455,9 @@ add_attack(int wchit, mixed wcpen, int dt, int prcuse, int id, int skill,
     {
         skill = 0;
     }
+
+    unarmed_extra_hit = me->query_property(LIVE_I_UNARMED_EXTRA_HIT);
+    unarmed_extra_pen = me->query_property(LIVE_I_UNARMED_EXTRA_PEN);
 
     if (!pointerp(wcpen))
         wcpen = map(allocate(W_NUM_DT), &operator(+)(wcpen, ));
@@ -2479,12 +2483,18 @@ add_attack(int wchit, mixed wcpen, int dt, int prcuse, int id, int skill,
     if ((pos = member_array(id, att_id)) < 0)
     {
         att_id += ({ id });
-        attacks += ({ ({ wchit, pen, dt, prcuse, skill, m_pen, wep }) });
+        attacks += ({ ({ 
+            wchit + (wep ? 0 : unarmed_extra_hit),
+            pen + (wep ? 0 : unarmed_extra_pen),
+            dt, prcuse, skill, m_pen, wep }) });
         return 1;
     }
     else
     {
-        attacks[pos] = ({ wchit, pen, dt, prcuse, skill, m_pen, wep });
+        attacks[pos] = ({
+            wchit + (wep ? 0 : unarmed_extra_hit),
+            pen + (wep ? 0 : unarmed_extra_pen),
+            dt, prcuse, skill, m_pen, wep });
     }
 
     return 1;
