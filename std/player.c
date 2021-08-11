@@ -27,7 +27,6 @@ inherit "/std/living";
 #ifndef OWN_STATUE
 #include <living_desc.h>
 #endif
-#include <login.h>
 #include <macros.h>
 #include <mail.h>
 #include <money.h>
@@ -315,22 +314,13 @@ reset_userids()
 static nomask void
 init_vars_before_load()
 {
-    int i;
-    int *ostat = RACESTAT[query_race()];
-
-    if (!pointerp(ostat))
-    {
-	return;
-    }
-
-    i = -1;
+    int i = -1;
     while(++i < SS_NO_EXP_STATS)
     {
-        set_base_stat(i, ostat[i]);
+        set_base_stat(i, 1);
     }
 
     stats_to_acc_exp();
-
     set_learn_pref(query_orig_learn());
 
 #ifndef NO_ALIGN_TITLE

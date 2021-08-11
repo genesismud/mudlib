@@ -1122,6 +1122,10 @@ store_saved_props()
     m_vars[SAVEVAR_WEIGHT] = query_prop(CONT_I_WEIGHT);
     m_vars[SAVEVAR_VOLUME] = query_prop(CONT_I_VOLUME);
 
+    m_vars[SAVEVARS_LAST_HERB] = query_prop(LIVE_I_LAST_HERB);
+    m_vars[SAVEVARS_LAST_STEAL] = query_prop(LIVE_I_LAST_STEAL);
+    m_vars[SAVEVARS_LAST_PEEK] = query_prop(LIVE_I_LAST_PEEK);
+
     /* Only wizards may be busy. */
     if (query_wiz_level() && (busy = query_prop(WIZARD_I_BUSY_LEVEL)))
         m_vars[SAVEVAR_BUSY] = busy;
@@ -1141,6 +1145,10 @@ init_saved_props()
     add_prop(CONT_I_HEIGHT, m_vars[SAVEVAR_HEIGHT]);
     add_prop(CONT_I_VOLUME, m_vars[SAVEVAR_VOLUME]);
     add_prop(CONT_I_WEIGHT, m_vars[SAVEVAR_WEIGHT]);
+
+    add_prop(LIVE_I_LAST_HERB, m_vars[SAVEVARS_LAST_HERB]);
+    add_prop(LIVE_I_LAST_STEAL, m_vars[SAVEVARS_LAST_STEAL]);
+    add_prop(LIVE_I_LAST_PEEK, m_vars[SAVEVARS_LAST_PEEK]);
 
     /* Backward compatibility for use of the variable saved_props. */
     if (size > 0) add_prop(CONT_I_WEIGHT, saved_props[0]);

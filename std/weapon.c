@@ -614,6 +614,20 @@ query_slots()
 }
 
 /*
+ * Function name: query_attack_blocked
+ * Description  : When the weapon is wielded in both hands the left and right
+ *                hand attacks are blocked.
+ */
+int
+query_attack_blocked(int aid)
+{
+    if (wielded_in_hand != aid && wielded_in_hand & aid) {
+        return 1;
+    }
+    return 0;
+}
+
+/*
  * Function name: query_protects
  * Description  : Find out the slots the weapon protects. A weapon protects
  *                the whole arm when wielded in a hand.

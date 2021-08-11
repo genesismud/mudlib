@@ -212,6 +212,7 @@ cb_status()
     string str;
     int tmp;
     mixed ac, m_ac;
+    int defense, parry, acro, adj_acro, unarmed, adj_unarmed, total_evade = 0;
     object *valid_enemies;
 
     str = "Living object: " + file_name(me) +
@@ -261,6 +262,29 @@ cb_status()
             attack[ATT_PROCU]);
     }
 
+    defense = me->query_skill(SS_DEFENSE);
+    parry = me->query_skill(SS_PARRY);
+    acro = me->query_skill(SS_ACROBAT);
+    unarmed = me->query_skill(SS_UNARM_COMBAT);
+    adj_acro = compute_acrobat_evade(me);
+
+    total_evade = defense + adj_acro;
+
+    if (sizeof(filter(me->query_weapon(-1), objectp)))
+    {
+        adj_unarmed = 0;
+        total_evade += parry;
+    }
+    else
+    {
+        /* Let the encumberance of the victim lower the effectiveness of
+         * unarmed combat until 50% when fully encumbered.
+         */
+        adj_unarmed = max(min(me->query_encumberance_weight(), 100), 0);
+        adj_unarmed = ((200 - adj_unarmed) * me->query_skill(SS_UNARM_COMBAT)) / 200;
+        total_evade += adj_unarmed;
+    }
+
     str += sprintf("\n%-15s %@|13s\n","  Hit location",
         ({"impale", "slash", "bludgeon", " %hit" }));
 
@@ -293,10 +317,13 @@ cb_status()
     }
 
     str +=
-        "\nParry: " + me->query_skill(SS_PARRY) +
-        "  Defense: " + me->query_skill(SS_DEFENSE) +
-        "  Acrobat: " + me->query_skill(SS_ACROBAT) +
-        "  Adj acro: " + compute_acrobat_evade(me) +
+        "\nParry: " + parry +
+        "  Defense: " + defense +
+        "  Acrobat: " + acro +
+        "  Unarm: " + unarmed +
+        "\nAdj acro: " + adj_acro +
+        "  Adj unarm: " + adj_unarmed +
+        "  Total evade: " + total_evade +
         "\nStat av: " + (tmp = me->query_average_stat()) +
         "  Dex: " + me->query_stat(SS_DEX) +
         "  Enc: " + (me->query_encumberance_weight() +
@@ -1978,7 +2005,7 @@ log_hit(object attacker, int pen, int dt, int hp, int dam, string location, int 
  *                               used.
  * Returns:       Array: ({ proc_hurt, hitloc desc, phit, dam, hitloc id })
  *                int proc_hurt - 0-100, incurred damage as percentage of
- *                     victim HP, or -1 = dodge, -2 = parry.
+ *                     victim HP, or -1 = dodge, -2 = parry, -3 = acrobat dodge.
  *                string hitloc desc - descr. of the location that was hit.
  *                int phit - randomized value of the weapon penetration (wcpen)
  *                int dam - incurrent damage in hitpoints

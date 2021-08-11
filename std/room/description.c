@@ -1,4 +1,4 @@
-/* 
+/*
  * /std/room/description.c
  *
  * This is a sub-part of /std/room.c
@@ -35,7 +35,7 @@ add_my_desc(string str, object cobj)
 
     if (!cobj)
         cobj = previous_object();
-    
+
     if (!str)
         return;
 
@@ -163,7 +163,7 @@ exits_description()
         {
         case 0:
             break;
-        
+
         case 1:
             text += "There is one non-obvious exit: " + exits[0] + ".\n";
             break;
@@ -325,20 +325,10 @@ describe_contents(object for_obj, object *obarr)
 int
 calc_pros(object player)
 {
-    int p;
-
-    /*
-     * Players that are members of certain types of guilds get better chances.
-     */
-    if (player->query_guild_style_occ() == "cleric") p = p + 15;
-    if (player->query_guild_style_lay() == "cleric") p = p + 10;
-    if (player->query_guild_style_occ() == "ranger") p = p + 10;
-    if (player->query_guild_style_lay() == "ranger") p = p + 5;
-    p += player->query_skill(SS_HERBALISM);
+    int p = player->query_skill(SS_HERBALISM);
 
     /* Penalty will be given if no skill. */
     /* To add a certain element of luck  - wise players might get lucky. */
-
     return p + random(player->query_stat(SS_WIS) / 3);
 }
 
@@ -392,7 +382,7 @@ no_find()
  * Description:   The herbalist has searched the room, now let's see if and
  *                what he has found.
  * Arguments:     herbalist - The player searching for herbs
- *                herb_file - the file of the herb the player is looking for 
+ *                herb_file - the file of the herb the player is looking for
  *                            (optional)
  * Returns:       The message to write
  */
@@ -469,7 +459,7 @@ add_herb_file(string file)
  * Function name: remove_herb_file
  * Description:   Remove a herb file from our array
  * Arguments:     file - The filename to our herb
- * Returns:       1 if removed 
+ * Returns:       1 if removed
  */
 int
 remove_herb_file(string file)
@@ -480,7 +470,7 @@ remove_herb_file(string file)
     if (!herbs)
         herbs = ({ });
     else
-        herbs = filter(herbs, &operator(!=)(, file)); 
+        herbs = filter(herbs, &operator(!=)(, file));
 
     return 1;
 }
