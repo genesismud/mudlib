@@ -10,9 +10,8 @@ Effect     :
           Non-knives by default have this value set to 0. Knives
           by default effectively have +100 OBJ_I_AIDS_ACROBAT and
           suffer no penalty. Setting this property on shields will
-          have no effect. Setting the property on knives does
-          not only overrides the default and does not add to the
-          value.
+          have no effect. Setting the property on knives only
+          overrides the default and does not add to the value.
 
           Under default settings:
 
