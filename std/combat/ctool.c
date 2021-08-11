@@ -221,7 +221,7 @@ adjust_ac(int hid, object arm, int rm)
 static void
 adjust_unarmed_hit_pen(int slot, object arm, int rm)
 {
-    if (!function_exists("create_unarmed_enhancer", arm))
+    if (!IS_UNARMED_ENH_OBJECT(arm))
     {
         return;
     }

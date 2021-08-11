@@ -429,7 +429,8 @@ adverbs(string str)
 void
 compare_living(object living1, object living2)
 {
-    int skill = (1000 / (1 + this_player()->query_skill(SS_APPR_MON)));
+    /* Allow the player high precision up to 3x their skill vs stat average */
+    int skill = this_player()->query_skill(SS_APPR_MON) * 3;
     int seed  = atoi(OB_NUM(living1)) + atoi(OB_NUM(living2));
     int index = -1;
     int stat1;
@@ -448,11 +449,37 @@ compare_living(object living1, object living2)
         str2 = "the second " + living2->query_nonmet_name();
     }
 
+    /* Use high precision for avg up to skill, low precision for remainder */
+    int high_precision;
+    int low_precision;
+     /* Find the average of the query_average_stat up to their skill.
+        The player has high precision on their own stats regardless of skill.
+      */
+    high_precision = (living1->query_average_stat() > skill
+        && (this_player() != living1)
+        ? skill : living1->query_average_stat());
+    high_precision += (living2->query_average_stat() > skill
+        ? skill : living2->query_average_stat());
+    high_precision /= 2;
+
+    /* Find the average of the query_average_stat above their skill */
+    low_precision = (living1->query_average_stat() > skill
+        && (this_player() != living1)
+        ? living1->query_average_stat() - skill : 0);
+    low_precision += (living2->query_average_stat() > skill
+        ? living2->query_average_stat() - skill : 0);
+    low_precision /= 2;
+
+
     /* Loop over all known stats. */
     while(++index < SS_NO_EXP_STATS)
     {
-        stat1 = living1->query_stat(index) + random(skill, seed + index);
-        stat2 = living2->query_stat(index) + random(skill, seed + index + 27);
+        stat1 = living1->query_stat(index)
+            + random(high_precision / 10, seed)
+            + random(low_precision / 2, seed + 1);
+        stat2 = living2->query_stat(index)
+            + random(high_precision / 10, seed + 27)
+            + random(low_precision / 2, seed + 28);
 
         if (stat1 > stat2)
         {
@@ -482,6 +509,7 @@ compare_living(object living1, object living2)
     }
 }
 
+
 /*
  * Function name: compare_weapon
  * Description  : Compares the stats of two weapons.
@@ -491,8 +519,9 @@ compare_living(object living1, object living2)
 void
 compare_weapon(object weapon1, object weapon2)
 {
-    int skill = (2000 / (1 + this_player()->query_skill(SS_APPR_OBJ) +
-        this_player()->query_skill(SS_WEP_FIRST + weapon1->query_wt())));
+    /* Weapon skill and appraise are both used, so use half their average */
+    int skill = (this_player()->query_skill(SS_APPR_OBJ) +
+        this_player()->query_skill(SS_WEP_FIRST + weapon1->query_wt())) / 4;
     int seed = atoi(OB_NUM(weapon1)) + atoi(OB_NUM(weapon2));
     int swap;
     int stat1;
@@ -532,9 +561,29 @@ compare_weapon(object weapon1, object weapon2)
         }
     }
 
+    /* Use high precision for hit up to skill, low precision for remainder */
+    int high_precision;
+    int low_precision;
+
+    /* Find the average of the query_hit up to their skill */
+    high_precision = (weapon1->query_hit() > skill
+        ? skill : weapon1->query_hit());
+    high_precision += (weapon2->query_hit() > skill
+        ? skill : weapon2->query_hit());
+    high_precision /= 2;
+
+    /* Find the average of the query_hit above their skill */
+    low_precision = (weapon1->query_hit() > skill
+        ? weapon1->query_hit() - skill : 0);
+    low_precision += (weapon2->query_hit() > skill
+        ? weapon2->query_hit() - skill : 0);
+    low_precision /= 2;
+
     /* Gather the to-hit values. */
-    stat1 = weapon1->query_hit() + random(skill, seed);
-    stat2 = weapon2->query_hit() + random(skill, seed + 27);
+    stat1 = weapon1->query_hit() + random(high_precision / 10, seed)
+        + random(low_precision / 2, seed + 1);
+    stat2 = weapon2->query_hit() + random(high_precision / 10, seed + 27)
+        + random(low_precision / 2, seed + 28);
 
     if (stat1 > stat2)
     {
@@ -554,9 +603,25 @@ compare_weapon(object weapon1, object weapon2)
         compare_strings[6][((stat1 > 3) ? 3 : stat1)] + " the " +
         print2 + " and ");
 
+    /* Find the average of the query_pen up to their skill */
+    high_precision = (weapon1->query_pen() > skill
+        ? skill : weapon1->query_pen());
+    high_precision += (weapon2->query_pen() > skill
+        ? skill : weapon2->query_pen());
+    high_precision /= 2;
+
+    /* Find the average of the query_pen above their skill */
+    low_precision = (weapon1->query_pen() > skill
+        ? weapon1->query_pen() - skill : 0);
+    low_precision += (weapon2->query_hit() > skill
+        ? weapon2->query_pen() - skill : 0);
+    low_precision /= 2;
+
     /* Compare the penetration values. */
-    stat1 = weapon1->query_pen() + random(skill, seed);
-    stat2 = weapon2->query_pen() + random(skill, seed + 27);
+    stat1 = weapon1->query_pen() + random(high_precision / 10, seed)
+        + random(low_precision / 2, seed + 1);
+    stat2 = weapon2->query_pen() + random(high_precision / 10, seed + 27)
+        + random(low_precision / 2, seed + 28);
 
     if (stat1 > stat2)
     {
@@ -586,8 +651,9 @@ compare_weapon(object weapon1, object weapon2)
 void
 compare_unarmed_enhancer(object enh1, object enh2)
 {
-    int skill = (2000 / (1 + this_player()->query_skill(SS_APPR_OBJ) +
-        this_player()->query_skill(SS_UNARM_COMBAT)));
+    /* Weapon skill and appraise are both used, so use half their average */
+    int skill = (this_player()->query_skill(SS_APPR_OBJ) +
+        this_player()->query_skill(SS_UNARM_COMBAT)) / 4;
     int seed = atoi(OB_NUM(enh1)) + atoi(OB_NUM(enh2));
     int swap;
     int stat1;
@@ -627,9 +693,29 @@ compare_unarmed_enhancer(object enh1, object enh2)
         }
     }
 
+    /* Use high precision for hit up to skill, low precision for remainder */
+    int high_precision;
+    int low_precision;
+
+    /* Find the average of the query_hit up to their skill */
+    high_precision = (enh1->query_hit() > skill
+        ? skill : enh1->query_hit());
+    high_precision += (enh2->query_hit() > skill
+        ? skill : enh2->query_hit());
+    high_precision /= 2;
+
+    /* Find the average of the query_hit above their skill */
+    low_precision = (enh1->query_hit() > skill
+        ? enh1->query_hit() - skill : 0);
+    low_precision += (enh2->query_hit() > skill
+        ? enh2->query_hit() - skill : 0);
+    low_precision /= 2;
+
     /* Gather the to-hit values. */
-    stat1 = enh1->query_hit() + random(skill, seed);
-    stat2 = enh2->query_hit() + random(skill, seed + 27);
+    stat1 = enh1->query_hit() + random(high_precision / 10, seed)
+        + random(low_precision / 2, seed + 1);
+    stat2 = enh2->query_hit() + random(high_precision / 10, seed + 27)
+        + random(low_precision / 2, seed + 28);
 
     if (stat1 > stat2)
     {
@@ -645,13 +731,29 @@ compare_unarmed_enhancer(object enh1, object enh2)
     }
 
     stat1 = ((stat1 * sizeof(compare_strings[6])) / 100);
-    write("Hitting someone assisted by the " + print1 + " is " +
+    write("Hitting someone with the " + print1 + " is " +
         compare_strings[6][((stat1 > 3) ? 3 : stat1)] + " the " +
         print2 + " and ");
 
+    /* Find the average of the query_pen up to their skill */
+    high_precision = (enh1->query_pen() > skill
+        ? skill : enh1->query_pen());
+    high_precision += (enh2->query_pen() > skill
+        ? skill : enh2->query_pen());
+    high_precision /= 2;
+
+    /* Find the average of the query_pen above their skill */
+    low_precision = (enh1->query_pen() > skill
+        ? enh1->query_pen() - skill : 0);
+    low_precision += (enh2->query_hit() > skill
+        ? enh2->query_pen() - skill : 0);
+    low_precision /= 2;
+
     /* Compare the penetration values. */
-    stat1 = enh1->query_pen() + random(skill, seed);
-    stat2 = enh2->query_pen() + random(skill, seed + 27);
+    stat1 = enh1->query_pen() + random(high_precision / 10, seed)
+        + random(low_precision / 2, seed + 1);
+    stat2 = enh2->query_pen() + random(high_precision / 10, seed + 27)
+        + random(low_precision / 2, seed + 28);
 
     if (stat1 > stat2)
     {
@@ -667,7 +769,7 @@ compare_unarmed_enhancer(object enh1, object enh2)
     }
 
     stat1 = ((stat1 * sizeof(compare_strings[7])) / 100);
-    write("damage inflicted assisted by the " + print1 + " is " +
+    write("damage inflicted by the " + print1 + " is " +
         compare_strings[7][((stat1 > 3) ? 3 : stat1)] + " the " +
         print2 + ".\n");
 }
@@ -681,7 +783,7 @@ compare_unarmed_enhancer(object enh1, object enh2)
 void
 compare_armour(object armour1, object armour2)
 {
-    int skill = (1000 / (1 + this_player()->query_skill(SS_APPR_OBJ)));
+    int skill = (this_player()->query_skill(SS_APPR_OBJ)) / 2;
     int seed  = atoi(OB_NUM(armour1)) + atoi(OB_NUM(armour2));
     int swap;
     int stat1;
@@ -700,7 +802,7 @@ compare_armour(object armour1, object armour2)
         tmp = armour1;
         armour1 = armour2;
         armour2 = tmp;
-	swap = 1;
+    swap = 1;
     }
 
     str1 = armour1->short(this_player());
@@ -721,9 +823,28 @@ compare_armour(object armour1, object armour2)
         }
     }
 
-    /* Gather the armour class. */
-    stat1 = armour1->query_ac() + random(skill, seed);
-    stat2 = armour2->query_ac() + random(skill, seed + 27);
+    /* Use high precision for AC up to skill, low precision for remainder */
+    int high_precision;
+    int low_precision;
+     /* Find the average of the query_ac up to their skill */
+    high_precision = (armour1->query_ac() > skill
+        ? skill : armour1->query_ac());
+    high_precision += (armour2->query_ac() > skill
+        ? skill : armour2->query_ac());
+    high_precision /= 2;
+
+    /* Find the average of the query_ac above their skill */
+    low_precision = (armour1->query_ac() > skill
+        ? armour1->query_ac() - skill : 0);
+    low_precision += (armour2->query_ac() > skill
+        ? armour2->query_ac() - skill : 0);
+    low_precision /= 2;
+
+     /* Gather the armour class. */
+    stat1 = armour1->query_ac() + random(high_precision / 10, seed)
+        + random(low_precision / 2, seed + 1);
+    stat2 = armour2->query_ac() + random(high_precision / 10, seed + 27)
+        + random(low_precision / 2, seed + 28);
 
     if (stat1 > stat2)
     {
@@ -742,8 +863,7 @@ compare_armour(object armour1, object armour2)
     write("The " + print1 + " gives " +
         compare_strings[8][((stat1 > 3) ? 3 : stat1)] + " the " +
         print2 + ".\n");
-    if (function_exists("create_unarmed_enhancer", armour1) != 0 &&
-        function_exists("create_unarmed_enhancer", armour2) != 0)
+    if (IS_UNARMED_ENH_OBJECT(armour1) && IS_UNARMED_ENH_OBJECT(armour2))
     {
         compare_unarmed_enhancer(armour1, armour2);
     }
@@ -762,9 +882,10 @@ compare_projectiles(object projectile1, object projectile2)
     object  tmp;
     string  str1, str2, print1, print2;
     int     skill, seed, swap, stat1, stat2;
-    
-    skill = (2000 / (1 + this_player()->query_skill(SS_APPR_OBJ) +
-            this_player()->query_skill(SS_WEP_MISSILE)));
+
+    /* Weapon skill and appraise are both used, so use half their average */
+    skill = (this_player()->query_skill(SS_APPR_OBJ) +
+            this_player()->query_skill(SS_WEP_MISSILE)) / 4;
     seed = atoi(OB_NUM(projectile1)) + atoi(OB_NUM(projectile2));
 
     /* Always use the same order. After all, we don't want "compare X with Y"
@@ -796,9 +917,28 @@ compare_projectiles(object projectile1, object projectile2)
         }
     }
 
+    /* Use high precision for hit up to skill, low precision for remainder */
+    int high_precision;
+    int low_precision;
+     /* Find the average of the query_hit up to their skill */
+    high_precision = (projectile1->query_hit() > skill
+        ? skill : projectile1->query_hit());
+    high_precision += (projectile2->query_hit() > skill
+        ? skill : projectile2->query_hit());
+    high_precision /= 2;
+
+    /* Find the average of the query_hit above their skill */
+    low_precision = (projectile1->query_hit() > skill
+        ? projectile1->query_hit() - skill : 0);
+    low_precision += (projectile2->query_hit() > skill
+        ? projectile2->query_hit() - skill : 0);
+    low_precision /= 2;
+
     /* Gather the to-hit values. */
-    stat1 = projectile1->query_hit() + random(skill, seed);
-    stat2 = projectile2->query_hit() + random(skill, seed + 27);
+    stat1 = projectile1->query_hit() + random(high_precision / 10, seed)
+        + random(low_precision / 2, seed + 1);
+    stat2 = projectile2->query_hit() + random(high_precision / 10, seed + 27)
+        + random(low_precision / 2, seed + 28);
 
     if (stat1 > stat2)
     {
@@ -818,9 +958,25 @@ compare_projectiles(object projectile1, object projectile2)
         compare_strings[6][((stat1 > 3) ? 3 : stat1)] + " the " +
         print2 + " and ");
 
+    /* Find the average of the query_pen up to their skill */
+    high_precision = (projectile1->query_pen() > skill
+        ? skill : projectile1->query_pen());
+    high_precision += (projectile2->query_pen() > skill
+        ? skill : projectile2->query_pen());
+    high_precision /= 2;
+
+    /* Find the average of the query_pen above their skill */
+    low_precision = (projectile1->query_pen() > skill
+        ? projectile1->query_pen() - skill : 0);
+    low_precision += (projectile2->query_pen() > skill
+        ? projectile2->query_pen() - skill : 0);
+    low_precision /= 2;
+
     /* Compare the penetration values. */
-    stat1 = projectile1->query_pen() + random(skill, seed);
-    stat2 = projectile2->query_pen() + random(skill, seed + 27);
+    stat1 = projectile1->query_pen() + random(high_precision / 10, seed)
+        + random(low_precision / 2, seed + 1);
+    stat2 = projectile2->query_pen() + random(high_precision / 10, seed + 27)
+        + random(low_precision / 2, seed + 28);
 
     if (stat1 > stat2)
     {
@@ -980,11 +1136,11 @@ compare(string str)
         compare_armour(obj1, obj2);
         return 1;
     }
-    
+
     /* Compare two projectiles. */
     if (IS_PROJECTILE_OBJECT(obj1))
     {
-        if (function_exists("create_projectile", obj2) != 
+        if (function_exists("create_projectile", obj2) !=
             function_exists("create_projectile", obj1))
         {
             notify_fail("The " + obj1->short(this_player()) + " can only be "
@@ -1000,6 +1156,7 @@ compare(string str)
         LANG_THESHORT(obj1) + " with " + LANG_THESHORT(obj2) + ".\n");
     return 0;
 }
+
 
 /*
  * email - Display/change your email address.
@@ -1103,7 +1260,7 @@ health(string str)
             write("You would be feeling much better with an actual body.\n");
         }
         else
-        { 
+        {
             write("You are physically " +
                 GET_NUM_DESC(this_player()->query_hp(), this_player()->query_max_hp(), health_state) +
                 " and mentally " +
@@ -1586,7 +1743,7 @@ second_password(string password, string name)
         /* Error message would be printed within the call. */
         return;
     }
-    
+
     second("list");
 }
 
@@ -1867,10 +2024,10 @@ show_stats(string str)
     }
 
     write("As an explorer, " + lower_case(start_have) + "done " +
-        GET_NUM_DESC(ob->query_exp_quest(), 
+        GET_NUM_DESC(ob->query_exp_quest(),
             F_QUEST_EXP_MAX_BRUTE * sizeof(SD_LEVEL_MAP["quest-progress"]) / (sizeof(SD_LEVEL_MAP["quest-progress"]) - 1),
             SD_LEVEL_MAP["quest-progress"]) + ".\n");
-    
+
     return 1;
 }
 
@@ -2078,7 +2235,7 @@ gmcp_char_vitals_get(object player, mixed data)
 	    break;
 	}
     }
-    
+
     /* Lists the levels available for improvement. */
     player->catch_gmcp(GMCP_CHAR_VITALS_LEVELS, result);
 }
