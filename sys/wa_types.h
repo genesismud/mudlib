@@ -205,6 +205,23 @@
     A_R_ARM:    (A_R_HAND| A_R_FINGER | A_R_WRIST | A_R_SHOULDER), \
     A_L_ARM:    (A_L_HAND| A_L_FINGER | A_L_WRIST | A_L_SHOULDER) ])
 
+/*
+ * Hitloc Attack propagation Table
+ */
+#define ATTACK_TO_SLOT_PROPAGATION  ([ \
+    W_BOTH:     (A_R_HAND | A_L_HAND), \
+    W_FOOTR:    A_R_FOOT, \
+    W_FOOTL:    A_L_FOOT, \
+    W_RIGHT:    A_R_HAND, \
+    W_LEFT:     A_L_HAND ])
+
+#define SLOT_TO_ATTACK_PROPAGATION  ([ \
+    (A_R_HAND | A_L_HAND):    W_BOTH, \
+    A_R_FOOT:                 W_FOOTR, \
+    A_L_FOOT:                 W_FOOTL, \
+    A_R_HAND:                 W_RIGHT, \
+    A_L_HAND:                 W_LEFT ])
+
 /* Weapon types */
 
 #define W_FIRST     (0)		/* The first weapon index */

@@ -636,6 +636,138 @@ compare_weapon(object weapon1, object weapon2)
 }
 
 /*
+ * Function name: compare_unarmed_enhancer
+ * Description  : Compares the stats of two unarmed enhancers.
+ * Arguments    : object enh1 - the left hand side to compare.
+ *                object enh2 - the right hand side to compare.
+ */
+void
+compare_unarmed_enhancer(object enh1, object enh2)
+{
+    /* Weapon skill and appraise are both used, so use half their average */
+    int skill = (this_player()->query_skill(SS_APPR_OBJ) +
+        this_player()->query_skill(SS_UNARM_COMBAT)) / 4;
+    int seed = atoi(OB_NUM(enh1)) + atoi(OB_NUM(enh2));
+    int swap;
+    int stat1;
+    int stat2;
+    string str1;
+    string str2;
+    string print1;
+    string print2;
+    object tmp;
+
+    /* Always use the same order. After all, we don't want "compare X with Y"
+     * to differ from "compare Y with X".
+     */
+    if (OB_NUM(enh1) > OB_NUM(enh2))
+    {
+        tmp = enh1;
+        enh1 = enh2;
+        enh2 = tmp;
+        swap = 1;
+    }
+
+    str1 = enh1->short(this_player());
+    str2 = enh2->short(this_player());
+
+    /* Some people will want to compare items with the same description. */
+    if (str1 == str2)
+    {
+        if (swap)
+        {
+            str1 = "first " + str1;
+            str2 = "second " + str2;
+        }
+        else
+        {
+            str2 = "first " + str2;
+            str1 = "second " + str1;
+        }
+    }
+
+    /* Use high precision for hit up to skill, low precision for remainder */
+    int high_precision;
+    int low_precision;
+
+    /* Find the average of the query_hit up to their skill */
+    high_precision = (enh1->query_hit() > skill
+        ? skill : enh1->query_hit());
+    high_precision += (enh2->query_hit() > skill
+        ? skill : enh2->query_hit());
+    high_precision /= 2;
+
+    /* Find the average of the query_hit above their skill */
+    low_precision = (enh1->query_hit() > skill
+        ? enh1->query_hit() - skill : 0);
+    low_precision += (enh2->query_hit() > skill
+        ? enh2->query_hit() - skill : 0);
+    low_precision /= 2;
+
+    /* Gather the to-hit values. */
+    stat1 = enh1->query_hit() + random(high_precision / 10, seed)
+        + random(low_precision / 2, seed + 1);
+    stat2 = enh2->query_hit() + random(high_precision / 10, seed + 27)
+        + random(low_precision / 2, seed + 28);
+
+    if (stat1 > stat2)
+    {
+        stat1 = (100 - ((80 * stat2) / stat1));
+        print1 = str1;
+        print2 = str2;
+    }
+    else
+    {
+        stat1 = (100 - ((80 * stat1) / stat2));
+        print1 = str2;
+        print2 = str1;
+    }
+
+    stat1 = ((stat1 * sizeof(compare_strings[6])) / 100);
+    write("Hitting someone with the " + print1 + " is " +
+        compare_strings[6][((stat1 > 3) ? 3 : stat1)] + " the " +
+        print2 + " and ");
+
+    /* Find the average of the query_pen up to their skill */
+    high_precision = (enh1->query_pen() > skill
+        ? skill : enh1->query_pen());
+    high_precision += (enh2->query_pen() > skill
+        ? skill : enh2->query_pen());
+    high_precision /= 2;
+
+    /* Find the average of the query_pen above their skill */
+    low_precision = (enh1->query_pen() > skill
+        ? enh1->query_pen() - skill : 0);
+    low_precision += (enh2->query_hit() > skill
+        ? enh2->query_pen() - skill : 0);
+    low_precision /= 2;
+
+    /* Compare the penetration values. */
+    stat1 = enh1->query_pen() + random(high_precision / 10, seed)
+        + random(low_precision / 2, seed + 1);
+    stat2 = enh2->query_pen() + random(high_precision / 10, seed + 27)
+        + random(low_precision / 2, seed + 28);
+  
+    if (stat1 > stat2)
+    {
+        stat1 = (100 - ((80 * stat2) / stat1));
+        print1 = str1;
+        print2 = str2;
+    }
+    else
+    {
+        stat1 = (100 - ((80 * stat1) / stat2));
+        print1 = str2;
+        print2 = str1;
+    }
+
+    stat1 = ((stat1 * sizeof(compare_strings[7])) / 100);
+    write("damage inflicted by the " + print1 + " is " +
+        compare_strings[7][((stat1 > 3) ? 3 : stat1)] + " the " +
+        print2 + ".\n");
+}
+
+/*
  * Function name: compare_armour
  * Description  : Compares the stats of two armour.
  * Arguments    : object armour1 - the left hand side to compare.
@@ -724,6 +856,10 @@ compare_armour(object armour1, object armour2)
     write("The " + print1 + " gives " +
         compare_strings[8][((stat1 > 3) ? 3 : stat1)] + " the " +
         print2 + ".\n");
+    if (IS_UNARMED_ENH_OBJECT(armour1) && IS_UNARMED_ENH_OBJECT(armour2))
+    {
+        compare_unarmed_enhancer(armour1, armour2);
+    }
 }
 
 /*
