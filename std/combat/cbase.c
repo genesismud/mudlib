@@ -2505,7 +2505,7 @@ add_attack(int wchit, mixed wcpen, int dt, int prcuse, int id, int skill,
             );
             pen[pos] = wcpen[pos];
         }
-        pen[pos] + (wep ? 0 : unarmed_extra_pen)
+        pen[pos] + (wep ? 0 : unarmed_extra_pen);
     }
     wchit += (wep ? 0 : unarmed_extra_hit);
 
