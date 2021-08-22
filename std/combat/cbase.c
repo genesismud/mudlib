@@ -2505,23 +2505,19 @@ add_attack(int wchit, mixed wcpen, int dt, int prcuse, int id, int skill,
             );
             pen[pos] = wcpen[pos];
         }
+        pen[pos] + (wep ? 0 : unarmed_extra_pen)
     }
+    wchit += (wep ? 0 : unarmed_extra_hit);
 
     if ((pos = member_array(id, att_id)) < 0)
     {
         att_id += ({ id });
-        attacks += ({ ({ 
-            wchit + (wep ? 0 : unarmed_extra_hit),
-            pen + (wep ? 0 : unarmed_extra_pen),
-            dt, prcuse, skill, m_pen, wep }) });
+        attacks += ({ ({ wchit, pen, dt, prcuse, skill, m_pen, wep }) });
         return 1;
     }
     else
     {
-        attacks[pos] = ({
-            wchit + (wep ? 0 : unarmed_extra_hit),
-            pen + (wep ? 0 : unarmed_extra_pen),
-            dt, prcuse, skill, m_pen, wep });
+        attacks[pos] = ({ wchit, pen, dt, prcuse, skill, m_pen, wep });
     }
 
     return 1;

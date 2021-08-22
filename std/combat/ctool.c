@@ -19,6 +19,7 @@ inherit "/std/combat/cplain";
 #include <ss_types.h>
 #include <macros.h>
 #include <stdproperties.h>
+#include <files.h>
 
 /* Prototypes */
 public void cb_remove_arm(object wep);
