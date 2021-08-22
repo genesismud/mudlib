@@ -23,7 +23,6 @@ inherit "/std/combat/cplain";
 /* Prototypes */
 public void cb_remove_arm(object wep);
 static void adjust_ac(int hid, object arm, int rm);
-static void adjust_unarmed_hit_pen(int hid, object arm, int rm);
 
 /* 
    NOTE
@@ -148,15 +147,6 @@ cb_unwield(object wep)
 
     me->cr_reset_attack(aid);
     cb_calc_attackuse();
-
-    int slot = qme()->cr_convert_attack_id_to_hitloc_id(aid);
-    object *arms;
-
-    if (slot != 0)
-    {
-        arms = qme()->query_clothing(slot);
-        map(arms, &adjust_unarmed_hit_pen(slot, , 0));
-    }
 }
 
 /*
@@ -213,40 +203,6 @@ adjust_ac(int hid, object arm, int rm)
 }
 
 /*
- * Function name: adjust_unarmed_hit_pen
- * Description:   Adjust relevant attack id for a given armour
- *                when we wear an armour or remove an armour.
- * Arguments:     arm:   The armour.
- */
-static void
-adjust_unarmed_hit_pen(int slot, object arm, int rm)
-{
-    if (!IS_UNARMED_ENH_OBJECT(arm))
-    {
-        return;
-    }
-
-    int aid = qme()->cr_convert_slot_to_attack_id(slot);
-
-    if (objectp(qme()->query_tool(aid)))
-    {
-        // Skip attack ids with weapons wielded
-        return;
-    }
-
-    if (!rm)
-    {
-        add_attack(arm->query_hit(), arm->query_modified_pen(), arm->query_dt(),
-            arm->query_procuse(), aid, qme()->query_skill(SS_UNARM_COMBAT));  
-    }
-    else
-    {
-        qme()->cr_reset_attack(aid);
-        cb_calc_attackuse();
-    }
-}
-
-/*
  * Function name: cb_wear_arm
  * Description:   Wear an armour
  * Arguments:     arm - The armour.
@@ -274,12 +230,6 @@ cb_wear_arm(object arm)
     }
 
     map(hid, &adjust_ac(, arm, 0));
-
-    /* Adjust unarmed attack ids if relevant */
-    foreach (int slot: arm->query_slots())
-    {
-        adjust_unarmed_hit_pen(slot, arm, 0);
-    }
     return 1;
 }
 
@@ -305,12 +255,6 @@ cb_remove_arm(object arm)
                 qme()->cr_reset_hitloc(hid);
             }
         }
-    }
-
-    /* Adjust unarmed attack ids if relevant */
-    foreach (int slot: arm->query_slots())
-    {
-        adjust_unarmed_hit_pen(slot, arm, 1);
     }
 }
 
@@ -368,10 +312,7 @@ public varargs void
 cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
            int phit, int dam)
 {
-    object wep, enhancer;
-    object *arms, *enhancers;
-    int slot;
-    int num_enhancers;
+    object wep;
 
     if ((!enemy) || (!qme()))
     {
@@ -383,41 +324,10 @@ cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
     if (wep)
     {
         if (wep->did_hit(aid, hdesc, phurt, enemy, dt, phit, dam, hid))
-        {
-            /* Adjust our panic level */
-            cb_add_panic(((phurt >= 0) ? -3 - phurt / 5 : 1));
+    	{
+    	    /* Adjust our panic level */
+    	    cb_add_panic(((phurt >= 0) ? -3 - phurt / 5 : 1));
             return;
-        }
-    }
-    else
-    {
-        /* Unarmed attack, we notify the armour mapped to attack so
-         * that unarmed attack effects can be added to armours
-         */
-        slot = qme()->cr_convert_attack_id_to_slot(aid);
-        if (slot != 0)
-        {
-            arms = qme()->query_clothing(slot);
-            if (sizeof(arms) > 0)
-            {
-                enhancers = filter(arms, 
-                    &operator(!=)(0) @ &function_exists("did_hit",));
-                num_enhancers = sizeof(enhancers);
-                if (num_enhancers > 0)
-                {
-                    /* Choose a random armour, really only for the W_BOTH
-                     * edge case
-                     */
-                    enhancer = enhancers[random(num_enhancers)];
-                    if (enhancer->did_hit(aid, hdesc, phurt, enemy, dt, phit,
-                        dam, hid))
-                    {
-                        /* Adjust our panic level */
-                        cb_add_panic(((phurt >= 0) ? -3 - phurt / 5 : 1));
-                        return;
-                    }
-                }
-            }
         }
     }
 
@@ -474,15 +384,10 @@ cb_update_armour(object obj)
         arms = query_hitloc(hid)[HIT_ARMOURS];
 
         if (pointerp(arms) && (member_array(obj, arms) >= 0))
-        {
+	{
             me->cr_reset_hitloc(hid);
             map(arms, &adjust_ac(hid, , 0));
         }
-    }
-
-    foreach (int slot: obj->query_slots())
-    {
-        adjust_unarmed_hit_pen(slot, obj, 0);
     }
 }
             
