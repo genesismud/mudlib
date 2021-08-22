@@ -128,8 +128,6 @@
 #define LIVE_I_NON_FORGET	"_live_i_non_forget"
 #define LIVE_I_NON_REMEMBER	"_live_i_non_remember"
 #define LIVE_I_QUICKNESS	"_live_i_quickness"
-#define LIVE_I_UNARMED_EXTRA_HIT	"_live_i_unarmed_extra_hit"
-#define LIVE_I_UNARMED_EXTRA_PEN	"_live_i_unarmed_extra_pen"
 #define LIVE_I_SEE_DARK		"_live_i_see_dark"
 #define LIVE_I_SEE_INVIS	"_live_i_see_invis"
 #define LIVE_I_SNEAK    	"_live_i_sneak"
