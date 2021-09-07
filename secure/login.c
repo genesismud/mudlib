@@ -1059,8 +1059,7 @@ new_password(string str)
         return;
     }
 
-    if (strlen(old_password) &&
-        (crypt(str, old_password) == old_password))
+    if (strlen(old_password) && (crypt(str, old_password, 0) == old_password))
     {
         write_socket("The password must differ from the previous password.\n");
         write_socket("Password: ");
@@ -1214,7 +1213,7 @@ check_password(string pwd, int second_attempt = 0)
     time_out_alarm = set_alarm(TIMEOUT_TIME, 0.0, time_out);
 
     /* Player has no password, force him/her to set a new one. */
-    if (!password)
+    if (!password || !strlen(password))
     {
         if (check_restriction())
         {
@@ -1231,7 +1230,7 @@ check_password(string pwd, int second_attempt = 0)
     }
 
     /* Password doesn't match */
-    if (crypt(pwd, password) != password)
+    if (crypt(pwd, password, 0) != password)
     {
         write_socket("Wrong password!\n");
 

@@ -295,7 +295,7 @@ match_password(string p)
     if (!strlen(password))
         return 1;
 
-    return (password == crypt(p, password));
+    return (password == crypt(p, password, 0));
 }
 
 /*
