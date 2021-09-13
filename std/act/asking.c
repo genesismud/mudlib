@@ -181,7 +181,7 @@ query_default_answer()
     return default_answer;
 }
 
-/* 
+/*
  * Function name: query_default_answer_cmd
  * Description:   Find out whether the default answer is a command or a text
  *                to be echoed to the user.
@@ -196,7 +196,7 @@ query_default_answer_cmd()
 /*
  * Function name: set_not_here_func
  * Description:   Set a function to call if the player who posed the question
- *		  has left the room before he got the answere. 
+ *		  has left the room before he got the answere.
  * Arguments:	  func - The function name
  */
 public void
@@ -219,7 +219,7 @@ query_not_here_func()
 /*
  * Function name: query_question
  * Description:   This function will return the true question the mortals posed
- * 		  to us. It can be called from a VBFC for example to do some 
+ * 		  to us. It can be called from a VBFC for example to do some
  *		  testing or referring to the actual question if you want.
  * Returns: 	  question
  */
@@ -259,15 +259,15 @@ answer_question(mixed msg, int cmd)
 	    env == this_player() || (not_here_func &&
 		call_other(this_object(), not_here_func, this_player())))
     {
-	msg = this_object()->check_call(msg, this_player());
+        msg = this_object()->check_call(msg, this_player());
 
-        if (!msg)
+        if (!stringp(msg))
             return;
-        
-	if (cmd)
-	    command(msg);
-	else
-	    tell_object(this_player(), msg);
+
+        if (cmd)
+            command(msg);
+        else
+            tell_object(this_player(), msg);
     }
 }
 
