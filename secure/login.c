@@ -23,6 +23,8 @@
 #include <stdproperties.h>
 #include <time.h>
 
+#include "/config/sys/local.h"
+
 /*
  * These are the necessary variables stored in the save file.
  */
@@ -1272,6 +1274,14 @@ check_password(string pwd, int second_attempt = 0)
     }
 #endif FORCE_PASSWORD_CHANGE
 
+#ifdef UPGRADE_PASSWORD_HASH
+    /* If the password is using an old hash method upgrade */
+    if (!wildmatch(CRYPT_METHOD + "*", password)) {
+        password = crypt(pwd, CRYPT_METHOD, CRYPT_SALT_LENGTH);
+        password_set = 1;
+    }
+#endif
+
 #ifdef LOG_STRANGE_LOGIN
     /* See if there are people with the same password or seconds. */
     if (!wildmatch("*jr", name) &&
@@ -1399,8 +1409,7 @@ throw_out_interactive(string str)
     remove_alarm(time_out_alarm);
     time_out_alarm = set_alarm(TIMEOUT_TIME, 0.0, time_out);
 
-    if ((!strlen(str)) ||
-        (str[0] != 'y'))
+    if ((!strlen(str)) || (str[0] != 'y'))
     {
         write_socket("Please answer with either y[es] or n[o].\n" +
             "Throw the other copy out? ");
