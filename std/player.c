@@ -35,7 +35,7 @@ inherit "/std/living";
 #include <std.h>
 #include <stdproperties.h>
 
-#define LINKDEATH_TIME          (180.0) /* three minutes */
+#define LINKDEATH_TIME          (180.0)         /* three minutes */
 #define RETURN_TO_LOCATION_TIME (60 * 15)       /* 15 minutes */
 #define AUTOLOAD_INTERVAL       (0.0)
 #define RECOVERY_INTERVAL       (0.20)
@@ -677,7 +677,7 @@ setup_player(string pl_name)
      * recovery with a little alarm to make it safe. */
     load_auto_shadows();
     load_auto_files();
-    set_alarm(RECOVERY_INTERVAL, 0.0, load_recover_files);
+    load_recover_files();
 
     /* Set up skill decay now that the guild shadows are loaded. Do a first
      * decay as well, making it a bit more frequent for people who log
