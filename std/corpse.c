@@ -19,10 +19,10 @@ inherit "/std/container";
 #include <stdproperties.h>
 #include <wa_types.h>
 
-#define DECAY_TIME      10    /* times DECAY_UNIT == minutes */
-#define DECAY_LIMIT      3    /* times DECAY_UNIT == minutes */
-#define DECAY_UNIT      60.0  /* one minute */
-#define DECAY_FUN "decay_fun" /* Name of the intermediate decay routine. */
+#define DECAY_TIME   20          /* times DECAY_UNIT == minutes */
+#define DECAY_LIMIT  3           /* times DECAY_UNIT == minutes */
+#define DECAY_UNIT   60.0        /* one minute */
+#define DECAY_FUN    "decay_fun" /* Name of the intermediate decay routine. */
 
 /* Prototypes */
 void decay_fun();
@@ -346,7 +346,7 @@ make_leftover(mixed leftovers, object dest)
     if (obj->move(dest, 0) && living(dest))
     {
         write(LANG_THESHORT(obj) + " is too much to carry.\n");
-	obj->move(environment(), 1);
+        obj->move(environment(), 1);
     }
 }
 
@@ -689,8 +689,8 @@ get_leftover(string arg)
     if (this_player()->query_prop(TEMP_STDCORPSE_CHECKED))
         return 0;
 
-    vb = query_verb(); 
-    
+    vb = query_verb();
+
     notify_fail(capitalize(vb) + " what from what?\n");  /* access failure */
     if (!arg)
         return 0;
@@ -699,7 +699,7 @@ get_leftover(string arg)
         return 0;
 
     found = VISIBLE_ACCESS(corpses, "find_corpse", this_object());
-    
+
     if (sizeof(found) != 1)
     {
         set_alarm(0.5, 0.0, &(this_player())->remove_prop(TEMP_STDCORPSE_CHECKED));
@@ -761,9 +761,9 @@ get_leftover(string arg)
 
     for(i = 0; i < amount; i++)
     {
-	make_leftover(leftovers, this_player());
-	if (--leftovers[2] == 0)
-	    remove_leftover(organ);
+        make_leftover(leftovers, this_player());
+        if (--leftovers[2] == 0)
+            remove_leftover(organ);
     }
 
     if (i == 1)
