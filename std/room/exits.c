@@ -19,8 +19,8 @@ static mixed non_obvious_exits;
 static int   room_no_obvious;
 static string *default_dirs = DEFAULT_DIRECTIONS;
 static mapping no_exit_messages;
-static string *exit_order = ({ "north", "northeast", "east", "southeast", 
-                             "south", "southwest", "west", "northwest", "up", 
+static string *exit_order = ({ "north", "northeast", "east", "southeast",
+                             "south", "southwest", "west", "northwest", "up",
                              "down" });
 
 /*
@@ -30,30 +30,28 @@ int unq_move(string str);
 int unq_no_move(string str);
 
 /*
- * Function name: ugly_update_function
+ * Function name: ugly_update_action
  * Description  : Just fix so the verb is updated in a room when an exit
  *                is added or removed.
  * Arguments    : string cmd - the command verb.
- *		  int add    - add command if 1 else remove.
+ *		          int add    - add command if 1 else remove.
  */
-public void
-ugly_update_action(string cmd, int add)
+static void
+ugly_update_action(object player, string cmd, function fun)
 {
-    object old_tp = this_player();    
-    
-    foreach (object liv : FILTER_LIVE(all_inventory(this_object())))
-    {
-	set_this_player(liv);
-	if (add == 1)
-	    add_action(unq_move, cmd);
-	else
-	    add_action(unq_no_move, cmd);
+    string name = explode(function_name(fun), ">")[1];
+
+    /* Does the player have the command already? */
+    foreach (mixed arr: commands(player)) {
+        if (arr[0] == cmd && arr[2] == this_object() &&
+            arr[3] == name)
+            return;
     }
-    
-    if (objectp(old_tp))
-    {
-	set_this_player(old_tp);
-    }
+
+    object old_tp = this_player();
+    set_this_player(player);
+    add_action(fun, cmd);
+    set_this_player(old_tp);
 }
 
 /*
@@ -138,50 +136,46 @@ add_exit(string place, string cmd, mixed efunc, mixed tired, mixed non_obvious)
     /* No extra exits allowed. */
     if (query_prop(ROOM_I_NO_EXTRA_EXIT))
     {
-	return 0;
+        return 0;
     }
 
     /* If the place can consist of only the filename. Then we should add the
      * complete path name from the filename from this room.
      */
-    if (stringp(place) &&
-	(place[0] != '/') &&
-	(place[0] != '@'))
+    if (stringp(place) && place[0] != '/' && place[0] != '@')
     {
-	dir = implode(explode(file_name(this_object()), "/")[..-2], "/");
+        dir = implode(explode(file_name(this_object()), "/")[..-2], "/");
         place = FPATH(dir, place);
     }
 
     if (pointerp(room_exits))
-	room_exits = room_exits + ({ place, cmd, efunc });
+        room_exits = room_exits + ({ place, cmd, efunc });
     else
-	room_exits = ({ place, cmd, efunc });
+        room_exits = ({ place, cmd, efunc });
 
     /* Only create this for non-default values. Note that 1 is the default
      * value. We won't add that either, but parse 0 as 1 later.
      */
     if (!intp(tired) || (tired > 1))
     {
-	if (!pointerp(tired_exits))
-	    tired_exits = ({ });
+        if (!pointerp(tired_exits))
+            tired_exits = ({ });
 
-	tired_exits +=
-            allocate((sizeof(room_exits) / 3) - sizeof(tired_exits));
-	tired_exits[sizeof(tired_exits) - 1] = tired;
+        tired_exits += allocate((sizeof(room_exits) / 3) - sizeof(tired_exits));
+        tired_exits[sizeof(tired_exits) - 1] = tired;
     }
 
     /* Only create this for non-default values. */
     if (non_obvious)
     {
-	if (!pointerp(non_obvious_exits))
-	    non_obvious_exits = ({ });
+        if (!pointerp(non_obvious_exits))
+            non_obvious_exits = ({ });
 
-	non_obvious_exits +=
-            allocate((sizeof(room_exits) / 3) - sizeof(non_obvious_exits));
-	non_obvious_exits[sizeof(non_obvious_exits) - 1] = non_obvious;
+        non_obvious_exits += allocate((sizeof(room_exits) / 3) - sizeof(non_obvious_exits));
+        non_obvious_exits[sizeof(non_obvious_exits) - 1] = non_obvious;
     }
 
-    ugly_update_action(cmd, 1);
+    map(FILTER_LIVE(all_inventory()), &ugly_update_action(, cmd, unq_move));
     default_dirs -= ({ cmd });
     return 1;
 }
@@ -195,34 +189,33 @@ add_exit(string place, string cmd, mixed efunc, mixed tired, mixed non_obvious)
 public int
 remove_exit(string cmd)
 {
-    int i;
-
     if (!pointerp(room_exits))
-	return 0;
+        return 0;
     if (query_prop(ROOM_I_NO_EXTRA_EXIT))
-	return 0;
+        return 0;
 
+    int i;
     for (i = 1; i < sizeof(room_exits); i += 3)
     {
-	if (cmd == room_exits[i])
-	{
-	    room_exits = exclude_array(room_exits, i - 1, i + 1);
-	    i /= 3;
-	    if (i < sizeof(tired_exits))
-	    {
-		tired_exits = exclude_array(tired_exits, i, i);
-	    }
-	    if (i < sizeof(non_obvious_exits))
-	    {
-		non_obvious_exits = exclude_array(non_obvious_exits, i, i);
-	    }
+        if (cmd == room_exits[i])
+        {
+            room_exits = exclude_array(room_exits, i - 1, i + 1);
+           i /= 3;
+            if (i < sizeof(tired_exits))
+            {
+                tired_exits = exclude_array(tired_exits, i, i);
+            }
+            if (i < sizeof(non_obvious_exits))
+            {
+            	non_obvious_exits = exclude_array(non_obvious_exits, i, i);
+            }
 
             if (member_array(cmd, DEFAULT_DIRECTIONS) >= 0)
                 default_dirs += ({ cmd });
-            
-	    ugly_update_action(cmd, 0);
-	    return 1;
-	}
+
+            map(FILTER_LIVE(all_inventory()), &ugly_update_action(, cmd, unq_no_move));
+    	    return 1;
+    	}
     }
     return 0;
 }
@@ -408,8 +401,8 @@ query_obvious_exits()
     if (!pointerp(non_obvious_exits))
     {
 	obvious_exits = query_exit_cmds();
-        string *sorted_exits = obvious_exits & exit_order;                          
-        return sorted_exits + (obvious_exits - sorted_exits);             
+        string *sorted_exits = obvious_exits & exit_order;
+        return sorted_exits + (obvious_exits - sorted_exits);
     }
 
     size_cmds = sizeof(room_exits) / 3;
@@ -533,7 +526,7 @@ query_door_cmds()
 {
     string *exits = ({ });
 
-    foreach(object door: query_doors()) 
+    foreach(object door: query_doors())
     {
         exits += door->query_pass_command();
     }
