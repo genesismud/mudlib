@@ -1010,7 +1010,8 @@ valid_domain_bit(mixed actor, string dname, int bit)
     }
 
     /* Root, arches and keepers can do as they please. */
-    if ((actor == ROOT_UID) || query_wiz_rank(actor) >= WIZ_ARCH)
+    if ((actor == ROOT_UID) || query_wiz_rank(actor) >= WIZ_ARCH ||
+        query_team_member("aop", actor))
     {
         return 1;
     }
