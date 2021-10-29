@@ -217,7 +217,9 @@ adjust_ac(int hid, object arm, int rm)
  * Function name: adjust_unarmed_hit_pen
  * Description:   Adjust relevant attack id for a given armour
  *                when we wear an armour or remove an armour.
- * Arguments:     arm:   The armour.
+ * Arguments:     slot:  The tool slot.
+ *                arm:   The armour.
+ *                rm:    Whether the action is removal.
  */
 static void
 adjust_unarmed_hit_pen(int slot, object arm, int rm)
@@ -229,7 +231,8 @@ adjust_unarmed_hit_pen(int slot, object arm, int rm)
 
     int aid = qme()->cr_convert_slot_to_attack_id(slot);
 
-    if (objectp(qme()->query_tool(aid)))
+    object tool = qme()->query_tool(aid);
+    if (objectp(tool) && tool != arm)
     {
         // Skip attack ids with weapons wielded
         return;
@@ -237,8 +240,9 @@ adjust_unarmed_hit_pen(int slot, object arm, int rm)
 
     if (!rm)
     {
-        add_attack(arm->query_hit(), arm->query_modified_pen(), arm->query_dt(),
-            arm->query_procuse(), aid, qme()->query_skill(SS_UNARM_COMBAT));  
+        add_attack(arm->query_hit(), arm->query_modified_pen(),
+            arm->query_dt(), arm->query_procuse(), aid,
+            qme()->query_skill(SS_UNARM_COMBAT));  
     }
     else
     {

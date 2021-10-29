@@ -11,6 +11,7 @@ inherit "/std/armour";
 #include <macros.h>
 #include <stdproperties.h>
 #include <wa_types.h>
+#include <composite.h>
 
 static int      enh_hit,        /* Enhancer to hit */
                 enh_pen,        /* Enhancer penetration */
@@ -274,4 +275,34 @@ did_hit(int aid, string hdesc, int phurt, object enemy, int dt,
     }
 
     return 0;
+}
+
+/*
+ * Function name: wearable_item_usage_desc
+ * Description  : This function returns the usage of this wearable. It is
+ *                usually printed from the appraise function. The string
+ *                includes the location where it should be worn. For the
+ *                unarmed enhancer it also generates the damage type
+ *                description.
+ * Returns      : string - the description.
+ */
+string
+wearable_item_usage_desc()
+{
+    string *parts = map(query_slots(1), &extract(, 1) @ wear_how);
+    string * damage = ({ });
+
+    if (enh_dt & W_IMPALE)
+        damage += ({ one_of_list( ({ "impale", "pierce", "stab" }) ) });
+    if (enh_dt & W_SLASH)
+        damage += ({ one_of_list( ({ "slash", "cut", "hack" }) ) });
+    if (enh_dt & W_BLUDGEON)
+        damage += ({ one_of_list( ({ "bludgeon", "beat", "batter" }) ) });
+
+    if (!sizeof(damage))
+        damage = ({ "cause damage" });
+
+    return ("The " + this_object()->short(this_player()) +
+        " is made to be worn " + COMPOSITE_WORDS(parts) + ".  " +
+        "It can be used to " + COMPOSITE_WORDS(damage) + ".\n");
 }
