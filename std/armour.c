@@ -385,12 +385,8 @@ remove_broken(int silent = 0)
     }
 
     /* A broken armour will always be removed, so we do not have to
-     * dereference the result.
-     */
-    if (objectp(wear_func))
-    {
-        wear_func->remove(this_object());
-    }
+     * dereference the result. */
+    invoke_wf(&->remove(this_object()));
 
     /* If the wizard so chooses, this message may be omitted. */
     if (!silent)

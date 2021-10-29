@@ -10,9 +10,9 @@
 /* The default string of options for new players. It contains the following
  * information: more=30, screenwidth=-1 (none), whimpy=36 (very bad shape),
  * echo on, who_unmet, unarmed-off (that is, OPT_UNARMED_OFF is set to true),
- * web permissions, auto wrap, auto pwd, auto linecmd.
+ * web permissions, auto wrap, auto pwd, auto linecmd, block intimate.
  */
-#define OPT_DEFAULT_STRING " 30 -136*% '"
+#define OPT_DEFAULT_STRING " 30 -136*E '"
 
 /* Bit strings use only six bits per character in order to keep it printable.
  * The base of 48 means that 8 characters are used before the first bit.
@@ -44,7 +44,7 @@
 /* Wizard bits */
 #define OPT_AUTO_PWD		18  /* Display of current dir on changes. */
 #define OPT_AUTOLINECMD		20  /* Automatically alias line commands. */
-#define OPT_TIMESTAMP		21  /* Get a time stamp on wiz lines. */
+#define OPT_TIMESTAMP           21  /* Get a time stamp on wiz lines. */
 #define OPT_ALL_COMMUNE         22  /* See all communes. */
 #define OPT_ALWAYS_KNOWN        23  /* Be known to all mortals. */
 

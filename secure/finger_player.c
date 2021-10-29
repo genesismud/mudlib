@@ -59,7 +59,7 @@ static void acc_exp_to_stats();
 
 void
 create()
-{ 
+{
     seteuid(0);
 }
 
@@ -67,7 +67,7 @@ nomask public int
 load_player(string pl_name)
 {
     int ret;
-   
+
     if (!pl_name)
 	return 0;
     if (member_array(" ", explode(pl_name, "")) >= 0)
@@ -261,10 +261,10 @@ match_password(string p)
 {
     if (!strlen(password))
     {
-	return 1;
+        return 1;
     }
 
-    return (password == crypt(p, password));
+    return (password == crypt(p, password, 0));
 }
 
 nomask int
@@ -297,7 +297,7 @@ int query_max_exp() { return exp_max_total; }
 public string
 query_exp_title()
 {
-    if (wiz_level) 
+    if (wiz_level)
         return "";
 
     return "nonpresent mortal";
@@ -309,11 +309,11 @@ int query_ghost() { return is_ghost; }
 
 int query_wiz_level() { return wiz_level; }
 
-string 
+string
 long(mixed for_obj)
 {
     return LD_PRESENT_TO(this_object());
-}    
+}
 
 public string
 query_objective()
@@ -325,14 +325,14 @@ public string
 query_presentation()
 {
     string b;
-    
-    b = query_exp_title(); 
 
-    return query_name() + 
+    b = query_exp_title();
+
+    return query_name() +
         (strlen(title) ? (" " + title + ",") : "") +
         (strlen(b) ? (" " + b + ",") : "") + " " +
-        query_gender_string() + " " + 
-        race_name + 
+        query_gender_string() + " " +
+        race_name +
         (strlen(al_title) ? (" (" + al_title + ")") : "");
 }
 
@@ -363,7 +363,7 @@ set_base_stat(int stat, int val)
     stats[stat] = val;
     return val;
 }
-  
+
 nomask int
 exp_to_stat(int exp)
 {
@@ -399,7 +399,7 @@ acc_exp_to_stats()
     {
         if (query_base_stat(il) >= 0)
         {
-            tmp = exp_to_stat(query_acc_exp(il) * 
+            tmp = exp_to_stat(query_acc_exp(il) *
                 RACESTATMOD[query_race()][il] / 10);
             set_base_stat(il, tmp);
         }
@@ -426,7 +426,7 @@ round_stat(int stat)
 	return sprintf("%2.1fM", itof(stat) / 1000000.0);
     else if (stat > 1000)
 	return sprintf("%2.1fk", itof(stat) / 1000.0);
-		
+
     return sprintf("%d", stat);
 }
 
@@ -497,13 +497,13 @@ stat_living()
 		  to->query_alignment(),
 		  to->query_scar(),
 		  to->query_ghost(),
-		  to->query_whimpy(),                  
+		  to->query_whimpy(),
                   to->query_average_stat()
           );
     return str;
 }
 
-void 
+void
 remove_object()
 {
     destruct();

@@ -416,6 +416,12 @@ apply(string domain)
     return SECURITY->apply_to_domain(domain);
 }
 
+static string
+format_bit(int bit)
+{
+    return sprintf("%d [%d:%d]", bit, bit / 20, bit % 20);
+}
+
 /* **************************************************************************
  * bit - affect bits
  */
@@ -423,8 +429,6 @@ nomask int
 bit(string args)
 {
     int    argc;
-    int    group;
-    int    bit;
     int    index;
     int    index2;
     string *argv;
@@ -438,14 +442,17 @@ bit(string args)
         notify_fail("No argument to 'bit'. Check with the help text.\n");
         return 0;
     }
+
     argv = explode(args, " ");
     argc = sizeof(argv);
 
     if (argc < 3)
     {
-        notify_fail("Syntax: bit <command> <player> <args>\n");
+        notify_fail("Syntax: bit <command> <player> <domain> [args]\n");
         return 0;
     }
+
+    string domain = capitalize(argv[2]);
 
     if (!objectp(player = find_player(argv[1])))
     {
@@ -453,43 +460,23 @@ bit(string args)
         return 0;
     }
 
-    if (argc == 5)
+    if (SECURITY->query_domain_number(domain) == -1)
     {
-	string wname = this_player()->query_real_name();
-	int rank = SECURITY->query_wiz_rank(wname);
+        notify_fail("There is no domain named '" + domain + "'.\n");
+        return 0;
+    }
 
-	if (rank < WIZ_LORD)
-	{
-	    notify_fail("You are not allowed to give a domain name as " +
-                "argument. In order to change a bit administered by your " +
-                "own domain, you can omit the domain argument.\n");
-            return 0;
-        }
+    int bit;
+    if (argc > 3) {
+        int group;
 
-        argv[2] = capitalize(argv[2]);
-        if (SECURITY->query_domain_number(argv[2]) == -1)
+        if (sscanf(argv[3], "%d:%d", group, bit) == 2) {
+            bit = (group * 20 + bit);
+        } else if (!sscanf(argv[3], "%d", bit))
         {
-            notify_fail("There is no domain named '" + argv[2] + "'.\n");
-            return 0;
-        }
-
-	if ((rank == WIZ_LORD) &&
-	    (SECURITY->query_domain_lord(argv[2]) != wname))
-	{
-            notify_fail("You not the liege of the domain '" +
-		argv[2] + "'.\n");
-            return 0;
-	}
-
-        if (!seteuid(argv[2]))
-        {
-            write("Failed to set euid to " + argv[2] + ".\n");
+            write("Syntax error: Could not parse bit definition.\n");
             return 1;
         }
-
-        write("Euid changed to " + argv[2] + " for bit operation!\n");
-        argv = exclude_array(argv, 2, 2);
-        argc--;
     }
 
     switch(argv[0])
@@ -500,20 +487,14 @@ bit(string args)
             write("Syntax error. Check with the help text.\n");
             return 1;
         }
-        if ((sscanf(argv[2], "%d", group) != 1) ||
-            (sscanf(argv[3], "%d", bit) != 1))
+
+        if (!(player->set_domain_bit(domain, bit)))
         {
-            write("Syntax error. Check with the help text.\n");
+            write("You were not allowed to set bit " + format_bit(bit) + " in "
+                + domain + ".\n");
             return 1;
         }
-        if (!(player->set_bit(group, bit)))
-        {
-            write("You were not allowed to set bit " + group + ":" + bit +
-                  " in " + capitalize(argv[1]) + ".\n");
-            return 1;
-        }
-        write("Set bit " + group + ":" + bit + " in " + capitalize(argv[1]) +
-              ".\n");
+        write("Set bit " + format_bit(bit) + " in " + domain + ".\n");
         return 1;
 
     case "clear":
@@ -522,20 +503,14 @@ bit(string args)
             write("Syntax error. Check with the help text.\n");
             return 1;
         }
-        if ((sscanf(argv[2], "%d", group) != 1) ||
-            (sscanf(argv[3], "%d", bit) != 1))
+
+        if (!(player->clear_domain_bit(domain, bit)))
         {
-            write("Syntax error. Check with the help text.\n");
+            write("You were not allowed to clear bit " + format_bit(bit) +
+                  " in " + domain+ ".\n");
             return 1;
         }
-        if (!(player->clear_bit(group, bit)))
-        {
-            write("You were not allowed to clear bit " + group + ":" + bit +
-                  " in " + capitalize(argv[1]) + ".\n");
-            return 1;
-        }
-        write("Cleared bit " + group + ":" + bit + " in " +
-              capitalize(argv[1]) + ".\n");
+        write("Cleared bit " + format_bit(bit) + " in " + domain + ".\n");
         return 1;
 
     case "list":
@@ -545,28 +520,22 @@ bit(string args)
             return 1;
         }
 
-        argv[2] = capitalize(argv[2]);
-        result = "";
-        index = -1;
-        while(++index < 5)
+        string result = "";
+        for (int i = 0; i < 150; i++)
         {
-            index2 = -1;
-            while(++index2 < 20)
+            if (player->test_domain_bit(domain, i))
             {
-                if (player->test_bit(argv[2], index, index2))
-                {
-                    result += " " + index + ":" + index2;
-                }
+                result += (strlen(result) ? ", " : " ") + format_bit(i);
             }
         }
+
         if (!strlen(result))
         {
-            write(argv[2] + " has no bits set in " +
-                  capitalize(argv[1]) + ".\n");
+            write(domain + " has no bits set in " + capitalize(argv[1]) + ".\n");
             return 1;
         }
 
-        write(argv[2] + " has set bits:" + result + "\n");
+        write(domain + " has set bits:" + result + "\n");
         return 1;
 
     default:

@@ -52,7 +52,7 @@
  *
  * This is the name of the special domain where all 'lonely' wizards are
  * placed. This domain has no domainlord and no common, open dirs
- * 
+ *
  */
 #define WIZARD_DOMAIN "Wiz"
 
@@ -89,7 +89,7 @@
  * DEF_STARTING_PLACES
  *
  * This array contains all the places that are acknowledged starting places
- * by default. 
+ * by default.
  */
 #define DEF_STARTING_PLACES ({ "/d/Genesis/start/human/town/church", \
 			       "/d/Genesis/start/goblin/caverns/quarters", \
@@ -114,14 +114,14 @@
 #define ADMIN_HOME "/d/Genesis/wiz/admin"
 
 /*
- * WIZ_APPRENTICE_SCROLL 
+ * WIZ_APPRENTICE_SCROLL
  *
  * This is the path to the scroll that gets loaded and given to new wizards.
  */
 #define WIZ_APPRENTICE_SCROLL "/d/Genesis/obj/init_scroll"
 #define APPRENTICE_SCROLL_FILE "/doc/man/general/WIZARD_101"
 
-/* 
+/*
  * LOGIN_NEW_PLAYER
  *
  * This is the player object that manages all entering of new players.
@@ -136,7 +136,7 @@
  */
 #define WIZ_MAKER ({ "/d/Genesis/start/human/town/adv_guild" })
 
-/* 
+/*
  * LOGIN_FILE_WELCOME  - general welcome before password.
  * LOGIN_FILE_NEWS     - special news message after password.
  * LOGIN_FILE_RUNLEVEL - message about using a runlevel.
@@ -156,7 +156,7 @@
 #define INFOWIZ_PATH    "/d/Genesis/doc/infowiz/"
 #define LOCAL_HELP_PATH "/d/Genesis/doc/help/"
 
-/* 
+/*
  * DEFAULT_DEATH tells what object should be loaded when a player dies
  */
 
@@ -207,7 +207,7 @@
 
 /*
  * COMBAT_FILE
- * 
+ *
  * This file is cloned to manage a fight for a living object.
  */
 #define COMBAT_FILE "/std/combat/cbase"
@@ -218,7 +218,7 @@
  * This is the maximum amount of players that may be logged on at
  * one time.
  */
-#define MAX_PLAY        (2048) 
+#define MAX_PLAY        (2048)
 
 /*
  * SMALL_MEMORY_LIMIT
@@ -314,6 +314,15 @@
  */
 #undef FORCE_PASSWORD_CHANGE
 
+
+/*
+ * UPGRADE_PASSWORD_HASH
+ *
+ * If this is defined passwords using old hash methods will be upgraded
+ * as players login.
+ */
+#define UPGRADE_PASSWORD_HASH
+
 /*
  * BLOCK_DOUBLE_LOGIN
  *
@@ -339,8 +348,8 @@
 /*
  * STATUE_WHEN_LINKDEAD
  *
- * Show players as statues when they are linkdead. 
- * 
+ * Show players as statues when they are linkdead.
+ *
  */
 #define STATUE_WHEN_LINKDEAD
 #define OWN_STATUE "/d/Genesis/obj/statue"
@@ -364,7 +373,7 @@
  */
 #undef UDP_MANAGER "/d/Genesis/obj/udp"
 
-/* 
+/*
  * DECAY_XP
  *
  * The part of xp decayed each 15 minutes. (xp -= xp / DECAY_XP)
@@ -401,7 +410,7 @@
 #define REGULAR_UPTIME 332
 #define UPTIME_VARIATION 2
 
-/* 
+/*
  * NO_ALIGN_TITLE
  *
  * Defined if alignment title is not used
@@ -417,7 +426,7 @@
  * euid. Normally the maximum file size for a log is given with the euid '0',
  * however, if the name of the euid appears in this mapping, the owner of the
  * euid has the option of allowing the size grow to the given value before
- * cycling is done. 
+ * cycling is done.
  * If the size is less than 0, the log will be allowed to grow indefinately.
  */
 #define CYCLIC_LOG_SIZE ([ 0 : 20000, "root" : -1, "Genesis" : 100000 ])

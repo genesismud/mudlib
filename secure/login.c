@@ -23,6 +23,8 @@
 #include <stdproperties.h>
 #include <time.h>
 
+#include "/config/sys/local.h"
+
 /*
  * These are the necessary variables stored in the save file.
  */
@@ -74,7 +76,7 @@ static void who();
 /*
  * Function name: clean_up
  * Description  : This function is called every several minutes and if the
- *                player lost or broke connection, we destruct the object. 
+ *                player lost or broke connection, we destruct the object.
  */
 static void
 clean_up()
@@ -106,7 +108,7 @@ static void
 log(string fun, string message)
 {
     SECURITY->log_syslog(LOG_COMMANDS, sprintf("%s - %s:%-5d [%s] %s: %s\n",
-                                               ctime(time()), 
+                                               ctime(time()),
 					       query_ip_number(this_object()),
                                                query_remote_port(this_object()),
                                                query_ip_name(this_object()),
@@ -119,8 +121,8 @@ log(string fun, string message)
  * Description  : This function returns the short description of this object.
  * Returns      : string - the short description.
  */
-string 
-short() 
+string
+short()
 {
     return "login"  + (name ? " (" + name + ")" : "");
 }
@@ -277,9 +279,11 @@ swap_to_player(object ob)
         ob->revive();
         ob->fixup_screen();
     }
- 
-    ob->catch_gmcp(GMCP_CHAR_LOGIN, ([ GMCP_NAME : ob->query_real_name(),
-        GMCP_UID : STRING_HASH(ob->query_real_name()) ]) );
+
+    ob->catch_gmcp(GMCP_CHAR_LOGIN, ([
+            GMCP_NAME : ob->query_real_name(),
+            GMCP_UID : STRING_HASH(ob->query_real_name())
+        ]));
 
     /* Notify the wizards of the action. */
     SECURITY->notify(ob, login_type);
@@ -320,9 +324,9 @@ validate_playerfile()
         }
     }
 
-    /* 
+    /*
      * There can be three different reasons for not having a player_file:
-     * 
+     *
      *    1 - If this is a new character, let the login player object
      *        manage the creation / conversion / process.
      *    2 - The players racefile is not loadable, a new body must be chosen.
@@ -345,10 +349,10 @@ validate_playerfile()
                 ob = clone_object(LOGIN_NEW_PLAYER);
         }
 
-        ob->open_player(); 
+        ob->open_player();
         seteuid(BACKBONE_UID);
-        export_uid(ob); 
-        ob->set_trusted(1); 
+        export_uid(ob);
+        ob->set_trusted(1);
         exec(ob, this_object());
         ob->enter_new_player(name, password);
         destruct();
@@ -356,13 +360,13 @@ validate_playerfile()
     }
 
     /* Wizards get to have their own UID. */
-    ob->open_player(); 
+    ob->open_player();
     if (SECURITY->query_wiz_rank(name))
         seteuid(name);
     else
         seteuid(BACKBONE_UID);
-    export_uid(ob); 
-    ob->set_trusted(1); 
+    export_uid(ob);
+    ob->set_trusted(1);
     swap_to_player(ob);
 }
 
@@ -387,17 +391,17 @@ date()
 #endif REGULAR_REBOOT
 }
 
-/* 
+/*
  * Function name: generic_commands
- * Description  : Handles commands which should always be available such 
- *                as 'quit'. 
+ * Description  : Handles commands which should always be available such
+ *                as 'quit'.
  * Arguments    : str - the input
  *                function - to call when input was handled to, ususally
- *                           set to &input_to 
+ *                           set to &input_to
  * Returns      : True if the command was handled
  */
-public int 
-generic_command(string str, function input, string message) 
+public int
+generic_command(string str, function input, string message)
 {
     int done = 0;
     str = lower_case(str);
@@ -424,7 +428,7 @@ generic_command(string str, function input, string message)
     if (done) {
         input();
 
-        if (message) 
+        if (message)
             write_socket(message);
 
         return 1;
@@ -594,7 +598,7 @@ new_player_name(string str)
 
     str = lower_case(str);
 
-    if (generic_command(str, &input_to(new_player_name), "Give name again: ")) 
+    if (generic_command(str, &input_to(new_player_name), "Give name again: "))
         return;
 
     if (!valid_name(str))
@@ -625,7 +629,7 @@ new_player_name(string str)
 #ifdef ALWAYS_APPLY
     if (!wildmatch("*jr", str))
     {
-        write_socket("\nCurrently, " + SECURITY->get_mud_name() + 
+        write_socket("\nCurrently, " + SECURITY->get_mud_name() +
             " cannot accept new players from any site without application. " +
             "If you want to create a character here, you may log in with "+
             "'application'.\n\n");
@@ -635,7 +639,7 @@ new_player_name(string str)
     }
 #endif ALWAYS_APPLY
 
-    if (!wildmatch("*jr", str) && 
+    if (!wildmatch("*jr", str) &&
         SECURITY->check_newplayer(query_ip_number(this_object())) == 2)
     {
         write_socket("\nYour site is blocked due to repeated offensive " +
@@ -738,9 +742,9 @@ confirm_use_name(string str)
 {
     log("confirm_use_name", str);
 
-    if (generic_command(str, &input_to(confirm_use_name), 
+    if (generic_command(str, &input_to(confirm_use_name),
                         "Please answer with either y[es], n[o] or q[uit].\n" +
-                        "Would you really like to use the name " + 
+                        "Would you really like to use the name " +
                         capitalize(name) + "? "))
         return;
 
@@ -946,7 +950,7 @@ get_name(string str)
     /* Initialize variable we use. */
     if (!mappingp(m_vars))
 	m_vars = ([ ]);
-    
+
     /* If we have buffered GMCP, try to login the person. */
     if ((index = member_array(GMCP_CHAR_LOGIN, gmcp_buffer)) >= 0)
     {
@@ -1057,8 +1061,7 @@ new_password(string str)
         return;
     }
 
-    if (strlen(old_password) &&
-        (crypt(str, old_password) == old_password))
+    if (strlen(old_password) && (crypt(str, old_password, 0) == old_password))
     {
         write_socket("The password must differ from the previous password.\n");
         write_socket("Password: ");
@@ -1086,7 +1089,7 @@ new_password(string str)
     }
 
     /* Crypt the password. Use a new seed. */
-    password = crypt(password, CRYPT_METHOD);
+    password = crypt(password, CRYPT_METHOD, CRYPT_SALT_LENGTH);
 
     /* New password set, proceed with login. */
     validate_linkdeath();
@@ -1102,9 +1105,9 @@ tell_password()
 {
     write_socket("To prevent people from breaking your password, we feel " +
         "the need to\nrequire your password to match certain criteria:\n" +
-        "  - the password must be at least 8 characters long\n" + 
-        "  - the password must at least contain two 'special characters'\n" + 
-        "  - a 'special character' is anything other than a-z and A-Z\n" + 
+        "  - the password must be at least 8 characters long\n" +
+        "  - the password must at least contain two 'special characters'\n" +
+        "  - a 'special character' is anything other than a-z and A-Z\n" +
         "\n\nNew password: ");
     input_to(new_password, 1);
 }
@@ -1212,7 +1215,7 @@ check_password(string pwd, int second_attempt = 0)
     time_out_alarm = set_alarm(TIMEOUT_TIME, 0.0, time_out);
 
     /* Player has no password, force him/her to set a new one. */
-    if (!password)
+    if (!password || !strlen(password))
     {
         if (check_restriction())
         {
@@ -1229,7 +1232,7 @@ check_password(string pwd, int second_attempt = 0)
     }
 
     /* Password doesn't match */
-    if (crypt(pwd, password) != password)
+    if (crypt(pwd, password, 0) != password)
     {
         write_socket("Wrong password!\n");
 
@@ -1252,7 +1255,7 @@ check_password(string pwd, int second_attempt = 0)
     if (check_double_login())
         return;
 #endif
-    
+
     /* Reset the login flag so people won't skip the queue. */
     queue_passed = 0;
 
@@ -1271,6 +1274,14 @@ check_password(string pwd, int second_attempt = 0)
     }
 #endif FORCE_PASSWORD_CHANGE
 
+#ifdef UPGRADE_PASSWORD_HASH
+    /* If the password is using an old hash method upgrade */
+    if (!wildmatch(CRYPT_METHOD + "*", password)) {
+        password = crypt(pwd, CRYPT_METHOD, CRYPT_SALT_LENGTH);
+        password_set = 1;
+    }
+#endif
+
 #ifdef LOG_STRANGE_LOGIN
     /* See if there are people with the same password or seconds. */
     if (!wildmatch("*jr", name) &&
@@ -1286,7 +1297,7 @@ check_password(string pwd, int second_attempt = 0)
 
 	size = sizeof(players);
 	names = ({ });
-	
+
 	while(--size >= 0)
 	{
 	    /* Security, we don't want to give the pass to untrusted functions */
@@ -1330,7 +1341,7 @@ check_password(string pwd, int second_attempt = 0)
         /* Check for seconds. */
         names = SECURITY->query_seconds(name);
         names &= map(players, &->query_real_name());
-        
+
         if (sizeof(names))
 	{
 	    SECURITY->log_syslog(LOG_SECOND_LOGIN,
@@ -1398,8 +1409,7 @@ throw_out_interactive(string str)
     remove_alarm(time_out_alarm);
     time_out_alarm = set_alarm(TIMEOUT_TIME, 0.0, time_out);
 
-    if ((!strlen(str)) ||
-        (str[0] != 'y'))
+    if ((!strlen(str)) || (str[0] != 'y'))
     {
         write_socket("Please answer with either y[es] or n[o].\n" +
             "Throw the other copy out? ");

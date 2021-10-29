@@ -368,8 +368,8 @@ do_die(object killer)
         {
             corpse = clone_object("/std/corpse");
             corpse->set_name(query_name());
-	    corpse->add_adj(query_adjs());
-	    corpse->add_adj(query_race()); /* Allow syntax like "wolf corpse" */
+	        corpse->add_adj(query_adjs());
+            corpse->add_adj(query_race()); /* Allow syntax like "wolf corpse" */
             corpse->change_prop(CONT_I_WEIGHT, query_prop(CONT_I_WEIGHT));
             corpse->change_prop(CONT_I_VOLUME, query_prop(CONT_I_VOLUME));
             corpse->add_prop(CORPSE_S_RACE, query_race_name());
@@ -377,12 +377,14 @@ do_die(object killer)
             corpse->change_prop(CONT_I_MAX_WEIGHT, query_prop(CONT_I_MAX_WEIGHT));
             corpse->change_prop(CONT_I_MAX_VOLUME, query_prop(CONT_I_MAX_VOLUME));
             corpse->set_leftover_list(query_leftover());
-	    corpse->set_damage(combat_extern->cb_damage_by_type());
+            corpse->set_damage(combat_extern->cb_damage_by_type());
         }
 
-        corpse->add_prop(CORPSE_AS_KILLER,
-            ({ killer->query_real_name(), killer->query_nonmet_name() }) );
-	corpse->add_prop(CORPSE_S_LIVING_FILE, MASTER_OB(this_object()));
+        corpse->add_prop(CORPSE_AS_KILLER, ({
+            killer->query_real_name(),
+            killer->query_nonmet_name()
+        }));
+        corpse->add_prop(CORPSE_S_LIVING_FILE, MASTER_OB(this_object()));
         corpse->move(environment(this_object()), 1);
         move_all_to(corpse);
     }
@@ -422,13 +424,14 @@ move_all_to(object dest)
             continue;
         }
 
-        /* Mark in which room we were killed. */
-        obj->add_prop(OBJ_O_LOOTED_IN_ROOM, room);
+        if (!IS_PLAYER_OBJECT(this_object())) {
+            /* Mark in which room we were killed so abandoned loot can be removed.. */
+            obj->add_prop(OBJ_O_LOOTED_IN_ROOM, room);
+        }
 
 	    if (catch(ret = obj->move(dest)))
         {
-            log_file("DIE_ERR", ctime(time()) + " " +
-                this_object()->query_name() + " (" + file_name(obj) + ")\n");
+            log_file("DIE_ERR", ctime(time()) + " " + this_object()->query_name() + " (" + file_name(obj) + ")\n");
         }
         else if (ret)
             obj->move(environment(this_object()));

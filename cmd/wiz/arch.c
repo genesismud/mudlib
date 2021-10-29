@@ -594,7 +594,7 @@ newchar(string str)
     tmp_char = restore_map("/secure/proto_char");
     tmp_char["name"] = name;
     passwd = SECURITY->generate_password();
-    tmp_char["password"] = crypt(passwd, CRYPT_METHOD);
+    tmp_char["password"] = crypt(passwd, CRYPT_METHOD, CRYPT_SALT_LENGTH);
     tmp_char["mailaddr"] = args[1];
     tmp_char["password_time"] = time();
     tmp_char["login_time"] = time();
@@ -701,7 +701,7 @@ resetpassword(string str)
 
     /* Reset the password and also the time, forcing the player to change upon
        login if we set the password to a text. */
-    playerfile["password"] = (strlen(pswd) ? crypt(pswd, CRYPT_METHOD) : 0);
+    playerfile["password"] = (strlen(pswd) ? crypt(pswd, CRYPT_METHOD, CRYPT_SALT_LENGTH) : 0);
     playerfile["password_time"] = 0;
     save_map(playerfile, PLAYER_FILE(name));
 

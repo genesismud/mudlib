@@ -747,7 +747,7 @@ compare_unarmed_enhancer(object enh1, object enh2)
         + random(low_precision / 2, seed + 1);
     stat2 = enh2->query_pen() + random(high_precision / 10, seed + 27)
         + random(low_precision / 2, seed + 28);
-  
+
     if (stat1 > stat2)
     {
         stat1 = (100 - ((80 * stat2) / stat1));

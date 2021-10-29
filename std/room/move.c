@@ -1,4 +1,4 @@
-/* 
+/*
  * /std/room/move.c
  *
  * This is a sub-part of /std/room.c
@@ -12,11 +12,12 @@ static string  room_dircmd;  /* Command given after the triggering verb */
 static object *link_ends,    /* Links to endpoints, filenames of rooms */
               *link_starts;  /* Link to cloned rooms, obj pointers */
 static string  room_mlink;   /* For clones: master room */
+static int     round_fatigue_up = random(2);
 
 /*
  * Function name: link_room
  * Description:   Create a corridor room. Set the descriptions of it.
- *                Does not add exits. This is supposed to be replaced by 
+ *                Does not add exits. This is supposed to be replaced by
  *                the actual room inheriting this standard room. It is supposed
  *                to set proper descriptions (long and short) instead of
  *                copying the endpoint description. Corridor rooms are
@@ -39,13 +40,13 @@ link_room(string lfile, mixed dest, int pos)
     ob->add_prop(ROOM_I_LIGHT, query_prop_setting(ROOM_I_LIGHT));
     ob->add_prop(ROOM_I_INSIDE, query_prop_setting(ROOM_I_INSIDE));
     ob->add_prop(ROOM_I_TYPE, query_prop_setting(ROOM_I_TYPE));
-  
+
     return ob;
 }
 
 /*
  * Function name: transport_to
- * Description:   Transport player to first linked room in clone chain.  
+ * Description:   Transport player to first linked room in clone chain.
  *                Also creates the corridor and links it to the other
  *                endpoint if the corridor does not exist.
  * Arguments:	  ex:    The direction command (north, south ...)
@@ -75,7 +76,7 @@ transport_to(string ex, mixed room, int delay)
 	if (!sscanf(file_name(or), "%s#", room))
 	    room = file_name(or);
     }
-    
+
     lastr = 0;
 
     /* Add one more if not there in the number of linked room chains from
@@ -94,24 +95,24 @@ transport_to(string ex, mixed room, int delay)
     /* Make the cloned corridor if it is not already made. Build by adding
      * one room at a time from the destination position. */
     if (!lastr)
-    {  
+    {
 	/* Next to dest */
-	if (!(lastr = this_object()->link_room(ROOM_OBJECT, or, delay))) 
+	if (!(lastr = this_object()->link_room(ROOM_OBJECT, or, delay)))
 	    return 0;
 	backstr = (string) or->make_link(this_object(), lastr);
-	lastr->add_exit(or, ex, 0);   
+	lastr->add_exit(or, ex, 0);
 	lastr->link_master(room);    /* Destination is master of corridor */
 
 	for (c = 1; c < delay; c++)
 	{
 	    ls = link_room(ROOM_OBJECT, or, delay - c);
 	    ls->add_exit(lastr, ex, 0);
-	    lastr->add_exit(ls, backstr, 0);                   
+	    lastr->add_exit(ls, backstr, 0);
 	    lastr = ls;
 	    lastr->link_master(room);
 	}
 	lastr->add_exit(this_object(), backstr, 0);
-	link_starts = (sizeof(link_starts) 
+	link_starts = (sizeof(link_starts)
 		       ? link_starts + ({ lastr }) : ({ lastr }));
     }
 
@@ -153,18 +154,18 @@ make_link(mixed to_room, object via_link)
 	link_ends = ({ to_room });
 	ne = -1;
     }
-  
+
     if (ne < 0)
-    	link_starts = (link_starts ? 
+    	link_starts = (link_starts ?
 		       link_starts + ({ via_link }) : ({ via_link }));
-    
+
     ex = query_exit();
     ne = member_array(to_room, ex);
 
     return (ne >= 0 ? ex[ne + 1] : "back");
     /* We can't go back when we are at the end point, ie one way corridor */
 }
-  
+
 /*
  * Function name: link_master
  * Description:   Set the master room for this cloned corridor
@@ -200,7 +201,7 @@ load_room(int index)
     mixed droom;
     string err;
     object ob;
-    
+
     droom = check_call(room_exits[index]);
     if (objectp(droom))
     {
@@ -214,16 +215,16 @@ load_room(int index)
 	this_player()->move_living("X", query_link_master());
 	return 0;
     }
-    
+
     ob = find_object(droom);
     if (objectp(ob))
     {
 	return ob;
     }
-    
+
     if (err = LOAD_ERR(droom))
     {
-	SECURITY->log_loaderr(droom, environment(this_object()), 
+	SECURITY->log_loaderr(droom, environment(this_object()),
 			      room_exits[index + 1], this_object(), err);
 	write("Err in load:" + err + " <" + droom +
 	    ">\nPlease make a bugreport about this.\n");
@@ -236,7 +237,7 @@ load_room(int index)
  * Function name: query_dircmd
  * Description:   Gives the rest of the command given after move verb.
  *                This can be used in blocking functions (third arg add_exit)
- * Returns:       The movecommand as given. 
+ * Returns:       The movecommand as given.
  */
 public string
 query_dircmd()
@@ -310,17 +311,25 @@ unq_move(string str)
 	 */
 	if (this_player()->query_age() > 14400)
 	{
-            tired = query_tired_exit(index / 3);
-	    tmp = this_player()->query_encumberance_weight();
+        tired = query_tired_exit(index / 3);
+	    int enc = this_player()->query_encumberance_weight();
 
-	    /* Compute the fatigue bonus. Sneaking gives double fatigue and
-	     * so does talking with 80% encumberance, while 20% or less gives
-             * only half the fatigue.
-	     */
-	    tired = (this_player()->query_prop(LIVE_I_SNEAK) ?
-		(tired * 2) : tired);
-	    tired = ((tmp > 80) ? (tired * 2) :
-                ((tmp < 20) ? (tired / 2) : tired));
+        /* Compute the fatigue bonus. Sneaking gives double fatigue and
+         * so does moving with 80% encumberance, while 20% or less gives
+         * only half the fatigue.
+         */
+        if (this_player()->query_prop(LIVE_I_SNEAK))
+            tired *= 2;
+
+        if (enc > 80)
+            tired *= 2;
+        if (enc < 20) {
+            /* round_fatigue_up is 1 50% of the time */
+            if (tired % 2)
+                tired += round_fatigue_up;
+
+            tired /= 2;
+        }
 
 	    /* Player is too tired to move. */
 	    if (this_player()->query_fatigue() < tired)
@@ -344,7 +353,7 @@ unq_move(string str)
 	{
 	    return 1;
 	}
-	
+
         /* Remove the fatigue after the exit has been checked. */
         if (tired)
         {

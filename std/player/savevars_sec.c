@@ -295,7 +295,7 @@ match_password(string p)
     if (!strlen(password))
         return 1;
 
-    return (password == crypt(p, password));
+    return (password == crypt(p, password, 0));
 }
 
 /*
@@ -936,7 +936,8 @@ set_domain_bit(string domain, int bit)
     }
     /* Verify whether we have the authority to change the bit. */
     domain = capitalize(domain);
-    if (!SECURITY->valid_domain_bit(previous_object(), domain, bit))
+    if (!query_wiz_level() && !wildmatch("*jr", query_real_name()) &&
+        !SECURITY->valid_domain_bit(previous_object(), domain, bit))
     {
         return 0;
     }
@@ -969,7 +970,8 @@ clear_domain_bit(string domain, int bit)
     }
     /* Verify whether we have the authority to change the bit. */
     domain = capitalize(domain);
-    if (!SECURITY->valid_domain_bit(previous_object(), domain, bit))
+    if (!query_wiz_level() && !wildmatch("*jr", query_real_name()) &&
+        !SECURITY->valid_domain_bit(previous_object(), domain, bit))
     {
         return 0;
     }
@@ -980,6 +982,15 @@ clear_domain_bit(string domain, int bit)
         return 1;
     }
 
+    string actor = file_name(previous_object());
+    if (this_interactive() != this_object()) {
+        actor += " [" + capitalize(this_interactive()->query_real_name()) + "]";
+    }
+
+    SECURITY->log_syslog("MODIFY_BIT",
+        sprintf("%s %-13s %5s %-11s %3d by %s\n", ctime(),
+            capitalize(query_real_name()), "CLEAR", domain, bit, actor),
+        100000);
     m_bits[domain] = efun::clear_bit(m_bits[domain], bit);
     return 1;
 }

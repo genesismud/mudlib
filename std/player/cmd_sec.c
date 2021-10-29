@@ -209,7 +209,7 @@ compute_recover_str(int display)
 public nomask varargs void
 save_me(int manual)
 {
-    /* Do some queries to make certain time-dependent 
+    /* Do some queries to make certain time-dependent
      * vars are updated properly.
      */
     this_object()->query_mana();
@@ -254,7 +254,7 @@ save_me(int manual)
  * Returns      : int 1
  */
 public int
-save_character(string str) 
+save_character(string str)
 {
     write("Saving " + query_name() + ".\n");
     /* Display recovery for any argument other than "silent". */
@@ -326,7 +326,7 @@ quit(string str)
         dropped = filter(dropped, &not() @ &->check_recoverable(manual));
         dropped = filter(dropped, &not() @ &->query_prop(OBJ_M_NO_DROP));
 
-        foreach(object item: dropped)        
+        foreach(object item: dropped)
         {
             /* Move to the top of the inventory, otherwise it cannot be dropped. */
             if (environment(item) != this_object())
@@ -422,7 +422,7 @@ change_password_new(string str, string password1 = 0)
 
 	if (!(SECURITY->proper_password(str)))
 	{
-	    write("The new password must contain atleast two digits or special characters.\n"); 
+	    write("The new password must contain atleast two digits or special characters.\n");
 	    return;
 	}
 
@@ -435,12 +435,12 @@ change_password_new(string str, string password1 = 0)
     /* Second password doesn't match the first one. */
     if (str != password1)
     {
-	write("New passwords don't match! Password not changed.\n");
-	return;
+        write("New passwords don't match! Password not changed.\n");
+       return;
     }
 
     /* Generate new seed */
-    set_password(crypt(password1, CRYPT_METHOD));
+    set_password(crypt(password1, CRYPT_METHOD, CRYPT_SALT_LENGTH));
     /* Save the new password. */
     save_me(0);
     write("Password changed.\n");
@@ -451,12 +451,12 @@ change_password_new(string str, string password1 = 0)
  * Description  : Takes and checks the old password.
  * Arguments    : string str - the given (old) password.
  */
-static nomask void 
+static nomask void
 change_password_old(string str)
 {
     write("\n");
     if (!strlen(str) ||
-	!match_password(str)) 
+	!match_password(str))
     {
 	write("Wrong old password.\n");
 	return;
@@ -492,7 +492,7 @@ change_password(string str)
  * Arguments:     string cmd    - the name of the executed command
  *                object target - the target in your inventory, if 0 it's you.
  *                object actor  - the command performer
- *                int cmd_type  - the command attributes (from cmdparse.h) 
+ *                int cmd_type  - the command attributes (from cmdparse.h)
  * Returns:       0 - command allowed
  *                1 - command blocked, no error message provided
  *                string - command blocked, use string as error message.

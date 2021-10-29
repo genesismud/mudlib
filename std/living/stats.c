@@ -353,8 +353,8 @@ update_stat(int stat)
  *                NOTE: This method does not consider tax in any way. Any tax
  *                      must be deducted from the xp amounts before this is
  *                      called.
- * Arguments    : int stat_exp     - Stat Exp is spread over the exp stats. 
- *                int guild_exp    - Guild Exp is spread over the guild stats. 
+ * Arguments    : int stat_exp     - Stat Exp is spread over the exp stats.
+ *                int guild_exp    - Guild Exp is spread over the guild stats.
  */
 static void
 update_acc_exp(int stat_exp, int guild_exp)
@@ -385,11 +385,11 @@ update_acc_exp(int stat_exp, int guild_exp)
 
     /* Update the acc_exp for the guild stats */
     int tax_total = query_guild_pref_total();
-    if (guild_exp > 0 && tax_total > 0) { 
+    if (guild_exp > 0 && tax_total > 0) {
         index = SS_NO_EXP_STATS - 1;
         while(++index < SS_NO_STATS)
         {
-            set_acc_exp(index, query_acc_exp(index) + 
+            set_acc_exp(index, query_acc_exp(index) +
                     ((query_learn_pref(index) * guild_exp) / tax_total));
         }
     }
@@ -398,7 +398,7 @@ update_acc_exp(int stat_exp, int guild_exp)
     index = -1;
     while(++index < SS_NO_EXP_STATS)
     {
-        set_acc_exp(index, query_acc_exp(index) + 
+        set_acc_exp(index, query_acc_exp(index) +
                     ((query_learn_pref(index) * stat_exp) / query_stat_pref_total()));
     }
 
@@ -438,6 +438,42 @@ check_acc_exp()
 
     /* The stats don't match the total experience. */
     update_acc_exp(sum, 0);
+}
+
+/*
+ * Function name: modify_acc_exp
+ * Description  : Modify the distribution of the accumulated xp in the stats
+ * Arguments:     acc - An array of SS_NO_EXP_STATS with the new values.
+ *                      The sum of the values must be equal the stat total.
+ * Returns:       The acc exp total on success
+ *                -1 - Invalid input array
+ *                -2 - The new acc exp total does not match the current.
+ */
+public int
+modify_acc_exp(int *mod_acc)
+{
+    if (!pointerp(mod_acc) || sizeof(mod_acc) != SS_NO_EXP_STATS)
+        return -1;
+
+    int *old_acc = acc_exp[..(SS_NO_EXP_STATS - 1)];
+
+    int old = reduce(&operator(+)(,), old_acc);
+    int new = reduce(&operator(+)(,), mod_acc);
+
+    if (old != new)
+        return -2;
+
+
+    for (int stat = 0; stat < SS_NO_EXP_STATS; stat++) {
+        set_acc_exp(stat, mod_acc[stat]);
+    }
+
+    acc_exp_to_stats();
+
+    SECURITY->log_syslog("MODIFY_ACC_EXP",
+        sprintf("%s %-13s %@10d -> %@10d\n", ctime(),
+            this_object()->query_real_name(), old_acc, mod_acc), 100000);
+    return new;
 }
 
 /*
