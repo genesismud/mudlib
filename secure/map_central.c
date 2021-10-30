@@ -11,6 +11,7 @@
 #pragma strict_types
 
 #include <files.h>
+#include <filter_funs.h>
 #include <macros.h>
 
 #define MAP_MAPLINKS "/data/maplinks"
@@ -398,30 +399,36 @@ link_map(string path, string mapfile)
              * section where the map part is located. */
             parts = explode(maps[mapfile][section][filename], " ") - ({ "" });
             if (sizeof(parts) == 2)
-	    {
+	        {
                 ix = atoi(parts[0]);
                 iy = atoi(parts[1]);
-		if (query_maplink(path + filename) == mapfile)
-		{
-		    write("Already linked " + path + filename + "\n");
-		    continue;
-		}
-		write("Linked " + path + filename +
-                    " (" + section + " " + ix + "," + iy + ")\n");
-		add_maplink(path + filename, mapfile);
+
+                if (query_maplink(path + filename) == mapfile)
+                {
+                    write("Already linked " + path + filename + "\n");
+                    continue;
+                }
+
+                write("Linked " + path + filename + " (" + section + " " + ix +
+                    "," + iy + ")\n");
+
+                add_maplink(path + filename, mapfile);
                 /* Init the map if the room is loaded. */
                 if (objectp(room = find_object(path + filename)))
                 {
                     room->init_map_data();
+                    object *players = FILTER_PLAYERS(all_inventory(room));
+                    map(players, room->gmcp_room_info);
                 }
-		linked++;
+                linked++;
+            }
 	    }
-	}
     }
+
     if (!linked)
     {
-	write("Found no matches in: " + path + "\n");
-	return 0;
+	    write("Found no matches in: " + path + "\n");
+	    return 0;
     }
     return 1;
 }
