@@ -26,15 +26,15 @@ public void cb_remove_arm(object wep);
 static void adjust_ac(int hid, object arm, int rm);
 static void adjust_unarmed_hit_pen(int hid, object arm, int rm);
 
-/* 
+/*
    NOTE
- 
+
      There is a limited number of tool slots and one slot can only be
      occupied by one object at a time. One object may occupy many slots though.
-    
+
      Armours can protect one or more hit locations. What hit locations
      a given armour protects is given by the function 'query_protects' in
-     the armour. 
+     the armour.
 
      Weapons can only aid one attack. The attack id is given by the
      function 'query_attack_id' in the weapon.
@@ -51,7 +51,7 @@ static void adjust_unarmed_hit_pen(int hid, object arm, int rm);
      /std/armour.c and /std/weapon.c
 
      Tool slots are made as defined by the objects. The only thing that the
-     combat system does is to ensure that two tools do not use the same 
+     combat system does is to ensure that two tools do not use the same
      slot.
 
    MAGICAL armours
@@ -66,7 +66,7 @@ static void adjust_unarmed_hit_pen(int hid, object arm, int rm);
      Magical weapons work just like normal weapons. A magical 'weapon' that
      allocates no combat slot is not a 'weapon' it is an independant magic
      object and must cause damage onto the enemy on its own. Such magic
-     attacks are not supported in the combat system. 
+     attacks are not supported in the combat system.
 
 */
 
@@ -87,7 +87,7 @@ create_cplain()
 
 /*
  * Function name: cb_calc_procuse
- * Description  : Calculates the procuse based on 2H combat skill 
+ * Description  : Calculates the procuse based on 2H combat skill
  */
 public void
 cb_calc_attackuse()
@@ -104,7 +104,7 @@ cb_calc_attackuse()
         extra = qme()->query_skill(SS_2H_COMBAT);
         extra = extra > 20 ? extra / 2 : extra - 20;
     }
-    this_object()->cb_set_attackuse(100 + extra);    
+    this_object()->cb_set_attackuse(100 + extra);
 }
 
 /*
@@ -122,13 +122,13 @@ cb_wield_weapon(object wep)
 
     aid = (int) wep->query_attack_id();
 
-    /* Can we use this weapon ? */    
+    /* Can we use this weapon ? */
     if (!query_attack(aid))
     {
         return "It doesn't seem to fit your body very well.\n";
     }
 
-    add_attack(wep->query_hit(), wep->query_modified_pen(), wep->query_dt(), 
+    add_attack(wep->query_hit(), wep->query_modified_pen(), wep->query_dt(),
                wep->query_procuse(), aid, 0, wep);
 
 
@@ -184,19 +184,19 @@ adjust_ac(int hid, object arm, int rm)
     {
         am[il] += ac;
     }
-    
+
     oldloc = query_hitloc(hid);
 
     for (il = 0; il < sizeof(am) && il < sizeof(oldloc[HIT_AC]); il++)
     {
         if (rm)
-	{
+        {
             oldloc[HIT_AC][il] -= am[il];
-	}
+        }
         else
-	{
+        {
             oldloc[HIT_AC][il] += am[il];
-	}
+        }
     }
 
     arms = oldloc[HIT_ARMOURS];
@@ -225,11 +225,12 @@ static void
 adjust_unarmed_hit_pen(int slot, object arm, int rm)
 {
     if (!IS_UNARMED_ENH_OBJECT(arm))
-    {
         return;
-    }
 
     int aid = qme()->cr_convert_slot_to_attack_id(slot);
+
+    if (member_array(aid, query_attack_id()) < 0)
+        return;
 
     object tool = qme()->query_tool(aid);
     if (objectp(tool) && tool != arm)
@@ -242,7 +243,7 @@ adjust_unarmed_hit_pen(int slot, object arm, int rm)
     {
         add_attack(arm->query_hit(), arm->query_modified_pen(),
             arm->query_dt(), arm->query_procuse(), aid,
-            qme()->query_skill(SS_UNARM_COMBAT));  
+            qme()->query_skill(SS_UNARM_COMBAT));
     }
     else
     {
@@ -294,7 +295,7 @@ cb_wear_arm(object arm)
  * Arguments:     arm - The armour.
  */
 public void
-cb_remove_arm(object arm) 
+cb_remove_arm(object arm)
 {
     /*
      * Remove the armours effect for each hit location it protects
@@ -344,7 +345,7 @@ cb_attack_desc(int aid)
  * Function name: cb_try_hit
  * Description:   Decide if a certain attack fails because of something
  *                related to the attack itself, ie specific weapon that only
- *                works some of the time. 
+ *                works some of the time.
  * Arguments:     aid:   The attack id
  * Returns:       True if hit, otherwise 0.
  */
@@ -359,7 +360,7 @@ cb_try_hit(int aid)
 /*
  * Function name: cb_did_hit
  * Description:   Tells us that we hit something. Should produce combat
- *                messages to all relevant parties. 
+ *                messages to all relevant parties.
  * Arguments:     aid:   The attack id
  *                hdesc: The hitlocation description
  *                hid:   The hitlocation id
@@ -382,9 +383,9 @@ cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
     {
         return;
     }
-    
+
     wep = query_attack(aid)[ATT_OBJ];
-    
+
     if (wep)
     {
         if (wep->did_hit(aid, hdesc, phurt, enemy, dt, phit, dam, hid))
@@ -405,7 +406,7 @@ cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
             arms = qme()->query_clothing(slot);
             if (sizeof(arms) > 0)
             {
-                enhancers = filter(arms, 
+                enhancers = filter(arms,
                     &operator(!=)(0) @ &function_exists("did_hit",));
                 num_enhancers = sizeof(enhancers);
                 if (num_enhancers > 0)
@@ -446,7 +447,7 @@ cb_got_hit(int hid, int ph, object att, int aid, int dt, int dam)
     int il, size;
     object *arms;
 
-    /* 
+    /*
      * Many armours may help to cover the specific bodypart: hid
      */
     arms = query_hitloc(hid)[HIT_ARMOURS];
@@ -490,7 +491,7 @@ cb_update_armour(object obj)
         adjust_unarmed_hit_pen(slot, obj, 0);
     }
 }
-            
+
 /*
  * Function namn: cb_update_weapon
  * Description:   Call this function when something has caused the weapon
