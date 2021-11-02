@@ -231,6 +231,16 @@ adjust_unarmed_hit_pen(int slot, object arm, int rm)
 
     int aid = qme()->cr_convert_slot_to_attack_id(slot);
 
+    if (aid == 0)
+    {
+        // Skip slots that we do not map to an attack id
+        // We need this for items cover armour slots like
+        // A_FEET | A_LEGS where A_LEGS do not map to
+        // attack id. It will result in adding an attack
+        // "mind" if we don't check for this.
+        return;
+    }
+
     object tool = qme()->query_tool(aid);
     if (objectp(tool) && tool != arm)
     {
