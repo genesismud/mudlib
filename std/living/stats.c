@@ -60,6 +60,11 @@ set_stat_extra(int stat, int val)
 	return 0;
 
     stat_extra[stat] = val;
+
+    if (stat == SS_STR)
+    {
+        this_object()->query_combat_object()->cb_calc_modified_pen();
+    }
     return val;
 }
 
@@ -113,6 +118,10 @@ set_base_stat(int stat, int value, int deviation = 0)
     }
 
     stats[stat] = value;
+    if (stat == SS_STR)
+    {
+        this_object()->query_combat_object()->cb_calc_modified_pen();
+    }
     return value;
 }
 
@@ -212,6 +221,11 @@ add_tmp_stat(int stat, int ds, int dt)
     dt = MIN(dt, F_TMP_STAT_MAX_TIME);
     set_alarm(itof(dt * F_INTERVAL_BETWEEN_HP_HEALING), 0.0,
         &expire_tmp_stat(stat, ds));
+
+    if (stat == SS_STR)
+    {
+        this_object()->query_combat_object()->cb_calc_modified_pen();
+    }
 
     return 1;
 }

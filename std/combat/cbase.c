@@ -2439,6 +2439,33 @@ cb_update_attack()
     return attack_ob;
 }
 
+
+/*
+ * Function name: cb_calc_modified_pen
+ * Description:   Recompute the stat-modified pen of all attacks.
+ *                This will update the damage when the SS_STR
+ *                of the underlying living has change.
+*/
+void cb_calc_modified_pen()
+{
+    foreach (mixed * attack : attacks)
+    {
+       int* m_pen = allocate(W_NUM_DT);
+       int pos = -1;
+       mixed* wcpen = attack[1];
+       int skill = attack[4];
+       while(++pos < W_NUM_DT)
+       {
+          m_pen[pos] = F_ATTACK_PEN_MOD(
+              F_PENMOD(wcpen[pos], skill) *
+              F_STR_FACTOR(me->query_stat(SS_STR)) / 100
+          );
+       }
+       attack[5] = m_pen;
+    }
+}
+
+
 /**********************************************************
  *
  * Below is internal functions, only used by the inheritor of
