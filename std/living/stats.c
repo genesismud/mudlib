@@ -191,6 +191,10 @@ void
 expire_tmp_stat(int stat, int value)
 {
     delta_stat[stat] -= value;
+    if (stat == SS_STR)
+    {
+        this_object()->query_combat_object()->cb_calc_modified_pen();
+    }
 }
 
 /*
