@@ -1571,8 +1571,7 @@ start_boot(int no_preload)
 #endif PRELOAD_FIRST
 
     write("Loading and setting up domain links:\n");
-    links = filter(query_domain_links() + query_mage_links(),
-        load_domain_link);
+    links = filter(query_domain_links(), load_domain_link);
 
     size = sizeof(links);
     while (size--)
@@ -1581,6 +1580,7 @@ start_boot(int no_preload)
     }
 
     return prefiles;
+
 }
 
 /*
@@ -1995,10 +1995,6 @@ cloned_object(object cob, object ob)
         throw("Cloning without EUID: " + target + " by: " + file_name(cob) + "\n");
         return;
     }
-
-    object watcher = find_object("/w/cotillion/tools/clone_watcher");
-    if (objectp(watcher))
-    	watcher->object_cloned(cob, ob);
 
     if ((creator == BACKBONE_UID) ||
         (creator == auth[0]))

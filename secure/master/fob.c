@@ -2613,25 +2613,6 @@ query_wiz_path(string wname)
 }
 
 /*
- * Function name: query_mage_links
- * Description  : Finds all WIZARD_DOMAIN mages and makes a list of all links.
- * Returns      : string * - the list.
- */
-public string *
-query_mage_links()
-{
-    string *links;
-    int index;
-
-    links = sort_array( ({ }) + m_domains[WIZARD_DOMAIN][FOB_DOM_MEMBERS]);
-    index = sizeof(links);
-    while(--index >= 0)
-        links[index] = "/w/" + links[index] + "/" + WIZARD_LINK;
-
-    return links;
-}
-
-/*
  * Function name: query_domain_links
  * Description  : Make a list of domainfiles to link.
  * Returns      : string * - the list.

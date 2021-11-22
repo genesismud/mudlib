@@ -164,13 +164,10 @@
 
 /*
  * DOMAIN_LINK
- * WIZARD_LINK
  *
- * Filenames trailing /d/Domain_name/ and /d/<WIZARD_DOMAIN>/wizard_name/
- * to preload on startup
+ * Filenames trailing /d/Domain_name/ to preload on startup
  */
 #define DOMAIN_LINK "domain_link"
-#define WIZARD_LINK "wizard_link"
 
 /*
  * GAMEINFO_LOGIN
