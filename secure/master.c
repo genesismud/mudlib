@@ -2303,8 +2303,26 @@ incoming_service(string request)
 
     tmp = explode(request, " ");
 
+    tmp[0] = lower_case(tmp[0]);
+
+    /* Domains can receive services requests also */
+    string domain, method;
+    if (sscanf(tmp[0], "%s.%s", domain, method) == 2)
+    {
+        if (query_domain_number(domain) < 0)
+        {
+            return "ERROR: Invalid domain\n";
+        }
+
+        string link = "/d/" + capitalize(domain) + "/" + DOMAIN_LINK;
+        string ret = find_object(link)->incoming_service(method, implode(tmp[1..], " "));
+        if (!stringp(ret))
+            return "ERROR: Undefined method\n";
+        return ret;
+    }
+
     /* Switch on the request command. */
-    switch (lower_case(tmp[0]))
+    switch (tmp[0])
     {
     case "user":
         if (sizeof(tmp) != 2)
