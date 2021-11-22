@@ -43,10 +43,10 @@ create()
 
     maplinks = restore_map(MAP_MAPLINKS);
     if (!mappingp(maplinks))
-	maplinks = ([ ]);
+        maplinks = ([ ]);
     maps = restore_map(MAP_MAPFILES);
     if (!mappingp(maps))
-	maps = ([ ]);
+        maps = ([ ]);
 }
 
 /*
@@ -85,15 +85,24 @@ add_maplink(string path, string mapfile)
 {
     if (!maps[mapfile] || ((file_size(path + ".c") < 1) && !find_object(path)))
     {
-	return;
+        return;
     }
 
     maplinks[path] = mapfile;
 
+    /* Init the map if the room is loaded. */
+    object room;
+    if (objectp(room = find_object(path)))
+    {
+        room->init_map_data();
+        object *players = FILTER_PLAYERS(all_inventory(room));
+        map(players, room->gmcp_room_info);
+    }
+
     /* Use a small alarm, so that multiple actions are saved in one go. */
     if (!alarm_id)
     {
-	alarm_id = set_alarm(300.0, 0.0, save_mapdata);
+        alarm_id = set_alarm(300.0, 0.0, save_mapdata);
     }
 }
 
@@ -110,7 +119,7 @@ remove_maplink(string path)
     /* Use a small alarm, so that multiple actions are saved in one go. */
     if (!alarm_id)
     {
-	alarm_id = set_alarm(300.0, 0.0, save_mapdata);
+        alarm_id = set_alarm(300.0, 0.0, save_mapdata);
     }
 }
 
@@ -158,27 +167,27 @@ query_room_map_data(string path)
 
     if (!strlen(mapfile) || !mappingp(maps[mapfile]))
     {
-	return 0;
+        return 0;
     }
     filename = explode(path, "/")[-1];
 
     foreach(string section: m_indices(maps[mapfile]))
     {
-	if (!maps[mapfile][section][filename])
-	{
-	    continue;
-	}
-	size = sscanf(maps[mapfile][section][filename], "%d %d %s", ix, iy, str);
-	/* Only x and y means this is where the file is on the map. */
-	if ((size == 2) || (str == section))
-	{
-	    main = ({ section, ix, iy });
-	}
-	/* Also a section name means these are the coordinates for the zoom. */
-	if ((size == 3) && (str != section))
-	{
-	    zoom = ({ ix, iy });
-	}
+        if (!maps[mapfile][section][filename])
+        {
+            continue;
+        }
+        size = sscanf(maps[mapfile][section][filename], "%d %d %s", ix, iy, str);
+        /* Only x and y means this is where the file is on the map. */
+        if ((size == 2) || (str == section))
+        {
+            main = ({ section, ix, iy });
+        }
+        /* Also a section name means these are the coordinates for the zoom. */
+        if ((size == 3) && (str != section))
+        {
+            zoom = ({ ix, iy });
+        }
     }
     return ({ mapfile }) + main + zoom;
 }
@@ -195,11 +204,11 @@ query_map(string mapfile, string section = "main")
 {
     if (!mappingp(maps[mapfile]))
     {
-	return 0;
+        return 0;
     }
     if (!maps[mapfile][section])
     {
-	return 0;
+        return 0;
     }
     return maps[mapfile][section][MAP_ID];
 }
@@ -220,18 +229,18 @@ query_map_with_coords(string mapfile, string section, int ix, int iy)
 
     if (!maptext)
     {
-	return 0;
+        return 0;
     }
 
     lines = explode(maptext, "\n");
     if (iy >= sizeof(lines))
     {
-	return maptext + "\n";
+        return maptext + "\n";
     }
     ix--;
     if (ix >= strlen(lines[iy]))
     {
-	return maptext + "\n";
+        return maptext + "\n";
     }
     /* Place the X at the coordinates. This relies on ix never being 0. */
     lines[iy] = (lines[iy][..ix]) + "X" + lines[iy][(ix+2)..];
@@ -258,13 +267,13 @@ add_map(string mapfile)
     /* Go through the front end provided by the 'map' command. */
     if (!CALL_BY(WIZ_CMD_WIZARD))
     {
-	return 0;
+        return 0;
     }
 
     if (file_size(mapfile) < 1)
     {
-	write("Mapfile " + mapfile + " not found.\n");
-	return 0;
+        write("Mapfile " + mapfile + " not found.\n");
+        return 0;
     }
 
     newmaps = explode(read_file(mapfile), "::NEWMAP::\n");
@@ -272,30 +281,30 @@ add_map(string mapfile)
     {
         /* A map should consist of 3 parts: the name, the coordinates and
          * the actual map. */
-	parts = explode(newmap, "\n::MAPDATA::\n");
-	if (sizeof(parts) != 3)
-	{
-	    write("Mapfile " + mapfile + " section \"" + newmap[..29] +
-	        "\" with " + sizeof(parts) + " part(s) skipped.\n");
-	    return 0;
-	}
-	data += ([ parts[0] : ([ MAP_ID : parts[2] ]) ]);
-	lines = explode(parts[1], "\n");
-	foreach(string line: lines)
-	{
-	    /* Strip superfluous spaces from the coordinates. */
-	    while(line[-1] == ' ')
-	    {
-		line = line[..-2];
-	    }
-	    if (sscanf(line, "%s %s", filename, args) != 2)
-	    {
-		write("Coordinates \"" + line + "\"of map \"" +
-		    parts[0] + "\" not understood.\n");
-		return 0;
-	    }
-	    data[parts[0]] += ([ filename : args ]);
-	}
+        parts = explode(newmap, "\n::MAPDATA::\n");
+        if (sizeof(parts) != 3)
+        {
+            write("Mapfile " + mapfile + " section \"" + newmap[..29] +
+                "\" with " + sizeof(parts) + " part(s) skipped.\n");
+            return 0;
+        }
+        data += ([ parts[0] : ([ MAP_ID : parts[2] ]) ]);
+        lines = explode(parts[1], "\n");
+        foreach(string line: lines)
+        {
+            /* Strip superfluous spaces from the coordinates. */
+            while(line[-1] == ' ')
+            {
+                line = line[..-2];
+            }
+            if (sscanf(line, "%s %s", filename, args) != 2)
+            {
+                write("Coordinates \"" + line + "\"of map \"" +
+                    parts[0] + "\" not understood.\n");
+                return 0;
+            }
+            data[parts[0]] += ([ filename : args ]);
+        }
     }
 
     /* Replace existing info. */
@@ -304,7 +313,7 @@ add_map(string mapfile)
     /* Use a small alarm, so that multiple actions are saved in one go. */
     if (!alarm_id)
     {
-	alarm_id = set_alarm(300.0, 0.0, save_mapdata);
+        alarm_id = set_alarm(300.0, 0.0, save_mapdata);
     }
     return 1;
 }
@@ -324,14 +333,14 @@ remove_map(string mapfile)
     /* Go through the front end provided by the 'map' command. */
     if (!CALL_BY(WIZ_CMD_WIZARD))
     {
-	return 0;
+        return 0;
     }
 
     /* Remove all rooms that link to this mapfile. */
     paths = m_indices(filter(maplinks, &operator(==)(, mapfile)));
     foreach(string path: paths)
     {
-	m_delkey(maplinks, path);
+        m_delkey(maplinks, path);
     }
 
     m_delkey(maps, mapfile);
@@ -339,7 +348,7 @@ remove_map(string mapfile)
     /* Use a small alarm, so that multiple actions are saved in one go. */
     if (!alarm_id)
     {
-	alarm_id = set_alarm(300.0, 0.0, save_mapdata);
+        alarm_id = set_alarm(300.0, 0.0, save_mapdata);
     }
     return 1;
 }
@@ -363,20 +372,20 @@ link_map(string path, string mapfile)
     /* Go through the front end provided by the 'map' command. */
     if (!CALL_BY(WIZ_CMD_WIZARD))
     {
-	return 0;
+        return 0;
     }
     if (!strlen(mapfile) || !mappingp(maps[mapfile]))
     {
-	write("Map not found: " + mapfile + "\n");
-	write("Reminder: use 'map add' before you try to link it.\n");
-	return 0;
+        write("Map not found: " + mapfile + "\n");
+        write("Reminder: use 'map add' before you try to link it.\n");
+        return 0;
     }
     /* Petros requested that access to the map file should be enough, and
      * not specifically to the path being mapped. */
     if (!SECURITY->valid_write(mapfile, this_interactive(), "map"))
     {
-	write("No access to write in: " + path + "\n");
-	return 0;
+        write("No access to write in: " + path + "\n");
+        return 0;
     }
 
     path = implode(explode(path, "/")[..-2], "/") + "/";
@@ -385,21 +394,21 @@ link_map(string path, string mapfile)
 
     foreach(string section: m_indices(maps[mapfile]))
     {
-	files = sort_array(dirfiles & (string *)m_indices(maps[mapfile][section]));
-	foreach(string filename : files)
-	{
-	    if (!maps[mapfile][section][filename])
-	    {
-	        write("Error: No coordinates for " + filename +
-		    " in section " + section + "\n");
-	    }
-	    /* Only link if the file is mentioned in the details section. This
+        files = sort_array(dirfiles & (string *)m_indices(maps[mapfile][section]));
+        foreach(string filename : files)
+        {
+            if (!maps[mapfile][section][filename])
+            {
+                write("Error: No coordinates for " + filename +
+                    " in section " + section + "\n");
+            }
+            /* Only link if the file is mentioned in the details section. This
              * can be idenfitied by the format "x y" rather than "x y foo".
              * If the "foo" part is present, it's a reference to a details
              * section where the map part is located. */
             parts = explode(maps[mapfile][section][filename], " ") - ({ "" });
             if (sizeof(parts) == 2)
-	        {
+                {
                 ix = atoi(parts[0]);
                 iy = atoi(parts[1]);
 
@@ -413,22 +422,15 @@ link_map(string path, string mapfile)
                     "," + iy + ")\n");
 
                 add_maplink(path + filename, mapfile);
-                /* Init the map if the room is loaded. */
-                if (objectp(room = find_object(path + filename)))
-                {
-                    room->init_map_data();
-                    object *players = FILTER_PLAYERS(all_inventory(room));
-                    map(players, room->gmcp_room_info);
-                }
                 linked++;
             }
-	    }
+            }
     }
 
     if (!linked)
     {
-	    write("Found no matches in: " + path + "\n");
-	    return 0;
+            write("Found no matches in: " + path + "\n");
+            return 0;
     }
     return 1;
 }
