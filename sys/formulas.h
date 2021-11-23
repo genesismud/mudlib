@@ -62,23 +62,32 @@
 
 #define F_AT_WEIGHT_FACTOR(type) \
    (((type) == A_SHIELD) ? 20 : \
-    (((type) & A_BODY) ? 40 : 0) + \
-    (((type) & A_LEGS) ? 30 : 0) + \
-    (((type) & A_HEAD) ? 10 : 0) + \
-    (((type) & A_R_FOOT) ? 10 : 0) + \
-    (((type) & A_L_FOOT) ? 10 : 0) + \
+    (((type) & A_BODY) ? 45 : 0) + \
+    (((type) & A_LEGS) ? 20 : 0) + \
+    (((type) & A_HEAD) ? 15 : 0) + \
+    (((type) & A_R_FOOT) ? 5 : 0) + \
+    (((type) & A_L_FOOT) ? 5 : 0) + \
     (((type) & A_R_ARM) ? 10 : 0) + \
     (((type) & A_L_ARM) ? 10 : 0) + \
-    (((type) & A_R_HAND) ? 7 : 0) + \
-    (((type) & A_L_HAND) ? 7 : 0) + \
+    (((type) & A_R_HAND) ? 3 : 0) + \
+    (((type) & A_L_HAND) ? 3 : 0) + \
     (((type) & A_ROBE) ? 20 : 0))
 
 #define F_WEIGHT_DEFAULT_ARMOUR(ac, at) \
     (F_AT_WEIGHT_FACTOR(at) * (428 * (((ac) > 1) ? (ac) - 1 : 1) + \
      (((ac) > 14) ? 10000 : 0)) / 100)
 
+#define F_WEIGHT_DEFAULT_SHIELD(ac, at) \
+	(F_WEIGHT_DEFAULT_ARMOUR( \
+		ac, \
+		(reduce( &operator(+)(,) , at) & ~A_R_ARM) | A_L_ARM \
+	) * 47 / 100)
+
 #define F_WEIGHT_FAULT_ARMOUR(w, ac, at)\
     (F_WEIGHT_DEFAULT_ARMOUR(ac, at) * 800 / 1000 > (w))
+
+#define F_WEIGHT_FAULT_SHIELD(w, ac, slots)\
+    (F_WEIGHT_DEFAULT_SHIELD(ac, slots) * 800 / 1000 > (w))
 
 /*
  * Weapon
