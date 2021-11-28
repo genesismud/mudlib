@@ -708,9 +708,19 @@ update_prop_settings()
                         !query_prop(OBJ_I_IS_MAGIC_ARMOUR))
         add_prop(OBJ_I_VALUE, F_VALUE_ARMOUR(arm_ac));
 
-    if (F_WEIGHT_FAULT_ARMOUR(query_prop(OBJ_I_WEIGHT), arm_ac, arm_at) &&
-                        !query_prop(OBJ_I_IS_MAGIC_ARMOUR))
-        add_prop(OBJ_I_WEIGHT, F_WEIGHT_DEFAULT_ARMOUR(arm_ac, arm_at));
+    if (arm_at == A_SHIELD)
+    {
+        int *slots = query_shield_slots();
+        if (F_WEIGHT_FAULT_SHIELD(query_prop(OBJ_I_WEIGHT), arm_ac, slots) &&
+                            !query_prop(OBJ_I_IS_MAGIC_ARMOUR))
+            add_prop(OBJ_I_WEIGHT, F_WEIGHT_DEFAULT_SHIELD(arm_ac, slots));
+    }
+    else
+    {
+        if (F_WEIGHT_FAULT_ARMOUR(query_prop(OBJ_I_WEIGHT), arm_ac, arm_at) &&
+                            !query_prop(OBJ_I_IS_MAGIC_ARMOUR))
+            add_prop(OBJ_I_WEIGHT, F_WEIGHT_DEFAULT_ARMOUR(arm_ac, arm_at));
+    }
 }
 
 /*
