@@ -768,6 +768,167 @@ compare_unarmed_enhancer(object enh1, object enh2)
 }
 
 /*
+ * Function name: compare_living_to_unarmed_enhancer
+ * Description  : Compares attack_ids of living to unarmed enhancer.
+ * Arguments    : object living1 - the left hand side to compare.
+ *                object enh2 - the right hand side to compare.
+ */
+void
+compare_living_to_unarmed_enhancer(object living1, object enh2)
+{
+    /* Weapon skill and appraise are both used, so use half their average */
+    int skill = (this_player()->query_skill(SS_APPR_OBJ) +
+        this_player()->query_skill(SS_UNARM_COMBAT)) / 4;
+    int seed = atoi(OB_NUM(living1)) + atoi(OB_NUM(enh2));
+    int stat1;
+    int stat2;
+    string str1;
+    string str2;
+    string print1;
+    string print2;
+    object cobj = living1->query_combat_object();
+
+    str2 = enh2->short(this_player());
+
+    foreach (int aid : cobj->query_attack_id())
+    {
+        if (aid == W_BOTH)
+        {
+            continue;
+        }
+        mixed attack = cobj->query_attack(aid);
+        int hid = living1->cr_convert_attack_id_to_slot(aid);
+        if (!attack || (hid & enh2->query_at()) == 0)
+        {
+            continue;
+        }
+
+        /* Get hit and pen */
+        int hit = attack[0];
+        /* Array of pens */
+        int *pens = attack[1];
+        /* Damage type */
+        int dt = attack[2];
+        int *ac = ({});
+        
+        if (dt & W_IMPALE)
+        {
+            ac += ({ pens[0] });
+        }
+        if (dt & W_SLASH)
+        {
+            ac += ({ pens[1] });   
+        }
+        if (dt & W_BLUDGEON)
+        {
+            ac += ({ pens[2] });   
+        }
+        if (sizeof(ac) == 0)
+        {
+            // Should never happen
+            continue;
+        }
+        int pen = one_of_list(ac);
+
+        /* Attack desc */
+        str1 = living1->cr_attack_desc(aid);
+        if (this_player() == living1)
+        {
+            str1 = "your " + str1;
+        }
+        else
+        {
+            str1 = living1->query_the_possessive_name() + " " + str1;
+        }
+        mixed arm = living1->query_armour(hid);
+        if (objectp(arm) && IS_UNARMED_ENH_OBJECT(arm))
+        {
+            str1 = str1 + " wearing " + arm->short(this_player());
+        }
+
+        /* Use high precision for hit up to skill, low precision for remainder */
+        int high_precision;
+        int low_precision;
+
+        /* Find the average of the query_hit up to their skill */
+        high_precision = (hit > skill
+            ? skill : hit);
+        high_precision += (enh2->query_hit() > skill
+            ? skill : enh2->query_hit());
+        high_precision /= 2;
+
+        /* Find the average of the query_hit above their skill */
+        low_precision = (hit > skill
+            ? hit - skill : 0);
+        low_precision += (enh2->query_hit() > skill
+            ? enh2->query_hit() - skill : 0);
+        low_precision /= 2;
+
+        /* Gather the to-hit values. */
+        stat1 = hit + random(high_precision / 10, seed)
+            + random(low_precision / 2, seed + 1);
+        stat2 = enh2->query_hit() + random(high_precision / 10, seed + 27)
+            + random(low_precision / 2, seed + 28);
+
+        if (stat1 > stat2)
+        {
+            stat1 = (100 - ((80 * stat2) / stat1));
+            print1 = str1;
+            print2 = str2;
+        }
+        else
+        {
+            stat1 = (100 - ((80 * stat1) / stat2));
+            print1 = str2;
+            print2 = str1;
+        }
+
+        stat1 = ((stat1 * sizeof(compare_strings[6])) / 100);
+        write("Hitting someone with " + print1 + " is " +
+            compare_strings[6][((stat1 > 3) ? 3 : stat1)] + " the " +
+            print2 + " and ");
+
+        /* Find the average of the query_pen up to their skill */
+        high_precision = (pen > skill
+            ? skill : pen);
+        high_precision += (enh2->query_pen() > skill
+            ? skill : enh2->query_pen());
+        high_precision /= 2;
+
+        /* Find the average of the query_pen above their skill */
+        low_precision = (pen > skill
+            ? pen - skill : 0);
+        low_precision += (enh2->query_hit() > skill
+            ? enh2->query_pen() - skill : 0);
+        low_precision /= 2;
+
+        /* Compare the penetration values. */
+        stat1 = pen + random(high_precision / 10, seed)
+            + random(low_precision / 2, seed + 1);
+        stat2 = enh2->query_pen() + random(high_precision / 10, seed + 27)
+            + random(low_precision / 2, seed + 28);
+
+        if (stat1 > stat2)
+        {
+            stat1 = (100 - ((80 * stat2) / stat1));
+            print1 = str1;
+            print2 = str2;
+        }
+        else
+        {
+            stat1 = (100 - ((80 * stat1) / stat2));
+            print1 = str2;
+            print2 = str1;
+        }
+
+        stat1 = ((stat1 * sizeof(compare_strings[7])) / 100);
+        write("damage inflicted by " + print1 + " is " +
+            compare_strings[7][((stat1 > 3) ? 3 : stat1)] + " the " +
+            print2 + ".\n");
+    }
+}
+
+/*
  * Function name: compare_armour
  * Description  : Compares the stats of two armour.
  * Arguments    : object armour1 - the left hand side to compare.
@@ -856,7 +1017,9 @@ compare_armour(object armour1, object armour2)
     write("The " + print1 + " gives " +
         compare_strings[8][((stat1 > 3) ? 3 : stat1)] + " the " +
         print2 + ".\n");
-    if (IS_UNARMED_ENH_OBJECT(armour1) && IS_UNARMED_ENH_OBJECT(armour2))
+
+    if (IS_UNARMED_ENH_OBJECT(armour1) && IS_UNARMED_ENH_OBJECT(armour2) &&
+        (armour1->query_at() & armour2->query_at() & (A_HANDS | A_FEET)) != 0)
     {
         compare_unarmed_enhancer(armour1, armour2);
     }
@@ -998,6 +1161,7 @@ compare(string str)
     object *oblist;
     object obj1;
     object obj2;
+    int str1_is_fist, str1_is_foot, str1_is_unarmed;
 
     if (!strlen(str) ||
         sscanf(str, "%s with %s", str1, str2) != 2)
@@ -1006,8 +1170,14 @@ compare(string str)
         return 0;
     }
 
-    /* If we compare 'stats', then we are the left party. */
-    if (str1 == "stats")
+    str1_is_fist = str1 == "fists" || str1 == "fist";
+    str1_is_foot = str1 == "foot" || str1 == "feet";
+    str1_is_unarmed = str1_is_fist || str1_is_foot;
+        ;
+    /* If we compare 'stats' or 'fists/feet', then we are the left
+     * party.
+     */
+    if (str1 == "stats" || str1_is_unarmed)
     {
         obj1 = this_player();
     }
@@ -1023,7 +1193,7 @@ compare(string str)
         obj1 = oblist[0];
     }
 
-    if (str2 == "enemy")
+    if (str2 == "enemy" && !str1_is_unarmed)
     {
         if (!objectp(obj1->query_attack()))
         {
@@ -1062,9 +1232,36 @@ compare(string str)
         return 0;
     }
 
-    /* Compare the stats of two livings. */
+    /* Compare the stats of two livings or
+     * fists or feet against unarmed enhancers.
+     */
     if (living(obj1))
     {
+        if (str1_is_unarmed && IS_UNARMED_ENH_OBJECT(obj2))
+        {
+            if (str1_is_fist)
+            {
+                if ((obj2->query_at() & A_HANDS) == 0)
+                {
+                    notify_fail("The " + obj2->short(this_player()) +
+                        " cannot be compared to fists.\n");
+                    return 0;
+                }
+            }
+            else if (str1_is_foot)
+            {
+                if ((obj2->query_at() & A_FEET) == 0)
+                {
+                    notify_fail("The " + obj2->short(this_player()) +
+                        " cannot be compared to feet.\n");
+                    return 0;
+                }
+            }
+            
+            compare_living_to_unarmed_enhancer(obj1, obj2);
+            return 1;
+        }
+
         if (!living(obj2))
         {
             if (obj1 == this_player())
@@ -1118,10 +1315,10 @@ compare(string str)
             return 0;
         }
 
-        if (obj1->query_at() != obj2->query_at())
+        if ((obj1->query_at() & obj2->query_at()) == 0)
         {
             notify_fail("The " + obj1->short(this_player()) +
-                " can only be compared to another armour of the same " +
+                " can only be compared to another armour of similar " +
                 "type.\n");
             return 0;
         }
