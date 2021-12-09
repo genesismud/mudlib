@@ -61,6 +61,49 @@ unique_lookup_alternative(mixed alternatives, int always)
 }
 
 /*
+ * Function name: resolve_unique
+ * Description  : Use this function to limit the number of clones of a
+ *                certain object which are created over time. This
+ *                function does not clone the object, but returns the
+ *                path of the object that should be cloned.
+ *                 
+ *                See 'man clone_unique' for how this is accomplished.
+ *                 
+ * Arguments    : string file - The file path to the main object.
+ *                int    num  - The target number of clones
+ *                              Default: 1
+ *                mixed alt   - May be a string path, an array of string
+ *                              paths, or an array of arrays, each
+ *                              containing a string chance and an int.
+ *                int  always - If 'alt' is an array, always try to
+ *                              to pick an element from it.
+ *                              Default: 1
+ *                int  chance - The chance of the main item to be cloned
+ *                              and checked for.
+ *
+ * Notes        : For details on usage, see the associated man page
+ *                for this function and examples on how to
+ *                correctly use it.
+ */
+public varargs string
+resolve_unique(string rare, int num = 1, mixed alt = 0, int always = 1, 
+             int chance = F_DEFAULT_CLONE_UNIQUE_CHANCE, int not_used = 1) 
+{
+    string file;
+    
+    if (random(100) <= chance) {
+        if (CLONE_MASTER->may_clone(rare, num))
+            file = rare;
+    }
+
+    if (!file) {
+        file = unique_lookup_alternative(alt, always);
+    }
+
+    return file;
+}
+
+/*
  * Function name: clone_unique
  * Description  : Use this function to limit the number of clones of a
  *                certain object which are created over time.
@@ -93,14 +136,7 @@ clone_unique(string rare, int num = 1, mixed alt = 0, int always = 1,
     setuid();
     seteuid(getuid());
 
-    if (random(100) <= chance) {
-        if (CLONE_MASTER->may_clone(rare, num))
-            file = rare;
-    }
-
-    if (!file) {
-        file = unique_lookup_alternative(alt, always);
-    }
+    file = resolve_unique(rare, num, alt, always, chance, not_used);
 
     if (file) {
         ob = clone_object(file);
