@@ -306,3 +306,20 @@ wearable_item_usage_desc()
         " is made to be worn " + COMPOSITE_WORDS(parts) + ".  " +
         "It can be used to " + COMPOSITE_WORDS(damage) + ".\n");
 }
+
+/*
+ * Function name: stat_object
+ * Description:   This function is called when a wizard wants to get more
+ *                information about an object.
+ * Returns:       str - The string to write..
+ */
+string
+stat_object()
+{
+    string str;
+
+    str = ::stat_object();
+    str += "Unarmed Hit: " + enh_hit + "\tUnarmed Pen: " + enh_pen + "\n";
+    
+    return str + "\n";
+}
