@@ -1237,25 +1237,63 @@ compare(string str)
      */
     if (living(obj1))
     {
-        if (str1_is_unarmed && IS_UNARMED_ENH_OBJECT(obj2))
+        if (str1_is_unarmed)
         {
-            if (str1_is_fist)
+            if (IS_UNARMED_ENH_OBJECT(obj2))
             {
-                if ((obj2->query_at() & A_HANDS) == 0)
+                if (str1_is_fist)
                 {
-                    notify_fail("The " + obj2->short(this_player()) +
-                        " cannot be compared to fists.\n");
-                    return 0;
+                    if (obj1 == obj2->query_worn())
+                    {
+                        notify_fail("It is pointless to compare something " +
+                            "to fists wearing itself.\n");
+                        return 0;
+                    }
+                    if (obj1->query_weapon(W_RIGHT) ||
+                        obj1->query_weapon(W_LEFT) ||
+                        obj1->query_weapon(W_BOTH))
+                    {
+                        notify_fail("The " + obj2->short(this_player()) +
+                            " cannot be compared to fists " +
+                            "while a weapon is wielded.\n");
+                        return 0;
+                    }
+                    if ((obj2->query_at() & A_HANDS) == 0)
+                    {
+                        notify_fail("The " + obj2->short(this_player()) +
+                            " cannot be compared to fists.\n");
+                        return 0;
+                    }
+                }
+                else if (str1_is_foot)
+                {
+                    if (obj1 == obj2->query_worn())
+                    {
+                        notify_fail("It is pointless to compare something " +
+                            "to feet wearing itself.\n");
+                        return 0;
+                    }
+                    if (obj1->query_weapon(W_FOOTR) ||
+                        obj1->query_weapon(W_FOOTL))
+                    {
+                        notify_fail("The " + obj2->short(this_player()) +
+                            " cannot be compared to feet " +
+                            "while a weapon is wielded.\n");
+                        return 0;
+                    }
+                    if ((obj2->query_at() & A_FEET) == 0)
+                    {
+                        notify_fail("The " + obj2->short(this_player()) +
+                            " cannot be compared to feet.\n");
+                        return 0;
+                    }
                 }
             }
-            else if (str1_is_foot)
+            else
             {
-                if ((obj2->query_at() & A_FEET) == 0)
-                {
-                    notify_fail("The " + obj2->short(this_player()) +
-                        " cannot be compared to feet.\n");
-                    return 0;
-                }
+                notify_fail("The " + obj2->short(this_player()) +
+                    " does not enhance unarmed combat.\n");
+                return 0;
             }
             
             compare_living_to_unarmed_enhancer(obj1, obj2);
