@@ -7,6 +7,9 @@ The weapon can then easily be configured by calling the internal
 functions as described in the file (see also the section, How to make
 a weapon, below).
 
+A special category of weapons are unarmed enhancers which are armour
+that enhance the wchit and wcpen of fists and feet.
+
 Weapons differ in weapon type, damage type, and weapon class.
 
   o Weapon type.
@@ -60,10 +63,10 @@ When creating a weapon, certain RULES must be respected.
 
   o All weapons:
 
-    Max WC found (on the ground)	:  10
-    Max WC bought			:  40
-    Max WC conquered (in combat)	:  60
-    Max WC reward for solving quest	:  20 * questlevel (see xp_scale)
+    Max WC found (on the ground)    :  10
+    Max WC bought                   :  40
+    Max WC conquered (in combat)    :  60
+    Max WC reward for solving quest :  20 * questlevel (see xp_scale)
 
     The limit of WC 40 for bought weapons implies that all weapons with one 
     or two WC values exceeding 40 must have the property OBJ_M_NO_BUY set.
@@ -86,15 +89,18 @@ When creating a weapon, certain RULES must be respected.
     weapon type, the maximal WC of a weapon can be lower. For magical weapons
     these limits are for non-quest weapons.
 
-                non-magical     non-magical     magical         magical
-		one-handed	two-handed      one-handed      two-handed
-    Sword:	    35		    40              50              60
-    Polearm:	    n.a.	    40              n.a.            60
-    Axe:	    35		    40              50              60
-    Knife:	    20		    n.a.            40              n.a.
-    Club:	    35		    40              50              60
-    Missile:	    35 	            40              50              60
-    Javelin:	    n.a.            n.a.            n.a.            n.a.
+               non-magical     non-magical         magical         magical
+                one-handed      two-handed      one-handed      two-handed
+    Sword:              35              40              50              60
+    Polearm:            35              40              50              60
+    Axe:                35              40              50              60
+    Knife:              20            n.a.              40            n.a.
+    Club:               35              40              50              60
+    Missile:            35              40              50              60
+    Javelin:          n.a.            n.a.            n.a.            n.a.
+    
+    Unarmed enhancers shall be capped to 40 for non-magical versions and
+    50 for magical versions.
 
   o Magical weapons:
 
@@ -145,6 +151,17 @@ When creating a weapon, certain RULES must be respected.
     of the corresponding arm. To look at this, clone a weapon, wield it 
     and use the 'combatstat' command.
 
+    The wielding of a weapon also affects the execution of acrobatic
+    maneuvers during combat. The wielding of each weapon reduces the
+    effectiveness of SS_ACROBAT in half. Knives due to their size and lower
+    WC are exempt from this penalty. Unarmed enhancers are also exempt
+    because they are worn rather than wielded or held. The penalty can be
+    increased or reduced with the property OBJ_I_AIDS_ACROBAT.
+
+    See /doc/man/properties/OBJ_I_AIDS_ACROBAT for details.
+
+    Weapons that override the default SS_ACROBAT penalty must have thematic
+    and balance justifications.
 
 4.- Weapons may not be made autoloadable.
 
@@ -196,6 +213,37 @@ create_weapon()
     add_prop(OBJ_I_WEIGHT, F_WEIGHT_DEFAULT_WEAPON(PEN, W_KNIFE) +
         random(50) - 25);
 
+    /* calculate volume from weight */
+    add_prop(OBJ_I_VOLUME, query_prop(OBJ_I_WEIGHT)/5);
+}
+
+How to make an unarmed enhancer
+===============================
+
+inherit "/std/unarmed_enhancer";
+#include <wa_types.h>
+#include <formulas.h>
+#include <stdproperties.h>
+
+void
+create_unarmed_enhancer()
+{
+    /* Set basic descriptions */
+    set_name("knuckles");
+    set_pname("knuckles");
+    set_adj("brass");
+    add_adj("pair of");
+    set_short("pair of brass knuckles");
+    set_pshort("pairs of brass knuckles");
+    set_long("Worn on the middle two fingers of each hand with a palm bar "
+        + "for secure grasping, this pair of contoured brass knuckles stretches "
+        + "across the knuckles creating a punching surface capable of inflicting "
+        + "nasty damage.\n");
+
+    set_default_enhancer(35, 35, W_BLUDGEON, 3, A_HANDS, 0, this_object());
+
+    add_prop(OBJ_I_VALUE, F_VALUE_WEAPON(35, 35));
+    add_prop(OBJ_I_WEIGHT, F_WEIGHT_DEFAULT_ARMOUR(3, A_HANDS));
     /* calculate volume from weight */
     add_prop(OBJ_I_VOLUME, query_prop(OBJ_I_WEIGHT)/5);
 }
