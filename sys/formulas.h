@@ -73,9 +73,19 @@
     (((type) & A_L_HAND) ? 3 : 0) + \
     (((type) & A_ROBE) ? 20 : 0))
 
-#define F_WEIGHT_DEFAULT_ARMOUR(ac, at) \
+/* Original default weight formula is not appropriate for armour that allows
+ * the choice of slots i.e. A_ANY_*
+ */
+#define F_WEIGHT_DEFAULT_ARMOUR_NO_OPTION(ac, at) \
     (F_AT_WEIGHT_FACTOR(at) * (428 * (((ac) > 1) ? (ac) - 1 : 1) + \
      (((ac) > 14) ? 10000 : 0)) / 100)
+
+/* New default weight formula accounts for A_ANY_* by checking for
+ * at < 0.
+ */
+#define F_WEIGHT_DEFAULT_ARMOUR(ac, at) \
+    ((at < 0) ? (F_WEIGHT_DEFAULT_ARMOUR_NO_OPTION(ac, -at) / 2) : \
+        (F_WEIGHT_DEFAULT_ARMOUR_NO_OPTION(ac, at)))
 
 #define F_WEIGHT_DEFAULT_SHIELD(ac, at) \
 	(F_WEIGHT_DEFAULT_ARMOUR( \
