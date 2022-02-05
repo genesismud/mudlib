@@ -19,13 +19,7 @@
 #ifndef F_FORMULAS
 #define F_FORMULAS
 
-/*
- * No need to use our own formulas.c as math.c seems logical enough to
- * use as well.
- */
-#ifndef MATH_FILE
-#define MATH_FILE "/sys/global/math"
-#endif  MATH_FILE
+#define FORMULAS_FILE "/sys/global/formulas"
 
 /*
  * Stats
@@ -60,32 +54,8 @@
 		4 * (40 - (lik)))
  /* random(500) was 1000 Mercade */
 
-#define F_AT_WEIGHT_FACTOR(type) \
-   (((type) == A_SHIELD) ? 20 : \
-    (((type) & A_BODY) ? 45 : 0) + \
-    (((type) & A_LEGS) ? 20 : 0) + \
-    (((type) & A_HEAD) ? 15 : 0) + \
-    (((type) & A_R_FOOT) ? 5 : 0) + \
-    (((type) & A_L_FOOT) ? 5 : 0) + \
-    (((type) & A_R_ARM) ? 10 : 0) + \
-    (((type) & A_L_ARM) ? 10 : 0) + \
-    (((type) & A_R_HAND) ? 3 : 0) + \
-    (((type) & A_L_HAND) ? 3 : 0) + \
-    (((type) & A_ROBE) ? 20 : 0))
-
-/* Original default weight formula is not appropriate for armour that allows
- * the choice of slots i.e. A_ANY_*
- */
-#define F_WEIGHT_DEFAULT_ARMOUR_NO_OPTION(ac, at) \
-    (F_AT_WEIGHT_FACTOR(at) * (428 * (((ac) > 1) ? (ac) - 1 : 1) + \
-     (((ac) > 14) ? 10000 : 0)) / 100)
-
-/* New default weight formula accounts for A_ANY_* by checking for
- * at < 0.
- */
 #define F_WEIGHT_DEFAULT_ARMOUR(ac, at) \
-    ((at < 0) ? (F_WEIGHT_DEFAULT_ARMOUR_NO_OPTION(ac, -at) / 2) : \
-        (F_WEIGHT_DEFAULT_ARMOUR_NO_OPTION(ac, at)))
+    (int)call_other(FORMULAS_FILE, "weight_default_armour", (ac), (at))
 
 #define F_WEIGHT_DEFAULT_SHIELD(ac, at) \
 	(F_WEIGHT_DEFAULT_ARMOUR( \
@@ -206,7 +176,7 @@
 #define F_KILL_NEUTRAL_ALIGNMENT        (10)
 #define F_MAX_ABS_ALIGNMENT		(1200)
 #define F_KILL_ADJUST_ALIGN(k_al, v_al) \
-    (int)call_other(MATH_FILE, "delta_align_on_kill", (k_al), (v_al))
+    (int)call_other(FORMULAS_FILE, "delta_align_on_kill", (k_al), (v_al))
 #define F_QUEST_ADJUST_ALIGN(my_align, quest_align) \
     (F_KILL_ADJUST_ALIGN((my_align), -(quest_align)))
 #define F_PANIC_WIMP_LEVEL(dis)		(10 + 3 * (dis))
@@ -298,7 +268,7 @@
 #define F_GUILD_STAT_BRUTE_FACTOR       (80)
 
 #define F_EXP_ON_KILL(k_av, v_av) \
-    (int)call_other(MATH_FILE, "exp_on_kill", (k_av), (v_av))
+    (int)call_other(FORMULAS_FILE, "exp_on_kill", (k_av), (v_av))
 #define F_KILL_GIVE_EXP(av)	        (((av) * (av) * 400) / ((av) + 50))
 #define F_EXP_TEAM_BONUS(size)          (100 + ((size) * 10))
 

@@ -19,6 +19,7 @@
 /sys/global/composite
 /sys/global/filepath
 /sys/global/filters
+/sys/global/formulas
 /sys/global/language
 /sys/global/listeners
 /sys/global/manpath
