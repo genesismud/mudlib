@@ -29,6 +29,7 @@
  * to the inclusion files. The reason for this is that the function that
  * contains the search-path for inclusion files is defined in this object.
  */
+#include "/sys/config.h"
 #include "/sys/files.h"
 #include "/sys/language.h"
 #include "/sys/living_desc.h"
@@ -696,7 +697,7 @@ valid_read(string file, mixed reader, string func)
 
     if (objectp(reader))
     {
-	rpath = explode(file_name(reader), "/") - ({ "" });
+        rpath = explode(file_name(reader), "/") - ({ "" });
         reader = geteuid(reader);
     }
 
@@ -707,15 +708,13 @@ valid_read(string file, mixed reader, string func)
     }
 
     /* Root and archwizards and keepers may do as they please. */
-    if ((reader == ROOT_UID) ||
-        (query_wiz_rank(reader) >= WIZ_ARCH))
+    if ((reader == ROOT_UID) || (query_wiz_rank(reader) >= WIZ_ARCH))
     {
         return 1;
     }
 
     /* Anonymous objects cannot do anything. */
-    if (!stringp(reader) ||
-        !strlen(reader))
+    if (!stringp(reader) || !strlen(reader))
     {
         return 0;
     }
@@ -764,29 +763,29 @@ valid_read(string file, mixed reader, string func)
         }
 
         /* Only a mentor can read the file of his mentee in the 'restrictlog'
-	 * directory, but not read in the directory itself. */
+         * directory, but not read in the directory itself. */
         if ((subdir == "private") && (size > 3) && (dirs[3] == "restrictlog"))
         {
-	    if (size == 4)
-		return 0;
-            return IN_ARRAY(dirs[4], query_students(reader));
+            if (size == 4)
+	            return 0;
+           return IN_ARRAY(dirs[4], query_students(reader));
         }
 
-	/* Check for special team directory here, as it is in the base
-	 * domain, but not reachable by anyone (i.e. before any sanction
-	 * checks are made)
-	 */
+        /* Check for special team directory here, as it is in the base
+         * domain, but not reachable by anyone (i.e. before any sanction
+         * checks are made)
+         */
         dir = ((size > 3) ? dirs[3] : "");
-	if ((dname == BASE_DOMAIN) && (subdir == "ateam"))
-	{
-	    /* This can be allowed only if the wizard is a member of the team,
-	     * or if the ateam code is reading in its own dir. Otherwise we
-	     * disallow it.
-	     */
-	    return IN_ARRAY(dir, query_team_membership(reader)) ||
-		((dname == reader) && (sizeof(rpath) > 3) && (rpath[2] == "ateam") &&
-		 (rpath[3] == dirs[3]));
-	}
+        if ((dname == BASE_DOMAIN) && (subdir == "ateam"))
+        {
+            /* This can be allowed only if the wizard is a member of the team,
+             * or if the ateam code is reading in its own dir. Otherwise we
+             * disallow it.
+             */
+            return IN_ARRAY(dir, query_team_membership(reader)) ||
+        	((dname == reader) && (sizeof(rpath) > 3) && (rpath[2] == "ateam") &&
+        	 (rpath[3] == dirs[3]));
+        }
 
         /* The domain can read in itself, unless it is the domain for lonely
          * wizards.
@@ -813,13 +812,18 @@ valid_read(string file, mixed reader, string func)
 
         /* Some people have been granted global read rights. Global read
          * includes the private directory of a domain. Team members all
-	 * have global read.
+         * have global read.
          */
-        if (m_global_read[reader] ||
-	    sizeof(query_team_membership(reader)) > 0)
-	{
+        int global_exempt = 0;
+#ifdef GLOBAL_READ_EXEMPT_DOMAINS
+        global_exempt = member_array(dname, GLOBAL_READ_EXEMPT_DOMAINS) >= 0;
+#endif
+
+        if (!global_exempt &&
+           (m_global_read[reader] || sizeof(query_team_membership(reader)) > 0))
+        {
             return 1;
-	}
+    	}
 
         /* Wizards can read everywhere in the domain unless this is the domain
          * for 'lonely' wizards.
@@ -843,7 +847,7 @@ valid_read(string file, mixed reader, string func)
         }
 
         /* As experiment, mages, stewards and Lords have global read rights. */
-        if (query_wiz_rank(reader) >= WIZ_MAGE)
+        if (!global_exempt && query_wiz_rank(reader) >= WIZ_STEWARD)
         {
             return 1;
         }

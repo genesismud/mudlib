@@ -48,6 +48,13 @@
 #define BASE_DOMAIN "Genesis"
 
 /*
+ * GLOBAL_READ_EXEMPT_DOMAINS
+ *
+ * Domains for which global read is not enough.
+ */
+#define GLOBAL_READ_EXEMPT_DOMAINS  ({ "Liwitch" })
+
+/*
  * WIZARD_DOMAIN
  *
  * This is the name of the special domain where all 'lonely' wizards are
