@@ -100,11 +100,7 @@ query_stat_extra(int stat)
 varargs int
 set_base_stat(int stat, int value, int deviation = 0)
 {
-    int offset;
-
-    if ((stat < 0) ||
-        (stat >= SS_NO_STATS) ||
-        (value < 1 ))
+    if ((stat < 0) || (stat >= SS_NO_STATS) || (value < 1))
     {
         return 0;
     }
@@ -113,15 +109,20 @@ set_base_stat(int stat, int value, int deviation = 0)
     {
         /* For value = 60, deviation = 10%, this does 60 - 6 + random(13) */
         deviation = ((deviation > 50) ? 50 : deviation);
-        offset = ((value * deviation) / 50);
+        int offset = ((value * deviation) / 50);
         value += random(offset + 1) - (offset / 2);
     }
 
+    if (stats[stat] == value)
+        return stats[stat];
+
     stats[stat] = value;
+
     if (stat == SS_STR)
     {
         this_object()->query_combat_object()->cb_calc_modified_pen();
     }
+
     return value;
 }
 
