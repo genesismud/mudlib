@@ -316,6 +316,10 @@
 #define F_UNARMED_PEN(skill, str)    ((skill) / 10 + (str) / 20)
 #define F_UNARMED_DEFAULT	     (40)
 
+// Convert defense + parry + acrobat into a final modifier for
+// cb_tohit.
+#define F_DEFENSIVE_TOHIT_MODIFIER(defense)     ((50) + (defense) * 3 / 4)
+
 /* How much time it takes you after combat before you can teleport/LD/quit. */
 #define F_RELAX_TIME_AFTER_COMBAT(tme)  (60 + (3 * ((tme) % 10)))
 
