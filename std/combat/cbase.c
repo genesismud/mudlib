@@ -402,6 +402,7 @@ cb_data()
 
     tmp += me->query_skill(SS_DEFENSE);
     tmp += compute_acrobat_evade(me);
+    tmp = F_DEFENSIVE_TOHIT_MODIFIER(tmp);
     val += 4 * fixnorm(70, tmp);
     str += sprintf("%-30s %5d\n", "Defensive tohit:", val);
 
@@ -760,6 +761,9 @@ cb_tohit(int aid, int wchit, object vic)
     vic_combat_obj = vic->query_combat_object();
     vic_combat_obj->cb_update_acrobat_evade();
     tmp += vic_combat_obj->query_acrobat_evade();
+
+    /* This does not scale well at low values, so we modify it */
+    tmp = F_DEFENSIVE_TOHIT_MODIFIER(tmp);
 
     /*
      * Is it dark or opponent invis? Then how well do we fight?
