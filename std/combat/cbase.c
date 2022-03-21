@@ -402,8 +402,9 @@ cb_data()
 
     tmp += me->query_skill(SS_DEFENSE);
     tmp += compute_acrobat_evade(me);
+    tmp = F_DEFENSIVE_TOHIT_MODIFIER(tmp);
     val += 4 * fixnorm(70, tmp);
-    str += sprintf("%-30s %5d\n", "Defensive tohit post formula:", val);
+    str += sprintf("%-30s %5d\n", "Defensive tohit:", val);
 
     fval = 0.0;
     mapping armours = ([ ]);
