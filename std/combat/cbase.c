@@ -1843,18 +1843,29 @@ heart_beat()
     
     while (num_attacks > 0 && total_attackproc > 0)
     {
-        int skipped_attackproc = 0;
-        il = -1;
-        while(++il < size)
+        if (!objectp(me))
         {
-            if (!objectp(me))
-                break;
+            // I don't exist, I can't have more attacks.
+            break;
+        }
 
-            int attack_idx = member_array(il, used_attacks);
+        // Pick a spot out of all the remaining attackproc.
+        int selected = random(total_attackproc);
+        
+        il = -1;
+        while(++il < size && selected > 0)
+        {
 
-            /* Will we use this attack this round? (random(available) < %use) */
-            if (random(total_attackproc - skipped_attackproc) < attacks[il][ATT_PROCU]
-                && attack_idx == -1)
+            if (member_array(il, used_attacks) != -1)
+            {
+                // This was already deducted from total_attackproc
+                continue;
+            }
+            
+            selected -= attacks[il][ATT_PROCU];
+            
+            // Is this the block of total_attackproc we wanted?
+            if (selected < 0)
             {
                 /*
                  * Reduce the total available attacks, the total odds,
@@ -1872,7 +1883,8 @@ heart_beat()
                 hitsuc = cb_try_hit(att_id[il]);
                 if (hitsuc <= 0)
                 {
-                    continue;
+                    // This attack id failed, but others may pass.
+                    break;
                 }
 
                 /*
@@ -1882,11 +1894,16 @@ heart_beat()
                 hitsuc = attack_ob->query_not_attack_me(me, att_id[il]);
                 if (hitsuc > 0)
                 {
-                    continue;
+                    // This attack id was prevented, but others may pass.
+                    break;
                 }
 
                 if (!objectp(attack_ob))
+                {
+                    // The attack object has vanished, no more attacks this round.
+                    num_attacks = 0;
                     break;
+                }
 
                 hitsuc = cb_tohit(att_id[il], attacks[il][ATT_WCHIT], attack_ob);
                 
@@ -1955,6 +1972,7 @@ heart_beat()
                 }
                 else
                 {
+                    num_attacks = 0;
                     break; /* Ghost, linkdeath, immortals etc */
                 }
 
@@ -1963,14 +1981,9 @@ heart_beat()
                 {
                     enemies = enemies - ({ attack_ob });
                     attack_ob->do_die(me);
+                    num_attacks = 0;
                     break;
                 }
-                break;
-            }
-            else if (attack_idx == -1)
-            {
-                // The random number didn't pick this one.
-                skipped_attackproc += attacks[il][ATT_PROCU];
             }
         }
     }
