@@ -1829,114 +1829,161 @@ heart_beat()
 
     il = -1;
     size = sizeof(attacks);
+    int total_attackproc = 0;
+    
     while(++il < size)
     {
+        total_attackproc += attacks[il][ATT_PROCU];
+    }
+    int num_attacks = total_attackproc / 100;
+    if (random(100) < total_attackproc % 100)
+        num_attacks++;
+    
+    int* used_attacks = ({ });
+    
+    while (num_attacks > 0 && total_attackproc > 0)
+    {
         if (!objectp(me))
-            break;
-
-        /* Will we use this attack this round? (random(100) < %use) */
-        if (random(100) < attacks[il][ATT_PROCU])
         {
-            /*
-             * The attack has a chance of failing. If for example the attack
-             * comes from a wielded weapon, the weapon can force a fail or
-             * if the wchit is to low for this opponent.
-             */
-            hitsuc = cb_try_hit(att_id[il]);
-            if (hitsuc <= 0)
+            // I don't exist, I can't have more attacks.
+            break;
+        }
+
+        // Pick a spot out of all the remaining attackproc.
+        int selected = random(total_attackproc);
+        
+        il = -1;
+        while(++il < size && selected > 0)
+        {
+
+            if (member_array(il, used_attacks) != -1)
             {
+                // This was already deducted from total_attackproc
                 continue;
             }
-
-            /*
-             * The intended victim can also force a fail. like in the weapon
-             * case, if fail, the cause must produce explanatory text himself.
-             */
-            hitsuc = attack_ob->query_not_attack_me(me, att_id[il]);
-            if (hitsuc > 0)
+            
+            selected -= attacks[il][ATT_PROCU];
+            
+            // Is this the block of total_attackproc we wanted?
+            if (selected < 0)
             {
-                continue;
-            }
+                /*
+                 * Reduce the total available attacks, the total odds,
+                 * and mark this attack as being used up.
+                 */
+                total_attackproc -= attacks[il][ATT_PROCU];
+                num_attacks--;
+                used_attacks += ({ il });
 
-            if (!objectp(attack_ob))
-                break;
-
-            hitsuc = cb_tohit(att_id[il], attacks[il][ATT_WCHIT], attack_ob);
-
-            if (hitsuc > 0)
-            {
-                /* Choose one damage type */
-                dt = attacks[il][ATT_DAMT];
-                dbits = ({ dt & W_IMPALE, dt & W_SLASH, dt & W_BLUDGEON }) - ({ 0 });
-                dt = sizeof(dbits) ? one_of_list(dbits) : W_BLUDGEON;
-
-                mixed pen = attacks[il][ATT_M_PEN];
-
-                /* Get the base pen */
-                if (sizeof(pen))
+                /*
+                 * The attack has a chance of failing. If for example the attack
+                 * comes from a wielded weapon, the weapon can force a fail or
+                 * if the wchit is to low for this opponent.
+                 */
+                hitsuc = cb_try_hit(att_id[il]);
+                if (hitsuc <= 0)
                 {
-                    tmp = MATH_FILE->quick_find_exp(dt);
-                    if (tmp < sizeof(pen))
-                    pen = pen[tmp];
-                    else
-                    pen = pen[0];
+                    // This attack id failed, but others may pass.
+                    break;
                 }
 
-                if (crit = (!random(F_CRIT_FREQUENCY)))
-                {
-                    pen = F_CRIT_MOD(pen);
-                }
-
-                hitresult = attack_ob->hit_me(pen, dt, me, att_id[il]);
-
-                if (crit)
-                {
-                    SECURITY->log_syslog("CRITICAL", sprintf("%s: %-11s on %-11s " +
-                        "(crit pen = %d; hp - dam = %d - %d%s)\n\t%s on %s\n",
-                        ctime(time()),  capitalize(me->query_real_name()),
-                        capitalize(attack_ob->query_real_name()), pen,
-                        attack_ob->query_hp(), hitresult[3],
-                        ((attack_ob->query_hp() <= hitresult[3]) ? " LETHAL" : ""),
-                        file_name(me), file_name(attack_ob)), LOG_SIZE_100K);
-                }
-            }
-            else
-            {
-                hitresult = attack_ob->hit_me(hitsuc, 0, me, att_id[il]);
-            }
-
-            /*
-             * Generate combat message, arguments Attack id, hitloc description
-             * proc_hurt, Defender
-             */
-            if (hitsuc > 0)
-            {
-                hitsuc = attacks[il][ATT_WCPEN][tmp];
+                /*
+                 * The intended victim can also force a fail. like in the weapon
+                 * case, if fail, the cause must produce explanatory text himself.
+                 */
+                hitsuc = attack_ob->query_not_attack_me(me, att_id[il]);
                 if (hitsuc > 0)
                 {
-                    hitsuc = 100 * hitresult[2] / hitsuc;
+                    // This attack id was prevented, but others may pass.
+                    break;
+                }
+
+                if (!objectp(attack_ob))
+                {
+                    // The attack object has vanished, no more attacks this round.
+                    num_attacks = 0;
+                    break;
+                }
+
+                hitsuc = cb_tohit(att_id[il], attacks[il][ATT_WCHIT], attack_ob);
+                
+                if (hitsuc > 0)
+                {
+                    /* Choose one damage type */
+                    dt = attacks[il][ATT_DAMT];
+                    dbits = ({ dt & W_IMPALE, dt & W_SLASH, dt & W_BLUDGEON }) - ({ 0 });
+                    dt = sizeof(dbits) ? one_of_list(dbits) : W_BLUDGEON;
+
+                    mixed pen = attacks[il][ATT_M_PEN];
+
+                    /* Get the base pen */
+                    if (sizeof(pen))
+                    {
+                        tmp = MATH_FILE->quick_find_exp(dt);
+                        if (tmp < sizeof(pen))
+                            pen = pen[tmp];
+                        else
+                            pen = pen[0];
+                    }
+
+                    if (crit = (!random(F_CRIT_FREQUENCY)))
+                    {
+                        pen = F_CRIT_MOD(pen);
+                    }
+
+                    hitresult = attack_ob->hit_me(pen, dt, me, att_id[il]);
+
+                    if (crit)
+                    {
+                        SECURITY->log_syslog("CRITICAL", sprintf("%s: %-11s on %-11s " +
+                            "(crit pen = %d; hp - dam = %d - %d%s)\n\t%s on %s\n",
+                            ctime(time()),  capitalize(me->query_real_name()),
+                            capitalize(attack_ob->query_real_name()), pen,
+                            attack_ob->query_hp(), hitresult[3],
+                            ((attack_ob->query_hp() <= hitresult[3]) ? " LETHAL" : ""),
+                            file_name(me), file_name(attack_ob)), LOG_SIZE_100K);
+                    }
                 }
                 else
                 {
-                    hitsuc = 0;
+                    hitresult = attack_ob->hit_me(hitsuc, 0, me, att_id[il]);
                 }
-            }
-            if (hitresult[1])
-            {
-                cb_did_hit(att_id[il], hitresult[1], hitresult[4], hitresult[0],
-                       attack_ob, dt, hitsuc, hitresult[3]);
-            }
-            else
-            {
-                break; /* Ghost, linkdeath, immortals etc */
-            }
 
-            /* Oops, Lifeform turned into a deadform. Reward the killer. */
-            if (attack_ob->query_hp() <= 0)
-            {
-                enemies = enemies - ({ attack_ob });
-                attack_ob->do_die(me);
-                break;
+                /*
+                 * Generate combat message, arguments Attack id, hitloc description
+                 * proc_hurt, Defender
+                 */
+                if (hitsuc > 0)
+                {
+                    hitsuc = attacks[il][ATT_WCPEN][tmp];
+                    if (hitsuc > 0)
+                    {
+                        hitsuc = 100 * hitresult[2] / hitsuc;
+                    }
+                    else
+                    {
+                        hitsuc = 0;
+                    }
+                }
+                if (hitresult[1])
+                {
+                    cb_did_hit(att_id[il], hitresult[1], hitresult[4], hitresult[0],
+                           attack_ob, dt, hitsuc, hitresult[3]);
+                }
+                else
+                {
+                    num_attacks = 0;
+                    break; /* Ghost, linkdeath, immortals etc */
+                }
+
+                /* Oops, Lifeform turned into a deadform. Reward the killer. */
+                if (attack_ob->query_hp() <= 0)
+                {
+                    enemies = enemies - ({ attack_ob });
+                    attack_ob->do_die(me);
+                    num_attacks = 0;
+                    break;
+                }
             }
         }
     }
