@@ -1893,8 +1893,12 @@ set_skill(int skill, int val)
     if ((skill >= 0) && (skill <= SS_MUDLIB_SKILL_END))
         val = max(min(100, val), 0);
 
-    skillmap[skill] = val;
-    update_skill(skill);
+    if (skillmap[skill] != val)
+    {
+        skillmap[skill] = val;
+        update_skill(skill);
+    }
+
     return 1;
 }
 
@@ -1916,8 +1920,11 @@ set_skill_extra(int skill, int val)
         return;
     }
 
-    skill_extra_map[skill] = val;
-    update_skill(skill);
+    if (skill_extra_map[skill] != val)
+    {
+        skill_extra_map[skill] = val;
+        update_skill(skill);
+    }
 }
 
 /*
