@@ -405,8 +405,7 @@ cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
             arms = qme()->query_clothing(slot);
             if (sizeof(arms) > 0)
             {
-                enhancers = filter(arms,
-                    &operator(!=)(0) @ &function_exists("did_hit",));
+                enhancers = filter(arms, &->check_unarmed_enhancer());
                 num_enhancers = sizeof(enhancers);
                 if (num_enhancers > 0)
                 {
