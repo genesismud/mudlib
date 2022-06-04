@@ -13,6 +13,7 @@
 #include <filter_funs.h>
 #include <formulas.h>
 #include <gmcp.h>
+#include <hooks.h>
 #include <macros.h>
 #include <ss_types.h>
 #include <stdproperties.h>
@@ -582,7 +583,7 @@ set_hp(int hp)
 public int
 query_max_mana()
 {
-    return F_MAX_MANA(query_stat(SS_INT)); 
+    return F_MAX_MANA(query_stat(SS_INT));
 }
 
 /*
@@ -1055,7 +1056,7 @@ add_exp_combat(int exp)
 
         /* Deduct tax and and the stat exp to the total */
 	stat_exp -= tax;
-        exp_combat += stat_exp; 
+        exp_combat += stat_exp;
 
         /* Calculate the experience to add to the guild stat using static brute */
         guild_exp = exp * (100 - F_GUILD_STAT_BRUTE_FACTOR) / 100 * query_guild_pref_total() / 100;
@@ -1694,7 +1695,7 @@ set_soaked(int soak)
 int
 query_guild_pref_total()
 {
-    return (learn_pref[SS_RACE] + learn_pref[SS_LAYMAN] + 
+    return (learn_pref[SS_RACE] + learn_pref[SS_LAYMAN] +
         learn_pref[SS_OCCUP] + learn_pref[SS_CRAFT]);
 }
 
@@ -1852,7 +1853,7 @@ update_skill(int skill)
     case SS_WEP_FIRST..(SS_WEP_FIRST + 10):
         map(this_object()->query_weapon(-1), this_object()->update_weapon);
         break;
-        
+
     case SS_2H_COMBAT:
         this_object()->query_combat_object()->cb_calc_attackuse();
         break;
@@ -1897,6 +1898,7 @@ set_skill(int skill, int val)
     {
         skillmap[skill] = val;
         update_skill(skill);
+        call_hook(HOOK_SKILL_CHANGED, skill, query_skill(skill));
     }
 
     return 1;
@@ -1924,6 +1926,7 @@ set_skill_extra(int skill, int val)
     {
         skill_extra_map[skill] = val;
         update_skill(skill);
+        call_hook(HOOK_SKILL_CHANGED, skill, query_skill(skill));
     }
 }
 

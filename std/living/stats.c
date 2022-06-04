@@ -6,6 +6,7 @@
  * All stat and skill related routines are coded here.
  */
 #include <files.h>
+#include <hooks.h>
 #include <macros.h>
 #include <state_desc.h>
 #include <ss_types.h>
@@ -57,14 +58,14 @@ public int
 set_stat_extra(int stat, int val)
 {
     if (stat < 0 || stat >= SS_NO_STATS)
-	return 0;
+        return 0;
 
-    stat_extra[stat] = val;
-
-    if (stat == SS_STR)
+    if (stat_extra[stat] != val)
     {
-        this_object()->query_combat_object()->cb_calc_modified_pen();
+        stat_extra[stat] = val;
+        call_hook(HOOK_STAT_CHANGED, stat, query_stat(stat));
     }
+
     return val;
 }
 
@@ -78,7 +79,7 @@ public int
 query_stat_extra(int stat)
 {
     if (stat < 0 || stat >= SS_NO_STATS)
-	return 0;
+        return 0;
 
     return stat_extra[stat];
 }
@@ -113,14 +114,10 @@ set_base_stat(int stat, int value, int deviation = 0)
         value += random(offset + 1) - (offset / 2);
     }
 
-    if (stats[stat] == value)
-        return stats[stat];
-
-    stats[stat] = value;
-
-    if (stat == SS_STR)
+    if (stats[stat] != value)
     {
-        this_object()->query_combat_object()->cb_calc_modified_pen();
+        stats[stat] = value;
+        call_hook(HOOK_STAT_CHANGED, stat, query_stat(stat));
     }
 
     return value;
@@ -135,10 +132,9 @@ set_base_stat(int stat, int value, int deviation = 0)
 public int
 query_base_stat(int stat)
 {
-    if ((stat < 0) ||
-        (stat >= SS_NO_STATS))
+    if ((stat < 0) || (stat >= SS_NO_STATS))
     {
-	return -1;
+        return -1;
     }
 
     return stats[stat];
@@ -169,10 +165,9 @@ query_relative_stat(int stat)
 {
     int average;
 
-    if ((stat < 0) ||
-        (stat >= SS_NO_STATS))
+    if ((stat < 0) || (stat >= SS_NO_STATS))
     {
-	return 0;
+        return 0;
     }
 
     /* The average should not be 0, but even so, let's test to be sure. */
@@ -192,10 +187,7 @@ void
 expire_tmp_stat(int stat, int value)
 {
     delta_stat[stat] -= value;
-    if (stat == SS_STR)
-    {
-        this_object()->query_combat_object()->cb_calc_modified_pen();
-    }
+    call_hook(HOOK_STAT_CHANGED, stat, query_stat(stat));
 }
 
 /*
@@ -215,22 +207,17 @@ add_tmp_stat(int stat, int ds, int dt)
 
     tmp = query_stat(stat) - query_base_stat(stat);
 
-    if ((ds + tmp > 10 + query_base_stat(stat) / 10) ||
-        (dt <= 0))
+    if ((ds + tmp > 10 + query_base_stat(stat) / 10) || (dt <= 0))
     {
-	return 0;
+        return 0;
     }
 
     delta_stat[stat] += ds;
+    call_hook(HOOK_STAT_CHANGED, stat, query_stat(stat));
 
     dt = MIN(dt, F_TMP_STAT_MAX_TIME);
     set_alarm(itof(dt * F_INTERVAL_BETWEEN_HP_HEALING), 0.0,
         &expire_tmp_stat(stat, ds));
-
-    if (stat == SS_STR)
-    {
-        this_object()->query_combat_object()->cb_calc_modified_pen();
-    }
 
     return 1;
 }
@@ -244,19 +231,12 @@ add_tmp_stat(int stat, int ds, int dt)
 public int
 query_stat(int stat)
 {
-    int i, tmp;
-
-    if ((stat < 0) ||
-        (stat >= SS_NO_STATS))
+    if ((stat < 0) || (stat >= SS_NO_STATS))
     {
-	return -1;
+        return -1;
     }
 
-    tmp = query_base_stat(stat);
-    tmp += delta_stat[stat];
-    tmp += stat_extra[stat];
-
-    return (tmp > 0 ? tmp : 1);
+    return max(query_base_stat(stat) + delta_stat[stat] + stat_extra[stat], 1);
 }
 
 /*
@@ -310,20 +290,20 @@ stats_to_acc_exp()
 
     for (il = SS_STR, sum = 0; il < SS_NO_STATS; il++)
     {
-	tmp = stat_to_exp(query_base_stat(il));
-	if (tmp > 0)
-	{
-	    set_acc_exp(il, tmp);
+        tmp = stat_to_exp(query_base_stat(il));
+        if (tmp > 0)
+        {
+            set_acc_exp(il, tmp);
 
             /* Only count the "real" stats in the total experience. */
-	    if (il < SS_NO_EXP_STATS)
-	    {
-	        sum += tmp;
-	    }
-	}
-	else
+            if (il < SS_NO_EXP_STATS)
+            {
+                sum += tmp;
+            }
+        }
+        else
         {
-	    set_acc_exp(il, 0);
+	        set_acc_exp(il, 0);
         }
     }
 

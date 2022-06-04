@@ -612,7 +612,7 @@ new_player_name(string str)
     {
         input_to(new_player_name);
         write_socket("\nThe name " + capitalize(str) +
-            " is alrady taken. Please choose something else.\n");
+            " is already taken. Please choose something else.\n");
         write_socket("Give name again: ");
         return;
     }

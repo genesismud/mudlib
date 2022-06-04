@@ -24,7 +24,7 @@
  * commands were implemented for examples.)
  *
  * Commands and "use functions":
- * 
+ *
  * Command       Function                Remark
  * =========================================================================
  *   drink       command_drink()
@@ -250,7 +250,7 @@ query_cmd_soul()
  *                sublocations responsible for extra descriptions of the
  *                living object.
  */
-public void 
+public void
 using_soul(object live)
 {
 }
@@ -262,7 +262,7 @@ mapping
 query_cmdlist()
 {
     return
-	([
+        ([
              "drink"      : "drink",
              "eat"        : "eat",
              "extinguish" : "extinguish",
@@ -273,9 +273,9 @@ query_cmdlist()
              "release"    : "release",
              "remove"     : "remove",
              "unwield"    : "unwield",
-  	     "wear"       : "wear",
+             "wear"       : "wear",
              "wield"      : "wield",
-	]);
+        ]);
 }
 
 /*
@@ -295,39 +295,39 @@ use_items(object *items, function func, int silent)
     mixed res;
     object *used = ({ });
     string fail_msg = "";
+    string verb = query_verb();
 
     foreach(object item: items)
     {
         /* Call the function to "use" the item */
         res = func(item);
         if (!res)
-	{
-	    /* The item cannot be used in this way */
+        {
+            /* The item cannot be used in this way */
             continue;
-	}
+        }
 
         if (stringp(res))
-	{
-	    /* The attempt to use the item failed */
-	    fail_msg += res;
-	}
+        {
+            /* The attempt to use the item failed */
+            fail_msg += res;
+        }
         else
-	{
-	    /* The item was successfully used */
-	    used += ({ item });
-	}
+        {
+            /* The item was successfully used */
+            used += ({ item });
+        }
     }
-        
+
     if (!sizeof(used))
     {
         /* Nothing could be used.  Say why. */
-
         if (!strlen(fail_msg))
-	{
-            notify_fail("You seem unable to " + query_verb() + 
+        {
+            notify_fail("You seem unable to " + verb +
                 ((sizeof(items) > 1) ? " those" : " that") + ".\n");
             return 0;
-	}
+        }
 
         write(fail_msg);
         return ({ });
@@ -335,21 +335,20 @@ use_items(object *items, function func, int silent)
 
     if (!silent)
     {
-    	write("You " + query_verb() + " " + COMPOSITE_ALL_DEAD(used) + 
-            ".\n");
-    	say(QCTNAME(this_player()) + " " + LANG_PWORD(query_verb()) + " " +
-            QCOMPDEAD + ".\n");
+        write("You " + verb + " " + COMPOSITE_ALL_DEAD(used) + ".\n");
+        say(QCTNAME(this_player()) + " " + LANG_PWORD(verb) + " " + QCOMPDEAD
+            + ".\n");
     }
 
     return used;
 }
-    
+
 /*
  * Function name: use_described_items
  * Description:   Given a string, cause the actor to "use" the items described
  *                by the string.
  * Arguments:     string str  - the string describing what to use
- *                object *obs - the items to be matched with the string 
+ *                object *obs - the items to be matched with the string
  *                function func - the function to call in the objects found to
  *                              use them.
  *                int silent  - suppress the default message given when items are
@@ -450,11 +449,11 @@ release(string str)
 {
     mixed *items;
 
-    if (!strlen(str) || !parse_command(str, all_inventory(this_player()), 
+    if (!strlen(str) || !parse_command(str, all_inventory(this_player()),
         "[the] %i", items))
     {
         notify_fail(capitalize(query_verb()) + " what?\n", 0);
-	return 0;
+        return 0;
     }
 
     items = CMDPARSE_STD->normal_access(items, 0, 0, 1);
@@ -471,7 +470,7 @@ remove(string str)
     if (!strlen(str))
     {
         notify_fail(capitalize(query_verb()) + " what?\n", 0);
-	return 0;
+        return 0;
     }
 
     inv = this_player()->query_clothing(-1);
@@ -480,7 +479,7 @@ remove(string str)
     if (!parse_command(str, inv, "[the] %i", items))
     {
         notify_fail(capitalize(query_verb()) + " what?\n", 0);
-	return 0;
+        return 0;
     }
 
     items = CMDPARSE_STD->normal_access(items, 0, 0, 1);
@@ -497,7 +496,7 @@ unwield(string str)
     if (!strlen(str))
     {
         notify_fail(capitalize(query_verb()) + " what?\n", 0);
-	return 0;
+        return 0;
     }
 
     inv = this_player()->query_weapon(-1);
@@ -506,7 +505,7 @@ unwield(string str)
     if (!parse_command(str, inv, "[the] %i", items))
     {
         notify_fail(capitalize(query_verb()) + " what?\n", 0);
-	return 0;
+        return 0;
     }
 
     items = CMDPARSE_STD->normal_access(items, 0, 0, 1);

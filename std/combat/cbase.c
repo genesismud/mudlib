@@ -36,6 +36,8 @@
 /*
  * Prototypes
  */
+
+static void update_modified_pen();
 public nomask int cb_query_panic();
 static nomask int fixnorm(int offence, int defence);
 static nomask void heart_beat();
@@ -500,17 +502,35 @@ remove_object()
 }
 
 /*
- * Function name: combat_link
- * Description:   Called by the internal combat routines on startup
+ * Function name: cb_configure
+ * Description:   Configure attacks and hitlocations.
  */
 public void
-cb_link()
+cb_configure()
 {
-    if (objectp(me))
-        return;
+    att_id = ({});
+    hit_id = ({});
+    hitloc_ac = ({});
+    attacks = ({});
+}
 
-    me = previous_object();
-    i_am_real = !(me->query_npc());
+static void
+skill_change(int skill, int val)
+{
+    if (skill == SS_UNARM_COMBAT)
+    {
+        // Refresh all attacks to get updated SS_UNARM_COMBAT
+        cb_configure();
+    }
+}
+
+static void
+stat_change(int stat, int val)
+{
+    if (stat == SS_STR)
+    {
+        update_modified_pen();
+    }
 }
 
 /*
@@ -522,16 +542,20 @@ public object qme()
 }
 
 /*
- * Function name: cb_configure
- * Description:   Configure attacks and hitlocations.
+ * Function name: combat_link
+ * Description:   Called by the internal combat routines on startup
  */
 public void
-cb_configure()
+cb_link()
 {
-    att_id = ({});
-    hit_id = ({});
-    hitloc_ac = ({});
-    attacks = ({});
+    if (objectp(me))
+        return;
+
+    me = previous_object();
+    i_am_real = !(me->query_npc());
+
+    qme()->add_hook(HOOK_STAT_CHANGED, stat_change);
+    qme()->add_hook(HOOK_SKILL_CHANGED, skill_change);
 }
 
 /*
@@ -599,8 +623,7 @@ cb_may_panic()
     object *tm;
 
     /* If you don't run away, then you shouldn't panic either. */
-    if (me->query_ghost() ||
-        me->query_prop(NPC_I_NO_RUN_AWAY))
+    if (me->query_ghost() || me->query_prop(NPC_I_NO_RUN_AWAY))
     {
         return;
     }
@@ -1830,7 +1853,7 @@ heart_beat()
     il = -1;
     size = sizeof(attacks);
     int total_attackproc = 0;
-    
+
     while(++il < size)
     {
         total_attackproc += attacks[il][ATT_PROCU];
@@ -1838,9 +1861,9 @@ heart_beat()
     int num_attacks = total_attackproc / 100;
     if (random(100) < total_attackproc % 100)
         num_attacks++;
-    
+
     int* used_attacks = ({ });
-    
+
     while (num_attacks > 0 && total_attackproc > 0)
     {
         if (!objectp(me))
@@ -1851,7 +1874,7 @@ heart_beat()
 
         // Pick a spot out of all the remaining attackproc.
         int selected = random(total_attackproc);
-        
+
         il = -1;
         while(++il < size && selected > 0)
         {
@@ -1861,9 +1884,9 @@ heart_beat()
                 // This was already deducted from total_attackproc
                 continue;
             }
-            
+
             selected -= attacks[il][ATT_PROCU];
-            
+
             // Is this the block of total_attackproc we wanted?
             if (selected < 0)
             {
@@ -1906,7 +1929,7 @@ heart_beat()
                 }
 
                 hitsuc = cb_tohit(att_id[il], attacks[il][ATT_WCHIT], attack_ob);
-                
+
                 if (hitsuc > 0)
                 {
                     /* Choose one damage type */
@@ -2492,27 +2515,29 @@ cb_update_attack()
 
 
 /*
- * Function name: cb_calc_modified_pen
+ * Function name: update_modified_pen
  * Description:   Recompute the stat-modified pen of all attacks.
  *                This will update the damage when the SS_STR
  *                of the underlying living has change.
 */
-void cb_calc_modified_pen()
+static void
+update_modified_pen()
 {
-    foreach (mixed * attack : attacks)
+    foreach (mixed *attack: attacks)
     {
-       int* m_pen = allocate(W_NUM_DT);
+       int *m_pen = allocate(W_NUM_DT);
+       mixed *wcpen = attack[ATT_WCPEN];
+       int skill = attack[ATT_SKILL];
+
        int pos = -1;
-       mixed* wcpen = attack[1];
-       int skill = attack[4];
-       while(++pos < W_NUM_DT)
+       while (++pos < W_NUM_DT)
        {
           m_pen[pos] = F_ATTACK_PEN_MOD(
               F_PENMOD(wcpen[pos], skill) *
               F_STR_FACTOR(me->query_stat(SS_STR)) / 100
           );
        }
-       attack[5] = m_pen;
+       attack[ATT_M_PEN] = m_pen;
     }
 }
 
@@ -2537,7 +2562,7 @@ void cb_calc_modified_pen()
  *
  * Returns:       True if added.
  */
-varargs int
+static varargs int
 add_attack(int wchit, mixed wcpen, int dt, int prcuse, int id, int skill,
     object wep)
 {
