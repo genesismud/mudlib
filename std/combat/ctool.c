@@ -8,13 +8,12 @@
   This object is cloned and linked to a specific individual when
   engaged in combat. The actual object resides in 'limbo'.
 */
-
-#pragma save_binary
 #pragma strict_types
 
 inherit "/std/combat/cplain";
 
 #include "combat.h"
+
 #include <wa_types.h>
 #include <ss_types.h>
 #include <macros.h>
@@ -509,4 +508,20 @@ cb_update_weapon(object wep)
     add_attack(wep->query_hit(), wep->query_modified_pen(), wep->query_dt(),
         wep->query_procuse(), wep->query_attack_id(),
         me->query_skill(wep->query_wt()), wep);
+}
+
+static void
+skill_change(int skill, int val)
+{
+    ::skill_change(skill, val);
+
+    if (skill >= SS_WEP_FIRST && skill < (SS_WEP_FIRST + 10))
+    {
+        map(cb_query_weapon(-1), cb_update_weapon);
+    }
+
+    if (skill == SS_2H_COMBAT)
+    {
+        cb_calc_attackuse();
+    }
 }

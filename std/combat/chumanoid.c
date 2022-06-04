@@ -235,7 +235,7 @@ cb_wear_arm(object arm)
 {
     if (!me->query_wiz_level() && !IS_ARMOUR_OBJECT(arm))
     {
-	return "The " + arm->short() + " is not a true armour!\n";
+	    return "The " + arm->short() + " is not a true armour!\n";
     }
 
     return ::cb_wear_arm(arm);
