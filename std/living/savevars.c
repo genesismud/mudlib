@@ -1840,28 +1840,6 @@ set_guild_pref(int guildstat, int tax)
 }
 
 /*
- * Function name: update_skill
- * Description  : Called by set_skill when a skill changes to notify the
- *                combat object.
- * Arguments    : int skill - the skill number
- */
-void
-update_skill(int skill)
-{
-    switch (skill)
-    {
-    case SS_WEP_FIRST..(SS_WEP_FIRST + 10):
-        map(this_object()->query_weapon(-1), this_object()->update_weapon);
-        break;
-
-    case SS_2H_COMBAT:
-        this_object()->query_combat_object()->cb_calc_attackuse();
-        break;
-    }
-}
-
-
-/*
  * Function name: set_skill
  * Description  : Set a specific skill to a specific value.
  * Arguments    : int skill - the skill-number to set.
@@ -1897,7 +1875,6 @@ set_skill(int skill, int val)
     if (skillmap[skill] != val)
     {
         skillmap[skill] = val;
-        update_skill(skill);
         call_hook(HOOK_SKILL_CHANGED, skill, query_skill(skill));
     }
 
@@ -1916,16 +1893,15 @@ set_skill(int skill, int val)
 public void
 set_skill_extra(int skill, int val)
 {
-    if (val == 0)
-    {
-        m_delkey(skill_extra_map, skill);
-        return;
-    }
-
     if (skill_extra_map[skill] != val)
     {
-        skill_extra_map[skill] = val;
-        update_skill(skill);
+        if (val)
+        {
+            skill_extra_map[skill] = val;
+        } else {
+            m_delkey(skill_extra_map, skill);
+        }
+
         call_hook(HOOK_SKILL_CHANGED, skill, query_skill(skill));
     }
 }
@@ -1967,7 +1943,7 @@ remove_skill(int skill)
 #endif LOG_SET_SKILL
 
         m_delkey(skillmap, skill);
-        update_skill(skill);
+        call_hook(HOOK_SKILL_CHANGED, skill, query_skill(skill));
     }
 }
 
