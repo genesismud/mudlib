@@ -268,7 +268,7 @@ get_mud_name()
     {
         return MUD_NAME;
     }
-#endif MUD_NAME
+#endif
     return "LPmud(" + debug("version") + ":" + MUDLIB_VERSION + ")";
 }
 
@@ -369,6 +369,8 @@ connect()
     return clone_object(LOGIN_OBJECT);
 }
 
+
+static string *null_auth = ({ "0", "0"});
 /*
  * Function name: valid_set_auth
  * Description  : Whenever the hidden authorization information of an object,
@@ -383,33 +385,32 @@ connect()
 string
 valid_set_auth(object setter, object getting_set, string value)
 {
-    string *oldauth;
-    string *newauth;
     string auth = query_auth(getting_set);
 
-//    find_player("cotillion")->catch_tell("AUTH: " + file_name(getting_set) + " by " + file_name(setter) + " " + calling_function(-1) + "\n");
-
-    if (!stringp(value) ||
-            ((setter != this_object()) &&
-         (setter != find_object(SIMUL_EFUN))))
+    if (!stringp(value) || value == auth ||
+        ((setter != this_object()) && (setter != find_object(SIMUL_EFUN))))
     {
         return auth;
     }
 
-    newauth = explode(value, ":");
+    string *newauth = explode(value, ":");
     if (sizeof(newauth) != 2)
     {
         return auth;
     }
 
-    oldauth = (stringp(auth) ? explode(auth, ":") : ({ "0", "0"}) );
-    if (newauth[0] == "#")
+    if (newauth[0] == "#" || newauth[1] == "#")
     {
-        newauth[0] = oldauth[0];
-    }
-    if (newauth[1] == "#")
-    {
-        newauth[1] = oldauth[1];
+        string *oldauth = (stringp(auth) ? explode(auth, ":") : null_auth);
+
+        if (newauth[0] == "#")
+        {
+            newauth[0] = oldauth[0];
+        }
+        if (newauth[1] == "#")
+        {
+            newauth[1] = oldauth[1];
+        }
     }
 
     return implode(newauth, ":");
