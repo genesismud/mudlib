@@ -2459,6 +2459,7 @@ incoming_service(string request)
                 query_ip_number(player) != tmp[2])
             {
                 set_ip_number(player, tmp[2]);
+                player->set_login_from();
             }
         }
 
