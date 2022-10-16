@@ -90,9 +90,9 @@ query_slots()
     for (index = 2; index <= held_in_hand; index <<= 1)
     {
         if (index & held_in_hand)
-		{
+                {
             slot_arr += ({ index });
-		}
+                }
     }
 
     return slot_arr;
@@ -128,6 +128,7 @@ hold()
  * Description  : Called when the person wants to release the item. This
  *                function may allow or disallow the object to be released,
  *                and it may print its own messages.
+ * Note:          this_player() is guaranteed to be the holder
  * Returns      : string / int -
  *                 0 - The item can be relased, print default messages.
  *                 1 - The item can be relased, print no messages.
@@ -155,21 +156,21 @@ query_slot_desc(object for_obj)
     string possessive;
 
     possessive = (!for_obj ? "the" : ((for_obj == holder) ? "your" :
-	holder->query_possessive()));
+        holder->query_possessive()));
 
     switch ((holder ? held_in_hand : slots))
     {
     case W_RIGHT:
-	return "in " + possessive + " right hand";
+        return "in " + possessive + " right hand";
 
     case W_LEFT:
-	return "in " + possessive + " left hand";
+        return "in " + possessive + " left hand";
 
     case W_BOTH:
         return "in both hands";
 
     case W_ANYH:
-	return "in either hand";
+        return "in either hand";
 
     case W_FOOTR:
         return "on " + possessive + " right foot";
@@ -178,13 +179,13 @@ query_slot_desc(object for_obj)
         return "on " + possessive + " left foot";
 
     case W_FOOTR | W_FOOTL:
-	return "on both " + possessive + " feet";
+        return "on both " + possessive + " feet";
     }
 
     /* Should never happen. */
     return "somewhere";
 }
-	    
+
 /*
  * Function name: query_hold_desc
  * Description  : Returns the string describing how the player is holding
@@ -200,11 +201,11 @@ query_hold_desc(object for_obj)
 
     if (CAN_SEE(this_player(), this_object()))
     {
-	str = LANG_ADDART(this_object()->short(for_obj)) + " ";
+        str = LANG_ADDART(this_object()->short(for_obj)) + " ";
     }
     else
     {
-	str = "something ";
+        str = "something ";
     }
 
     return str + query_slot_desc(for_obj);
@@ -219,10 +220,6 @@ query_hold_desc(object for_obj)
 nomask mixed
 command_hold()
 {
-    string str;
-    mixed fail;
-    mixed hret;
-
     if (holder)
     {
         return "You are already holding the " + this_object()->short() + ".\n";
@@ -230,7 +227,7 @@ command_hold()
 
     if (this_player() != environment())
     {
-        return "You must carry the " + this_object()->short() + 
+        return "You must carry the " + this_object()->short() +
             " to be able to hold it.\n";
     }
 
@@ -242,13 +239,13 @@ command_hold()
     if (slots == W_ANYH)
     {
         if (this_player()->query_tool(TS_RWEAPON))
-	{ 
+        {
             held_in_hand = TS_LWEAPON;
-	}
+        }
         else
-	{
+        {
             held_in_hand = TS_RWEAPON;
-	}
+        }
     }
     else
     {
@@ -256,6 +253,7 @@ command_hold()
     }
 
     /* can the weapon be held? */
+    string fail;
     if (stringp(fail = this_player()->hold(this_object())))
     {
         return fail;
@@ -264,26 +262,27 @@ command_hold()
     holder = this_player();
 
     /* Check for a hold function */
+    mixed hret;
     if (!(hret = this_object()->hold()))
     {
-        write("You hold the " + this_object()->short() + 
-	    " " + query_slot_desc(this_player()) + ".\n");
-        str = " holds " + LANG_ADDART(this_object()->short()) + ".\n";
-        say( ({ this_player()->query_Met_name() + str, 
+        write("You hold the " + this_object()->short() +
+            " " + query_slot_desc(this_player()) + ".\n");
+        string str = " holds " + LANG_ADDART(this_object()->short()) + ".\n";
+        say( ({ this_player()->query_Met_name() + str,
                 "The " + this_player()->query_nonmet_name() + str,
                 "" }) );
     }
 
     if (stringp(hret))
     {
-	holder = 0;
+        holder = 0;
         this_player()->release(this_object());
         return hret;
     }
 
     if (hret < 0)
     {
-	holder = 0;
+        holder = 0;
         this_player()->release(this_object());
         return "You cannot hold the " + this_object()->short() + ".\n";
     }
@@ -314,11 +313,11 @@ command_release()
 
     if (!(hret = this_object()->release()))
     {
-	write("You release the " + this_object()->short() + ".\n");
-	str = " releases " + LANG_ADDART(this_object()->short()) + ".\n";
-	say( ({ this_player()->query_Met_name() + str, 
-		"The " + this_player()->query_nonmet_name() + str,
-		"" }) );
+        write("You release the " + this_object()->short() + ".\n");
+        str = " releases " + LANG_ADDART(this_object()->short()) + ".\n";
+        say( ({ this_player()->query_Met_name() + str,
+                "The " + this_player()->query_nonmet_name() + str,
+                "" }) );
     }
 
     if (stringp(hret))
@@ -385,24 +384,26 @@ query_holdable_item()
 public void
 holdable_item_leave_env(object env, object to)
 {
-    mixed hret;
-
     if (!holder)
-    {
         return;
-    }
 
+    object otp = this_player();
+    set_this_player(holder);
+
+    mixed hret;
     if (!(hret = this_object()->release()))
     {
         tell_object(holder, "You release the " + this_object()->short() + ".\n");
     }
 
-    this_player()->release(this_object());
+    holder->release(this_object());
     this_object()->remove_expiration_combat_hook(holder);
     this_object()->remove_adj("held");
     this_object()->add_adj("unheld");
     holder = 0;
     held_in_hand = 0;
+
+    set_this_player(otp);
 }
 
 #if 0
@@ -435,8 +436,8 @@ public string
 holdable_item_usage_desc()
 {
     return ("The " + this_object()->short(this_player()) +
-	" can be held " + query_slot_desc() + ".\n");
-}    
+        " can be held " + query_slot_desc() + ".\n");
+}
 
 /*
  * Function name: appraise_holdable_item
