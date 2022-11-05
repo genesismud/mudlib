@@ -30,7 +30,7 @@ create_heap()
     set_long("An empty vial. You could fill a potion into it, but that " +
         "is all it is good for.\n");
     add_prop(HEAP_I_UNIT_VOLUME, 100);
-    add_prop(HEAP_I_UNIT_WEIGHT, 250);
+    add_prop(HEAP_I_UNIT_WEIGHT, 50);
     add_prop(HEAP_I_UNIT_VALUE, 24);
     add_prop(HEAP_S_UNIQUE_ID, "_std_potion_vial");
     add_prop(OBJ_M_NO_SELL, 1);
