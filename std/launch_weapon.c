@@ -48,6 +48,7 @@ mixed  Hitloc_id;           /* The hitloc we aim on. */
 
 int    Shoot_alarm,         /* Alarm used between aim and fire. */
        Fatigue_alarm,       /* Alarm used to unload a bow if not fired. */
+       Loaded,              /* Flag signifying we have loaded the projectile */
        Ready,               /* Flag signifying we have aimed and can shoot. */
        Next_round,          /* The time we can shoot once more. */
        Drawn_wep;           /* Flag signifying that is weapon must be held
@@ -84,6 +85,12 @@ public void tell_archer_fatigue_unload(object archer, object target, object proj
 public void tell_archer_unload(object archer, object target, object projectile);
 public void tell_others_unload(object archer, object target, object projectile);
 public void tell_all_projectile_break(object projectile, object target);
+public void tell_archer_miss_acrobat(object archer, object target, object projectile, string adj_room_desc);
+public void tell_target_miss_acrobat(object archer, object target, object projectile, string adj_room_desc, string org_room_desc);
+public void tell_others_miss_acrobat(object archer, object target, object projectile, string adj_room_desc, string org_room_desc);
+public void tell_archer_miss_parried(object archer, object target, object projectile, string adj_room_desc);
+public void tell_target_miss_parried(object archer, object target, object projectile, string adj_room_desc, string org_room_desc);
+public void tell_others_miss_parried(object archer, object target, object projectile, string adj_room_desc, string org_room_desc);
 public void tell_archer_miss(object archer, object target, object projectile, string adj_room_desc);
 public void tell_target_miss(object archer, object target, object projectile, string adj_room_desc, string org_room_desc);
 public void tell_others_miss(object archer, object target, object projectile, string adj_room_desc, string org_room_desc);
@@ -907,8 +914,9 @@ ready_to_fire()
     if (Projectile)
     {
         Ready = 1;
-	tell_object(query_wielded(),
-		    "You are ready to " + Fire_command + ".\n");
+        Loaded = 1;
+        tell_object(query_wielded(), "You are ready to " + 
+            Fire_command + ".\n");
     }
 
     Shoot_alarm = 0;
@@ -1409,25 +1417,28 @@ try_load()
     stack_env = environment(Projectile_stack);
 
     if (stack_env == query_wielded() ||
-	(stack_env->query_prop(CONT_I_IS_QUIVER) &&
-	 !stack_env->query_prop(CONT_I_CLOSED) &&
-	 environment(stack_env) == query_wielded()))
+        (stack_env->query_prop(CONT_I_IS_QUIVER) &&
+            !stack_env->query_prop(CONT_I_CLOSED) &&
+            environment(stack_env) == query_wielded()))
     {
 	    // We still have the stack present.
 	    load_projectile();
+        Loaded = 1;
 	    return 1;
     }
     else
     {
         // We do not have projectiles nearby anymore.
         if (!find_projectiles())
-	{
+        {
+            Loaded = 0;
             return 0;
-	}
-	else
-	{
-	    return 1;
-	}
+        }
+        else
+        {
+            Loaded = 1;
+            return 1;
+        }
     }
 }
 
@@ -1467,6 +1478,7 @@ long(string str, object for_obj)
 int
 try_hit(object target)
 {
+    object obj = this_object();
     ::try_hit();
 
     Archer = query_wielded();
@@ -1476,35 +1488,54 @@ try_hit(object target)
         return 0;
     }
 
-    if (!Projectile)
+    if (!Projectile || !Loaded)
     {
+        if (objectp(Projectile))
+        {
+            /*
+             * For some reason the previous shoot round did not fully
+             * complete (usually due to a evade special) and the clean
+             * up in did_hit() was never called so we must treat this
+             * round as a load round and clean up.
+             */
+            Projectile->unload();
+
+            if (!random(F_PROJECTILE_BREAK_CHANCE))
+            {
+                obj->tell_all_projectile_break(Projectile, target, environment(target));
+                Projectile->set_broken(1);
+            }
+
+            move_projectile_to_env(environment(target), Projectile);
+        }
         if (try_load())
         {
-	    this_object()->tell_archer_load(query_wielded(), target,
-					    Projectile, "");
+            obj->tell_archer_load(Archer, target,
+                Projectile, "");
 
-	    this_object()->tell_others_load(query_wielded(), target,
-					    Projectile, "");
+            obj->tell_others_load(Archer, target,
+				Projectile, "");
 
-	    this_object()->tell_target_load(query_wielded(), target,
-					    Projectile);
-	    return 0;
-	}
-	else
-	{
-	    this_object()->tell_archer_no_missiles();
-	    set_this_player(query_wielded());
-	    unwield_me();
-	    if (Sec_wep_cmd)
-	    {
-		wield_secondary_weapon();
-	    }
-	}
+            obj->tell_target_load(Archer, target,
+                Projectile);
+            return 0;
+        }
+        else
+        {
+            obj->tell_archer_no_missiles();
+            set_this_player(Archer);
+            unwield_me();
+            if (Sec_wep_cmd)
+            {
+                wield_secondary_weapon();
+            }
+        }
     }
     else
     {
         Next_round = time() +
-	  ftoi(query_wielded()->query_combat_object()->cb_query_speed());
+            ftoi(Archer->query_combat_object()->cb_query_speed());
+        Loaded = 0;
         return 1;
     }
 }
@@ -1638,23 +1669,23 @@ find_projectiles()
         quivers = filter(all_inventory(query_wielded()),
 			 &->query_prop(CONT_I_IS_QUIVER));
 
-	if (!sizeof(quivers))
-	{
-            return 0;
-	}
-
-	for (i = 0; i < sizeof(quivers); i++)
+        if (!sizeof(quivers))
         {
-	    projectiles = query_valid_projectiles(quivers[i]);
+            return 0;
+        }
 
-	    if (sizeof(projectiles))
-	    {
-	        break;
-	    }
-	}
+        for (i = 0; i < sizeof(quivers); i++)
+        {
+            projectiles = query_valid_projectiles(quivers[i]);
 
-	if (!sizeof(projectiles))
-	    return 0;
+            if (sizeof(projectiles))
+            {
+                break;
+            }
+        }
+
+        if (!sizeof(projectiles))
+            return 0;
     }
 
     set_projectile_stack(projectiles[0]);
@@ -1723,62 +1754,83 @@ did_hit(int aid, string hdesc, int phurt, object target, int dt,
                 int phit, int dam, int hid)
 {
     object armour;
+    object obj = this_object();
+    object Archer = query_wielded();
 
     // Miss.
-    if (phurt == -1)
+    if (phurt < 0)
     {
-        this_object()->
-	    tell_archer_miss(query_wielded(), target,
-			     Projectile, Adj_room_desc);
+        switch (phurt)
+        {
+        case -3:
+            // Miss attributed to SS_ACROBAT
+            obj->tell_archer_miss_acrobat(Archer, target,
+                Projectile, Adj_room_desc);
 
-        this_object()->
-	    tell_target_miss(query_wielded(), target,
-			     Projectile, Adj_room_desc, Org_room_desc);
+            obj->tell_target_miss_acrobat(Archer, target,
+                Projectile, Adj_room_desc, Org_room_desc);
 
-        this_object()->
-	    tell_others_miss(query_wielded(), target,
-			     Projectile, Adj_room_desc, Org_room_desc);
+            obj->tell_others_miss_acrobat(Archer, target,
+                Projectile, Adj_room_desc, Org_room_desc);
+            break;
+        case -2:
+            // Miss attributed to SS_PARRY
+            obj->tell_archer_miss_parried(Archer, target,
+                Projectile, Adj_room_desc);
+
+            obj->tell_target_miss_parried(Archer, target,
+                Projectile, Adj_room_desc, Org_room_desc);
+
+            obj->tell_others_miss_parried(Archer, target,
+                Projectile, Adj_room_desc, Org_room_desc);
+            break;
+        default:
+            // Miss attributed to SS_DEFENCE and any other
+            // generic miss
+            obj->tell_archer_miss(Archer, target,
+                Projectile, Adj_room_desc);
+
+            obj->tell_target_miss(Archer, target,
+                Projectile, Adj_room_desc, Org_room_desc);
+
+            obj->tell_others_miss(Archer, target,
+                Projectile, Adj_room_desc, Org_room_desc);
+            break;
+        }
     }
     // Hit, but target is protected by his armour.
     else if (dam == 0)
     {
         armour = find_protecting_armour(target, hid);
 
-	this_object()->
-	    tell_archer_bounce_armour(query_wielded(), target,
-				      Projectile, Adj_room_desc, armour);
+        obj->tell_archer_bounce_armour(Archer, target,
+            Projectile, Adj_room_desc, armour);
 
-        this_object()->
-	    tell_target_bounce_armour(query_wielded(), target, Projectile,
-				      Adj_room_desc, Org_room_desc, armour);
+        obj->tell_target_bounce_armour(Archer, target,
+            Projectile, Adj_room_desc, Org_room_desc, armour);
 
-        this_object()->
-	    tell_others_bounce_armour(query_wielded(), target, Projectile,
-				      Adj_room_desc, Org_room_desc, armour);
+        obj->tell_others_bounce_armour(Archer, target,
+            Projectile, Adj_room_desc, Org_room_desc, armour);
     }
     // Hit.
     else
     {
-	this_object()->
-	    tell_archer_hit(query_wielded(), target, Projectile,
-			    Adj_room_desc, hdesc, dt, phurt, dam, hid);
+        obj->tell_archer_hit(Archer, target, Projectile,
+            Adj_room_desc, hdesc, dt, phurt, dam, hid);
 
-	this_object()->
-	    tell_target_hit(query_wielded(), target, Projectile, Adj_room_desc,
-			    Org_room_desc, hdesc, dt, phurt, dam, hid);
+        obj->tell_target_hit(Archer, target, Projectile, Adj_room_desc,
+            Org_room_desc, hdesc, dt, phurt, dam, hid);
 
-	this_object()->
-	    tell_others_hit(query_wielded(), target, Projectile, Adj_room_desc,
-			    Org_room_desc, hdesc, dt, phurt, dam, hid);
+        obj->tell_others_hit(Archer, target, Projectile, Adj_room_desc,
+            Org_room_desc, hdesc, dt, phurt, dam, hid);
     }
 
     Projectile->unload();
 
     if (!random(F_PROJECTILE_BREAK_CHANCE))
     {
-        this_object()->
-	    tell_all_projectile_break(Projectile, target, environment(target));
-	Projectile->set_broken(1);
+        obj->tell_all_projectile_break(Projectile, target, environment(target));
+        Projectile->set_broken(1);
     }
 
     if (phurt < 5)
@@ -1793,8 +1845,8 @@ did_hit(int aid, string hdesc, int phurt, object target, int dt,
     if (dam > 0)
     {
         target->heal_hp((F_LAUNCH_W_DAM_FACTOR * -dam) / 100);
-	Projectile->projectile_hit_target(query_wielded(), aid, hdesc, phurt,
-					  target, dt, phit, dam, hid);
+        Projectile->projectile_hit_target(Archer, aid, hdesc, phurt,
+            target, dt, phit, dam, hid);
     }
 
     /* Reset launch weapon only after all other processing. */
@@ -1812,6 +1864,7 @@ reset_launch_weapon()
 {
     Projectile = 0;
     Ready = 0;
+    Loaded = 0;
 
     if (Shoot_alarm)
     {
@@ -2257,6 +2310,142 @@ check_remote_seen(object spectator, object target)
     }
 
     return 1;
+}
+
+/*
+ * Function name: tell_archer_miss_acrobat
+ * Description  : Produces a message to the player when he misses his target
+ *                due to the target dodging acrobatically.
+ *                This function take visual conditions in consideration as
+ *                well as shoots across rooms. This function is meant to be
+ *                overridden in launch_weapon implementations.
+ *
+ * Arguments    : archer:        The player loading his weapon.
+ *                target:        The target player is aiming at.
+ *                projectile:    The projectile we are loading.
+ *                adj_room_desc: Description of the room we shoot into. 0 if
+ *                               target stand in the same room.
+ */
+public void
+tell_archer_miss_acrobat(object archer, object target,
+         object projectile, string adj_room_desc)
+{
+    return;
+}
+
+/*
+ * Function name: tell_target_miss_acrobat
+ * Description  : Produces a message to the target when the archer tries to
+ *                shoot at him but miss due to the target dodging acrobatically.
+ *                This function take visual
+ *                conditions in consideration as well as shoots across rooms.
+ *                This function is meant to be overridden in launch_weapon
+ *                implementations.
+ *
+ * Arguments    : archer:        The player loading his weapon.
+ *                target:        The target player is aiming at.
+ *                projectile:    The projectile we are loading.
+ *                adj_room_desc: Description of the room we shoot into. 0 if
+ *                               target stands in the same room at the archer.
+ *                org_room_desc: Description of originating room. 0 if
+ *                               target stands in the same room as the archer.
+ */
+public void
+tell_target_miss_acrobat(object archer, object target, object projectile,
+         string adj_room_desc, string org_room_desc)
+{
+    return;
+}
+
+/*
+ * Function name: tell_others_miss_acrobat
+ * Description  : Produces messages to all bystanders when the archer misses
+ *                his target due to the target dodging acrobatically.
+ *                This function take visual conditions in
+ *                consideration as well as shoots across rooms. This function
+ *                is meant to be overridden in launch_weapon implementations.
+ *
+ * Arguments    : archer:        The player loading his weapon.
+ *                target:        The target player is aiming at.
+ *                projectile:    The projectile we are loading.
+ *                adj_room_desc: Description of the room we shoot into. 0 if
+ *                               target stands in the same room at the archer.
+ *                org_room_desc: Description of originating room. 0 if
+ *                               target stands in the same room as the archer.
+ */
+public void
+tell_others_miss_acrobat(object archer, object target, object projectile,
+         string adj_room_desc, string org_room_desc)
+{
+    return;
+}
+
+/*
+ * Function name: tell_archer_miss_parried
+ * Description  : Produces a message to the player when he but target
+ *                parries the arrow.
+ *                This function take visual conditions in consideration as
+ *                well as shoots across rooms. This function is meant to be
+ *                overridden in launch_weapon implementations.
+ *
+ * Arguments    : archer:        The player loading his weapon.
+ *                target:        The target player is aiming at.
+ *                projectile:    The projectile we are loading.
+ *                adj_room_desc: Description of the room we shoot into. 0 if
+ *                               target stand in the same room.
+ */
+public void
+tell_archer_miss_parried(object archer, object target,
+         object projectile, string adj_room_desc)
+{
+    return;
+}
+
+/*
+ * Function name: tell_target_miss_parried
+ * Description  : Produces a message to the target when the archer tries to
+ *                shoot at him but the target parries the arrow.
+ *                This function take visual
+ *                conditions in consideration as well as shoots across rooms.
+ *                This function is meant to be overridden in launch_weapon
+ *                implementations.
+ *
+ * Arguments    : archer:        The player loading his weapon.
+ *                target:        The target player is aiming at.
+ *                projectile:    The projectile we are loading.
+ *                adj_room_desc: Description of the room we shoot into. 0 if
+ *                               target stands in the same room at the archer.
+ *                org_room_desc: Description of originating room. 0 if
+ *                               target stands in the same room as the archer.
+ */
+public void
+tell_target_miss_parried(object archer, object target, object projectile,
+         string adj_room_desc, string org_room_desc)
+{
+    return;
+}
+
+/*
+ * Function name: tell_others_miss_parried
+ * Description  : Produces messages to all bystanders when the archer misses
+ *                his target due to the target dodging acrobatically.
+ *                This function take visual conditions in
+ *                consideration as well as shoots across rooms. This function
+ *                is meant to be overridden in launch_weapon implementations.
+ *
+ * Arguments    : archer:        The player loading his weapon.
+ *                target:        The target player is aiming at.
+ *                projectile:    The projectile we are loading.
+ *                adj_room_desc: Description of the room we shoot into. 0 if
+ *                               target stands in the same room at the archer.
+ *                org_room_desc: Description of originating room. 0 if
+ *                               target stands in the same room as the archer.
+ */
+public void
+tell_others_miss_parried(object archer, object target, object projectile,
+         string adj_room_desc, string org_room_desc)
+{
+    return;
 }
 
 /*

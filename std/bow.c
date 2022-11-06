@@ -527,6 +527,456 @@ tell_target_load(object archer, object target, object projectile)
 }
 
 /*
+ * Function name: tell_archer_miss_acrobat
+ * Description  : Produces a message to the player when he misses his target
+ *                due to the target dodging acrobatically.
+ *                This function take visual conditions in consideration as
+ *                well as shoots across rooms. This function is meant to be
+ *                overridden in launch_weapon implementations.
+ *
+ * Arguments    : archer:        The player loading his weapon.
+ *                target:        The target player is aiming at.
+ *                projectile:    The projectile we are loading.
+ *                adj_room_desc: Description of the room we shoot into. 0 if
+ *                               target stand in the same room.
+ */
+public void
+tell_archer_miss_acrobat(object archer, object target, object projectile,
+                 string adj_room_desc)
+{
+    if (archer->query_npc() || archer->query_option(OPT_GAG_MISSES))
+    {
+        return;
+    }
+ 
+    if (environment(archer) == environment(target))
+    {
+        if (CAN_SEE(archer, target) && CAN_SEE_IN_ROOM(archer))
+        {
+          /*
+           * You shoot an arrow at the black orc, but the black
+           * orc backflips away.
+           */
+            
+          tell_object(archer, "You shoot an arrow at " +
+                      target->query_the_name(archer) + ", but " +
+                      target->query_pronoun() + " backflips away" +
+                      " from the arrow.\n");
+        }
+        else
+        {
+            // You shoot blindly at the orc.
+            if (archer->query_met(target))
+            {
+                tell_object(archer, "You shoot blindly at " +
+                            target->query_met_name() + ".\n");
+            }
+            else
+            {
+                tell_object(archer, "You shoot blindly at the " +
+                            target->query_race_name() + ".\n");
+            }
+        }
+    }
+    else
+    {
+        if (check_remote_seen(archer, target))
+        {
+            // You shoot an arrow at the black orc on the courtyard,
+            // but the black orc backflips aways.
+            tell_object(archer, "You shoot an arrow at " +
+                        target->query_the_name(archer) + " " +
+                        adj_room_desc + ", but " +
+                        target->query_pronoun() + " backflips away" +
+                        " from the arrow.\n");
+        } 
+        else
+        {
+            // You shoot blindly at the orc on the courtyard.
+            if (archer->query_met(target))
+            {
+                tell_object(archer, "You shoot blindly at " +
+                            target->query_met_name() + " " +
+                            adj_room_desc + ".\n");
+            }
+            else
+            {
+                tell_object(archer, "You shoot blindly at the " +
+                            target->query_race_name() + " " +
+                            adj_room_desc + ".\n");
+            }
+        }
+    }
+}
+
+/*
+ * Function name: tell_target_miss_acrobat
+ * Description  : Produces a message to the target when the archer tries to
+ *                shoot at him but miss due to the target dodging acrobatically.
+ *                This function take visual
+ *                conditions in consideration as well as shoots across rooms.
+ *                This function is meant to be overridden in launch_weapon
+ *                implementations.
+ *
+ * Arguments    : archer:        The player loading his weapon.
+ *                target:        The target player is aiming at.
+ *                projectile:    The projectile we are loading.
+ *                adj_room_desc: Description of the room we shoot into. 0 if
+ *                               target stands in the same room at the archer.
+ *                org_room_desc: Description of originating room. 0 if
+ *                               target stands in the same room as the archer.
+ */
+public void
+tell_target_miss_acrobat(object archer, object target, object projectile,
+                 string adj_room_desc, string org_room_desc)
+{
+    if (target->query_npc() || target->query_option(OPT_GAG_MISSES))
+    {
+        return;
+    }
+    
+    if (environment(archer) == environment(target))
+    {
+        if (CAN_SEE(target, archer) && CAN_SEE_IN_ROOM(archer))
+        {
+            // The tall green-clad elf shoots an arrow at you, but
+            // you backflip away.
+            tell_object(target, archer->query_The_name(target) + 
+                        " shoots an arrow at you, but you" +
+                        " backflip away from the arrow.\n");
+        }
+        else
+        {
+            tell_object(target, "You hear the hiss of an arrow " +
+                        "flying past.\n");
+        } 
+    }
+    else
+    {
+        if (check_remote_seen(target, archer))
+        {
+            /*
+             * The tall green-clad elf shoots an arrow at you from
+             * the battlement, but you backflip away.
+             */
+            tell_object(target, archer->query_The_name(target) +
+                        " shoots an arrow at you from " +
+                        org_room_desc + ", but you" +
+                        " backflip away from the arrow.\n");
+        }
+        else if (CAN_SEE_IN_ROOM(target))
+        {
+            tell_object(target, "Someone shoots an arrow at you," +
+                        " but misses.\n");
+        }
+        else
+        {
+            tell_object(target, "You hear the hiss of an arrow " +
+                        "flying past.\n");
+        }
+    }
+}
+
+/*
+ * Function name: tell_others_miss_acrobat
+ * Description  : Produces messages to all bystanders when the archer misses
+ *                his target due to the target dodging acrobatically.
+ *                This function take visual conditions in
+ *                consideration as well as shoots across rooms. This function
+ *                is meant to be overridden in launch_weapon implementations.
+ *
+ * Arguments    : archer:        The player loading his weapon.
+ *                target:        The target player is aiming at.
+ *                projectile:    The projectile we are loading.
+ *                adj_room_desc: Description of the room we shoot into. 0 if
+ *                               target stands in the same room at the archer.
+ *                org_room_desc: Description of originating room. 0 if
+ *                               target stands in the same room as the archer.
+ */
+public void
+tell_others_miss_acrobat(object archer, object target, object projectile,
+                 string adj_room_desc, string org_room_desc)
+{
+    if (environment(archer) == environment(target))
+    {
+        /*
+         * The tall green-clad elf shoots an arrow at the black orc,
+         * but the black orc backflips away.
+         */
+        tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
+            QTNAME(target) + ", but " + QTNAME(target) +
+            " backflips away from the arrow.\n",
+            QCTNAME(archer) + " shoots an arrow at something.\n",
+            "An arrow flies past " + QTNAME(target) + " as " +
+            target->query_pronoun() + " backflips away from the arrow.\n",
+            "You hear the hiss of an arrow flying through the air.\n",
+            archer, target, environment(archer));
+    }
+    
+    else
+    {
+        /*
+         * Archer shooting to adjecent room. Archer room:
+         *
+         * The tall green-clad elf shoots an arrow at the black orc on
+         * the courtyard, but misses.    
+         */
+        tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
+            QTNAME(target) + " " + adj_room_desc + ", but " +
+            QTNAME(target) + " backflips away from the arrow.\n",
+            QCTNAME(archer) + " shoots an arrow at something " +
+            adj_room_desc + ".\n",
+            "Someone shoots an arrow at " + QTNAME(target) + " " +
+            adj_room_desc + ", but " + QTNAME(target) +
+            " backflips away from the arrow.\n",
+            "You hear the hiss of an arrow flying through the air.\n",
+            archer, target, environment(archer));
+
+        /*
+         * Archer shooting to adjecent room. Target room:
+         *
+         * The tall green-clad elf shoots an arrow at the black orc
+         * from the battlements, but misses.
+         *
+         */
+        tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
+            QTNAME(target) + " from " + org_room_desc + ", but " +
+            QTNAME(target) + " backflips away from the arrow.\n",
+            QCTNAME(archer) + " shoots an arrow at something.\n",
+            "Someone shoots an arrow at " + QTNAME(target) + ", but " +
+            target->query_pronoun() + " backflips away from the arrow.\n",
+            "You hear the hiss of an arrow flying through the air.\n",
+            archer, target, environment(target));
+    }
+
+    return;
+}
+
+/*
+ * Function name: tell_archer_miss_parried
+ * Description  : Produces a message to the player when he but target
+ *                parries the arrow.
+ *                This function take visual conditions in consideration as
+ *                well as shoots across rooms. This function is meant to be
+ *                overridden in launch_weapon implementations.
+ *
+ * Arguments    : archer:        The player loading his weapon.
+ *                target:        The target player is aiming at.
+ *                projectile:    The projectile we are loading.
+ *                adj_room_desc: Description of the room we shoot into. 0 if
+ *                               target stand in the same room.
+ */
+public void
+tell_archer_miss_parried(object archer, object target, object projectile,
+                 string adj_room_desc)
+{
+    if (archer->query_npc() || archer->query_option(OPT_GAG_MISSES))
+    {
+        return;
+    }
+ 
+    if (environment(archer) == environment(target))
+    {
+        if (CAN_SEE(archer, target) && CAN_SEE_IN_ROOM(archer))
+        {
+          /*
+           * You shoot an arrow at the black orc, but the black
+           * orc backflips away.
+           */
+            
+          tell_object(archer, "You shoot an arrow at " +
+                      target->query_the_name(archer) + ", but " +
+                      target->query_pronoun() + " parries the arrow.\n");
+        }
+        else
+        {
+            // You shoot blindly at the orc.
+            if (archer->query_met(target))
+            {
+                tell_object(archer, "You shoot blindly at " +
+                            target->query_met_name() + ".\n");
+            }
+            else
+            {
+                tell_object(archer, "You shoot blindly at the " +
+                            target->query_race_name() + ".\n");
+            }
+        }
+    }
+    else
+    {
+        if (check_remote_seen(archer, target))
+        {
+            // You shoot an arrow at the black orc on the courtyard,
+            // but the black orc backflips aways.
+            tell_object(archer, "You shoot an arrow at " +
+                        target->query_the_name(archer) + " " +
+                        adj_room_desc + ", but " +
+                        target->query_pronoun() + " parries the arrow.\n");
+        } 
+        else
+        {
+            // You shoot blindly at the orc on the courtyard.
+            if (archer->query_met(target))
+            {
+                tell_object(archer, "You shoot blindly at " +
+                            target->query_met_name() + " " +
+                            adj_room_desc + ".\n");
+            }
+            else
+            {
+                tell_object(archer, "You shoot blindly at the " +
+                            target->query_race_name() + " " +
+                            adj_room_desc + ".\n");
+            }
+        }
+    }
+}
+
+/*
+ * Function name: tell_target_miss_parried
+ * Description  : Produces a message to the target when the archer tries to
+ *                shoot at him but the target parries the arrow.
+ *                This function take visual
+ *                conditions in consideration as well as shoots across rooms.
+ *                This function is meant to be overridden in launch_weapon
+ *                implementations.
+ *
+ * Arguments    : archer:        The player loading his weapon.
+ *                target:        The target player is aiming at.
+ *                projectile:    The projectile we are loading.
+ *                adj_room_desc: Description of the room we shoot into. 0 if
+ *                               target stands in the same room at the archer.
+ *                org_room_desc: Description of originating room. 0 if
+ *                               target stands in the same room as the archer.
+ */
+public void
+tell_target_miss_parried(object archer, object target, object projectile,
+                 string adj_room_desc, string org_room_desc)
+{
+    if (target->query_npc() || target->query_option(OPT_GAG_MISSES))
+    {
+        return;
+    }
+    
+    if (environment(archer) == environment(target))
+    {
+        if (CAN_SEE(target, archer) && CAN_SEE_IN_ROOM(archer))
+        {
+            // The tall green-clad elf shoots an arrow at you, but
+            // you backflip away.
+            tell_object(target, archer->query_The_name(target) + 
+                        " shoots an arrow at you, but you" +
+                        " parry the arrow.\n");
+        }
+        else
+        {
+            tell_object(target, "You hear the hiss of an arrow " +
+                        "flying past.\n");
+        } 
+    }
+    else
+    {
+        if (check_remote_seen(target, archer))
+        {
+            /*
+             * The tall green-clad elf shoots an arrow at you from
+             * the battlement, but you backflip away.
+             */
+            tell_object(target, archer->query_The_name(target) +
+                        " shoots an arrow at you from " +
+                        org_room_desc + ", but you" +
+                        " parry the arrow.\n");
+        }
+        else if (CAN_SEE_IN_ROOM(target))
+        {
+            tell_object(target, "Someone shoots an arrow at you," +
+                        " but misses.\n");
+        }
+        else
+        {
+            tell_object(target, "You hear the hiss of an arrow " +
+                        "flying past.\n");
+        }
+    }
+}
+
+/*
+ * Function name: tell_others_miss_parried
+ * Description  : Produces messages to all bystanders when the archer misses
+ *                his target due to the target dodging acrobatically.
+ *                This function take visual conditions in
+ *                consideration as well as shoots across rooms. This function
+ *                is meant to be overridden in launch_weapon implementations.
+ *
+ * Arguments    : archer:        The player loading his weapon.
+ *                target:        The target player is aiming at.
+ *                projectile:    The projectile we are loading.
+ *                adj_room_desc: Description of the room we shoot into. 0 if
+ *                               target stands in the same room at the archer.
+ *                org_room_desc: Description of originating room. 0 if
+ *                               target stands in the same room as the archer.
+ */
+public void
+tell_others_miss_parried(object archer, object target, object projectile,
+                 string adj_room_desc, string org_room_desc)
+{
+    if (environment(archer) == environment(target))
+    {
+        /*
+         * The tall green-clad elf shoots an arrow at the black orc,
+         * but the black orc parries the arrow.
+         */
+        tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
+            QTNAME(target) + ", but " + QTNAME(target) +
+            " parries the arrow.\n",
+            QCTNAME(archer) + " shoots an arrow at something.\n",
+            "An arrow flies past " + QTNAME(target) + " as " +
+            target->query_pronoun() + " parries the arrow.\n",
+            "You hear the hiss of an arrow flying through the air.\n",
+            archer, target, environment(archer));
+    }
+    
+    else
+    {
+        /*
+         * Archer shooting to adjecent room. Archer room:
+         *
+         * The tall green-clad elf shoots an arrow at the black orc on
+         * the courtyard, but misses.    
+         */
+        tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
+            QTNAME(target) + " " + adj_room_desc + ", but " +
+            QTNAME(target) + " parries the arrow.\n",
+            QCTNAME(archer) + " shoots an arrow at something " +
+            adj_room_desc + ".\n",
+            "Someone shoots an arrow at " + QTNAME(target) + " " +
+            adj_room_desc + ", but " + QTNAME(target) +
+            " parries the arrow.\n",
+            "You hear the hiss of an arrow flying through the air.\n",
+            archer, target, environment(archer));
+
+        /*
+         * Archer shooting to adjecent room. Target room:
+         *
+         * The tall green-clad elf shoots an arrow at the black orc
+         * from the battlements, but misses.
+         *
+         */
+        tell_bystanders_miss(QCTNAME(archer) + " shoots an arrow at " +
+            QTNAME(target) + " from " + org_room_desc + ", but " +
+            QTNAME(target) + " parries the arrow.\n",
+            QCTNAME(archer) + " shoots an arrow at something.\n",
+            "Someone shoots an arrow at " + QTNAME(target) + ", but " +
+            target->query_pronoun() + " parries the arrow.\n",
+            "You hear the hiss of an arrow flying through the air.\n",
+            archer, target, environment(target));
+    }
+
+    return;
+}
+
+/*
  * Function name: tell_archer_miss
  * Description  : Produces a message to the player when he misses his target.
  *                This function take visual conditions in consideration as
