@@ -281,9 +281,9 @@
  *
  * Calculates the base attack pen given a weapon pen and a weapon skill
  */
-#define F_PENMOD(pen, skill) ((((pen) > (skill) ? (skill) : (pen)) + 50) * \
+#define F_PENMOD(pen, skill) ((((((pen) > (skill) ? (skill) : (pen)) + 50) * \
 	(((skill) > (pen) ? (pen) + ((skill) - (pen)) / 2 : (skill)) + 50) / \
-	30 - 80)
+	30 - 80) * 60) / 100)
 
 /*
 * F_ATTACK_PEN_MODIFER
