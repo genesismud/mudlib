@@ -125,7 +125,7 @@
  * Even if MET_ACTIVE is not defined, QMET should be VBFC for the functions
  * are dependant of previous_object for visibility.
  */
-#define QMET(func, ob) ("@@" + (func) + ":" + file_name(ob) + "@@")
+#define QMET(func, ob) (ob ? "@@" + (func) + ":" + file_name(ob) + "@@" : "0")
 
 #define QSHORT(ob) QMET("vbfc_short", (ob))
 
