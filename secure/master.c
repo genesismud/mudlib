@@ -3528,6 +3528,7 @@ query_snoop(object snoopee)
     return 0;
 }
 
+static int game_start_time;
 /*
  * Function name: query_start_time
  * Description  : Return the time when the game started.
@@ -3536,22 +3537,26 @@ query_snoop(object snoopee)
 public int
 query_start_time()
 {
-    int theport;
-    string game_start;
+    if (game_start_time)
+    {
+        return game_start_time;
+    }
 
     /* Find the time-stamp from the log file that marks the game starts. */
-    theport = debug("mud_port");
+    int theport = debug("mud_port");
     if (theport != 0)
     {
-        game_start = GAME_START + "." + theport;
+        string game_start = GAME_START + "." + theport;
         if (file_size(game_start) > 0)
         {
-            return file_time(game_start);
+            game_start_time = file_time(game_start);
+            return game_start_time;
         }
     }
 
     /* This value will be wrong if the master has been updated. */
-    return object_time(this_object());
+    game_start_time = object_time(this_object());
+    return game_start_time;
 }
 
 /*
