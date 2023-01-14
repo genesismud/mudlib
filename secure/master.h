@@ -34,3 +34,9 @@ static int do_change_rank(string wname, int rank, string cmder);
  * /secure/master/sanction.c
  */
 static void remove_all_sanctions(string name);
+
+
+/*
+ * /secure/master/guild.c
+ */
+static void remove_from_guilds(string name);
