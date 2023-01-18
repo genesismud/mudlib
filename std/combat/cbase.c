@@ -1765,7 +1765,7 @@ stop_heart()
 static nomask void
 heart_beat()
 {
-    int             il, dt, hitsuc, tmp, size, crit, ftg;
+    int             il, dt, hitsuc, tmp, size, crit, crit_freq, ftg;
     string logtext;
     mixed           *hitresult, *dbits, pen, fail;
     object          *new, ob;
@@ -1775,6 +1775,12 @@ heart_beat()
         attack_ob = 0;
         stop_heart();
         return;
+    }
+
+    crit_freq = me->query_critical_hit_frequency();
+    if (!crit_freq)
+    {
+        crit_freq = F_CRIT_FREQUENCY;
     }
 
     /*
@@ -1949,7 +1955,7 @@ heart_beat()
                             pen = pen[0];
                     }
 
-                    if (crit = (!random(F_CRIT_FREQUENCY)))
+                    if (crit = (!random(crit_freq)))
                     {
                         pen = F_CRIT_MOD(pen);
                     }
@@ -1959,12 +1965,12 @@ heart_beat()
                     if (crit)
                     {
                         SECURITY->log_syslog("CRITICAL", sprintf("%s: %-11s on %-11s " +
-                            "(crit pen = %d; hp - dam = %d - %d%s)\n\t%s on %s\n",
+                            "(crit pen = %d; hp - dam = %d - %d%s), freq %d\n\t%s on %s\n",
                             ctime(time()),  capitalize(me->query_real_name()),
                             capitalize(attack_ob->query_real_name()), pen,
                             attack_ob->query_hp(), hitresult[3],
                             ((attack_ob->query_hp() <= hitresult[3]) ? " LETHAL" : ""),
-                            file_name(me), file_name(attack_ob)), LOG_SIZE_100K);
+                            crit_freq, file_name(me), file_name(attack_ob)), LOG_SIZE_100K);
                     }
                 }
                 else
