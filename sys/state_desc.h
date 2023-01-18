@@ -105,43 +105,72 @@
                           "muscular", "hefty", "strong", "powerful", \
                           "musclebound", "ironlike", "forceful", "crushing", \
                           "mighty", "titanic", "epic strength", \
-                          "immortal strength", "supreme strength" })
+                          "immortal strength", "supreme strength", \
+                          "extraordinary strength", "incredible strength", \
+                          "unbelievable strength", "miraculous strength", \
+                          "impossible strength" })
 #define SD_STATLEV_DEX ({ "stiff", "lumbering", "clumsy", "deft", "flexible", \
                           "nimble", "lithe", "supple", "agile", "swift", \
                           "quick", "graceful", "athletic", "gymnastic", \
                           "acrobatic", "epic dexterity", \
-                          "immortal dexterity", "supreme dexterity" })
+                          "immortal dexterity", "supreme dexterity", \
+                          "extraordinary dexterity", "incredible dexterity", \
+                          "unbelievable dexterity", "miraculous dexterity", \
+                          "impossible dexterity" })
 #define SD_STATLEV_CON ({ "sickly", "fragile", "frail", "skinny", "lean", \
                           "healthy", "firm", "hearty", "hardy", "hale", \
                           "robust", "staunch", "tough", "sturdy", "vigorous", \
                           "epic constitution", "immortal constitution", \
-                          "supreme constitution" })
+                          "supreme constitution", \
+                          "extraordinary constitution", "incredible constitution", \
+                          "unbelievable constitution", "miraculous constitution", \
+                          "impossible constitution" })
 #define SD_STATLEV_INT ({ "moronic", "dimwitted", "simple", "dense", "slow", \
                           "limited", "keen", "clever", "quick minded", \
                           "intelligent", "sharp", "bright", "inventive", \
                           "ingenious", "brilliant", "epic intelligence", \
-                          "immortal intelligence", "supreme intelligence" })
+                          "immortal intelligence", "supreme intelligence", \
+                          "extraordinary intelligence", "incredible intelligence", \
+                          "unbelievable intelligence", "miraculous intelligence", \
+                          "impossible intelligence" })
 #define SD_STATLEV_WIS ({ "inane", "stupid", "idiotic", "foolish", "uneducated", \
                           "literate", "educated", "learned", "scholarly", \
                           "cultivated", "knowledgeable", "erudite", "wise", \
                           "sage", "enlightened", "epic wisdom", \
-                          "immortal wisdom", "supreme wisdom" })
+                          "immortal wisdom", "supreme wisdom", \
+                          "extraordinary wisdom", "incredible wisdom", \
+                          "unbelievable wisdom", "miraculous wisdom", \
+                          "impossible wisdom" })
 #define SD_STATLEV_DIS ({ "gutless", "frightened", "spineless", "fearful", \
                           "cowardly", "insecure", "timid", "sound", "bold", \
                           "brave", "courageous", "fearless", "valiant", \
                           "heroic", "lionhearted", "epic discipline", \
-                          "immortal discipline", "supreme discipline" })
+                          "immortal discipline", "supreme discipline", \
+                          "extraordinary discipline", "incredible discipline", \
+                          "unbelievable discipline", "miraculous discipline", \
+                          "impossible discipline" })
                           
 #define SD_STATLEV_EPIC "epic"
 #define SD_STATLEV_IMM  "immortal"
 #define SD_STATLEV_SUP  "supreme"
+#define SD_STATLEV_EXT  "extraordinary"
+#define SD_STATLEV_INC  "incredible"
+#define SD_STATLEV_UNB  "unbelievable"
+#define SD_STATLEV_MIR  "miraculous"
+#define SD_STATLEV_IMP  "impossible"
 
-#define SD_NUM_STATLEVS 18
+#define SD_NUM_STATLEVS 23
                       /* Lowest possible level is probably 7. But just to be safe. */
-#define SD_STATLEVELS ({ 1, 14, 22, 30, 39, 48, 58, 68, 79, 90, 102, 114, 126, 138, 150, 165, 185, 210 })
+#define SD_STATLEVELS ({ 1, 14, 22, 30, 39, 48, 58, 68, 79, 90, 102, 114, 126, 138, 150, 165, 185, 210, \
+                            245, 295, 365, 460, 600 })
 #define SD_STATLEVEL_EPIC 165 
 #define SD_STATLEVEL_IMM  185 
 #define SD_STATLEVEL_SUP  210 
+#define SD_STATLEVEL_EXT  245
+#define SD_STATLEVEL_INC  295
+#define SD_STATLEVEL_UNB  365
+#define SD_STATLEVEL_MIR  460
+#define SD_STATLEVEL_IMP  600
 
 #define SD_NUM_GUILDS       4
 #define SD_GUILD_EXTENSIONS ({ "race", "occ", "lay", "craft" })
@@ -301,7 +330,7 @@
 			  "mana" : SD_MANA,				\
 			  "health" : SD_HEALTH,				\
 			  "brutality" : SD_BRUTE_FACT,			\
-                          "quest-progress" : SD_QUEST_PROGRESS,         \
+              "quest-progress" : SD_QUEST_PROGRESS,         \
 			  "compare-strength" : SD_COMPARE_STR,		\
 			  "compare-dexterity" : SD_COMPARE_DEX,		\
 			  "compare-constitution" : SD_COMPARE_CON,	\
@@ -320,7 +349,7 @@
 			  "weapon-rust" : SD_WEAPON_RUST,		\
 			  "weapon-condition" : SD_WEAPON_COND,		\
 			  "encumbrance": SD_ENC_WEIGHT,			\
-                          "quickness": SD_QUICKNESS                     \
+              "quickness": SD_QUICKNESS                     \
 		       ])
 
 /* No definitions beyond this line. */
