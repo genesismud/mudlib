@@ -118,6 +118,56 @@ check_last_stats(int quest)
         new_stats[index] = query_base_stat(index);
         if (new_stats[index] != last_stats[index])
         {
+            if (new_stats[index] >= SD_STATLEVEL_IMP)
+            {
+                if (last_stats[index] < SD_STATLEVEL_IMP)
+                {
+                    tell_object(this_object(), "You have reached impossible " +
+                        SD_LONG_STAT_DESC[index] + ".\n");
+                    gmcp_char(GMCP_CHAR_STATUS, SD_LONG_STAT_DESC[index], "impossible");
+                    ACHIEVEMENTS->trigger_event_stat_level(this_object(), index, "immortal", "impossible");
+                }
+            }
+            if (new_stats[index] >= SD_STATLEVEL_MIR)
+            {
+                if (last_stats[index] < SD_STATLEVEL_MIR)
+                {
+                    tell_object(this_object(), "You have reached miraculous " +
+                        SD_LONG_STAT_DESC[index] + ".\n");
+                    gmcp_char(GMCP_CHAR_STATUS, SD_LONG_STAT_DESC[index], "miraculous");
+                    ACHIEVEMENTS->trigger_event_stat_level(this_object(), index, "immortal", "miraculous");
+                }
+            }
+            if (new_stats[index] >= SD_STATLEVEL_UNB)
+            {
+                if (last_stats[index] < SD_STATLEVEL_UNB)
+                {
+                    tell_object(this_object(), "You have reached unbelievable " +
+                        SD_LONG_STAT_DESC[index] + ".\n");
+                    gmcp_char(GMCP_CHAR_STATUS, SD_LONG_STAT_DESC[index], "unbelievable");
+                    ACHIEVEMENTS->trigger_event_stat_level(this_object(), index, "immortal", "unbelievable");
+                }
+            }
+            if (new_stats[index] >= SD_STATLEVEL_INC)
+            {
+                if (last_stats[index] < SD_STATLEVEL_INC)
+                {
+                    tell_object(this_object(), "You have reached incredible " +
+                        SD_LONG_STAT_DESC[index] + ".\n");
+                    gmcp_char(GMCP_CHAR_STATUS, SD_LONG_STAT_DESC[index], "incredible");
+                    ACHIEVEMENTS->trigger_event_stat_level(this_object(), index, "immortal", "incredible");
+                }
+            }
+            if (new_stats[index] >= SD_STATLEVEL_EXT)
+            {
+                if (last_stats[index] < SD_STATLEVEL_EXT)
+                {
+                    tell_object(this_object(), "You have reached extraordinary " +
+                        SD_LONG_STAT_DESC[index] + ".\n");
+                    gmcp_char(GMCP_CHAR_STATUS, SD_LONG_STAT_DESC[index], "extraordinary");
+                    ACHIEVEMENTS->trigger_event_stat_level(this_object(), index, "immortal", "extraordinary");
+                }
+            }
             if (new_stats[index] >= SD_STATLEVEL_SUP)
             {
                 if (last_stats[index] < SD_STATLEVEL_SUP)
@@ -128,7 +178,7 @@ check_last_stats(int quest)
                     ACHIEVEMENTS->trigger_event_stat_level(this_object(), index, "immortal", "supreme");
                 }
             }
-            else if (new_stats[index] >= SD_STATLEVEL_IMM)
+            if (new_stats[index] >= SD_STATLEVEL_IMM)
             {
                 if (last_stats[index] < SD_STATLEVEL_IMM)
                 {

@@ -2167,7 +2167,10 @@ show_stats(string str)
     int limit, index, stat;
     object ob;
     string start_be, start_have, text, *stats;
-    string *immortal = ({ }), *epic = ({ }), *supreme = ({ });
+    string *immortal = ({ }), *epic = ({ }), *supreme = ({ }),
+        *extraordinary = ({ }), *incredible = ({ }), *unbelievable = ({ }),
+        *miraculous = ({ }), *impossible = ({ });
+
     string orig_brute, actual_brute;
 
     if (str == "reset")
@@ -2200,7 +2203,12 @@ show_stats(string str)
     for (index = 0; index < SS_NO_EXP_STATS; index++)
     {
         stat = ob->query_stat(index);
-        if (stat >= SD_STATLEVEL_SUP) supreme += ({ SD_LONG_STAT_DESC[index] });
+        if (stat >= SD_STATLEVEL_IMP) impossible += ({ SD_LONG_STAT_DESC[index] });
+        else if (stat >= SD_STATLEVEL_MIR) miraculous += ({ SD_LONG_STAT_DESC[index] });
+        else if (stat >= SD_STATLEVEL_UNB) unbelievable += ({ SD_LONG_STAT_DESC[index] });
+        else if (stat >= SD_STATLEVEL_INC) incredible += ({ SD_LONG_STAT_DESC[index] });
+        else if (stat >= SD_STATLEVEL_EXT) extraordinary += ({ SD_LONG_STAT_DESC[index] });
+        else if (stat >= SD_STATLEVEL_SUP) supreme += ({ SD_LONG_STAT_DESC[index] });
         else if (stat >= SD_STATLEVEL_IMM) immortal += ({ SD_LONG_STAT_DESC[index] });
         else if (stat >= SD_STATLEVEL_EPIC) epic += ({ SD_LONG_STAT_DESC[index] });
         else stats += ({ GET_STAT_LEVEL_DESC(index, stat) });
@@ -2211,6 +2219,11 @@ show_stats(string str)
     if (sizeof(epic)) stats += ({ SD_STATLEV_EPIC + " " + COMPOSITE_WORDS(epic) });
     if (sizeof(immortal)) stats += ({ SD_STATLEV_IMM + " " + COMPOSITE_WORDS(immortal) });
     if (sizeof(supreme)) stats += ({ SD_STATLEV_SUP + " " + COMPOSITE_WORDS(supreme) });
+    if (sizeof(extraordinary)) stats += ({ SD_STATLEV_EXT + " " + COMPOSITE_WORDS(extraordinary) });
+    if (sizeof(incredible)) stats += ({ SD_STATLEV_INC + " " + COMPOSITE_WORDS(incredible) });
+    if (sizeof(unbelievable)) stats += ({ SD_STATLEV_UNB + " " + COMPOSITE_WORDS(unbelievable) });
+    if (sizeof(miraculous)) stats += ({ SD_STATLEV_MIR + " " + COMPOSITE_WORDS(miraculous) });
+    if (sizeof(impossible)) stats += ({ SD_STATLEV_IMP + " " + COMPOSITE_WORDS(impossible) });
     if (sizeof(stats)) text += " with " + COMPOSITE_WORDS(stats);
     write(text + ".\n");
 

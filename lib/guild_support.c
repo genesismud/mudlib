@@ -622,9 +622,9 @@ gs_meditate(string str)
     while(++index < SS_NO_EXP_STATS)
     {
         stat = this_player()->query_stat(index);
-        if (stat >= SD_STATLEVEL_SUP)
+        if (stat >= SD_STATLEVEL_IMP)
         {
-            write("You have reached supreme " + SD_LONG_STAT_DESC[index] + ".\n");
+            write("You have reached impossible " + SD_LONG_STAT_DESC[index] + ".\n");
             continue;
         }
 
