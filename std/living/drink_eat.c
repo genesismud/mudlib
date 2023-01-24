@@ -160,3 +160,13 @@ eat_food(int amount, int ask)
 
     return 1;
 }
+
+/*
+ * Function name: 	herb_ingest_interval
+ * Description:   	How long to wait until another herb can be used.
+ * Returns:		    Number of seconds between herbs.
+ */
+public int herb_ingest_interval()
+{
+    return F_HERB_INTERVAL;
+}
