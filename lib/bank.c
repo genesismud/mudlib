@@ -19,6 +19,18 @@ int change(string str);
 int minimize(string str);
 int test(string str);
 
+
+int get_current_fee() {
+    int fee = bank_fee;
+    fee -= fee * this_player()->query_bank_fee_reduction_percent() / 100;
+    if (fee < 1)
+    {
+        fee = 1;
+    }
+
+    return 100 + fee;
+}
+
 /*
  * Function name: config_trade_data
  * Description:   Here we configure our own settings for the trade data
@@ -29,8 +41,8 @@ config_trade_data()
     /* You have to set these two to the same number in order to get the
      * right calculations.
      */
-    set_money_greed_buy(100 + bank_fee);
-    set_money_greed_change(100 + bank_fee);
+    set_money_greed_buy(get_current_fee);
+    set_money_greed_change(get_current_fee);
 
     /* A bank is rich. And if you can't give out the max with each type
      * of money you'll have to use another formula than I have below,
