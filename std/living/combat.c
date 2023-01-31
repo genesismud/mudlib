@@ -757,14 +757,12 @@ query_not_attack_me(object who, int aid)
 
 /*
  * Function name:   query_critical_hit_frequency
- * Description:     The attacker has a one in <frequency> chance of scoring
- *                  a critical hit from their attack.  This can override
- *                  the default value.
- * Returns:         int The frequency to be used by the critical hits
- *                  system.
+ * Description:     Called from the combat system to obtain the frequency of
+ *                  critical hits performed by this living.
+ * Returns:         int freq - one in freq will be a critical hit
  */
-
-public int query_critical_hit_frequency()
+public int
+query_critical_hit_frequency()
 {
     return F_CRIT_FREQUENCY;
 }
