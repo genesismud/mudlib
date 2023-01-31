@@ -79,6 +79,7 @@ private static mapping move_opposites;
 private static string  udp_manager;
 private static int     uptime_limit;
 private static string  mudlib_version;
+private static int     game_start_time;
 
 /*
  * Function name: create
@@ -1634,6 +1635,7 @@ final_boot()
     int theport;
 
     game_started = 1;
+    game_start_time = time();
     theport = debug("mud_port");
     if (theport)
     {
@@ -3528,7 +3530,6 @@ query_snoop(object snoopee)
     return 0;
 }
 
-static int game_start_time;
 /*
  * Function name: query_start_time
  * Description  : Return the time when the game started.
