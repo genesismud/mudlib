@@ -523,12 +523,12 @@ command_eat()
             return "You are unable to " + query_verb() + " anything.\n";
     }
 
-    int interval = this_player()->herb_ingest_interval();
+    int interval = this_player()->query_prop(LIVE_I_HERB_INTERVAL);
     if (interval <= 0)
     {
         interval = F_HERB_INTERVAL;
     }
-    
+
     if (this_player()->query_prop(LIVE_I_LAST_HERB) > time() - interval)
     {
         return capitalize(LANG_THESHORT(this_object())) +

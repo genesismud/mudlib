@@ -93,7 +93,7 @@ drink_alco(int strength, int ask)
 	return 1;
 
     curtox += strength;
-    
+
     set_intoxicated(curtox);
 
     return 1;
@@ -159,14 +159,4 @@ eat_food(int amount, int ask)
     set_stuffed(curam);
 
     return 1;
-}
-
-/*
- * Function name: 	herb_ingest_interval
- * Description:   	How long to wait until another herb can be used.
- * Returns:		    Number of seconds between herbs.
- */
-public int herb_ingest_interval()
-{
-    return F_HERB_INTERVAL;
 }
