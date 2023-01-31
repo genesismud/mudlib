@@ -19,6 +19,24 @@ int change(string str);
 int minimize(string str);
 int test(string str);
 
+
+/*
+ * Function name: get_current_fee
+ * Description  : Returns the bank fee for a player
+ */
+int
+get_current_fee()
+{
+    int fee = bank_fee;
+    fee -= fee * this_player()->query_bank_fee_reduction_percent() / 100;
+    if (fee < 1)
+    {
+        fee = 1;
+    }
+
+    return 100 + fee;
+}
+
 /*
  * Function name: config_trade_data
  * Description:   Here we configure our own settings for the trade data
@@ -29,8 +47,8 @@ config_trade_data()
     /* You have to set these two to the same number in order to get the
      * right calculations.
      */
-    set_money_greed_buy(100 + bank_fee);
-    set_money_greed_change(100 + bank_fee);
+    set_money_greed_buy(get_current_fee);
+    set_money_greed_change(get_current_fee);
 
     /* A bank is rich. And if you can't give out the max with each type
      * of money you'll have to use another formula than I have below,
@@ -234,7 +252,7 @@ change(string str)
     /* First find out how many coins player maximum can change to
      * Arguments: price = 0, changer = this_player(), str1 = what changer
      * wants to change, 1 = this is a test, 0 = a nil object (we),
-     * str2 = how changer wants the change 
+     * str2 = how changer wants the change
      *
      * These settings returns an array of what the changer wants to
      * change and how much that would be in the change the changer has
@@ -261,8 +279,8 @@ change(string str)
 	 	"than 0?\n");
 	}
 
-	if (hold_arr[i] <= 0) 
-	    return 0; 
+	if (hold_arr[i] <= 0)
+	    return 0;
 
 	if ((i = valid_type(str2)) >= 0)
 	{
@@ -307,7 +325,7 @@ change(string str)
 	notify_fail("You have to choose a valid type of money to change.\n");
 	return 0;
     }
-  
+
     /* Here is the actual change taking place */
     if (!(arr = pay(price, this_player(), str1, testflag, 0, str2)))
 	return 0;
@@ -393,7 +411,7 @@ minimize(string str)
 
 /*
  * Function name: test
- * Description:   To allow the player to see what would happen with a change 
+ * Description:   To allow the player to see what would happen with a change
  *                command about to be given
  * Arguments:     str - The string holding the change command
  */
@@ -402,11 +420,11 @@ test(string str)
 {
     int i;
     string str1;
-    
+
     notify_fail("Test what?\n");
     if (!str)
 	return 0;
-    
+
     write("This would be the result of that change command:\n");
 
     if (parse_command(str, ({}), "'change' / 'exchange' %s", str1))
