@@ -755,6 +755,17 @@ query_not_attack_me(object who, int aid)
     return 0;
 }
 
+/*
+ * Function name:   query_critical_hit_frequency
+ * Description:     Called from the combat system to obtain the frequency of
+ *                  critical hits performed by this living.
+ * Returns:         int freq - one in freq will be a critical hit
+ */
+public int
+query_critical_hit_frequency()
+{
+    return F_CRIT_FREQUENCY;
+}
 
 /*
  * Function name: run_away
