@@ -10,8 +10,9 @@ Communication | say, shout, whisper, rsay, reply, ask, commune, converse,
 Introductions | introduce, remember, forget, remembered, introduced
 Combat        | kill, assist, safe_rooms, stop
 Teams         | invite, join, leave, team, teams
-Thief         | backstab, hide, peek, sneak, steal, track
+Thief         | backstab, hide, peek, sneak, steal, track, acrobat
 Magic         | spells, cast, abort, imbuement
+Missile       | aim, fire, shoot, select
 Game          | who, help, date, save, quit, escape, password, email
               | options, last, restrict
 Guilds        | guilds, improve, learn, meditate
