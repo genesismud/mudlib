@@ -975,6 +975,27 @@ tell_watcher_miss(string str, object enemy, mixed arr)
 }
 
 /*
+ * Function name: cb_did_crit
+ * Description:   Tells us that we had a critical hit.  This produces critical
+ *                hit messages to all relevant parties. This takes place
+ *                after cb_did_hit, but before do_die.
+ * Arguments:     aid:   The attack id
+ *                hdesc: The hitlocation description
+ *                hid:   The hitlocation id
+ *                phurt: The %hurt made on the enemy
+ *                enemy: The enemy who got hit
+ *                dt:    The current damagetype
+ *                phit:  The %success that we made with our weapon
+ *                       If this is negative, it indicates fail
+ *                dam:   Damage we did in hit points
+ */
+public void
+cb_did_crit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
+           int phit, int dam)
+{
+}
+
+/*
  * Function name: cb_did_hit
  * Description:   Tells us that we hit something. Should produce combat
  *                messages to all relevant parties. This is supposed to be
@@ -1998,6 +2019,11 @@ heart_beat()
                 {
                     cb_did_hit(att_id[il], hitresult[1], hitresult[4], hitresult[0],
                            attack_ob, dt, hitsuc, hitresult[3]);
+                    if (crit)
+                    {
+                          cb_did_crit(att_id[il], hitresult[1], hitresult[4],
+                              hitresult[0], attack_ob, dt, hitsuc, hitresult[3]);
+                    }
                 }
                 else
                 {

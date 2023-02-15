@@ -1001,6 +1001,7 @@ combat_data()
     CEX; return combat_extern->cb_data();
 }
 
+
 /*
  * Function name:   tell_watcher
  * Description:     Send a string to people who wants to see fights
@@ -1269,6 +1270,39 @@ hook_stop_fighting_offer(object attacker)
      */
 }
 #endif
+
+
+/*
+ * Function name: cr_did_crit
+ * Description:   Tells us that we had a critical hit.  This produces critical
+ *                hit messages to all relevant parties. This takes place
+ *                after cb_did_hit, but before do_die.
+ * Arguments:     aid:   The attack id
+ *                hdesc: The hitlocation description
+ *                hid:   The hitlocation id
+ *                phurt: The %hurt made on the enemy
+ *                enemy: The enemy who got hit
+ *		  dt:	 The current damagetype
+ *		  phit:  The %success that we made with our weapon
+ *		  dam:	 The damage made in hitpoints
+ * Returns:      True if messages were provided for the critical hit. 
+ */
+public int
+cr_did_crit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
+	   int phit, int dam)
+{
+    if (dam <= 0)
+        return 1;
+    this_object()->catch_msg(QCTNAME(enemy) + " recoils in pain as your " +
+        "attack was more powerful than expected!\n");
+    enemy->catch_msg("You recoil in pain as " + QTPNAME(this_object()) + 
+        " attack was more powerful than expected!\n");
+    tell_watcher(QCTNAME(enemy) + " recoils in pain as " + 
+        QTPNAME(this_object()) + " attack was more powerful than expected!\n",
+        enemy);
+    return 1;
+}
+
 
 /*
  * Function Name: query_speed

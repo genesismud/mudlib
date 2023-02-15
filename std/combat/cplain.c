@@ -156,6 +156,30 @@ cb_attack_desc(int aid)
 }
 
 /*
+ * Function name: cb_did_crit
+ * Description:   Tells us that we had a critical hit.  This produces critical
+ *                hit messages to all relevant parties. This takes place
+ *                after cb_did_hit, but before do_die.
+ * Arguments:     aid:   The attack id
+ *                hdesc: The hitlocation description
+ *                hid:   The hitlocation id
+ *                phurt: The %hurt made on the enemy
+ *                enemy: The enemy who got hit
+ *		  dt:	 The current damagetype
+ *		  phit:  The %success that we made with our weapon
+ *		  dam:	 The damamge made in hitpoints
+ */
+public void
+cb_did_crit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
+	   int phit, int dam)
+{
+    if (qme()->cr_did_crit(aid, hdesc, hid, phurt, enemy, dt, phit, dam))
+        return;
+    else
+        ::cb_did_crit(aid, hdesc, hid, phurt, enemy, dt, phit, dam);
+}
+
+/*
  * Function name: cb_did_hit
  * Description:   Tells us that we hit something. Should produce combat
  *                messages to all relevant parties. This is supposed to be
@@ -179,4 +203,3 @@ cb_did_hit(int aid, string hdesc, int hid, int phurt, object enemy, int dt,
     else
 	::cb_did_hit(aid, hdesc, hid, phurt, enemy, dt, phit, dam);
 }
-
