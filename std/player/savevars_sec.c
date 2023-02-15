@@ -1484,6 +1484,18 @@ query_remembered(mixed name)
     return ([ ]) + m_remember_name;
 }
 
+
+/*
+ * Function name:   max_remembered
+ * Description  :   Returns the number of names a player can remember.
+ * Returns      :   The number of names.
+ */
+public int
+max_remembered()
+{
+    return F_MAX_REMEMBERED(query_stat(SS_INT), query_stat(SS_WIS));
+}
+
 /*
  * Function name:   add_remembered
  * Description:     Adds a living to those whom we want to remember.
@@ -1509,7 +1521,7 @@ add_remembered(string str)
     if (!mappingp(m_remember_name))
         m_remember_name = ([ ]);
 
-    max = F_MAX_REMEMBERED(query_stat(SS_INT), query_stat(SS_WIS));
+    max = max_remembered();
     if (m_sizeof(m_remember_name) >= max)
 	return -1;
 

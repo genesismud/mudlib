@@ -1232,8 +1232,7 @@ remembered(string str)
       (size == 1 ? "person" : "people") + ":\n");
     write(HANGING_INDENT("  " + implode(map(names, capitalize), ", "), 2, 0));
 
-    size = max((F_MAX_REMEMBERED(this_player()->query_stat(SS_INT),
-        this_player()->query_stat(SS_WIS)) - size), 0);
+    size = max(this_player()->max_remembered() - size, 0);
     write("Your brain can handle " + LANG_WNUM(size) +
         " more name" + (size == 1 ? ".\n" : "s.\n") );
     return 1;
