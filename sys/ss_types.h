@@ -114,8 +114,8 @@
 #define SKILL_DECAY_INTERVAL    10800
 
 /* These are used in guild_support.c */
-#define GS_PRIMARY_FOCUS        100
-#define GS_SECONDARY_FOCUS       60
+#define GS_PRIMARY_FOCUS        150
+#define GS_SECONDARY_FOCUS       90
 #define GS_DEFAULT_FOCUS         30
 
 /* The highest skill number available for mudlib skills */
