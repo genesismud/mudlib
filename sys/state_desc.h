@@ -245,12 +245,12 @@
 #define SD_STUFF    	({ "eat quite a lot more", "eat a lot more",	  \
 		     	   "eat some more", "eat a little more",	  \
 		     	   "barely eat more" })
-    
+
 #define SD_INTOX_SOBER  "sober"
 #define SD_INTOX	({ "tipsy", "intoxicated", "drunk", "tanked", 	  \
 			   "blitzed", "wasted", "toasted", "pissed",	  \
 			   "stoned", "obliviated" })
-    
+
 #define SD_HEADACHE	({ "mild", "uncomfortable", "bad", "serious",     \
 			   "intense", "pounding", "burning", "extreme" })
 

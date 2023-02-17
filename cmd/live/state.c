@@ -1537,6 +1537,14 @@ levels(string str)
             break_string(COMPOSITE_WORDS(ix) + ".", 77, 3) + "\n");
         return 0;
     }
+    if (str == "intox" && this_player()->query_prop(LIVE_S_EXTENDED_INTOX))
+    {
+        levs += ({ this_player()->query_prop(LIVE_S_EXTENDED_INTOX) });
+    }
+    if (str == "stuffed" && this_player()->query_prop(LIVE_S_EXTENDED_STUFF))
+    {
+        levs += ({ this_player()->query_prop(LIVE_S_EXTENDED_STUFF) });
+    }
 
     write("Level descriptions for: " + capitalize(str) + "\n" +
         break_string(COMPOSITE_WORDS(levs) + ".", 77, 3) + "\n");
@@ -2086,7 +2094,13 @@ vitals(string str, object target = this_player())
 
     case "intox":
     case "intoxication":
-        if (target->query_intoxicated())
+        if (target->query_intoxicated() > target->query_prop(LIVE_I_MAX_INTOX) &&
+            target->query_prop(LIVE_S_EXTENDED_INTOX))
+        {
+            write((self ? "You are" : (name + " is")) + " " +
+                target->query_prop(LIVE_S_EXTENDED_INTOX) + ".\n");
+        }
+        else if (target->query_intoxicated())
         {
             write((self ? "You are" : (name + " is")) + " " +
                 GET_NUM_DESC_SUB(target->query_intoxicated(),
@@ -2118,8 +2132,11 @@ vitals(string str, object target = this_player())
 
     case "stuffed":
     case "soaked":
-        write((self ? "You can" : (name + " can")) + " " +
-            GET_NUM_DESC(target->query_stuffed(), target->query_prop(LIVE_I_MAX_EAT), stuff_state) +
+        string stuffed_desc = 
+            (target->query_stuffed() > target->query_prop(LIVE_I_MAX_EAT) &&
+            target->query_prop(LIVE_S_EXTENDED_STUFF)) ? target->query_prop(LIVE_S_EXTENDED_STUFF)
+            : GET_NUM_DESC(target->query_stuffed(), target->query_prop(LIVE_I_MAX_EAT), stuff_state);
+        write((self ? "You can" : (name + " can")) + " " + stuffed_desc +
 	    " and " +
             GET_NUM_DESC(target->query_soaked(), target->query_prop(LIVE_I_MAX_DRINK), soak_state) + ".\n");
         return 1;

@@ -149,6 +149,8 @@
 #define LIVE_S_EXTRA_SHORT	"_live_s_extra_short"
 #define LIVE_S_LAST_MOVE	"_live_s_last_move"
 #define LIVE_S_SOULEXTRA        "_live_s_soulextra"
+#define LIVE_S_EXTENDED_INTOX   "_live_s_extended_intox"
+#define LIVE_S_EXTENDED_STUFF   "_live_s_extended_stuff"
 
 /* *********************************************************
  * Magic properties
