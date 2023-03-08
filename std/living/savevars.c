@@ -102,16 +102,6 @@ save_vars_reset(int t = time())
 }
 
 /*
- * Function name: skill_extra_map_reset
- * Description  : Reset the skill_extra_map at initialization.
- */
-private void
-skill_extra_map_reset()
-{
-    skill_extra_map = ([ ]);
-}
-
-/*
  * Function name: set_m_in
  * Description  : Set the normal entrance message of this living. This text
  *                should fit into the phrase "<name> <m-in> <from direction>."
@@ -147,7 +137,7 @@ query_m_in()
 public void
 set_m_out(string m)
 {
-    m_out = implode(explode(m, "   "), " ");
+    m_out = implode(explode(m, "  "), " ");
 }
 
 /*
@@ -1893,6 +1883,9 @@ set_skill(int skill, int val)
 public void
 set_skill_extra(int skill, int val)
 {
+    if (!mappingp(skill_extra_map))
+        skill_extra_map = ([ ]);
+
     if (skill_extra_map[skill] != val)
     {
         if (val)
@@ -1916,6 +1909,8 @@ set_skill_extra(int skill, int val)
 public int
 query_skill_extra(int skill)
 {
+    if (!mappingp(skill_extra_map))
+        return 0;
     return skill_extra_map[skill];
 }
 
@@ -1973,10 +1968,7 @@ query_base_skill(int skill)
 public int
 query_skill(int skill)
 {
-    if (!mappingp(skillmap))
-        return 0;
-
-    return skillmap[skill] + skill_extra_map[skill];
+    return (skillmap || ([]))[skill] + (skill_extra_map || ([ ]))[skill];
 }
 
 /*
@@ -1987,9 +1979,7 @@ query_skill(int skill)
 public int *
 query_all_skill_types()
 {
-    if (!mappingp(skillmap))
-        return 0;
-    return m_indexes(skillmap);
+    return m_indexes(skillmap || ([])) | m_indexes(skill_extra_map || ([]));
 }
 
 /*

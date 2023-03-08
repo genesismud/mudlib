@@ -1,4 +1,4 @@
-/* 
+/*
  * /std/living.c
  *
  * Contains all routines relating to living objects of any kind.
@@ -19,7 +19,7 @@
  *
  * The maintainer of this LPmud might become sad with you if you fail
  * to do any of the above. Ask other wizards if you are doubtful.
- *   
+ *
  * The reason of this, is that the above saves a lot of memory.
  */
 
@@ -83,8 +83,8 @@ create_container()
     }
 
     if (!geteuid(this_object()))   /* Get our own uid if not prepared */
-    { 
-	setuid(); 
+    {
+	setuid();
 	seteuid(getuid(this_object()));
     }
 
@@ -95,15 +95,14 @@ create_container()
     add_prop(CONT_I_REDUCE_VOLUME, 200);
 
     set_random_size_descs();
-    ss_reset(); 
+    ss_reset();
     save_vars_reset();
-    skill_extra_map_reset();
     notify_meet_reset();
     gender_reset();
     spells_reset();
     carry_reset();
     drink_eat_reset();
-    move_reset(); 
+    move_reset();
     wear_reset();
     wield_reset();
     combat_reset();
@@ -136,7 +135,7 @@ create_living()
 
 /*
  * Function name: reset_container
- * Description:   Reset the living object. 
+ * Description:   Reset the living object.
  */
 public nomask void
 reset_container() { reset_living(); }
@@ -213,7 +212,7 @@ can_see_in_room()
  *                object from_player - the originator of the message in case
  *                    the message is in array form.
  */
-public void 
+public void
 catch_vbfc(mixed str, object from_player = 0)
 {
     if (!query_interactive(this_object()) && !query_tell_active())
@@ -252,7 +251,7 @@ catch_vbfc(mixed str, object from_player = 0)
  * Function name: catch_msg
  * Description  : See catch_vbfc.
  */
-public void 
+public void
 catch_msg(mixed str, object from_player = 0)
 {
     catch_vbfc(str, from_player);
