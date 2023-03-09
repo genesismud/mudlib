@@ -2245,8 +2245,7 @@ wizard_change_rank(string wname, int rank)
     }
 
     /* Allow non-existant wizards to be demoted to mortal. */
-    if (!exist_player(wname) &&
-        (rank != WIZ_MORTAL))
+    if (!exist_player(wname) && (rank != WIZ_MORTAL))
     {
         write("Non-existant wizards may only be demoted to mortal.\n");
         return 1;
@@ -2263,14 +2262,13 @@ wizard_change_rank(string wname, int rank)
     }
     else if (m_wizards[cmder][FOB_WIZ_RANK] == WIZ_LORD)
     {
-        if (m_domains[dname][FOB_DOM_LORD] != cmder)
+        if (!m_domains[dname] || m_domains[dname][FOB_DOM_LORD] != cmder)
         {
             write("You may only handle people in your own domain(s).\n");
             return 1;
         }
 
-        if ((old_rank != WIZ_STEWARD) ||
-            (rank != WIZ_NORMAL))
+        if ((old_rank != WIZ_STEWARD) || (rank != WIZ_NORMAL))
         {
             write("You are only allowed to make a steward into a normal " +
               "wizard.\n");
