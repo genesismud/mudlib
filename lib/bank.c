@@ -382,7 +382,7 @@ minimize(string str)
 	bank_hook_already_minimized();
 	return 1;
     }
-    new_sum = total_sum - bank_fee * value / 100;
+    new_sum = total_sum - (get_current_fee() - 100) * value / 100;
     money_arr2 = split_values(new_sum);
     for (i = 0; i < money_num; i++)
     {
