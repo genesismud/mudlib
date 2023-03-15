@@ -651,17 +651,17 @@ gs_meditate(string str)
 
     /* See if both mental and physical stats are at the same levels ... */
     if ((abs(prefs[SS_STR] - prefs[SS_CON]) <= 1) &&
-        (abs(prefs[SS_WIS] - prefs[SS_INT]) <= 1))
+        (abs(prefs[SS_STR] - prefs[SS_DEX]) <= 1) &&
+        (abs(prefs[SS_WIS] - prefs[SS_INT]) <= 1) &&
+        (abs(prefs[SS_WIS] - prefs[SS_DIS]) <= 1))
     {
-        /* WIS is about 2 x STR */
-        if (abs(prefs[SS_WIS] - prefs[SS_STR] - prefs[SS_CON]) <= 2)
+        if (prefs[SS_WIS] - prefs[SS_CON] >= 2)
         {
             write("Your focus is towards the mental stats.\n");
             return 1;
         }
 
-        /* CON is about 2 x INT */
-        if (abs(prefs[SS_CON] - prefs[SS_INT] - prefs[SS_DIS]) <= 2)
+        if (prefs[SS_CON] - prefs[SS_WIS] >= 2)
         {
             write("Your focus is towards the physical stats.\n");
             return 1;
