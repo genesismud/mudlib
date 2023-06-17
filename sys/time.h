@@ -100,5 +100,19 @@
  */
 #define STAMP2TIME(s) ((int)TIME_FILE->stamp2time(s))
 
+/*
+ * Name   : MKTIME(s)
+ * Returns: int
+ *
+ * Converts time components into time() value.
+ *     y - year    (Example 2001)
+ *     m - month   (Example 7)
+ *     d - day     (Example 31)
+ *     h - hour    (Example 23)
+ *     m - minute  (Example 59)
+ *     s - seconds (Example 59)
+ */
+#define MKTIME(y, m, d, h, m, s) ((int)TIME_FILE->mktime(y, m, d, h, m, s))
+
 /* No definitions beyond this line. */
 #endif TIME_DEFINITIONS

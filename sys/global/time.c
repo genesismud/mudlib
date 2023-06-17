@@ -27,6 +27,9 @@ private mapping MonthToNumMap = ([ "Jan" : 1, "Feb" : 2, "Mar" : 3,
 private mapping MonthToDaysMap = ([ "Jan" : 0, "Feb" : 31, "Mar" : 59,
     "Apr" : 90, "May" : 120, "Jun" : 151, "Jul" : 181, "Aug" : 212,
     "Sep" : 243, "Oct" : 273, "Nov" : 304, "Dec" : 334 ]);
+private mapping MonthIntToDaysMap = ([ 1 : 0, 2 : 31, 3 : 59,
+    4 : 90, 5 : 120, 6 : 151, 7 : 181, 8 : 212,
+    9 : 243, 10 : 273, 11 : 304, 12 : 334 ]);
 
 /*
  * Function name: time_to_numbers
@@ -385,6 +388,34 @@ time2format(int timestamp, string format)
     }
    
     return result;
+}
+
+/*
+ * Function name: mktime
+ * Description  : Converts time components into time() value.
+ * Arguments    : int year
+ *              : int month
+ *              : int day
+ *              : int hr
+ *              : int min
+ *              : int sec
+ * Returns      : int - the time() value or 0.
+ */
+int
+mktime(int year, int month, int day, int hr, int min, int sec)
+{
+    int leap;
+
+    /* Calculate the number of leap days. */
+    year -= 1968;
+    leap = year / 4;
+    year -= 2;
+    if (year >= 2000) leap--;
+
+    /* Count the number of seconds since unix time start in CET. */
+    return (year * 31536000) +
+        ((MonthIntToDaysMap[month] + leap + day - 1) * 86400) +
+        ((hr - 1) * 3600) + (min * 60) + sec;
 }
 
 /*
