@@ -3043,18 +3043,28 @@ query_restrict(string wiz)
  * Description  : Update the list of teams.
  */
 void
-update_teams(void)
+update_teams()
 {
-    foreach(string team: m_indices(m_teams))
+    foreach (string team: m_indices(m_teams))
     {
         /* Remove non-wizards. */
-        foreach(string wname: m_teams[team][FOB_TEAM_MEMBERS])
+        foreach (string wname: m_teams[team][FOB_TEAM_MEMBERS])
         {
-            if (m_wizards[wname][FOB_WIZ_RANK] < WIZ_NORMAL)
+            if (!m_wizards[wname] || m_wizards[wname][FOB_WIZ_RANK] < WIZ_NORMAL)
             {
                 m_teams[team][FOB_TEAM_MEMBERS] -= ({ wname });
+
+                if (m_teams[team][FOB_TEAM_LEADER] == wname)
+                {
+                    m_teams[team][FOB_TEAM_LEADER] = 0;
+                }
+
+                log_file("TEAMS",
+                    sprintf("%s %-11s: Removed from %s team by purge.\n",
+                    ctime(time()), capitalize(wname), team));
             }
         }
+
         /* Remove empty teams. */
         if (!sizeof(m_teams[team][FOB_TEAM_MEMBERS]))
         {
@@ -3094,6 +3104,10 @@ add_team_member(string team, string member)
 
     save_master();
 
+    log_file("TEAMS",
+        sprintf("%s %-11s: Added to %s team by %s.\n",
+            ctime(time()), capitalize(member), team, capitalize(getwho())));
+
     return 1;
 }
 
@@ -3115,10 +3129,18 @@ remove_team_member(string team, string member)
     if (pointerp(m_teams[team]))
     {
         member = lower_case(member);
+
+        if (member_array(member, m_teams[team][FOB_TEAM_MEMBERS]) < 0)
+            return 0;
+
         m_teams[team][FOB_TEAM_MEMBERS] -= ({ member });
 
         if (m_teams[team][FOB_TEAM_LEADER] == member)
             m_teams[team][FOB_TEAM_LEADER] = 0;
+
+        log_file("TEAMS",
+            sprintf("%s %-11s: Removed from %s team by %s.\n",
+            ctime(time()), capitalize(member), team, capitalize(getwho())));
 
         update_teams();
     }
