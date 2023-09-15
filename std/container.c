@@ -7,7 +7,7 @@
 #pragma save_binary
 #pragma strict_types
 
-inherit "/std/object";  
+inherit "/std/object";
 inherit "/lib/keep";
 
 #include <macros.h>
@@ -20,7 +20,7 @@ inherit "/lib/keep";
 /*
  * All variables in this file must be declared static. This is to ensure
  * that the player object higher in the inherit chain can use save and
- * restore object without saving variables from this file. 
+ * restore object without saving variables from this file.
  */
 static  mixed     cont_linkroom;  /* The room connected to this container */
 
@@ -113,7 +113,7 @@ create_container()
 
 /*
  * Function name: reset_object
- * Description:   Reset the container 
+ * Description:   Reset the container
  */
 public nomask void
 reset_object()
@@ -140,7 +140,7 @@ public int
 volume_left()
 {
     if (query_prop(CONT_I_RIGID))
-        return query_prop(CONT_I_MAX_VOLUME) - query_prop(CONT_I_VOLUME) - 
+        return query_prop(CONT_I_MAX_VOLUME) - query_prop(CONT_I_VOLUME) -
             cont_cur_volume;
     else
         return query_prop(CONT_I_MAX_VOLUME) - query_prop(OBJ_I_VOLUME);
@@ -165,7 +165,7 @@ light()
 {
     int li = query_prop(CONT_I_LIGHT);
 
-    if (query_prop(CONT_I_TRANSP) || 
+    if (query_prop(CONT_I_TRANSP) ||
         query_prop(CONT_I_ATTACH) ||
         !query_prop(CONT_I_CLOSED))
     {
@@ -256,7 +256,7 @@ prevent_enter(object ob)
     return 0;
 }
 
-/* 
+/*
  * Function name: enter_inv
  * Description:   Called when objects enter this container or when an
  *                object has just changed its weight/volume/light status.
@@ -295,7 +295,7 @@ prevent_leave(object ob)
     return 0;
 }
 
-/* 
+/*
  * Function name: leave_inv
  * Description:   Called when objects leave this container or when an
  *                object is about to change its weight/volume/light status.
@@ -308,7 +308,7 @@ leave_inv(object ob, object to)
     int l, w, v;
 
     if (cont_linkroom)
-        return; 
+        return;
 
     l = ob->query_prop(OBJ_I_LIGHT);
     w = ob->query_prop(OBJ_I_WEIGHT);
@@ -369,7 +369,7 @@ leave_env(object from, object to)
     }
 }
 
-/* 
+/*
  * Function name: update_internal
  * Description:   Updates the light, weight and volume of things inside
  *                also updates a possible environment.
@@ -389,14 +389,14 @@ update_internal(int l, int w, int v)
     if (!(env = environment()))
         return;
 
-    /* 
+    /*
      * There are some containers that does not distribute internal light
      *
      * Transparent containers always do.
      * Containers that has its inventory attached on the outside do.
      * Closed containers dont if none of the above applies.
      */
-    if (!query_prop(CONT_I_TRANSP) && 
+    if (!query_prop(CONT_I_TRANSP) &&
         !query_prop(CONT_I_ATTACH) &&
         query_prop(CONT_I_CLOSED))
         l = 0;
@@ -509,7 +509,7 @@ notify_change_prop(string prop, mixed val, mixed old)
 
     if (ld < 0)
         return;
-        
+
     /* 0 -> turn off, 1 -> turn on */
     if (ld == 0)
         update_internal(n, 0, 0);
@@ -536,10 +536,10 @@ visible(object ob)
         !this_object()->query_prop(CONT_I_CLOSED)))
     {
         return ((env->query_prop(OBJ_I_LIGHT) >
-            -(this_player()->query_prop(LIVE_I_SEE_DARK))) && 
+            -(this_player()->query_prop(LIVE_I_SEE_DARK))) &&
             CAN_SEE(this_player(), ob));
     }
-        
+
     env = environment(ob);
     if (env == this_player() || (env == environment(this_player())))
         return CAN_SEE(this_player(), ob);
@@ -570,17 +570,17 @@ describe_contents(object for_obj, object *obarr)
     {
         if (sizeof(obarr) > 0)
         {
-            for_obj->catch_tell(capitalize(COMPOSITE_DEAD(obarr)) + 
+            for_obj->catch_tell(capitalize(COMPOSITE_DEAD(obarr)) +
 		(((sizeof(obarr) > 1) || (obarr[0]->num_heap() > 1)) ? " are" : " is") +
 		    " on the " + this_object()->short() + ".\n");
         }
         else
-            for_obj->catch_tell("There is nothing on the " + 
+            for_obj->catch_tell("There is nothing on the " +
 		this_object()->short() + ".\n");
     }
     else if (sizeof(obarr) > 0)
     {
-        for_obj->catch_tell("The " + this_object()->short() + " contains " + 
+        for_obj->catch_tell("The " + this_object()->short() + " contains " +
 	    COMPOSITE_DEAD(obarr) + ".\n");
     }
     else
@@ -611,12 +611,12 @@ show_visible_contents(object for_obj)
 
 
 /************************************************************
- * 
+ *
  * Sublocation routines. These routines manages sublocations within
  * and around containers. All containers start out with the default
  * sublocation 'inside'. Sublocation are given as second argument
  * to move()
- * 
+ *
  * Sublocations are given specific names when added to a container
  *
  * Each sublocation has a responsiple object. On this object the following
@@ -625,10 +625,10 @@ show_visible_contents(object for_obj)
  *              show_subloc(string subloc, object on_obj, object for_obj)
  *                      - Print a description of the sublocation 'subloc'
  *                        on object 'ob_obj' for object 'for_obj'.
- *              
+ *
  */
 
-/* 
+/*
  * Function name: add_subloc
  * Description:   Add a named sublocation to this container.
  * Arguments:     sloc: Name of sub location
@@ -661,7 +661,7 @@ add_subloc(string sloc, mixed resp, mixed ids)
     }
 }
 
-/* 
+/*
  * Function name: query_subloc_obj
  * Description:   Get the object corresponding to a subloc string
  */
@@ -671,18 +671,18 @@ query_subloc_obj(string sloc)
     return cont_sublocs[sloc];
 }
 
-/* 
+/*
  * Function name: query_sublocs
  * Description:   Get the current list of sublocations for this container
  */
 public string *
 query_sublocs() { return m_indexes(cont_sublocs); }
 
-/* 
+/*
  * Function name: remove_subloc
  * Description:   Remove a named sublocation of this container.
  * Arguments:     sloc: Name of sub location
- *                
+ *
  */
 public void
 remove_subloc(string sloc)
@@ -718,7 +718,7 @@ fix_ob_subloc_when_remove(object ob, string sloc)
     return 0;
 }
 
-/* 
+/*
  * Function name: subloc_id
  * Description:   Give the sublocation(s) if any for a specific id
  * Arguments:     id: name osublocation
@@ -729,7 +729,7 @@ subloc_id(string id)
     return cont_subloc_ids[id];
 }
 
-/* 
+/*
  * Function name: subloc_cont_access
  * Description:   Check if a sublocation can be accessed or not
  * Arguments:     sloc: Name of the sublocation
@@ -744,7 +744,7 @@ subloc_cont_access(string sloc, string acs, object for_obj)
 
     if (!objectp(for_obj))
         for_obj = previous_object();
-    
+
     if (!sloc)
         slob = this_object();
     else
@@ -756,7 +756,7 @@ subloc_cont_access(string sloc, string acs, object for_obj)
         return slob->subloc_access(sloc, this_object(), acs, for_obj);
 }
 
-/* 
+/*
  * Function name: subinventory
  * Description:   Give the subinventory for a specific sublocation
  * Arguments:     sloc: sublocation
@@ -767,22 +767,22 @@ subinventory(mixed sloc)
     return filter(all_inventory(), &subloc_filter(, sloc));
 }
 
-nomask int 
+nomask int
 subloc_filter(object ob, mixed sloc)
 {
     return (ob->query_subloc() == sloc);
 }
 
-/* 
+/*
  * Function name: show_sublocs
  * Description:   Give a description of each sublocation. This is a default
- *                routine merely calling show_cont_subloc in this object for 
+ *                routine merely calling show_cont_subloc in this object for
  *                each sublocation.
  * Arguments:     for_obj: The object for which description is given
  *                slocs:   Identifiers for sublocations
  */
 public varargs string
-show_sublocs(object for_obj, mixed *slocs) 
+show_sublocs(object for_obj, mixed *slocs)
 {
     string str = "";
     mixed data;
@@ -808,7 +808,7 @@ show_sublocs(object for_obj, mixed *slocs)
     return str;
 }
 
-/* 
+/*
  * Function name: show_cont_subloc
  * Description:   Give a description of one sublocation.
  * Arguments:     sloc : The name of the sublocation
@@ -816,7 +816,7 @@ show_sublocs(object for_obj, mixed *slocs)
  * Returns:       string or 0 for invalid or 1 for temporary bad
  */
 public varargs mixed
-show_cont_subloc(string sloc, object for_obj) 
+show_cont_subloc(string sloc, object for_obj)
 {
     int il;
     string data;
@@ -925,46 +925,49 @@ void
 reset_auto_objects()
 {
     int clone_count;
-    object leader;
-    
+
     if (!mappingp(container_objects))
         return;
 
     foreach (string file, mixed data : container_objects)
     {
-        /* This code is relying heavily on the copy-by-reference of arrays */
         int count = data[0];
         function condition = data[1];
-        function init_call = data[2];
-        object *clones = data[3];
-        
+        function pre_init = data[2];
+        function post_init = data[3];
+        object *clones = data[4];
+
         clones = filter(clones, objectp);
-        
+
         if (functionp(condition))
             clones = filter(clones, condition);
-        
+
         while (sizeof(clones) < count)
         {
             object ob = clone_object(file);
             if (!objectp(ob))
                 return;
 
-            if (functionp(init_call))
-                init_call(ob);
+            if (functionp(pre_init))
+                pre_init(ob);
 
             if (living(ob))
-	    {
+            {
                 ob->move_living("xx", this_object(), 1, 1);
-		/* If there's another NPC already, team them up. */
-		if (sizeof(clones))
-		{
-		    leader = clones[0]->query_leader();
-		    (leader ? leader : clones[0])->team_join(ob);
-		}
-	    }
+
+                /* If there's another NPC already, team them up. */
+                if (sizeof(clones))
+    	        {
+                   object leader = clones[0]->query_leader();
+                  (leader ? leader : clones[0])->team_join(ob);
+                }
+            }
             else
                 ob->move(this_object(), 1);
-            
+
+            if (functionp(post_init))
+                post_init(ob);
+
             clones += ({ ob });
 
             clone_count++;
@@ -975,8 +978,8 @@ reset_auto_objects()
                 return;
             }
         }
-        
-        data[3] = clones;
+
+        data[4] = clones;
     }
 }
 
@@ -984,28 +987,30 @@ reset_auto_objects()
  * Function Name: add_auto_object
  * Description  : Add an object to the list of objects that should
  *                be automatically reset.
- * 
+ *
  *                NOTE: In most cases you don't want this function, you wan't
  *                      the interfaces add_npc or add_object
- *                      
+ *
  * Arguments    : string file - The file to clone
  *                int count   - How many should be cloned.
  *                function condition - Whas is the condition for the cloning
  *                                     to take place.
- *                function init - Can be a set to a function to be called in
- *                                the newly cloned object.
+ *                function pre_init  - Optional init call executed before
+ *                                     move into the room.
+ *                function post_init - Optional init call executed after
+ *                                     move into the room.
  */
 varargs void
 add_auto_object(string file, int count = 1, function condition = 0,
-    function init_call = 0)
+    function pre_init = 0, function post_init = 0)
 {
     if (!stringp(file))
         return 0;
 
     if (!mappingp(container_objects))
         container_objects = ([ ]);
-    
-    container_objects[file] = ({ count, condition, init_call, ({ }) });
+
+    container_objects[file] = ({ count, condition, pre_init, post_init, ({ }) });
 
     /* Reset has to be started for the cloning to be done */
     if (!query_reset_active())
@@ -1020,15 +1025,16 @@ add_auto_object(string file, int count = 1, function condition = 0,
  *                it has been removed from the container.
  * Arguments    : string file - the file to clone
  *                int count   - how many of this item.
- *                function init - (optional) If you want a function to be
- *                                called in the object add it here.
- *                                For example &->add_name("extra name")
- *                                to have add_name called.
+ *                function pre - (optional) A function which is called before
+ *                               the object is moved into the room.
+ *                               Example &->add_name("extra name")
+ *                function post - (optional) A function called after the object
+ *                               has been moved into the room.
  */
 varargs void
-add_object(string file, int count = 1, function init_call = 0)
+add_object(string file, int count = 1, function pre = 0, function post = 0)
 {
     add_auto_object(file, count,
-        &operator(==)(, this_object()) @ &environment(), init_call);
+        &operator(==)(, this_object()) @ &environment(), pre, post);
 }
 

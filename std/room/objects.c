@@ -12,14 +12,17 @@
  *                when it has been killed.
  * Arguments    : string file - the file to clone
  *                int count   - how many of this item.
- *                function init - (optional) If you want a function to be
- *                                called in the npc add it here. example
- *                                &->arm_me() to have arm_me called.
+ *                function pre  - Optional function which is called before the
+ *                                npc is moved into the room.
+ *                                Example: &->arm_me()
+ *                function post - Optional function which is called after
+ *                                the npc has been moved into the room.
+ *                                Example: &->command("say Hello!")
  */
 varargs void
-add_npc(string file, int count = 1, function init_call = 0)
+add_npc(string file, int count = 1, function pre = 0, function post = 0)
 {
-    add_auto_object(file, count, &objectp(), init_call);
+    add_auto_object(file, count, &objectp(), pre, post);
 }
 
 /*
