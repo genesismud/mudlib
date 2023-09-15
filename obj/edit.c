@@ -203,7 +203,7 @@ display(int num, int use_more = 0)
  *                the report function in the calling object.
  * Arguments    : string str - the text entered.
  */
-static void 
+static void
 finished(string str)
 {
     if (functionp(finished_fun))
@@ -345,7 +345,7 @@ delete(string arg)
         write("No lines specified for deletion.\n");
         return;
     }
- 
+
     arg   = implode(explode(arg, " "), "");
     parts = explode(arg, ",");
 
@@ -575,17 +575,16 @@ static void
 autowrap(string str)
 {
     str = (strlen(str) ? lower_case(str) : "y");
+
+    if (strlen(str) > 1 && str[0] == '~')
+        str = str[1..];
+
     switch(str[0])
     {
-    case '~':
     case 'q':
-        if ((str == "~q") || (str == "q"))
-        {
-            finished("");
-            remove_object();
-            return;
-        }
-
+        finished("");
+        remove_object();
+        return;
     case 'n':
         write("The text will not be auto-wrapped.\n");
         break;
