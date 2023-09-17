@@ -12,6 +12,11 @@
 #ifndef HOOKS_DEFINED
 #define HOOKS_DEFINED
 
+
+#define HOOK_COOLDOWN_REFRESH       ("_cooldown_refresh")
+#define HOOK_COOLDOWN_EXPIRED       ("_cooldown_expired")
+#define HOOK_COOLDOWN_START         ("_cooldown_start")
+
 /*
  * Triggered when a living kills something
  * From: do_die
@@ -32,6 +37,12 @@
  * Arguments: (object *) - those hunting
  */
 #define HOOK_LIVING_HUNTED      "_hook_living_hunted"
+
+/*
+ * Triggered when a living has moved into a new room or subloc.
+ * From: move_living
+ */
+#define HOOK_LIVING_MOVED      "_hook_living_moved"
 
 /*
  * Triggered by heart_beat when in combat.

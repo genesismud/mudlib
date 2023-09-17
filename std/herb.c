@@ -10,6 +10,7 @@
 inherit "/std/heap";
 inherit "/lib/herb_support";
 
+#include <cooldowns.h>
 #include <cmdparse.h>
 #include <composite.h>
 #include <files.h>
@@ -529,7 +530,8 @@ command_eat()
         interval = F_HERB_INTERVAL;
     }
 
-    if (this_player()->query_prop(LIVE_I_LAST_HERB) > time() - interval)
+    if (this_player()->query_cooldown(HERB_COOLDOWN) ||
+        this_player()->query_prop(LIVE_I_LAST_HERB) > time() - interval)
     {
         return capitalize(LANG_THESHORT(this_object())) +
             " is too much for you.\n";
@@ -544,7 +546,9 @@ command_eat()
     }
 
     force_heap_split();
+
     this_player()->add_prop(LIVE_I_LAST_HERB, time());
+    this_player()->trigger_cooldown(HERB_COOLDOWN, itof(interval));
     return 1;
 }
 

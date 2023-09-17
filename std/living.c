@@ -40,6 +40,7 @@ inherit "/lib/hooks";
 
 #include "/std/living/living.h"
 #include "/std/living/savevars.c"
+#include "/std/living/cooldown.c"
 #include "/std/living/combat.c"
 #include "/std/living/gender.c"
 #include "/std/living/stats.c"

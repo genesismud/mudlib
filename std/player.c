@@ -20,6 +20,8 @@ inherit "/std/living";
 #include "/std/player/pcombat.c"
 #include "/std/player/more.c"
 
+#include <cooldowns.h>
+#include <hooks.h>
 #include <const.h>
 #include <files.h>
 #include <formulas.h>
@@ -1161,6 +1163,20 @@ linkdead_save_vars_reset()
 }
 
 /*
+ * Function name: cooldown_expired_hook
+ * Description  : Used to display messages to the player when a cooldowns
+ *                expire.
+ */
+static void
+cooldown_expired_hook(string cooldown)
+{
+    if (cooldown != HERB_COOLDOWN)
+        return;
+
+    this_object()->catch_tell("You feel ready to consume another herb.\n");
+}
+
+/*
  * Function name: create_living
  * Description  : Called to create the player. It initializes some variables.
  */
@@ -1172,6 +1188,7 @@ create_living()
     m_bits = ([ ]);
 
     player_save_vars_reset();
+    add_hook(HOOK_COOLDOWN_EXPIRED, cooldown_expired_hook);
 }
 
 /*
