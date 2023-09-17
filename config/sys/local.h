@@ -424,6 +424,13 @@
 #undef NO_SKILL_DECAY
 
 /*
+ * LANG_PRETITLES
+ *
+ * We use badname instead of the pretitle check.
+ */
+#undef LANG_PRETITLES
+
+/*
  * CYCLIC_LOG_SIZE
  *
  * This is a mapping containing the maximum file size for logs for a given

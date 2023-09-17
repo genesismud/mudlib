@@ -685,6 +685,7 @@ new_player_name(string str)
         return;
     }
 
+#ifdef LANG_PRETITLES
     if (sizeof(filter(LANG_PRETITLES, &wildmatch(, str))))
     {
         write_socket("\nThe use of chivalrous pretitles such as \"sir\" or " +
@@ -692,6 +693,7 @@ new_player_name(string str)
         input_to(new_player_name);
         write_socket("Give another name: ");
     }
+#endif
 
     vowels = sizeof(filter(explode(str, ""),
         &operator(!=)(-1) @ &member_array(, LANG_VOWELS)));
