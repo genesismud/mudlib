@@ -19,9 +19,6 @@ static mixed non_obvious_exits;
 static int   room_no_obvious;
 static string *default_dirs = DEFAULT_DIRECTIONS;
 static mapping no_exit_messages;
-static string *exit_order = ({ "north", "northeast", "east", "southeast",
-                             "south", "southwest", "west", "northwest", "up",
-                             "down" });
 
 /*
  * Prototype
@@ -34,7 +31,7 @@ int unq_no_move(string str);
  * Description  : Just fix so the verb is updated in a room when an exit
  *                is added or removed.
  * Arguments    : string cmd - the command verb.
- *		          int add    - add command if 1 else remove.
+ *                        int add    - add command if 1 else remove.
  */
 static void
 ugly_update_action(object player, string cmd, function fun)
@@ -70,12 +67,12 @@ init()
     size = sizeof(room_exits);
     while((index += 3) < size)
     {
-	add_action(unq_move, room_exits[index]);
+        add_action(unq_move, room_exits[index]);
     }
 
     foreach (string dir: default_dirs)
     {
-	add_action(unq_no_move, dir);
+        add_action(unq_no_move, dir);
     }
 }
 
@@ -207,15 +204,15 @@ remove_exit(string cmd)
             }
             if (i < sizeof(non_obvious_exits))
             {
-            	non_obvious_exits = exclude_array(non_obvious_exits, i, i);
+                non_obvious_exits = exclude_array(non_obvious_exits, i, i);
             }
 
             if (member_array(cmd, DEFAULT_DIRECTIONS) >= 0)
                 default_dirs += ({ cmd });
 
             map(FILTER_LIVE(all_inventory()), &ugly_update_action(, cmd, unq_no_move));
-    	    return 1;
-    	}
+            return 1;
+        }
     }
     return 0;
 }
@@ -236,7 +233,7 @@ query_exit()
 {
     if (!pointerp(room_exits))
     {
-	return ({ });
+        return ({ });
     }
 
     return ({ }) + room_exits;
@@ -258,21 +255,21 @@ query_tired_exits()
 
     if (!pointerp(tired_exits))
     {
-	tired = allocate(sizeof(room_exits) / 3);
+        tired = allocate(sizeof(room_exits) / 3);
     }
     else
     {
-	tired = tired_exits + allocate((sizeof(room_exits) / 3) -
-	    sizeof(tired_exits));
+        tired = tired_exits + allocate((sizeof(room_exits) / 3) -
+            sizeof(tired_exits));
     }
 
     size = sizeof(tired);
     while(--size >= 0)
     {
-	if (tired[size] < 1)
-	{
-	    tired[size] = 1;
-	}
+        if (tired[size] < 1)
+        {
+            tired[size] = 1;
+        }
     }
 
     return tired;
@@ -294,7 +291,7 @@ query_tired_exit(int index)
 
     if (index < sizeof(tired_exits))
     {
-	tired = check_call(tired_exits[index]);
+        tired = check_call(tired_exits[index]);
     }
 
     return ((tired > 0) ? tired : 1);
@@ -316,14 +313,14 @@ query_exit_rooms()
 
     if ((size = sizeof(room_exits)) < 3)
     {
-	return ({ });
+        return ({ });
     }
 
     exits = ({ });
     index = -3;
     while((index += 3) < size)
     {
-	exits += ({ room_exits[index] });
+        exits += ({ room_exits[index] });
     }
     return exits;
 }
@@ -343,14 +340,14 @@ query_exit_cmds()
 
     if ((size = sizeof(room_exits)) < 3)
     {
-	return ({ });
+        return ({ });
     }
 
     cmds = ({ });
     index = -2;
     while((index += 3) < size)
     {
-	cmds += ({ room_exits[index] });
+        cmds += ({ room_exits[index] });
     }
     return cmds;
 }
@@ -370,16 +367,29 @@ query_exit_functions()
 
     if ((size = sizeof(room_exits)) < 3)
     {
-	return ({ });
+        return ({ });
     }
 
     delays = ({ });
     index = -1;
     while((index += 3) < size)
     {
-	delays += ({ room_exits[index] });
+        delays += ({ room_exits[index] });
     }
     return delays;
+}
+
+/*
+ * Function name: query_exit_order
+ * Description  : Returns a static array of the exits in the prefered sort
+ *                order.
+ * Returns:       string *
+ */
+string *
+query_exit_order()
+{
+    return ({ "north", "northeast", "east", "southeast", "south", "southwest",
+        "west", "northwest", "up", "down" });
 }
 
 /*
@@ -392,35 +402,29 @@ query_exit_functions()
 public string *
 query_obvious_exits()
 {
-    int index;
-    int size;
-    int size_cmds;
-    string *obvious_exits;
+    int exit_count = sizeof(room_exits) / 3;
+    if (!exit_count)
+        return ({ });
+
+    string *exit_order = query_exit_order();
 
     /* No non-obvious exits marked, so all exits are obvious. */
     if (!pointerp(non_obvious_exits))
     {
-	obvious_exits = query_exit_cmds();
+        string *obvious_exits = query_exit_cmds();
         string *sorted_exits = obvious_exits & exit_order;
         return sorted_exits + (obvious_exits - sorted_exits);
     }
 
-    size_cmds = sizeof(room_exits) / 3;
-    if (!size_cmds)
+    string *obvious_exits = ({ });
+    int index = -1;
+    int size = sizeof(non_obvious_exits);
+    while(++index < exit_count)
     {
-	return ({ });
-    }
-
-    obvious_exits = ({ });
-    index = -1;
-    size = sizeof(non_obvious_exits);
-    while(++index < size_cmds)
-    {
-	if (index >= size ||
-	    !check_call(non_obvious_exits[index]))
-	{
-	    obvious_exits += ({ room_exits[(index * 3) + 1] });
-	}
+        if (index >= size || !check_call(non_obvious_exits[index]))
+        {
+            obvious_exits += ({ room_exits[(index * 3) + 1] });
+        }
     }
 
     string *sorted_exits = obvious_exits & exit_order;
@@ -437,19 +441,19 @@ query_non_obvious_exits()
 {
     if (!pointerp(non_obvious_exits))
     {
-	return allocate(sizeof(room_exits) / 3);
+        return allocate(sizeof(room_exits) / 3);
     }
 
     return non_obvious_exits + allocate((sizeof(room_exits) / 3) -
-					sizeof(non_obvious_exits));
+                                        sizeof(non_obvious_exits));
 }
 
 /*
  * Function name: set_no_exit_msg
- * Description	: set the custom no-exit msg for direction(s). So instead of
+ * Description  : set the custom no-exit msg for direction(s). So instead of
  *                "There is no obvious exit west.", you can tell player
  *                "You wander west among the trees for a bit, then return to the road."
- * Arguments	: mixed exits - either a string or an array of strings with the
+ * Arguments    : mixed exits - either a string or an array of strings with the
  *                    direction(s) for which this room does not have an exit.
  *                mixed msg - the message for these directions; supports VBFC.
  */
@@ -459,7 +463,7 @@ set_no_exit_msg(mixed exits, mixed msg)
     /* No extra exits allowed. */
     if (query_prop(ROOM_I_NO_EXTRA_EXIT))
     {
-	return;
+        return;
     }
 
     if (!mappingp(no_exit_messages))
@@ -474,7 +478,7 @@ set_no_exit_msg(mixed exits, mixed msg)
     }
     else if (stringp(exits) && strlen(exits))
     {
-	no_exit_messages[exits] = msg;
+        no_exit_messages[exits] = msg;
     }
 }
 
