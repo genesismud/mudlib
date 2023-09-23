@@ -18,6 +18,7 @@
 #pragma save_binary
 #pragma strict_types
 
+#include <cmdparse.h>
 #include <comb_mag.h>
 #include <composite.h>
 #include <filter_funs.h>
@@ -1514,6 +1515,7 @@ cb_adjust_combat_on_move(int leave)
     }
 }
 
+
 /*
  * Function name: cb_run_away
  * Description:   'me' runs away from the fight
@@ -1522,72 +1524,47 @@ cb_adjust_combat_on_move(int leave)
 public void
 cb_run_away(string dir)
 {
-    object          here;
-    int             size, pos,
-                    i,
-                    j;
-    mixed           *exits;
-    string          *std_exits, old_mout, old_min;
-
-    if (me->query_ghost() ||
-        me->query_prop(NPC_I_NO_RUN_AWAY))
-    {
+    if (me->query_ghost() || me->query_prop(NPC_I_NO_RUN_AWAY))
         return;
-    }
 
-    here = environment(me);
-    i = 0;
-    std_exits = ({ "north", "south", "west", "east", "up", "down" });
-    if (stringp(dir))
-        me->command(dir);
+    object here = environment(me);
+    string old_mout = me->query_m_out();
+    string old_min = me->query_m_in();
 
-    exits = here->query_exit();
-    size = sizeof(exits);
-    j = random(size / 3);
-
-    while (i < size && here == environment(me))
-    {
-        i += 3;
-        if ((pos = member_array(exits[j * 3 + 1], std_exits)) > -1)
-            std_exits[pos] = "";
-        old_mout = me->query_m_out();
+    try {
         me->set_m_out("panics and flees");
-        old_min = me->query_m_in();
-        me->set_m_in("rushes in, panicky");
-        catch(me->command(exits[j * 3 + 1]));
-        me->set_m_out(old_mout);
-        me->set_m_in(old_min);
-        j++;
-        if (j * 3 >= size)
-            j = 0;
+
+        string *room_exits = here->query_exit_cmds();
+        string *std_exits = DEFAULT_DIRECTIONS - room_exits;
+
+        if (stringp(dir))
+            me->command(dir);
+
+        int size;
+        while ((size = sizeof(room_exits)) && here == environment(me)) {
+            string current = room_exits[random(size)];
+            me->command(current);
+            room_exits -= ({ current });
+        }
+
+        int count = 5;
+        while (count-- && (size = sizeof(std_exits)) && here == environment(me)) {
+            string current = std_exits[random(size)];
+            me->command(current);
+            std_exits -= ({ current });
+        }
+    } catch (string err) {
+         tell_object(me, "Your legs failed to run away with you!\n" +
+            "Err " + err + "\n");
     }
 
-    size = sizeof(std_exits);
-    j = random(size);
-    i = 0;
-    while (i < size && here == environment(me))
-    {
-        i++;
-        if (strlen(std_exits[j]))
-        {
-            old_mout = me->query_m_out();
-            me->set_m_out("panics and flees");
-            old_min = me->query_m_in();
-            me->set_m_in("rushes in, panicky");
-            catch(me->command(std_exits[j]));
-            me->set_m_out(old_mout);
-            me->set_m_in(old_min);
-        }
-        j++;
-        if (j >= size)
-            j = 0;
-    }
+    me->set_m_out(old_mout);
+    me->set_m_in(old_min);
 
     if (here == environment(me))
     {
-        tell_room(environment(me),
-            QCTNAME(me) + " tried, but failed to run away.\n", me);
-
+        tell_room(environment(me), QCTNAME(me) +
+            " tried, but failed to run away.\n", me);
         tell_object(me, "Your legs tried to run away, but failed.\n");
     }
     else
