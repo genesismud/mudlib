@@ -33,14 +33,11 @@ static  mapping   cont_sublocs,    /* Map of sublocations and the object res-
                                       ponsible for the subloc, in container */
                   cont_subloc_ids; /* Map of sublocation ids to sublocation */
 
-static private string *NotifyProps;   /* Properties to notify about changes of */
-
 /*
  * container_objects = ([ (string)filename :
  *     ({ (int)count, (function)condition, (function)init_call, (object *)clones }) ])
  */
 static mapping container_objects;
-
 
 
 /*
@@ -77,10 +74,6 @@ create_object()
     cont_sublocs = ([]);
     cont_subloc_ids = ([]);
     create_container();
-
-    NotifyProps = ({ CONT_I_ATTACH, CONT_I_TRANSP, CONT_I_CLOSED,
-	CONT_I_LIGHT, OBJ_I_LIGHT, CONT_I_WEIGHT, OBJ_I_WEIGHT,
-	CONT_I_VOLUME, OBJ_I_VOLUME });
 
     reset_auto_objects();
 }
@@ -443,14 +436,8 @@ update_light(int recursive)
 public void
 notify_change_prop(string prop, mixed val, mixed old)
 {
-    object pobj;
-    int n, o, ld;
-
     if (old == val)
         return;
-    if (member_array(prop, NotifyProps) < 0)
-        return;
-    pobj = previous_object();
 
     switch(prop)
     {
@@ -470,13 +457,22 @@ notify_change_prop(string prop, mixed val, mixed old)
     case OBJ_I_VOLUME:
         update_internal(0, 0, val - old);
         return;
+
+    case CONT_I_ATTACH:
+    case CONT_I_TRANSP:
+    case CONT_I_CLOSED:
+        break;
+    default:
+        // We don't care about these props
+        return;
     }
 
-    n = pobj->query_internal_light();
+    object pobj = previous_object();
+    int n = pobj->query_internal_light();
     if (!n)
         return;
 
-    ld = -1;  /* No change */
+    int ld = -1;  /* No change */
 
     /*
      * The rest is for light distribution. These are the rules:
