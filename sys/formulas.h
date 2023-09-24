@@ -251,9 +251,10 @@
 #define F_DEATH_MESSAGE      "\nYou die.\n" + 				     \
 			     "You have a strange feeling.\n" +               \
                              "You can see your own dead body from above.\n\n"
-#define F_GHOST_MSGIN 	     "drifts around."
-#define F_GHOST_MSGOUT 	     "blows"
-#define F_NAME_OF_GHOST	     "some mist"
+
+#define F_GHOST_MSGIN           ("drifts in")
+#define F_GHOST_MSGOUT          ("blows")
+#define F_NAME_OF_GHOST         ("some mist")
 
 #define F_DIE_REDUCE_XP(xp)             ((xp) / 4)
 #define F_DIE_KEEP_XP(xp)		((xp) - (F_DIE_REDUCE_XP(xp)))
@@ -370,10 +371,10 @@
  * referenced by default from those files for backwards compatibilty
  * reasons.
  */
-#define F_ALIVE_MSGIN                   "arrives"
-#define F_ALIVE_MSGOUT 			"leaves"
-#define F_ALIVE_TELEIN 			"arrives in a puff of smoke."
-#define F_ALIVE_TELEOUT 		"disappears in a puff of smoke."
+#define F_ALIVE_MSGIN                   ("arrives")
+#define F_ALIVE_MSGOUT                  ("leaves")
+#define F_ALIVE_TELEIN                  ("arrives in a puff of smoke.")
+#define F_ALIVE_TELEOUT                 ("disappears in a puff of smoke.")
 
 /* No definitions beyond this line. */
 #endif F_FORMULAS
