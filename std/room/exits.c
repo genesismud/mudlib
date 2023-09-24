@@ -58,14 +58,11 @@ ugly_update_action(object player, string cmd, function fun)
 public void
 init()
 {
-    int index;
-    int size;
-
     ::init();
 
-    index = -2;
-    size = sizeof(room_exits);
-    while((index += 3) < size)
+    int index = -2;
+    int size = sizeof(room_exits);
+    while ((index += 3) < size)
     {
         add_action(unq_move, room_exits[index]);
     }
@@ -264,7 +261,7 @@ query_tired_exits()
     }
 
     size = sizeof(tired);
-    while(--size >= 0)
+    while (--size >= 0)
     {
         if (tired[size] < 1)
         {
@@ -298,6 +295,25 @@ query_tired_exit(int index)
 }
 
 /*
+ * Function name: exit_data
+ * Description  : Internal helper which constructs the return value for
+ *                a number of query_exit_ functions.
+ * Arguments    : int offset - Which value from room_exits to return
+ */
+ private mixed *
+ exit_data(int offset)
+ {
+    int size = pointerp(room_exits) ? sizeof(room_exits) / 3 : 0;
+    mixed arr = allocate(size);
+
+    for (int i = 0; i < size; i++) {
+        arr[i] = room_exits[(i * 3) + offset];
+    }
+
+    return arr;
+ }
+
+/*
  * Function name: query_exit_rooms
  * Description  : Returns an array of strings containing the full path names
  *                to all rooms that are connected to this one by add_exit()'s.
@@ -307,22 +323,7 @@ query_tired_exit(int index)
 mixed
 query_exit_rooms()
 {
-    int index;
-    int size;
-    mixed exits;
-
-    if ((size = sizeof(room_exits)) < 3)
-    {
-        return ({ });
-    }
-
-    exits = ({ });
-    index = -3;
-    while((index += 3) < size)
-    {
-        exits += ({ room_exits[index] });
-    }
-    return exits;
+   return exit_data(0);
 }
 
 /*
@@ -334,22 +335,7 @@ query_exit_rooms()
 string *
 query_exit_cmds()
 {
-    int index;
-    int size;
-    string *cmds;
-
-    if ((size = sizeof(room_exits)) < 3)
-    {
-        return ({ });
-    }
-
-    cmds = ({ });
-    index = -2;
-    while((index += 3) < size)
-    {
-        cmds += ({ room_exits[index] });
-    }
-    return cmds;
+    return exit_data(1);
 }
 
 /*
@@ -361,22 +347,7 @@ query_exit_cmds()
 mixed
 query_exit_functions()
 {
-    int index;
-    int size;
-    mixed delays;
-
-    if ((size = sizeof(room_exits)) < 3)
-    {
-        return ({ });
-    }
-
-    delays = ({ });
-    index = -1;
-    while((index += 3) < size)
-    {
-        delays += ({ room_exits[index] });
-    }
-    return delays;
+    return exit_data(2);
 }
 
 /*
@@ -419,7 +390,7 @@ query_obvious_exits()
     string *obvious_exits = ({ });
     int index = -1;
     int size = sizeof(non_obvious_exits);
-    while(++index < exit_count)
+    while (++index < exit_count)
     {
         if (index >= size || !check_call(non_obvious_exits[index]))
         {
@@ -440,9 +411,7 @@ public mixed
 query_non_obvious_exits()
 {
     if (!pointerp(non_obvious_exits))
-    {
         return allocate(sizeof(room_exits) / 3);
-    }
 
     return non_obvious_exits + allocate((sizeof(room_exits) / 3) -
                                         sizeof(non_obvious_exits));
@@ -530,7 +499,7 @@ query_door_cmds()
 {
     string *exits = ({ });
 
-    foreach(object door: query_doors())
+    foreach (object door: query_doors())
     {
         exits += door->query_pass_command();
     }
