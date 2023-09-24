@@ -2,7 +2,8 @@ NAME
         wear - put something on
 
 SYNOPSIS
-	wear <specification>
+        wear <specification>
+        wear all
 
 DESCRIPTION
         Put on armour items, amulets, rings, clothes, etc
@@ -11,6 +12,6 @@ OPTIONS
         specification - a string that specifies what you want to wear.
 	                It can take many different forms. The specified
 			item  must be in your inventory.
-	
+
 SEE ALSO
 	remove, wield, unwield
