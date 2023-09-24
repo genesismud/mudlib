@@ -1533,6 +1533,7 @@ cb_run_away(string dir)
 
     try {
         me->set_m_out("panics and flees");
+        me->set_m_in("rushes in, panicky");
 
         string *room_exits = here->query_exit_cmds();
         string *std_exits = DEFAULT_DIRECTIONS - room_exits;
@@ -1541,19 +1542,22 @@ cb_run_away(string dir)
             me->command(dir);
 
         int size;
-        while ((size = sizeof(room_exits)) && here == environment(me)) {
+        while ((size = sizeof(room_exits)) && here == environment(me))
+        {
             string current = room_exits[random(size)];
             me->command(current);
             room_exits -= ({ current });
         }
 
         int count = 5;
-        while (count-- && (size = sizeof(std_exits)) && here == environment(me)) {
+        while (count-- && (size = sizeof(std_exits)) && here == environment(me))
+        {
             string current = std_exits[random(size)];
             me->command(current);
             std_exits -= ({ current });
         }
-    } catch (string err) {
+    } catch (string err)
+    {
          tell_object(me, "Your legs failed to run away with you!\n" +
             "Err " + err + "\n");
     }
