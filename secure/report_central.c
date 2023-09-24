@@ -60,13 +60,14 @@ static void header(string str);
 #define REPORT_DONE     1
 #define REPORT_DELETED  2
 
+#define REPORT_NAME_ALL  "all"
 #define REPORT_NAME_BUG  "bug"
 #define REPORT_NAME_TYPO "typo"
 #define REPORT_NAME_IDEA "idea"
 #define REPORT_NAME_PRAISE "praise"
-#define REPORT_NAMES_SHORT ({ "U", "B", "T", "I", "P" })
-#define REPORT_NAMES_LONG  ({ "unknown", "bug", "typo", "idea", "praise" })
-#define REPORT_NAMES_MAP  ([ "bug" : REPORT_BUG, "typo" : REPORT_TYPO, "idea" : REPORT_IDEA ])
+#define REPORT_NAMES_SHORT ({ "-", "B", "T", "I", "P" })
+#define REPORT_NAMES_LONG  ({ "all", "bug", "typo", "idea", "praise" })
+#define REPORT_NAMES_MAP  ([ "bug" : REPORT_BUG, "typo" : REPORT_TYPO, "idea" : REPORT_IDEA, "praise": REPORT_PRAISE ])
 #define REPORT_STATUS_SHORT ([ 0 : "-", REPORT_DONE: "D", REPORT_DELETED: "X", (REPORT_DONE | REPORT_DELETED) : "X" ])
 #define REPORT_STATUS_LONG  ([ 0 : "-", REPORT_DONE: "Done", REPORT_DELETED: "Deleted" ])
 
@@ -209,7 +210,7 @@ restore_wizard()
         {
             gOwner = wname;
         }
-        gType = REPORT_NAME_BUG;
+        gType = REPORT_NAME_ALL;
         gCurrent = sizeof(m_reports[gOwner]);
         gPrevious = 0;
     }
@@ -262,23 +263,23 @@ query_next_report_time()
  * Function name: notify_subscribers
  * Description  : Sends notification messages to the wizards subscribing
  *                to a log when a new report is written.
- * Returns      : void 
+ * Returns      : void
  */
 static void
 notify_subscribers(string owner, int type)
 {
     object *wizards = FILTER_IS_WIZARD(users());
 
-    foreach (object wizard: wizards) 
+    foreach (object wizard: wizards)
     {
         if (this_player() == wizard)
             continue;
 
         string name = wizard->query_real_name();
-        if (m_report_wizards[name] && m_report_wizards[name][owner]) 
+        if (m_report_wizards[name] && m_report_wizards[name][owner])
         {
-            wizard->catch_tell("There is a new " + REPORT_NAMES_LONG[type] + 
-                " report in the " + capitalize(owner) + " log.\n"); 
+            wizard->catch_tell("There is a new " + REPORT_NAMES_LONG[type] +
+                " report in the " + capitalize(owner) + " log.\n");
         }
     }
 }
@@ -419,7 +420,7 @@ parse_range(string str)
     str = implode(explode(lower_case(str), " "), ",");
     /* Remove all empty spaces from the string. */
     parts = (explode(str, ",") - ({ "", 0 }) );
- 
+
     foreach(string part: parts)
     {
         /* The parts can either consist of a single number of a range. */
@@ -453,7 +454,7 @@ parse_range(string str)
             {
                 return 0;
             }
-            /* Add the element to the range; eliminate duplicates. */ 
+            /* Add the element to the range; eliminate duplicates. */
             range |= ({ index });
         }
     }
@@ -477,7 +478,7 @@ loop()
         gCurrent = sizeof(m_reports[gOwner]);
     }
 
-    write("Log: " + capitalize(gOwner) + " [1-" +
+    write("Log: " + capitalize(gOwner) + " [" + capitalize(gType) + "] [1-" +
         sizeof(m_reports[gOwner]) + "] cdDMeEfhlLqrnpsux.-+!? (current: " +
         gCurrent + ") -- ");
 
@@ -603,7 +604,7 @@ done(int *numbers)
         loop();
         return;
     }
-    
+
     if (!pointerp(numbers) || !sizeof(numbers))
     {
         write("Mark which report as done?\nSyntax: d [<number/range>][,<...>]\n");
@@ -832,7 +833,7 @@ forward(string str)
                 index++;
                 break;
             }
-        }        
+        }
         m_reports[newowner] = include_array(m_reports[newowner], ({ report }), index);
         m_report_owners[newowner] = max(m_report_owners[newowner], report[REPORT_TIME]);
     }
@@ -880,6 +881,7 @@ header(string str)
 
     if (REPORT_NAMES_MAP[str])
     {
+        gType = str;
         report = REPORT_NAMES_MAP[str];
         size = sizeof(m_reports[gOwner]);
         for (index = 0; index < size; index++)
@@ -926,7 +928,7 @@ header(string str)
     {
         report = m_reports[gOwner][index];
 
-        flag = ((report[REPORT_TIME] == m_report_wizards[wname][gOwner]) ? "R" : 
+        flag = ((report[REPORT_TIME] == m_report_wizards[wname][gOwner]) ? "R" :
             REPORT_STATUS_SHORT[report[REPORT_STATUS]]);
         write(sprintf("%2d: %-11s %1s %-46s %1s %11s\n", index+1,
             report[REPORT_AUTHOR], REPORT_NAMES_SHORT[report[REPORT_TYPE]],
@@ -935,6 +937,37 @@ header(string str)
     }
 
     loop();
+}
+
+/*
+ * Function name: iterate
+ * Description  : Returns gCurrent modified by count while taking
+ *                gType filters into account
+ */
+int
+iterate(int count)
+{
+    int type = REPORT_NAMES_MAP[gType];
+    if (!type)
+        return gCurrent + count;
+
+    int current = gCurrent - 1;
+    int last = current;
+    int remaining = abs(count);
+
+    while (remaining != 0) {
+        current += (count > 0 ? 1 : -1);
+
+        if (current < 0 || current >= sizeof(m_reports[gOwner]))
+            return last;
+
+        if (m_reports[gOwner][current][REPORT_TYPE] == type) {
+            last = current;
+            remaining--;
+        }
+    }
+
+    return current + 1;
 }
 
 /*
@@ -1035,7 +1068,7 @@ merge(int *numbers)
         loop();
         return;
     }
-    
+
     int size = (pointerp(numbers) ? sizeof(numbers) : 0);
 
     if (size <= 1)
@@ -1044,7 +1077,7 @@ merge(int *numbers)
         loop();
         return;
     }
-    
+
     if (size < 2)
     {
 	write("Merging requires at least two reports be specified.\n");
@@ -1142,7 +1175,7 @@ open(string str)
         loop();
         return;
     }
-    
+
     gCurrent = size;
     header("");
     /* loop() called from header(). */;
@@ -1206,11 +1239,11 @@ read(int more)
     }
 
     report = m_reports[gOwner][gCurrent - 1];
-    text = "Owner : " + capitalize(gOwner) + "\n";
-    if (report[REPORT_STATUS])
-    {
-        text += "Status: " + REPORT_STATUS_LONG[report[REPORT_STATUS]] + "\n";
-    }
+    text = sprintf("%-3d %s [%s] %s\n",
+        gCurrent,
+        capitalize(gOwner), capitalize(REPORT_NAMES_LONG[report[REPORT_TYPE]]),
+        (report[REPORT_STATUS] ?
+            "Status: " + REPORT_STATUS_LONG[report[REPORT_STATUS]] : ""));
     text += read_file(REPORT_FILENAME(report[REPORT_TIME]));
 
     /* Update last read report for this owner. */
@@ -1364,9 +1397,9 @@ get_cmd(string str)
     /* Re-initialize the variables for this wizard. */
     restore_wizard();
 
-    /* Default command: show the next headers. */
+    /* Default command: next report. */
     if (!strlen(str))
-        str = "+";
+        str = "n";
 
     /* Typing an owner name, or bug/typo/idea opens at log. */
     if ((str == ROOT_UID) ||
@@ -1428,7 +1461,7 @@ get_cmd(string str)
     /* Read the next report [with more]. */
     case "n":
     case "mn":
-        gCurrent++;
+        gCurrent = iterate(1);
         read(more);
         return;
 
@@ -1449,7 +1482,7 @@ get_cmd(string str)
     /* Read the previous report [with more]. */
     case "p":
     case "mp":
-        gCurrent--;
+        gCurrent = iterate(-1);
         read(more);
         return;
 
@@ -1537,7 +1570,7 @@ get_cmd(string str)
 
     default:
         write("Unrecognized command. Do \"?\" for help, \"q\" to quit.\n");
-        loop();    
+        loop();
     }
 }
 
