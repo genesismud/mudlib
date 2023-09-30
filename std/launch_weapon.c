@@ -649,7 +649,7 @@ parse_select(string args)
         {
             tell_object(Archer, "The " + quiver->short() + " is " +
                 "not a projectile container.\n");
-            return 1;   
+            return 1;
         }
 
         projectiles = all_inventory(quiver);
@@ -915,7 +915,7 @@ ready_to_fire()
     {
         Ready = 1;
         Loaded = 1;
-        tell_object(query_wielded(), "You are ready to " + 
+        tell_object(query_wielded(), "You are ready to " +
             Fire_command + ".\n");
     }
 
@@ -1904,8 +1904,8 @@ tell_archer_no_missiles()
 public void
 tell_archer_fatigue_unload(object archer, object target, object projectile)
 {
-    tell_object(archer, "You are too tired to keep the " + short() +
-		" loaded, you unload your " + short() + ".\n");
+    tell_object(archer, "You are too tired to keep the " + short(archer) +
+		" loaded, you unload your " + short(archer) + ".\n");
 }
 
 /*
@@ -1921,7 +1921,7 @@ tell_archer_fatigue_unload(object archer, object target, object projectile)
 public void
 tell_archer_unload(object archer, object target, object projectile)
 {
-    tell_object(archer, "You unload your " + short() + ".\n");
+    tell_object(archer, "You unload your " + short(archer) + ".\n");
 }
 
 /*
@@ -1939,7 +1939,7 @@ public void
 tell_others_unload(object archer, object target, object projectile)
 {
     tell_room(environment(archer), QCTNAME(archer) + " unloads " +
-	      archer->query_possessive() + " " + short() + ".\n",
+	      archer->query_possessive() + " " + QSHORT(this_object()) + ".\n",
 	      ({ archer }), archer);
 }
 
@@ -1960,14 +1960,14 @@ tell_archer_load(object archer, object target,
 {
     if (environment(archer) == environment(target))
     {
-        archer->catch_msg("You load your " + short() + " with " +
+        archer->catch_msg("You load your " + short(archer) + " with " +
  			  LANG_ADDART(Projectile->singular_short()) +
 			  " and take careful aim at " +
 			  target->query_the_name(archer) + ".\n");
     }
     else
     {
-        archer->catch_msg("You load your " + short() + " with " +
+        archer->catch_msg("You load your " + short(archer) + " with " +
 			  LANG_ADDART(Projectile->singular_short()) +
 			  " and take careful aim at " +
 			  target->query_the_name(archer) + " " +
@@ -1994,20 +1994,20 @@ tell_others_load(object archer,  object target,
     {
         // X loads his weapon and aims at Y.
         tell_bystanders_miss(QCTNAME(archer) + " loads " +
-			     archer->query_possessive() + " " + short() +
+			     archer->query_possessive() + " " + QSHORT(this_object()) +
 			     " and aims at " + QTNAME(target) + ".\n",
 			     QCTNAME(archer) + " loads " +
-			     archer->query_possessive() + " " + short() +
+			     archer->query_possessive() + " " + QSHORT(this_object()) +
 			     " and aims at something.\n",
 			     0, 0, archer, target, environment(archer));
     }
     else
     {
         tell_bystanders_miss(QCTNAME(archer) + " loads " +
-			     archer->query_possessive() + " " + short() +
+			     archer->query_possessive() + " " + QSHORT(this_object()) +
 			     " and aims at something " + adj_desc + ".\n",
 			     QCTNAME(archer) + " loads " +
-			     archer->query_possessive() + " " + short() +
+			     archer->query_possessive() + " " + QSHORT(this_object()) +
 			     " and aims at something " + adj_desc + ".\n",
 			     0, 0, archer, target, environment(archer));
     }
@@ -2029,7 +2029,7 @@ tell_target_load(object archer,  object target, object projectile)
     if (environment(target) == environment(archer))
     {
         tell_object(target, archer->query_The_name(target) + " loads " +
-		    archer->query_possessive() + " " + short() + " with " +
+		    archer->query_possessive() + " " + short(target) + " with " +
 		    LANG_ADDART(Projectile->singular_short()) +
 		    "and takes careful aim at you.\n");
     }
@@ -2046,8 +2046,8 @@ tell_target_load(object archer,  object target, object projectile)
 public void
 tell_all_projectile_break(object projectile, object target)
 {
-    tell_room(environment(target), "The " +
-	      Projectile->singular_short() + " breaks!\n");
+    tell_room(environment(target), "The " + Projectile->singular_short() +
+        " breaks!\n");
 }
 
 /*
@@ -2064,9 +2064,8 @@ tell_all_projectile_break(object projectile, object target)
  *                bystanders: Array of the bystanders to send the message.
  */
 nomask void
-tell_bystanders(string see_both, string see_archer,
-		string see_target, string see_noone,
-		object archer, object target, object *bystanders)
+tell_bystanders(string see_both, string see_archer, string see_target,
+    string see_noone, object archer, object target, object *bystanders)
 {
     object *current_bystanders;
 
