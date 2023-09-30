@@ -39,7 +39,7 @@
  * Both dofun and afun are needed because afun most be called first for all
  * objects to get <item> descs like "the second apple" to work right.
  *
- * Returns: 
+ * Returns:
  *            An array holding all objects for which 'dofun' returned 1.
  */
 #define CMDPARSE_ONE_ITEM(c, dofun, afun) \
@@ -53,7 +53,7 @@
  * It finds those of <item1> is located inside <item2>
  *
  * Arguments:
- *            c     Command string after verb. 
+ *            c     Command string after verb.
  *                  <itemX> can be for example:
  *                      "the red two apples", "all blue ones" etc.
  *
@@ -70,7 +70,7 @@
  * Both dofun and afun are needed because afun most be called first for all
  * objects to get <item> descs like "the second apple" to work right.
  *
- * Returns: 
+ * Returns:
  *            An array holding all objects for which 'dofun' returned 1.
  */
 #define CMDPARSE_IN_ITEM(c, pfun, dofun, afun) \
@@ -82,7 +82,7 @@
  * Parse and execute a command of the type <verb> <item1> "prep" <item2>
  *
  * Arguments:
- *            c     Command string after verb. 
+ *            c     Command string after verb.
  *                  <itemX> can be for example:
  *                      "the red two apples", "all blue ones" etc.
  *
@@ -101,7 +101,7 @@
  *                  those of the objects that are in the players inventory
  *                  or the players environment are included.
  *
- * Returns: 
+ * Returns:
  *            An array holding all objects for which 'dofun' returned 1.
  */
 #define CMDPARSE_WITH_ITEM(c, chfun, dofun, afun1, afun2) \
@@ -158,8 +158,8 @@
  *
  *            acsobj  object use to call acsfunc
  *
- * Returns: 
- *            An array holding all objects satisfying arr[0] and acsfunc. 
+ * Returns:
+ *            An array holding all objects satisfying arr[0] and acsfunc.
  */
 #define NORMAL_ACCESS(arr, acsfunc, acsobj) \
     ((object *)CMDPARSE_STD->normal_access(arr, acsfunc, acsobj))
@@ -178,8 +178,8 @@
  *
  *            acsobj  object use to call acsfunc
  *
- * Returns: 
- *            An array holding all objects satisfying arr[0] and acsfunc. 
+ * Returns:
+ *            An array holding all objects satisfying arr[0] and acsfunc.
  */
 #define VISIBLE_ACCESS(arr, acsfunc, acsobj) \
     ((object *)CMDPARSE_STD->visible_access(arr, acsfunc, acsobj, 0))
@@ -218,15 +218,15 @@
  * Returns an array with four elements:
  *
  *
- * ret[0]		 The prepositions 
- * ret[1]		 The items, a normal parse_command %i return value 
- * ret[2]		 True if last was not a normal object 
- * ret[3]		 True if no normal objects 
+ * ret[0]		 The prepositions
+ * ret[1]		 The items, a normal parse_command %i return value
+ * ret[2]		 True if last was not a normal object
+ * ret[3]		 True if no normal objects
  *
  */
 #define CMDPARSE_ITEMLIST(str) CMDPARSE_STD->parse_itemlist(str)
 
-/* 
+/*
  * PARSE_THIS
  *
  * This define gives access to the function parse_this in the basic soul
@@ -339,8 +339,8 @@
        "examine", "forget", "h", "health", "help", "idea", "last", \
        "levels", "l", "look", "mwho", "nick", "options", "praise", "quit", \
        "remember", "remembered", "reply", "save", "skills", "stats", \
-       "sysbug", "sysidea", "syspraise", "systypo", "team", "typo", "v", \
-       "vitals", "who" })
+       "sysbug", "sysidea", "syspraise", "systypo", "typo", "unalias", \
+       "v", "vitals", "who" })
 
 /*
  * FIND_NEIGHBOURS(search, depth)
