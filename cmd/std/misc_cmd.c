@@ -6,7 +6,7 @@
 #pragma save_binary
 #pragma strict_types
 
-inherit "/cmd/std/command_driver.c";
+inherit "/cmd/std/command_driver";
 
 /*
  * Function name: replace_soul
@@ -17,14 +17,14 @@ public string *
 replace_soul()
 {
     return
-	({ 
-	    "/cmd/live/info",
-	    "/cmd/live/items",
-	    "/cmd/live/magic",
-	    "/cmd/live/social",
-	    "/cmd/live/speech",
-	    "/cmd/live/state",
-            "/cmd/live/thief",
-	    "/cmd/live/things",
+	({
+        "/cmd/live/info",
+        "/cmd/live/items",
+        "/cmd/live/magic",
+        "/cmd/live/social",
+        "/cmd/live/speech",
+        "/cmd/live/state",
+        "/cmd/live/thief",
+        "/cmd/live/things",
 	});
 }

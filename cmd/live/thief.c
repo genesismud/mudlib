@@ -5,7 +5,7 @@
  *
  * The soul contains the following commands:
  *
- * - backstab
+ * - peek
  * - steal
  */
 #pragma no_clone
@@ -13,8 +13,6 @@
 #pragma strict_types
 
 inherit "/cmd/std/command_driver";
-/* Inherit for the new special system: 2017-10-27 */
-inherit "/d/Genesis/specials/abilities";
 
 #include <cmdparse.h>
 #include <cooldowns.h>
@@ -31,10 +29,7 @@ inherit "/d/Genesis/specials/abilities";
 #include <wa_types.h>
 
 // Define where to log steals, or undef to not log.
-//#undef LOG_STEALS "/some_dir/open/STEAL"
 #define LOG_STEALS "STEAL_LOG"
-
-#define BACKSTAB_DIR    "/d/Genesis/specials/std/backstab"
 
 // Prototypes
 private int query_the_value(object ob);
@@ -69,29 +64,15 @@ query_cmd_soul()
 }
 
 /*************************************************************************
- * The ability map used in the new special system.
- * /Carnak - 2017-10-27
- */
-public mapping
-query_ability_map()
-{
-    return ([
-                "backstab"   : BACKSTAB_DIR,
-            ]);
-}
-
-/*************************************************************************
  * The list of verbs and functions. Please add new in alfabetical order.
  */
 public mapping
 query_cmdlist()
 {
-    return ( ([
-           /*  Ability name : Ability function */
-                "backstab"  : "do_ability",
-                "peek"      : "peek",
-                "steal"     : "steal",
-             ]) );
+    return ([
+        "peek"      : "peek",
+        "steal"     : "steal",
+     ]);
 }
 
 /*
