@@ -942,7 +942,7 @@ header(string str)
 /*
  * Function name: iterate
  * Description  : Returns gCurrent modified by count while taking
- *                gType filters into account
+ *                gType filters into account. It ignores done reports.
  */
 int
 iterate(int count)
@@ -961,7 +961,8 @@ iterate(int count)
         if (current < 0 || current >= sizeof(m_reports[gOwner]))
             return last + 1;
 
-        if (m_reports[gOwner][current][REPORT_TYPE] == type) {
+        if (m_reports[gOwner][current][REPORT_TYPE] == type &&
+            m_reports[gOwner][current][REPORT_STATUS] == 0) {
             last = current;
             remaining--;
         }
@@ -1451,7 +1452,7 @@ get_cmd(string str)
               " q or x           - quit the report handler (does not auto-erase)\n" +
               " r or .           - read the current report (mr or m. for more)\n" +
               " [m]<number>      - read the report <number> (use m for more)\n" +
-              " n or p           - read the next or previous report (mn or np for more)\n" +
+              " n or p           - read the next or previous unresolved report (mn or np for more)\n" +
               " s [owner]        - subscribe to reports of a domain/wizard/root, or list subs.\n" +
               " u [owner]        - mark the report [log of an owner] as unread\n" +
               " us <owner>       - unsubscribe from reports on a domain/wizard/root\n");
