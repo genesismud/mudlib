@@ -233,6 +233,14 @@
 #define F_MAX_REMEMBERED(int, wis) ((((int) + (wis)) / 3) + 10)
 
 /*
+ * F_REMEMBERED_INACTIVE
+ *
+ * Players who have been inactive for this long no longer count against
+ * F_MAX_REMEMBERED.
+ */
+#define F_REMEMBERED_INACTIVE           (86400 * 365 * 5)
+
+/*
  * These macros convert from seconds to heart beats and back. We still
  * need this since query_age() is in heartbeats.
  */

@@ -97,43 +97,43 @@ mapping
 query_cmdlist()
 {
     return ([
-             "aggressive":"aggressive",
-             "assist":"assist",
-             "assist!":"assist",
+             "aggressive": "aggressive",
+             "assist": "assist",
+             "assist!": "assist",
 
-             "emote":"emote",
+             "emote": "emote",
 
-             "friend":"friend",
+             "friend": "friend",
 
-             "forget":"forget",
+             "forget": "forget",
 
-	     "gifts":"gifts",
+             "gifts": "gifts",
 
-             "introduce":"intro_live",
-             "introduced":"introduced",
-             "invite":"invite",
+             "introduce": "intro_live",
+             "introduced": "introduced",
+             "invite": "invite",
 
-             "join":"join",
+             "join": "join",
 
-             "kill":"kill",
-             "kill!":"kill",
+             "kill": "kill",
+             "kill!": "kill",
 
-             "last":"last",
-             "leave":"leave",
+             "last": "last",
+             "leave": "leave",
 
-             "mwho":"who",
+             "mwho": "who",
 
-             "present":"intro_live",
+             "present": "intro_live",
 
-             "remember":"remember_live",
-             "remembered":"remembered",
+             "remember": "remember_live",
+             "remembered": "remembered",
 
-             "spar":"spar",
-             "stop":"stop",
+             "spar": "spar",
+             "stop": "stop",
 
-             "team":"team",
+             "team": "team",
 
-             "who":"who"
+             "who": "who"
              ]);
 }
 
@@ -223,8 +223,8 @@ assist(string str)
 
     if (str == "!")
     {
-	pkill = 1;
-	str = "";
+        pkill = 1;
+        str = "";
     }
 
     if (!strlen(str))
@@ -257,8 +257,8 @@ assist(string str)
         /* Require an exaclamation for attacking players. */
         if (str[-1..] == "!")
         {
-	    pkill = 1;
-	    str = str[..-2];
+            pkill = 1;
+            str = str[..-2];
         }
 
         obs = parse_this(str, "[the] %l");
@@ -434,7 +434,7 @@ friend(string str)
         {
             write(HANGING_INDENT("You have granted friendship to: " +
                     COMPOSITE_WORDS(map(words, capitalize)) + ".", 4, 0));
-	    return 1;
+            return 1;
         }
 
         notify_fail("You have not granted friendship to anyone.\n");
@@ -844,7 +844,7 @@ introduced(string str)
     {
         /* Wizards get an asterisk. */
         if (SECURITY->query_wiz_level(names[index]))
-	    names[index] += "*";
+            names[index] += "*";
     }
     write("You were introduced to the following " +
       (size == 1 ? "person" : "people") + ":\n");
@@ -901,8 +901,8 @@ kill(string str)
     /* Require an exaclamation for attacking players. */
     if (str[-1..] == "!")
     {
-	pkill = 1;
-	str = str[..-2];
+        pkill = 1;
+        str = str[..-2];
     }
 
     str = lower_case(str);
@@ -1172,13 +1172,13 @@ remember_live(string str)
     if (this_player()->query_real_name() == str)
     {
         notify_fail("Yes, you vaguely remember " +
-	    LANG_ADDART(capitalize(str)) + ".\n");
+            LANG_ADDART(capitalize(str)) + ".\n");
         return 0;
     }
 
     if (objectp(ob = find_living(str)) &&
         ((ob->query_prop(LIVE_I_NON_REMEMBER) ||
-	  ob->query_prop(LIVE_I_NEVERKNOWN))))
+          ob->query_prop(LIVE_I_NEVERKNOWN))))
     {
         notify_fail("Remember " + ob->query_objective() + "? Never!\n");
         return 0;
@@ -1208,33 +1208,47 @@ remember_live(string str)
 int
 remembered(string str)
 {
-    mapping memory;
-    string *names;
-    int index, size;
-
-    memory = this_player()->query_remembered();
-    if (!(size = m_sizeof(memory)))
+    mapping memory = this_player()->query_remembered();
+    if (!m_sizeof(memory))
     {
         write("You don't remember knowing anyone at all.\n");
         return 1;
     }
 
-    names = sort_array(m_indices(memory));
-    for (index = 0; index < size; index++)
-    {
-        /* Wizards get an asterisk, non-existent players a plus. */
-        if (SECURITY->query_wiz_level(names[index]))
-	    names[index] += "*";
-	else if (!SECURITY->exist_player(names[index]))
-	    names[index] += "+";
-    }
-    write("You remember the following " +
-      (size == 1 ? "person" : "people") + ":\n");
-    write(HANGING_INDENT("  " + implode(map(names, capitalize), ", "), 2, 0));
+    int used = 0;
 
-    size = max(this_player()->max_remembered() - size, 0);
-    write("Your brain can handle " + LANG_WNUM(size) +
-        " more name" + (size == 1 ? ".\n" : "s.\n") );
+
+    string *active = sort_array(m_indices(filter(memory, &operator(==)(, 1))));
+    string *inactive = sort_array(m_indices(filter(memory, &operator(==)(, 2))));
+    string *deleted = sort_array(m_indices(filter(memory, &operator(==)(, 3))));
+
+    if (sizeof(active))
+    {
+        write("You have recent memories of the the following " +
+            (sizeof(active) == 1 ? "person" : "people") + ":\n");
+        write(HANGING_INDENT("  " + implode(map(active, capitalize), ", "),
+            2, 0));
+    }
+
+    if (sizeof(inactive))
+    {
+        write("You remember the following " +
+            (sizeof(inactive) == 1 ? "person" : "people") + ":\n");
+        write(HANGING_INDENT("  " + implode(map(inactive, capitalize), ", "),
+            2, 0));
+    }
+
+    if (sizeof(deleted))
+    {
+        write("You have memories of " + (sizeof(deleted) == 1 ?
+             "this lost name" : "these lost names") + ":\n");
+        write(HANGING_INDENT("  " + implode(map(deleted, capitalize), ", "),
+            2, 0));
+    }
+
+    int left = max(this_player()->max_remembered() - sizeof(active), 0);
+    write("Your brain can handle " + LANG_WNUM(left) +
+        " more name" + (left == 1 ? ".\n" : "s.\n") );
     return 1;
 }
 
@@ -1348,12 +1362,12 @@ stop(string str)
             notify_fail("You are already as peaceful as can be.\n");
             return 0;
         }
-	/* Intentional fallthrough. */
+        /* Intentional fallthrough. */
     }
     else if (str == "counting")
     {
         notify_fail("You are not counting anything. You may have lost count of that, too.\n");
-	return 0;
+        return 0;
     }
     else if (parse_command(lower_case(str), ({ }),"[the] 'world'"))
     {
@@ -1623,10 +1637,10 @@ team(string str)
     case "disband":
         FAIL_IF_NO_MEMBERS("disband your team");
         write("You disband your team.\n");
-	members->catch_msg(QCTNAME(this_player()) + " disbands " +
+        members->catch_msg(QCTNAME(this_player()) + " disbands " +
             this_player()->query_possessive() + " team and forces you to leave.\n");
         map(members, &team_leave(, this_player(), 1));
-	members->gmcp_team();
+        members->gmcp_team();
 
         members = FILTER_PRESENT(members);
         all2actbb(" disbands " + this_player()->query_possessive() +
@@ -1726,8 +1740,8 @@ team(string str)
         }
 
         /* Remove the members from the old leader (me).
-	 * Note: both this and the next foreach are written as foreach instead
-	 * of map as a functionpointer (as used in map) cannot be shadowed. */
+         * Note: both this and the next foreach are written as foreach instead
+         * of map as a functionpointer (as used in map) cannot be shadowed. */
         foreach(object ob: members)
         {
             this_player()->team_leave(ob);
@@ -1778,7 +1792,7 @@ team(string str)
             say(QCTNAME(this_player()) + " leaves the team of " +
                 QTNAME(leader) + ".\n", ({ leader, this_player() }));
             team_leave(this_player(), leader, 0);
-	    this_player()->gmcp_team();
+            this_player()->gmcp_team();
             leader->gmcp_team_update();
             return 1;
         }
@@ -1804,7 +1818,7 @@ team(string str)
         write("You force " + COMPOSITE_ALL_LIVE(oblist) + " to leave your team.\n");
         oblist->catch_msg(QCTNAME(this_player()) + " forces you to leave " +
             this_player()->query_possessive() + " team.\n");
-	oblist->gmcp_team();
+        oblist->gmcp_team();
         oblist = FILTER_PRESENT(oblist);
         all2actbb(" forces", oblist, " to leave " +
             this_player()->query_possessive() + " team.");
@@ -2001,7 +2015,7 @@ print_who(string opts, object *list, object *nonmet, int size)
         else if (sizeof(list) < size)
         {
             write(", of which " + sizeof(list) + " fit" +
-	        ((sizeof(list) == 1) ? "s" : "") + " your selection");
+                ((sizeof(list) == 1) ? "s" : "") + " your selection");
         }
         write(".\n");
     }
@@ -2115,8 +2129,7 @@ who(string opts)
      * we add that to the list, but only if the player did not ask to only
      * see the interactive players.
      */
-    if (!OPTION_USED("i", opts) &&
-        objectp(room = find_object(OWN_STATUE)))
+    if (!OPTION_USED("i", opts) && objectp(room = find_object(OWN_STATUE)))
     {
         list |= (object *)room->query_linkdead_players();
     }

@@ -645,6 +645,7 @@ setup_player(string pl_name)
     /* Restore the saved properties and add a default one. */
     add_prop(PLAYER_I_MORE_LEN, 20);
     init_saved_props();
+    update_remembered();
 
     /* Restore the whimpy option into the internal variable. */
     ::set_whimpy(query_option(OPT_WHIMPY));
@@ -1257,8 +1258,7 @@ command(string cmd)
 public int
 id(string str)
 {
-    if ((str == query_real_name()) &&
-        notmet_me(this_player()))
+    if ((str == query_real_name()) && notmet_me(this_player()))
     {
         return 0;
     }
@@ -1277,12 +1277,9 @@ id(string str)
 public string *
 parse_command_id_list()
 {
-    string *ids;
+    string *ids = ::parse_command_id_list();
 
-    ids = ::parse_command_id_list();
-
-    if (sizeof(ids) &&
-        notmet_me(this_player()))
+    if (sizeof(ids) && notmet_me(this_player()))
     {
         ids -= ({ query_real_name() });
     }

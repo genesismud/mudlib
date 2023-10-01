@@ -6,10 +6,11 @@ SYNOPSIS
 
 DESCRIPTION
         Show a list of all the people you remember. These people will be
-	remembered from session to session, until you choose to forget them.
+        remembered from session to session, until you choose to forget them.
 
-	Wizards are denoted with an asterisk * and players who are no longer
-	present in these realms with a plus +.
+        The list is separated into at most three parts. One consisting of active
+        player names, one with inactive players and a list of lost names of
+        who no longer exist.
 
 SEE ALSO
 	remember, forget, introduce, introduced

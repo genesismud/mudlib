@@ -47,15 +47,15 @@ private int     *bit_savelist,          /* Saved bits */
 #ifndef NO_SKILL_DECAY
                 decay_time_acc,         /* # of seconds since last decay */
 #endif NO_SKILL_DECAY
-		        creation_time,          /* Player creation time() */
+                        creation_time,          /* Player creation time() */
                 login_time,             /* Last time logging in */
                 logout_time,            /* Last time logging out / saving */
                 wiz_unmet;              /* If wizards want to be unmet */
 private mapping m_remember_name,        /* Names of players we have met */
-		m_gift_accept,		/* Players we accept gifts from */
-		m_gift_reject,		/* Players we reject gifts from */
+                m_gift_accept,          /* Players we accept gifts from */
+                m_gift_reject,          /* Players we reject gifts from */
                 m_bits,                 /* The domain bits of the player. */
-		m_vars,                 /* Some less used variables. */
+                m_vars,                 /* Some less used variables. */
                 m_friends_list,         /* Players we consider friends */
                 m_alias_list,           /* Aliases for the quicktyper */
                 m_nick_list;            /* Nick(name)s for the quicktyper */
@@ -67,8 +67,8 @@ private object  logout_location;        /* The last logout / saving location */
  */
 private static string   cap_name;       /* Capitalized name of the player */
 private static int      age_time,       /* the last time the age was updated */
-			cl_width,       /* width of the client. */
-			cl_height;      /* height of the client. */
+                        cl_width,       /* width of the client. */
+                        cl_height;      /* height of the client. */
 #ifndef NO_SKILL_DECAY
 private static int      decay_time;     /* the last time the decay was done */
 #endif NO_SKILL_DECAY
@@ -610,8 +610,8 @@ set_mailaddr(string addr)
     string *parts = explode(addr, "\n");
 
     if (!wildmatch("*@*.*", addr) && addr != "none") {
-	write("The email address must be valid.\n");
-	return 0;
+        write("The email address must be valid.\n");
+        return 0;
     }
 
     if (sizeof(parts) > 1)
@@ -700,7 +700,7 @@ set_notify(int flag)
     if (flag)
         m_vars[SAVEVAR_NOTIFY] = flag;
     else
-	m_delkey(m_vars, SAVEVAR_NOTIFY);
+        m_delkey(m_vars, SAVEVAR_NOTIFY);
 }
 
 /*
@@ -722,7 +722,7 @@ static nomask void
 set_creation_time()
 {
     if (!creation_time)
-	creation_time = time();
+        creation_time = time();
 }
 
 /*
@@ -1039,7 +1039,7 @@ transform_domain_bits()
     /* Only transform if there are bits in the old format. */
     if (!sizeof(bit_savelist))
     {
-	return;
+        return;
     }
 
     /* Transform each of the bit groups in the save-list. */
@@ -1141,7 +1141,7 @@ store_saved_props()
     if (query_wiz_level() && (busy = query_prop(WIZARD_I_BUSY_LEVEL)))
         m_vars[SAVEVAR_BUSY] = busy;
     else
-	m_delkey(m_vars, SAVEVAR_BUSY);
+        m_delkey(m_vars, SAVEVAR_BUSY);
 }
 
 /*
@@ -1239,7 +1239,7 @@ set_option(int opt, int val)
             return 0;
 
         options = sprintf("%3d", val) + options[3..];
-	/* Backward compatibility. */
+        /* Backward compatibility. */
         add_prop(PLAYER_I_MORE_LEN, val);
         return 1;
 
@@ -1262,7 +1262,7 @@ set_option(int opt, int val)
 
     case OPT_ALWAYS_KNOWN:
         add_prop(LIVE_I_ALWAYSKNOWN, val);
-	/* Intentional fallthrough. */
+        /* Intentional fallthrough. */
 
     case OPT_ALL_COMMUNE:
     case OPT_AUTO_PWD:
@@ -1306,20 +1306,20 @@ public nomask varargs int
 query_option(int opt, int setting)
 {
     if (!strlen(options))
-	options = OPT_DEFAULT_STRING;
+        options = OPT_DEFAULT_STRING;
 
     switch (opt)
     {
     case OPT_MORE_LEN:
         /* Use the live value from the client, if it exists. */
         if (cl_height && !setting)
-	    return cl_height;
+            return cl_height;
         return atoi(options[..2]);
 
     case OPT_SCREEN_WIDTH:
         /* Use the live value from the client, if it exists. */
         if (cl_width && !setting)
-	    return cl_width;
+            return cl_width;
         return atoi(options[3..5]);
 
     case OPT_WHIMPY:
@@ -1376,7 +1376,7 @@ set_restricted(int seconds, int self)
         SECURITY->log_syslog(LOG_RESTRICTED,
             sprintf("%s %-11s until %s\n", ctime(time()),
                 query_cap_name(), ctime(m_vars[SAVEVAR_RESTRICT])),
-		LOG_SIZE_100K);
+                LOG_SIZE_100K);
 #endif /* LOG_RESTRICTED */
     }
     /* Administrative restriction. */
@@ -1466,6 +1466,32 @@ set_remember_name(mapping nlist)
 }
 
 /*
+ * Function name:   update_remembered
+ * Description  :   Update the internal state of the remember list.
+ *                  Executed once after login.
+ */
+ static void
+ update_remembered()
+ {
+    if (!mappingp(m_remember_name))
+        return;
+
+    int cut = time() - F_REMEMBERED_INACTIVE;
+
+    foreach (string name, int val: m_remember_name)
+    {
+        int time = file_time(PLAYER_FILE(name) + ".o");
+
+        if (!time)
+        {
+            m_remember_name[name] = 3;
+        } else {
+            m_remember_name[name] = time < cut ? 2 : 1;
+        }
+    }
+ }
+
+/*
  * Function name:   query_remembered
  * Description  :   Returns true if the player has rememberd someone.
  *                  If no argument is passed the entire remembered mapping is
@@ -1484,6 +1510,21 @@ query_remembered(mixed name)
     return ([ ]) + m_remember_name;
 }
 
+/*
+ * Function name:   num_remembered
+ * Description  :   Returns the number of names remembered which count against
+ *                  the max rememberd limit.
+ * Returns      :   The number of names.
+ */
+public int
+num_remembered()
+{
+    if (!mappingp(m_remember_name))
+        return 0;
+
+    mapping n = filter(m_remember_name, &operator(==)(, 1));
+    return m_sizeof(n);
+}
 
 /*
  * Function name:   max_remembered
@@ -1512,18 +1553,17 @@ add_remembered(string str)
 
     /* Alreayd known? */
     if (query_remembered(str))
-	return 2;
+        return 2;
 
     /* Not introduced? */
     if (!query_met(str) && !query_introduced(str))
-	return 0;
+        return 0;
 
     if (!mappingp(m_remember_name))
         m_remember_name = ([ ]);
 
-    max = max_remembered();
-    if (m_sizeof(m_remember_name) >= max)
-	return -1;
+    if (num_remembered() >= max_remembered())
+        return -1;
 
     remove_introduced(str);
     m_remember_name[str] = 1;
@@ -1547,7 +1587,7 @@ remove_remembered(string name)
     if (query_introduced(name))
     {
         result = 1;
-	remove_introduced(name);
+        remove_introduced(name);
     }
 
     if (query_remembered(name))
