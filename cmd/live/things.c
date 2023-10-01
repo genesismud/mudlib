@@ -19,7 +19,6 @@
  * - l
  * - look
  * - loot
- * - peek
  * - pick
  * - put
  * - reveal
@@ -126,7 +125,6 @@ query_cmdlist()
       "l":"look",
       "look":"look",
 
-      "peek":"peek",
       "pick":"get",
       "put":"put",
 
@@ -2107,94 +2105,6 @@ go(string str)
 	return this_player()->command("$" + str);
     }
     return 0;
-}
-
-int
-peek_access(object ob)
-{
-    if (!living(ob) || ob->query_ghost() || ob == this_player())
-	return 0;
-    else
-	return 1;
-}
-
-/*
- * peek - Peek into someone's inventory, part of someone's inventory.
- */
-int
-peek(string str)
-{
-    string vb;
-    object *p, *inv;
-    int id, i, pp_skill;
-
-    if (!CAN_SEE_IN_ROOM(this_player()))
-    {
-        return light_fail("see");
-    }
-
-    vb = query_verb();
-    notify_fail(capitalize(vb) + " at whom?\n");
-
-    if (!stringp(str))
-        return 0;
-
-    p = CMDPARSE_ONE_ITEM(str, "peek_access", "peek_access");
-
-    if (!sizeof(p))
-    {
-        return 0;
-    }
-
-    if (sizeof(p) > 1)
-    {
-        notify_fail(capitalize(vb) + " at one person at a time.\n");
-        return 0;
-    }
-
-    /* Don't allow people to try peek in rapid succession. */
-    if ((this_player()->query_prop(LIVE_I_LAST_PEEK)
-        + F_TIME_BETWEEN_STEAL) > time())
-    {
-        notify_fail("It is too soon to perform another peek attempt.\n");
-        return 0;
-    }
-
-    MONEY_EXPAND(p[0]);
-
-    pp_skill = this_player()->query_skill(SS_PICK_POCKET) / 2;
-    if ((pp_skill + random(pp_skill) > p[0]->query_skill(SS_AWARENESS)) &&
-      (!p[0]->query_wiz_level()))
-    {
-	inv = all_inventory(p[0]);
-
-	p[0]->add_prop(TEMP_SUBLOC_SHOW_ONLY_THINGS, 1);
-	id = set_alarm(0.1, 0.0, &(p[0])->remove_prop(TEMP_SUBLOC_SHOW_ONLY_THINGS));
-	write(p[0]->show_sublocs(this_player()));
-	p[0]->remove_prop(TEMP_SUBLOC_SHOW_ONLY_THINGS);
-	remove_alarm(id);
-
-	inv = (object*)p[0]->subinventory(0);
-	inv = FILTER_SHOWN(inv);
-	if (sizeof(inv))
-	    write(p[0]->query_The_name(this_player()) +
-	      " is currently in possession of: " +
-	      COMPOSITE_DEAD(inv) + ".\n");
-	else
-	    write(p[0]->query_The_name(this_player()) +
-	      " does not own anything.\n");
-    }
-    else
-    {
-	tell_object(p[0], "You catch " +
-	  this_player()->query_the_name(p[0]) +
-	  " rifling through your private belongings!\n");
-	write("Oops! " + p[0]->query_The_name(this_player()) +
-	  " seems to have caught on to you!\n");
-    }
-
-    this_player()->add_prop(LIVE_I_LAST_PEEK, time());
-    return 1;
 }
 
 /*

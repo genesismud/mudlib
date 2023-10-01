@@ -959,7 +959,7 @@ iterate(int count)
         current += (count > 0 ? 1 : -1);
 
         if (current < 0 || current >= sizeof(m_reports[gOwner]))
-            return last;
+            return last + 1;
 
         if (m_reports[gOwner][current][REPORT_TYPE] == type) {
             last = current;

@@ -1157,8 +1157,8 @@ linkdead_save_vars_reset()
 {
     if (!interactive())
     {
-	player_save_vars_reset();
-	save_vars_reset();
+        player_save_vars_reset();
+        save_vars_reset();
     }
 }
 
@@ -1170,10 +1170,18 @@ linkdead_save_vars_reset()
 static void
 cooldown_expired_hook(string cooldown)
 {
-    if (cooldown != HERB_COOLDOWN)
-        return;
-
-    this_object()->catch_tell("You feel ready to consume another herb.\n");
+    switch (cooldown)
+    {
+    case HERB_COOLDOWN:
+        this_object()->catch_tell("You feel ready to consume another herb.\n");
+        break;
+    case PEEK_COOLDOWN:
+        this_object()->catch_tell("You feel ready to rifle through someones belongings again.\n");
+        break;
+    case STEAL_COOLDOWN:
+        this_object()->catch_tell("You feel ready to steal something again.\n");
+        break;
+    }
 }
 
 /*
