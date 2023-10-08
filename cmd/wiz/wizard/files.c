@@ -71,26 +71,26 @@ copy(string path1, string path2)
     buf = read_file(path1);
     if (!strlen(buf))
     {
-	return 0;
+        return 0;
     }
 
     switch(file_size(path2))
     {
-	/* Target is a directory. Impossible. */
-	case -2:
-	    return 0;
+        /* Target is a directory. Impossible. */
+        case -2:
+            return 0;
 
-	/* Target file does not exist or is empty. Proceed. */
-	case -1:
-	case  0:
-	    break;
+        /* Target file does not exist or is empty. Proceed. */
+        case -1:
+        case  0:
+            break;
 
-	/* Existing target file. Try to remove it first. */
-	default:
-	    if (!rm(path2))
-	    {
-		return 0;
-	    }
+        /* Existing target file. Try to remove it first. */
+        default:
+            if (!rm(path2))
+            {
+                return 0;
+            }
     }
 
     /* Write the buffer and return the return value of the efun. */
@@ -119,8 +119,8 @@ multi_file(string str, int operation)
 
     if (!stringp(str))
     {
-	notify_fail("No argument given to " + query_verb() + ".\n");
-	return 0;
+        notify_fail("No argument given to " + query_verb() + ".\n");
+        return 0;
     }
 
     /* Explode the argument and solve the tilde-path notation. */
@@ -130,20 +130,20 @@ multi_file(string str, int operation)
     size = sizeof(files);
     while(++index < size)
     {
-	files[index] = FTPATH(str, files[index]);
+        files[index] = FTPATH(str, files[index]);
     }
 
     /* For cp and mv we need at least two arguments, mark the target. */
     if (operation != MULTI_RM)
     {
-	if (size == 1)
-	{
-	    notify_fail("Syntax: " + query_verb() + " <source> <target>\n");
-	    return 0;
-	}
+        if (size == 1)
+        {
+            notify_fail("Syntax: " + query_verb() + " <source> <target>\n");
+            return 0;
+        }
 
-	target = files[--size];
-	files -= ({ target });
+        target = files[--size];
+        files -= ({ target });
     }
 
     /* Expand the wildcards. */
@@ -151,116 +151,116 @@ multi_file(string str, int operation)
     source = ({ });
     while(++index < size)
     {
-	parts = explode(files[index], "/");
-	str = implode(parts[..(sizeof(parts) - 2)], "/") + "/";
+        parts = explode(files[index], "/");
+        str = implode(parts[..(sizeof(parts) - 2)], "/") + "/";
 
-	if (pointerp((cont = get_dir(files[index]))))
-	    source += map(cont - ({ ".", ".." }), &operator(+)(str));
-	else
-	    return notify_fail(query_verb() + ": " + files[index] +
-		": No such file or directory.\n");
+        if (pointerp((cont = get_dir(files[index]))))
+            source += map(cont - ({ ".", ".." }), &operator(+)(str));
+        else
+            return notify_fail(query_verb() + ": " + files[index] +
+                ": No such file or directory.\n");
     }
 
     /* If too many files are selected, we still process the first batch. */
     if ((size = sizeof(source)) == 0)
-	return notify_fail(query_verb() + ": " + files[0] +
-	    ": No such file or directory.\n");
+        return notify_fail(query_verb() + ": " + files[0] +
+            ": No such file or directory.\n");
 
     if (size > MAXFILES)
     {
-	write("Selected " + size + " files. Only the first " + MAXFILES +
-	    " will be processed.\n");
-	source = source[..(MAXFILES - 1)];
-	size = sizeof(source);
+        write("Selected " + size + " files. Only the first " + MAXFILES +
+            " will be processed.\n");
+        source = source[..(MAXFILES - 1)];
+        size = sizeof(source);
     }
 
     if (size > 1)
     {
-	if ((operation != MULTI_RM) &&
-	    (file_size(target) != -2))
-	{
-	    notify_fail("When selecting multiple files, the destination " +
-		"must be a directory.\n");
-	    return 0;
-	}
+        if ((operation != MULTI_RM) &&
+            (file_size(target) != -2))
+        {
+            notify_fail("When selecting multiple files, the destination " +
+                "must be a directory.\n");
+            return 0;
+        }
 
-	write("Selected " + size + " files.\n");
+        write("Selected " + size + " files.\n");
     }
 
     index = -1;
     while(++index < size)
     {
-	switch(operation)
-	{
-	case MULTI_CP:
-	    if (file_size(source[index]) == -2)
-	    {
-		write("Directory " + source[index] + " cannot be copied.\n");
-		break;
-	    }
+        switch(operation)
+        {
+        case MULTI_CP:
+            if (file_size(source[index]) == -2)
+            {
+                write("Directory " + source[index] + " cannot be copied.\n");
+                break;
+            }
 
-	    str = target;
-	    if (file_size(target) == -2)
-	    {
-		parts = explode(source[index], "/");
-		str += "/" + parts[sizeof(parts) - 1];
-	    }
+            str = target;
+            if (file_size(target) == -2)
+            {
+                parts = explode(source[index], "/");
+                str += "/" + parts[sizeof(parts) - 1];
+            }
 
-	    if (copy(source[index], str))
-	    {
-		done++;
-	    }
-	    else
-	    {
-		write("Failed at " + source[index] + "\n");
-	    }
-	    break;
+            if (copy(source[index], str))
+            {
+                done++;
+            }
+            else
+            {
+                write("Failed at " + source[index] + "\n");
+            }
+            break;
 
-	case MULTI_MV:
-	    if ((file_size(source[index]) == -2) &&
-		(size > 1))
-	    {
-		write("When moving directory " + source[index] +
-		    " the directory must be the only argument.\n");
-		break;
-	    }
+        case MULTI_MV:
+            if ((file_size(source[index]) == -2) &&
+                (size > 1))
+            {
+                write("When moving directory " + source[index] +
+                    " the directory must be the only argument.\n");
+                break;
+            }
 
-	    str = target;
-	    if (file_size(target) == -2)
-	    {
-		parts = explode(source[index], "/");
-		str += "/" + parts[sizeof(parts) - 1];
-	    }
+            str = target;
+            if (file_size(target) == -2)
+            {
+                parts = explode(source[index], "/");
+                str += "/" + parts[sizeof(parts) - 1];
+            }
 
-	    if (rename(source[index], str))
-	    {
+            if (rename(source[index], str))
+            {
                 SECURITY->remove_binary(str);
-		done++;
-	    }
-	    else
-	    {
-		write("Failed at " + source[index] + "\n");
-	    }
-	    break;
+                done++;
+            }
+            else
+            {
+                write("Failed at " + source[index] + "\n");
+            }
+            break;
 
-	case MULTI_RM:
-	    if (file_size(source[index]) == -2)
-	    {
-		write("Directory " + source[index] +
-		    " cannot be removed using rm.\n");
-		break;
-	    }
+        case MULTI_RM:
+            if (file_size(source[index]) == -2)
+            {
+                write("Directory " + source[index] +
+                    " cannot be removed using rm.\n");
+                break;
+            }
 
-	    if (rm(source[index]))
-	    {
-		done++;
-	    }
-	    else
-	    {
-		write("Failed at " + source[index] + "\n");
-	    }
-	    break;
-	}
+            if (rm(source[index]))
+            {
+                done++;
+            }
+            else
+            {
+                write("Failed at " + source[index] + "\n");
+            }
+            break;
+        }
     }
 
     write(MULTI_OPERATION[operation] + " " + done + " file" +
@@ -311,13 +311,13 @@ read_aft_file(string name)
     /* No such file, set to defaults. */
     if (!m_sizeof(aft_tracked))
     {
-	aft_tracked = ([ ]);
-	aft_sorted = ({ });
+        aft_tracked = ([ ]);
+        aft_sorted = ({ });
     }
     else
     /* Sort the names in the mapping. */
     {
-	aft_sorted = sort_array(m_indices(aft_tracked));
+        aft_sorted = sort_array(m_indices(aft_tracked));
     }
 }
 
@@ -333,9 +333,9 @@ save_aft_file(string name)
     /* No file being tracked, remove the file completely. */
     if (!m_sizeof(aft_tracked))
     {
-	/* We do not need to append the .o as that is done in rm_cache(). */
-	rm_cache(SECURITY->query_wiz_path(name) + AFT_FILE);
-	return;
+        /* We do not need to append the .o as that is done in rm_cache(). */
+        rm_cache(SECURITY->query_wiz_path(name) + AFT_FILE);
+        return;
     }
 
     save_cache(aft_tracked, (SECURITY->query_wiz_path(name) + AFT_FILE));
@@ -359,13 +359,13 @@ aft_find_file(string file)
     /* May be the index number in the list of files. */
     if (index = atoi(file))
     {
-	if ((index > 0) &&
-	    (index <= sizeof(aft_sorted)))
-	{
-	    return aft_sorted[index - 1];
-	}
+        if ((index > 0) &&
+            (index <= sizeof(aft_sorted)))
+        {
+            return aft_sorted[index - 1];
+        }
 
-	/* No such index. Maybe it is a name, who knows ;-) */
+        /* No such index. Maybe it is a name, who knows ;-) */
     }
 
     /* May be a private name the wizard assigned to the file. This filter
@@ -373,17 +373,17 @@ aft_find_file(string file)
      * name was indeed found.
      */
     tmp = filter(aft_tracked,
-	&operator(==)(file, ) @ &operator([])(, AFT_PRIVATE_NAME));
+        &operator(==)(file, ) @ &operator([])(, AFT_PRIVATE_NAME));
     if (m_sizeof(tmp))
     {
-	return m_indices(tmp)[0];
+        return m_indices(tmp)[0];
     }
 
     /* Could be the path itself. */
     file = FTPATH(this_interactive()->query_path(), file);
     if (pointerp(aft_tracked[file]))
     {
-	return file;
+        return file;
     }
 
     /* File not found. */
@@ -424,7 +424,7 @@ aft(string str)
     /* Set to default when there is no argument. */
     if (!strlen(str))
     {
-	str = "lu";
+        str = "lu";
     }
 
     args = explode(str, " ");
@@ -437,270 +437,270 @@ aft(string str)
      * to track either.
      */
     if (!m_sizeof(aft_tracked) &&
-	args[0] != "s")
+        args[0] != "s")
     {
-	write("You are not tracking any files.\n");
-	return 1;
+        write("You are not tracking any files.\n");
+        return 1;
     }
 
     switch(args[0])
     {
     case "c":
-	if (size != 2)
-	{
-	    notify_fail("Syntax: aft c <file>\n");
-	    return 0;
-	}
+        if (size != 2)
+        {
+            notify_fail("Syntax: aft c <file>\n");
+            return 0;
+        }
 
-	str = aft_find_file(args[1]);
-	if (!stringp(str))
-	{
-	    notify_fail("You are not tracking a file \"" + args[1] + "\".\n");
-	    return 0;
-	}
+        str = aft_find_file(args[1]);
+        if (!stringp(str))
+        {
+            notify_fail("You are not tracking a file \"" + args[1] + "\".\n");
+            return 0;
+        }
 
-	/* Mark the file as being up to date and make it current. */
-	aft_catchup_file(str);
-	aft_current[name] = member_array(str, aft_sorted);
-	save_aft_file(name);
+        /* Mark the file as being up to date and make it current. */
+        aft_catchup_file(str);
+        aft_current[name] = member_array(str, aft_sorted);
+        save_aft_file(name);
 
-	write("Caught up on " + str + ".\n");
-	return 1;
+        write("Caught up on " + str + ".\n");
+        return 1;
 
     case "C":
-	if (size != 1)
-	{
-	    notify_fail("Syntax: aft C\n");
-	    return 0;
-	}
+        if (size != 1)
+        {
+            notify_fail("Syntax: aft C\n");
+            return 0;
+        }
 
-	/* Mark all files as being up to date. */
-	map(m_indices(aft_tracked), aft_catchup_file);
-	save_aft_file(name);
+        /* Mark all files as being up to date. */
+        map(m_indices(aft_tracked), aft_catchup_file);
+        save_aft_file(name);
 
-	write("Caught up on all files.\n");
-	return 1;
+        write("Caught up on all files.\n");
+        return 1;
 
     case "l":
-	flag = 1;
-	/* Continue at "lu". */
+        flag = 1;
+        /* Continue at "lu". */
 
     case "lu":
-	if (size != 1)
-	{
-	    notify_fail("Syntax: aft " + args[0] + "\n");
-	    return 0;
-	}
+        if (size != 1)
+        {
+            notify_fail("Syntax: aft " + args[0] + "\n");
+            return 0;
+        }
 
-	/* Loop over all files being tracked. */
-	size = sizeof(aft_sorted);
-	while(++index < size)
-	{
-	    ftime = file_time(aft_sorted[index]);
-	    changed = (ftime > aft_tracked[aft_sorted[index]][AFT_FILE_TIME]);
-	    /* Only print if the file actually changed, or if the wizard
-	     * signalled that he wanted all files.
-	     */
-	    if (flag || changed)
-	    {
-		fname = aft_sorted[index];
-		len = strlen(fname);
-		write(sprintf("%2d %-8s%-1s%-1s %-50s %s\n",
-		    (index + 1),
-		    aft_tracked[aft_sorted[index]][AFT_PRIVATE_NAME],
-		    (changed ? "*" : " "),
-		    ((index == aft_current[name]) ? ">" : ":"),
-		    ((len > 50) ? (fname[..23] + "..." + fname[-23..]) : fname),
-		    TIME2FORMAT(ftime, "-d mmm yyyy")));
+        /* Loop over all files being tracked. */
+        size = sizeof(aft_sorted);
+        while(++index < size)
+        {
+            ftime = file_time(aft_sorted[index]);
+            changed = (ftime > aft_tracked[aft_sorted[index]][AFT_FILE_TIME]);
+            /* Only print if the file actually changed, or if the wizard
+             * signalled that he wanted all files.
+             */
+            if (flag || changed)
+            {
+                fname = aft_sorted[index];
+                len = strlen(fname);
+                write(sprintf("%2d %-8s%-1s%-1s %-50s %s\n",
+                    (index + 1),
+                    aft_tracked[aft_sorted[index]][AFT_PRIVATE_NAME],
+                    (changed ? "*" : " "),
+                    ((index == aft_current[name]) ? ">" : ":"),
+                    ((len > 50) ? (fname[..23] + "..." + fname[-23..]) : fname),
+                    TIME2FORMAT(ftime, "-d mmm yyyy")));
 
-		args[0] = "oke";
-	    }
-	}
+                args[0] = "oke";
+            }
+        }
 
-	/* No output of any files. Give him a "fail" message. */
-	if (args[0] != "oke")
-	{
-	    write("No changes in any of the tracked files.\n");
-	}
+        /* No output of any files. Give him a "fail" message. */
+        if (args[0] != "oke")
+        {
+            write("No changes in any of the tracked files.\n");
+        }
 
-	return 1;
+        return 1;
 
     case "n":
     case "r":
     case "rr":
-	switch(size)
-	{
-	case 1:
-	    /* user wants to see next changed file. Loop over all files,
-	     * starting at the current file.
-	     */
-	    index = aft_current[name] - 1;
-	    size = sizeof(aft_sorted);
-	    while(++index < (size + aft_current[name]))
-	    {
-		/* If there is a change, break. */
-		if (file_time(aft_sorted[index % size]) >
-		    aft_tracked[aft_sorted[index % size]][AFT_FILE_TIME])
-		{
-		    index %= size;
-	            args += ({ aft_sorted[index] });
-		    break;
-		}
-	    }
-
-	    /* No change to any files. Give him a "fail" message. */
-	    if (sizeof(args) == 1)
-	    {
-		write("No changes in any of the tracked files.\n");
-		return 1;
-	    }
-
-	    /* Found file added to the list of arguments. */
-	    break;
-
-	case 2:
-	    /* user specified a file to read. */
-	    str = aft_find_file(args[1]);
-	    if (!stringp(str))
-	    {
-		notify_fail("You are not tracking a file \"" + args[1] + "\".\n");
-		return 0;
-	    }
-
-	    args[1] = str;
-	    break;
-
-	default:
-	    notify_fail("Syntax: aft " + args[0] + " [<file>]\n");
-	    return 0;
-	}
-
-	/* Access failure. */
-        if (!(SECURITY->valid_read(args[1], geteuid(), "tail")))
+        switch(size)
         {
-	    notify_fail("You have no read access to: " + args[1] + "\n");
-	    return 0;
+        case 1:
+            /* user wants to see next changed file. Loop over all files,
+             * starting at the current file.
+             */
+            index = aft_current[name] - 1;
+            size = sizeof(aft_sorted);
+            while(++index < (size + aft_current[name]))
+            {
+                /* If there is a change, break. */
+                if (file_time(aft_sorted[index % size]) >
+                    aft_tracked[aft_sorted[index % size]][AFT_FILE_TIME])
+                {
+                    index %= size;
+                    args += ({ aft_sorted[index] });
+                    break;
+                }
+            }
+
+            /* No change to any files. Give him a "fail" message. */
+            if (sizeof(args) == 1)
+            {
+                write("No changes in any of the tracked files.\n");
+                return 1;
+            }
+
+            /* Found file added to the list of arguments. */
+            break;
+
+        case 2:
+            /* user specified a file to read. */
+            str = aft_find_file(args[1]);
+            if (!stringp(str))
+            {
+                notify_fail("You are not tracking a file \"" + args[1] + "\".\n");
+                return 0;
+            }
+
+            args[1] = str;
+            break;
+
+        default:
+            notify_fail("Syntax: aft " + args[0] + " [<file>]\n");
+            return 0;
         }
 
-	/* Mark as read and file to current. Then save. */
-	aft_current[name] = member_array(args[1], aft_sorted);
-	size = aft_tracked[args[1]][AFT_FILE_SIZE];
-	ftime = aft_tracked[args[1]][AFT_FILE_TIME];
-	aft_catchup_file(args[1]);
-	save_aft_file(name);
+        /* Access failure. */
+        if (!(SECURITY->valid_read(args[1], geteuid(), "tail")))
+        {
+            notify_fail("You have no read access to: " + args[1] + "\n");
+            return 0;
+        }
 
-	write("AFT on " + args[1] + "\n");
-	if (args[0] == "n")
-	{
-	    /* If there is a newer '.old' then the file cycled. */
-	    if (file_time(args[1] + ".old") >= ftime)
-	    {
-		size = 0;
-	    }
-	    if (file_size(args[1]) <= size)
-	    {
-	        write("No new entries. File may have been edited.\n");
-	        return 1;
-	    }
+        /* Mark as read and file to current. Then save. */
+        aft_current[name] = member_array(args[1], aft_sorted);
+        size = aft_tracked[args[1]][AFT_FILE_SIZE];
+        ftime = aft_tracked[args[1]][AFT_FILE_TIME];
+        aft_catchup_file(args[1]);
+        save_aft_file(name);
 
-	    /* Read at most the last AFT_TAIL_DIFF bytes. */
+        write("AFT on " + args[1] + "\n");
+        if (args[0] == "n")
+        {
+            /* If there is a newer '.old' then the file cycled. */
+            if (file_time(args[1] + ".old") >= ftime)
+            {
+                size = 0;
+            }
+            if (file_size(args[1]) <= size)
+            {
+                write("No new entries. File may have been edited.\n");
+                return 1;
+            }
+
+            /* Read at most the last AFT_TAIL_DIFF bytes. */
             size = max(size, (file_size(args[1]) - AFT_TAIL_DIFF));
 
-	    this_player()->tail(read_bytes(args[1], size, AFT_TAIL_DIFF));
-	    return 1;
-	}
+            this_player()->tail(read_bytes(args[1], size, AFT_TAIL_DIFF));
+            return 1;
+        }
 
-	/* Force the wizard to use the tail command. We can force since we
-	 * have his/her euid.
-	 */
-	return this_interactive()->command("tail -r " + args[1]);
-	/* not reached */
+        /* Force the wizard to use the tail command. We can force since we
+         * have his/her euid.
+         */
+        return this_interactive()->command("tail -r " + args[1]);
+        /* not reached */
 
     case "s":
-	switch(size)
-	{
-	case 2:
-	    /* User does not want a private name. */
-	    args += ({ "" });
-	    break;
+        switch(size)
+        {
+        case 2:
+            /* User does not want a private name. */
+            args += ({ "" });
+            break;
 
-	case 3:
-	    /* Specified a private name. See whether it is not a duplicate. */
-	    tmp = filter(aft_tracked,
-		&operator(==)(args[2], ) @ &operator([])(, AFT_PRIVATE_NAME));
-	    if (m_sizeof(tmp))
-	    {
-		notify_fail("Name \"" + args[2] + "\" already used for " +
-		    m_indices(tmp)[0] + ".\n");
-		return 0;
-	    }
+        case 3:
+            /* Specified a private name. See whether it is not a duplicate. */
+            tmp = filter(aft_tracked,
+                &operator(==)(args[2], ) @ &operator([])(, AFT_PRIVATE_NAME));
+            if (m_sizeof(tmp))
+            {
+                notify_fail("Name \"" + args[2] + "\" already used for " +
+                    m_indices(tmp)[0] + ".\n");
+                return 0;
+            }
 
-	    break;
+            break;
 
-	default:
-	    notify_fail("Syntax: aft s <path> [<name>]\n");
-	    return 0;
-	}
+        default:
+            notify_fail("Syntax: aft s <path> [<name>]\n");
+            return 0;
+        }
 
         args[1] = FTPATH(this_interactive()->query_path(), args[1]);
-	if (aft_tracked[args[1]])
-	{
-	    notify_fail("You are already tracking " + args[1] + ".\n");
-	    return 0;
-	}
+        if (aft_tracked[args[1]])
+        {
+            notify_fail("You are already tracking " + args[1] + ".\n");
+            return 0;
+        }
 
-	if (file_size(args[1]) < 0)
-	{
-	    notify_fail("There is no file " + args[1] + ".\n");
-	    return 0;
-	}
+        if (file_size(args[1]) < 0)
+        {
+            notify_fail("There is no file " + args[1] + ".\n");
+            return 0;
+        }
 
-	/* Add the file, and mark as unread. Then save. */
-	aft_tracked[args[1]] = ({ args[2], 0, 0 });
-	aft_sorted = sort_array(m_indices(aft_tracked));
-	save_aft_file(name);
+        /* Add the file, and mark as unread. Then save. */
+        aft_tracked[args[1]] = ({ args[2], 0, 0 });
+        aft_sorted = sort_array(m_indices(aft_tracked));
+        save_aft_file(name);
 
-	write("Started tracking on " + args[1] + ".\n");
-	return 1;
+        write("Started tracking on " + args[1] + ".\n");
+        return 1;
 
     case "u":
-	if (size != 2)
-	{
-	    notify_fail("Syntax: aft u <file>\n");
-	    return 0;
-	}
+        if (size != 2)
+        {
+            notify_fail("Syntax: aft u <file>\n");
+            return 0;
+        }
 
-	str = aft_find_file(args[1]);
-	if (!stringp(str))
-	{
-	    notify_fail("You are not tracking a file \"" + args[1] + "\".\n");
-	    return 0;
-	}
+        str = aft_find_file(args[1]);
+        if (!stringp(str))
+        {
+            notify_fail("You are not tracking a file \"" + args[1] + "\".\n");
+            return 0;
+        }
 
-	if (member_array(str, aft_sorted) >= aft_current[name])
-	{
-	    aft_current[name] -= 1;
-	}
+        if (member_array(str, aft_sorted) >= aft_current[name])
+        {
+            aft_current[name] -= 1;
+        }
 
-	m_delkey(aft_tracked, str);
-	aft_sorted -= ({ str });
-	save_aft_file(name);
+        m_delkey(aft_tracked, str);
+        aft_sorted -= ({ str });
+        save_aft_file(name);
 
-	write("Unselected file " + str + ".\n");
-	return 1;
+        write("Unselected file " + str + ".\n");
+        return 1;
 
     case "U":
-	aft_tracked = ([ ]);
+        aft_tracked = ([ ]);
         m_delkey(aft_current, name);
-	aft_sorted = ({ });
-	save_aft_file(name);
+        aft_sorted = ({ });
+        save_aft_file(name);
 
-	write("Unselected all files. Stopped all tracking.\n");
-	return 1;
+        write("Unselected all files. Stopped all tracking.\n");
+        return 1;
 
     default:
-	notify_fail("No subcommand \"" + args[0] + "\" to aft.\n");
-	return 0;
+        notify_fail("No subcommand \"" + args[0] + "\" to aft.\n");
+        return 0;
     }
 
     write("Impossible end of aft switch. Please report to an archwizard!\n");
@@ -819,8 +819,8 @@ clone(string str)
 
     if (!stringp(str))
     {
-		notify_fail("Clone what object ?\n");
- 		return 0;
+                notify_fail("Clone what object ?\n");
+                return 0;
     }
 
     argv = explode(str, " ");
@@ -829,111 +829,111 @@ clone(string str)
     switch (argv[0])
     {
     case "-i":
-	ob = clone_ob(argv[1]);
-	if (!ob)
-	    return 0;
-	ob->move(this_interactive(), 1);
-	if (this_interactive()->query_option(OPT_ECHO))
-	{
-	    desc = (living(ob) ? ob->query_art_name(this_interactive()) : LANG_ASHORT(ob));
-	    write("You clone " + desc + " into your inventory.\n");
-	}
-	else
-	{
-	    write("Ok.\n");
-	}
-	break;
+        ob = clone_ob(implode(argv[1..], " "));
+        if (!ob)
+            return 0;
+        ob->move(this_interactive(), 1);
+        if (this_interactive()->query_option(OPT_ECHO))
+        {
+            desc = (living(ob) ? ob->query_art_name(this_interactive()) : LANG_ASHORT(ob));
+            write("You clone " + desc + " into your inventory.\n");
+        }
+        else
+        {
+            write("Ok.\n");
+        }
+        break;
 
     case "-e":
-	ob = clone_ob(argv[1]);
-	if (!ob)
-	    return 0;
-	ob->move(environment(this_interactive()), 1);
+        ob = clone_ob(implode(argv[1..], " "));
+        if (!ob)
+            return 0;
+        ob->move(environment(this_interactive()), 1);
         /* We need to do this instead of write() because cloning a living
          * will alter this_player().
          */
-	if (this_interactive()->query_option(OPT_ECHO))
-	{
-	    desc = (living(ob) ? ob->query_art_name(this_interactive()) : LANG_ASHORT(ob));
-	    this_interactive()->catch_tell("You clone " + desc +
-	        " into your environment.\n");
-	}
-	else
-	{
-	    this_interactive()->catch_tell("Ok.\n");
-	}
-	break;
+        if (this_interactive()->query_option(OPT_ECHO))
+        {
+            desc = (living(ob) ? ob->query_art_name(this_interactive()) : LANG_ASHORT(ob));
+            this_interactive()->catch_tell("You clone " + desc +
+                " into your environment.\n");
+        }
+        else
+        {
+            this_interactive()->catch_tell("Ok.\n");
+        }
+        break;
 
     default:
-	ob = clone_ob(argv[0]);
-	if (!ob)
-	    return 0;
+        ob = clone_ob(implode(argv[0..], " "));
+        if (!ob)
+            return 0;
 
-	num = (int)ob->move(this_interactive());
-	switch (num)
-	{
-	case 0:
-	    if (this_interactive()->query_option(OPT_ECHO))
-	    {
-	        desc = (living(ob) ? ob->query_art_name(this_interactive()) : LANG_ASHORT(ob));
-	        write("You clone " + desc + " into your inventory.\n");
-	    }
-	    else
-	    {
-	        write("Ok.\n");
-	    }
-	    break;
+        num = (int)ob->move(this_interactive());
+        switch (num)
+        {
+        case 0:
+            if (this_interactive()->query_option(OPT_ECHO))
+            {
+                desc = (living(ob) ? ob->query_art_name(this_interactive()) : LANG_ASHORT(ob));
+                write("You clone " + desc + " into your inventory.\n");
+            }
+            else
+            {
+                write("Ok.\n");
+            }
+            break;
 
-	case 1:
-	    write("Too heavy for destination.\n");
-	    break;
+        case 1:
+            write("Too heavy for destination.\n");
+            break;
 
-	case 2:
-	    write("Can't be dropped.\n");
-	    break;
+        case 2:
+            write("Can't be dropped.\n");
+            break;
 
-	case 3:
-	    write("Can't take it out of it's container.\n");
-	    break;
+        case 3:
+            write("Can't take it out of it's container.\n");
+            break;
 
-	case 4:
-	    write("The object can't be inserted into bags etc.\n");
-	    break;
+        case 4:
+            write("The object can't be inserted into bags etc.\n");
+            break;
 
-	case 5:
-	    write("The destination doesn't allow insertions of objects.\n");
-	    break;
+        case 5:
+            write("The destination doesn't allow insertions of objects.\n");
+            break;
 
-	case 6:
-	    write("The object can't be picked up.\n");
-	    break;
+        case 6:
+            write("The object can't be picked up.\n");
+            break;
 
-	case 7:
-	    write("Other (Error message printed inside move() function).\n");
-	    break;
+        case 7:
+            write("Other (Error message printed inside move() function).\n");
+            break;
 
-	case 8:
-	    write("Too big volume for destination.\n");
-	    break;
+        case 8:
+            write("Too big volume for destination.\n");
+            break;
 
-	default:
-	    write("Strange, very strange error in move: " + num + "\n");
-	    break;
-	}
-	if (num)
-	{
-	    num = (int)ob->move(environment(this_interactive()));
-	    if (this_interactive()->query_option(OPT_ECHO))
-	    {
-	        desc = (living(ob) ? ob->query_art_name(this_interactive()) : LANG_ASHORT(ob));
-	        write("You clone " + desc + " into your environment.\n");
-	    }
-	    else
-	    {
-	        write("Ok.\n");
-	    }
-	}
-	break;
+        default:
+            write("Strange, very strange error in move: " + num + "\n");
+            break;
+        }
+        if (num)
+        {
+            num = (int)ob->move(environment(this_interactive()));
+            if (this_interactive()->query_option(OPT_ECHO))
+            {
+                desc = (living(ob) ? ob->query_art_name(this_interactive()) : LANG_ASHORT(ob));
+                write("You clone " + desc + " into your environment.\n");
+            }
+            else
+            {
+                write("Ok.\n");
+            }
+        }
+        break;
     }
     return 1;
 }
@@ -960,63 +960,63 @@ destruct_ob(string str)
 
     if (!stringp(str))
     {
-	notify_fail("Destruct what?\n");
-	return 0;
+        notify_fail("Destruct what?\n");
+        return 0;
     }
 
     if (sscanf(str, "-D %s", str) == 1)
     {
-	dflag = 1;
+        dflag = 1;
     }
 
     if (!parse_command(str, environment(this_interactive()), "[the] %i",
-	oblist))
+        oblist))
     {
-	notify_fail("Destruct what?\n");
-	return 0;
+        notify_fail("Destruct what?\n");
+        return 0;
     }
 
     oblist = NORMAL_ACCESS(oblist, 0, 0);
     if (!sizeof(oblist))
     {
-	notify_fail("Destruct what?\n");
-	return 0;
+        notify_fail("Destruct what?\n");
+        return 0;
     }
 
     if (sizeof(oblist) > 1)
     {
-	notify_fail("You can destruct only one object at a time.\n");
-	return 0;
+        notify_fail("You can destruct only one object at a time.\n");
+        return 0;
     }
 
     if (living(oblist[0]))
     {
-	say(QCTNAME(oblist[0]) + " is disintegrated by " +
-	    QTNAME(this_interactive()) + ".\n");
-	if (this_player()->query_option(OPT_ECHO))
-	    write("Destructed " + oblist[0]->query_the_name(this_player()) +
-		  " (" + RPATH(MASTER_OB(oblist[0])) + ").\n");
-	else
-	    write("Ok.\n");
+        say(QCTNAME(oblist[0]) + " is disintegrated by " +
+            QTNAME(this_interactive()) + ".\n");
+        if (this_player()->query_option(OPT_ECHO))
+            write("Destructed " + oblist[0]->query_the_name(this_player()) +
+                  " (" + RPATH(MASTER_OB(oblist[0])) + ").\n");
+        else
+            write("Ok.\n");
     }
     else
     {
-	say(QCTNAME(this_interactive()) + " disintegrates " +
-	    LANG_ASHORT(oblist[0]) + ".\n");
-	if (this_player()->query_option(OPT_ECHO))
-	    write("Destructed " + LANG_THESHORT(oblist[0]) + " (" +
-		  RPATH(MASTER_OB(oblist[0])) + ").\n");
-	else
-	    write("Ok.\n");
+        say(QCTNAME(this_interactive()) + " disintegrates " +
+            LANG_ASHORT(oblist[0]) + ".\n");
+        if (this_player()->query_option(OPT_ECHO))
+            write("Destructed " + LANG_THESHORT(oblist[0]) + " (" +
+                  RPATH(MASTER_OB(oblist[0])) + ").\n");
+        else
+            write("Ok.\n");
     }
 
     if (dflag)
     {
-	SECURITY->do_debug("destroy", oblist[0]);
+        SECURITY->do_debug("destroy", oblist[0]);
     }
     else
     {
-	oblist[0]->remove_object();
+        oblist[0]->remove_object();
     }
 
     return 1;
@@ -1034,28 +1034,28 @@ distrust(string str)
 
     if (!str)
     {
-	notify_fail("Distrust what object?\n");
-	return 0;
+        notify_fail("Distrust what object?\n");
+        return 0;
     }
 
     ob = present(str, this_interactive());
 
     if (!ob)
-	ob = present(str, environment(this_interactive()));
+        ob = present(str, environment(this_interactive()));
 
     if (!ob)
-	ob = parse_list(str);
+        ob = parse_list(str);
 
     if (!ob)
     {
-	notify_fail("Object not found: " + str + "\n");
-	return 0;
+        notify_fail("Object not found: " + str + "\n");
+        return 0;
     }
 
     if (geteuid(ob) != geteuid(this_object()))
     {
-	notify_fail("Object not trusted by you.\n");
-	return 0;
+        notify_fail("Object not trusted by you.\n");
+        return 0;
     }
 
     /* Remove the previous euid */
@@ -1078,40 +1078,40 @@ du(string str)
 
     if (!str)
     {
-	path = ".";
+        path = ".";
     }
     else
     {
-	/* There is no getopt in CDlib... or? */
-	if (sscanf(str, "%s %s", flag, path) == 2)
-	{
-	    if (flag != "-a")
-	    {
-		notify_fail("usage: du [-a] [path]\n");
-		return 0;
-	    }
-	    else
-		aflag = 1;
-	}
-	else
-	{
-	    if (str == "-a")
-	    {
-		aflag = 1;
-		path = ".";
-	    }
-	    else
-		path = str;
-	}
+        /* There is no getopt in CDlib... or? */
+        if (sscanf(str, "%s %s", flag, path) == 2)
+        {
+            if (flag != "-a")
+            {
+                notify_fail("usage: du [-a] [path]\n");
+                return 0;
+            }
+            else
+                aflag = 1;
+        }
+        else
+        {
+            if (str == "-a")
+            {
+                aflag = 1;
+                path = ".";
+            }
+            else
+                path = str;
+        }
     }
     p = FTPATH(this_interactive()->query_path(), path);
 
     if (p == "/")
-	p = "";
+        p = "";
 
     xdu(p, aflag);
 
-	return 1;
+        return 1;
 }
 
 static nomask int
@@ -1126,19 +1126,19 @@ xdu(string path, int aflag)
 
     for (i = 0; i < sizeof(files); i++)
     {
-	if (files[i] == "." || files[i] == "..")
-	    continue;
+        if (files[i] == "." || files[i] == "..")
+            continue;
 
-	if (aflag && file_size(path + "/" + files[i]) > -1)
-	{
-	    write(file_size(path + "/" + files[i]) / 1024 + "\t" +
-		  path + "/" + files[i] + "\n");
-	}
+        if (aflag && file_size(path + "/" + files[i]) > -1)
+        {
+            write(file_size(path + "/" + files[i]) / 1024 + "\t" +
+                  path + "/" + files[i] + "\n");
+        }
 
-	if (file_size(path + "/" + files[i]) == -2)
-	    sum += xdu(path + "/" + files[i], aflag);
-	else
-	    sum += file_size(path + "/" + files[i]);
+        if (file_size(path + "/" + files[i]) == -2)
+            sum += xdu(path + "/" + files[i], aflag);
+        else
+            sum += file_size(path + "/" + files[i]);
     }
 
     write(sum / 1024 + "\t" + path + "\n");
@@ -1155,8 +1155,8 @@ ed_file(string file)
 
     if (!stringp(file))
     {
-	ed();
-	return 1;
+        ed();
+        return 1;
     }
     file = FTPATH((string)this_interactive()->query_path(), file);
 #ifdef LOG_ED_EDIT
@@ -1189,11 +1189,11 @@ load_many_delayed(object wizard, string *files)
     loadmany_wizard = wizard;
 
     if (!objectp(loadmany_wizard) ||
-	(member_array(loadmany_wizard->query_real_name(),
-    	    loadmany_going) == -1) ||
-    	(!interactive(loadmany_wizard)))
+        (member_array(loadmany_wizard->query_real_name(),
+            loadmany_going) == -1) ||
+        (!interactive(loadmany_wizard)))
     {
-    	return;
+        return;
     }
 
     loadmany_files = files;
@@ -1215,59 +1215,59 @@ load_many()
     string error;
 
     size = (sizeof(loadmany_files) > LOADMANY_MAX) ? LOADMANY_MAX :
-    	sizeof(loadmany_files);
+        sizeof(loadmany_files);
     while(++index < size)
     {
-	if (objectp(find_object(loadmany_files[index])) &&
-	    loadmany_wizard->query_option(OPT_ECHO))
-	{
-	    tell_object(loadmany_wizard, "Already loaded:  " +
-	    	loadmany_files[index] + "\n");
+        if (objectp(find_object(loadmany_files[index])) &&
+            loadmany_wizard->query_option(OPT_ECHO))
+        {
+            tell_object(loadmany_wizard, "Already loaded:  " +
+                loadmany_files[index] + "\n");
 
-	    /* Already loaded.. Readjust. */
-	    loadmany_files = exclude_array(loadmany_files, index, index);
-	    size = (sizeof(loadmany_files) > LOADMANY_MAX) ? LOADMANY_MAX :
-		sizeof(loadmany_files);
-	    index--;
+            /* Already loaded.. Readjust. */
+            loadmany_files = exclude_array(loadmany_files, index, index);
+            size = (sizeof(loadmany_files) > LOADMANY_MAX) ? LOADMANY_MAX :
+                sizeof(loadmany_files);
+            index--;
 
-	    continue;
-	}
+            continue;
+        }
 
-	if (error = catch(call_other(loadmany_files[index],
+        if (error = catch(call_other(loadmany_files[index],
             "teleledningsanka")))
-	{
-	    tell_object(loadmany_wizard, "Error loading:   " +
-	    	loadmany_files[index] + "\nMessage      :   " + error + "\n");
-	    continue;
-	}
+        {
+            tell_object(loadmany_wizard, "Error loading:   " +
+                loadmany_files[index] + "\nMessage      :   " + error + "\n");
+            continue;
+        }
 
-	if (loadmany_wizard->query_option(OPT_ECHO))
-	    tell_object(loadmany_wizard, "Loaded:          " +
-	        loadmany_files[index] + "\n");
+        if (loadmany_wizard->query_option(OPT_ECHO))
+            tell_object(loadmany_wizard, "Loaded:          " +
+                loadmany_files[index] + "\n");
 
-	/* Try to remove the object from memory the easy way. */
-	if (catch(call_other(loadmany_files[index], "remove_object")))
-	{
-	    tell_object(loadmany_wizard, "Cannot destruct: " +
-	    	loadmany_files[index] + "\n");
-	}
+        /* Try to remove the object from memory the easy way. */
+        if (catch(call_other(loadmany_files[index], "remove_object")))
+        {
+            tell_object(loadmany_wizard, "Cannot destruct: " +
+                loadmany_files[index] + "\n");
+        }
 
-	/* Hammer hard if the object doesn't go away that easily. */
-	if (objectp(obj = find_object(loadmany_files[index])))
-	{
-	    SECURITY->do_debug("destroy", obj);
-	}
+        /* Hammer hard if the object doesn't go away that easily. */
+        if (objectp(obj = find_object(loadmany_files[index])))
+        {
+            SECURITY->do_debug("destroy", obj);
+        }
     }
 
     if (sizeof(loadmany_files) > size)
     {
-    	set_alarm(LOADMANY_DELAY, 0.0, &load_many_delayed(loadmany_wizard,
-    	    loadmany_files[size..]));
+        set_alarm(LOADMANY_DELAY, 0.0, &load_many_delayed(loadmany_wizard,
+            loadmany_files[size..]));
     }
     else
     {
- 	tell_object(loadmany_wizard, "Loading completed.\n");
- 	loadmany_going -= ({ loadmany_wizard->query_real_name() });
+        tell_object(loadmany_wizard, "Loading completed.\n");
+        loadmany_going -= ({ loadmany_wizard->query_real_name() });
     }
 
     loadmany_files = 0;
@@ -1285,13 +1285,13 @@ public nomask void
 load_many_delayed_reloaded()
 {
     if ((geteuid(previous_object()) != geteuid()) ||
-    	(!interactive(previous_object())) ||
-    	(calling_function() != REOPEN_SOUL))
+        (!interactive(previous_object())) ||
+        (calling_function() != REOPEN_SOUL))
     {
-    	loadmany_files = 0;
-    	loadmany_going -= ({ loadmany_wizard->query_real_name() });
-    	loadmany_wizard = 0;
-    	return;
+        loadmany_files = 0;
+        loadmany_going -= ({ loadmany_wizard->query_real_name() });
+        loadmany_wizard = 0;
+        return;
     }
 
     load_many();
@@ -1310,8 +1310,8 @@ load(string str)
 
     if (!stringp(str))
     {
-	notify_fail("Load what?\n");
-	return 0;
+        notify_fail("Load what?\n");
+        return 0;
     }
 
     parts = explode(str, " ");
@@ -1321,67 +1321,67 @@ load(string str)
 
     if (str == "stop")
     {
-    	if (member_array(this_player()->query_real_name(),
-    	    loadmany_going) == -1)
-    	{
-    	    notify_fail("You are not loading multiple files at the moment.\n");
-    	    return 0;
-    	}
+        if (member_array(this_player()->query_real_name(),
+            loadmany_going) == -1)
+        {
+            notify_fail("You are not loading multiple files at the moment.\n");
+            return 0;
+        }
 
-	loadmany_going -= ({ this_player()->query_real_name() });
-    	write("Stopped loading multiple files.\n");
-    	return 1;
+        loadmany_going -= ({ this_player()->query_real_name() });
+        write("Stopped loading multiple files.\n");
+        return 1;
     }
 
     str = FTPATH(this_interactive()->query_path(), str);
     if (!strlen(str))
     {
-	notify_fail("Invalid file name.\n");
-	return 0;
+        notify_fail("Invalid file name.\n");
+        return 0;
     }
 
     /* If wildcards are used, the wizard means to check many files. */
     if (wildmatch("*[\\*\\?]*", str))
     {
-	if (member_array(this_player()->query_real_name(),
-	    loadmany_going) != -1)
-	{
-	    notify_fail("You are already loading multiple files. You have " +
-	    	"to use \"load stop\" first if you want to interrupt that " +
-	    	"sequence and start a new one. Please bear in mind that " +
-	    	"this operation is costly and that you should be careful " +
-	    	"with executing it a lot.\n");
-	    return 0;
-	}
+        if (member_array(this_player()->query_real_name(),
+            loadmany_going) != -1)
+        {
+            notify_fail("You are already loading multiple files. You have " +
+                "to use \"load stop\" first if you want to interrupt that " +
+                "sequence and start a new one. Please bear in mind that " +
+                "this operation is costly and that you should be careful " +
+                "with executing it a lot.\n");
+            return 0;
+        }
 
-    	/* Get the files the wizard wants to load and filter only those
-    	 * that are executable, ergo that end in .c
-    	 */
-	loadmany_files = filter(get_dir(str), &wildmatch("*.c"));
+        /* Get the files the wizard wants to load and filter only those
+         * that are executable, ergo that end in .c
+         */
+        loadmany_files = filter(get_dir(str), &wildmatch("*.c"));
 
-	if (!pointerp(loadmany_files) ||
-	    !sizeof(loadmany_files))
-	{
-	    write("No files found: " + str + "\n");
-	    return 1;
-	}
+        if (!pointerp(loadmany_files) ||
+            !sizeof(loadmany_files))
+        {
+            write("No files found: " + str + "\n");
+            return 1;
+        }
 
-	write("Loading " + sizeof(loadmany_files) + " file" +
-	    ((sizeof(loadmany_files) == 1) ? "" : "s") + "." +
-	    ((sizeof(loadmany_files) > LOADMANY_MAX) ? (" A delay of " +
-		ftoi(LOADMANY_DELAY) + " seconds is used each " +
-		LOADMANY_MAX + " files.") : "") + "\n");
+        write("Loading " + sizeof(loadmany_files) + " file" +
+            ((sizeof(loadmany_files) == 1) ? "" : "s") + "." +
+            ((sizeof(loadmany_files) > LOADMANY_MAX) ? (" A delay of " +
+                ftoi(LOADMANY_DELAY) + " seconds is used each " +
+                LOADMANY_MAX + " files.") : "") + "\n");
 
-	/* We have to add the full path to all the files to load. Then */
-	parts = explode(str, "/");
-	parts[sizeof(parts) - 1] = "";
-	loadmany_files = map(loadmany_files,
-	    &operator(+)(implode(parts, "/"), ));
-	loadmany_wizard = this_interactive();
-	loadmany_going += ({ this_player()->query_real_name() });
+        /* We have to add the full path to all the files to load. Then */
+        parts = explode(str, "/");
+        parts[sizeof(parts) - 1] = "";
+        loadmany_files = map(loadmany_files,
+            &operator(+)(implode(parts, "/"), ));
+        loadmany_wizard = this_interactive();
+        loadmany_going += ({ this_player()->query_real_name() });
 
-	load_many();
-	return 1;
+        load_many();
+        return 1;
     }
 
     /* Add ".c" if needed. */
@@ -1392,8 +1392,8 @@ load(string str)
     /* File does not exists. */
     if (file_size(str) < 0)
     {
-	notify_fail("No such file.\n");
-	return 0;
+        notify_fail("No such file.\n");
+        return 0;
     }
 
     /* If the object is already in memory, destruct it. */
@@ -1401,13 +1401,13 @@ load(string str)
     {
         self = (obj == this_object());
 
-	write("Trying to update: " + str + "\n");
+        write("Trying to update: " + str + "\n");
 
-    	if (!update_ob(str, recurse))
-    	{
-    	    write("Updating failed...\n");
-    	    return 1;
-    	}
+        if (!update_ob(str, recurse))
+        {
+            write("Updating failed...\n");
+            return 1;
+        }
 
         /* Don't try to reload ourselves. Just update ... */
         if (self)
@@ -1416,15 +1416,15 @@ load(string str)
 
     if (error = catch(str->teleledningsanka()))
     {
-    	write("Error loading: " + str + "\n");
+        write("Error loading: " + str + "\n");
         write("Message: " + error + "\n");
-	return 1;
+        return 1;
     }
 
     if (this_player()->query_option(OPT_ECHO))
-	write("Loaded: " + str + "\n");
+        write("Loaded: " + str + "\n");
     else
-	write("Ok.\n");
+        write("Ok.\n");
     return 1;
 }
 
@@ -1510,13 +1510,13 @@ makedir(string str)
 
     if (!stringp(str))
     {
-	notify_fail("Make what dir?\n");
-	return 0;
+        notify_fail("Make what dir?\n");
+        return 0;
     }
     if (mkdir(FTPATH((string)this_interactive()->query_path(), str)))
-	write("Ok.\n");
+        write("Ok.\n");
     else
-	write("Fail.\n");
+        write("Fail.\n");
     return 1;
 }
 
@@ -1558,13 +1558,13 @@ removedir(string str)
 
     if (!stringp(str))
     {
-	notify_fail("Remove what dir?\n");
-	return 0;
+        notify_fail("Remove what dir?\n");
+        return 0;
     }
     if (rmdir(FTPATH((string)this_interactive()->query_path(), str)))
-	write("Ok.\n");
+        write("Ok.\n");
     else
-	write("Fail.\n");
+        write("Fail.\n");
     return 1;
 }
 
@@ -1580,22 +1580,22 @@ trust_ob(string str)
 
     if (!str)
     {
-	notify_fail("Trust what object?\n");
-	return 0;
+        notify_fail("Trust what object?\n");
+        return 0;
     }
 
     ob = parse_list(str);
 
     if (!ob)
     {
-	notify_fail("Object not found: " + str + "\n");
-	return 0;
+        notify_fail("Object not found: " + str + "\n");
+        return 0;
     }
 
     if (geteuid(ob))
     {
-	notify_fail("Object already trusted by: " + geteuid(ob) + "\n");
-	return 0;
+        notify_fail("Object already trusted by: " + geteuid(ob) + "\n");
+        return 0;
     }
 
     /* Install the euid of this player as uid in the object */
@@ -1626,12 +1626,12 @@ update_startloc_check(object room)
 
     foreach(object player: players)
     {
-	if (player->query_default_start_location() == path)
-	{
-	    write("Cannot update the start location of " +
-	        capitalize(player->query_real_name()) + ".\n");
-	    return 1;
-	}
+        if (player->query_default_start_location() == path)
+        {
+            write("Cannot update the start location of " +
+                capitalize(player->query_real_name()) + ".\n");
+            return 1;
+        }
     }
     return 0;
 }
@@ -1650,24 +1650,24 @@ update_one_object(object ob, int recurse)
 
     ob->remove_object();
     if (ob = find_object(str))
-	SECURITY->do_debug("destroy", ob);
+        SECURITY->do_debug("destroy", ob);
 
     if (recurse)
     {
         /* We don't want to update the AUTO object. */
         files -= ({ SECURE_AUTO + ".c" });
 
-	foreach(string file: files)
-	{
-	    if (ob = find_object(file))
-	    {
-	        write("  " + file + "\n");
-	        ob->remove_object();
-	    }
+        foreach(string file: files)
+        {
+            if (ob = find_object(file))
+            {
+                write("  " + file + "\n");
+                ob->remove_object();
+            }
 
-	    if (ob = find_object(file))
-	        SECURITY->do_debug("destroy", ob);
-	}
+            if (ob = find_object(file))
+                SECURITY->do_debug("destroy", ob);
+        }
     }
 }
 
@@ -1683,27 +1683,27 @@ update_ob(string str, int recurse)
 
     if (!strlen(str))
     {
-	if (!objectp(ob = environment(this_player())))
-	{
-	    notify_fail("Update what? The void?\n");
-	    return 0;
-	}
+        if (!objectp(ob = environment(this_player())))
+        {
+            notify_fail("Update what? The void?\n");
+            return 0;
+        }
 
         /* Avoid updating a player's start location. */
-	if (update_startloc_check(ob))
-	{
-	    return 1;
-	}
+        if (update_startloc_check(ob))
+        {
+            return 1;
+        }
 
-	write("Updating environment.\n");
-	say(QCTNAME(this_player()) + " updates the surroundings.\n");
+        write("Updating environment.\n");
+        say(QCTNAME(this_player()) + " updates the surroundings.\n");
 
-	/* Move all players out of the room to their start location. */
+        /* Move all players out of the room to their start location. */
         players = FILTER_PLAYERS(all_inventory(ob));
- 	foreach(object player: players)
-	{
-	    player->move(player->query_default_start_location());
-	}
+        foreach(object player: players)
+        {
+            player->move(player->query_default_start_location());
+        }
 
         str = MASTER_OB(ob);
         /* The actual update. */
@@ -1711,7 +1711,7 @@ update_ob(string str, int recurse)
 
         if (strlen(error = catch(str->teleledningsanka())))
         {
-    	    write("Error loading: " + str + "\n");
+            write("Error loading: " + str + "\n");
             write("Message: " + error + "\n");
             players->catch_tell("Something went wrong. You find yourself ... home.\n\n");
             foreach(object player: players)
@@ -1720,41 +1720,41 @@ update_ob(string str, int recurse)
                 player->do_glance(player->query_option(OPT_BRIEF));
             }
 
-	    return 1;
+            return 1;
         }
 
         /* And bring the players back. */
         players->move(str);
-	return 1;
+        return 1;
     }
 
     str = FTPATH((string)this_interactive()->query_path(), str);
     if (!strlen(str))
     {
-	notify_fail("Invalid file name.\n");
-	return 0;
+        notify_fail("Invalid file name.\n");
+        return 0;
     }
 
     if (!objectp(ob = find_object(str)))
     {
-	notify_fail("No such object.\n");
-	return 0;
+        notify_fail("No such object.\n");
+        return 0;
     }
 
     if (ob == find_object(SECURITY))
-	kick_master = 1;
+        kick_master = 1;
 
     str = MASTER_OB(ob) + ".c";
     if (ob == this_object())
     {
-	write("Updated: " + str + "\n");
-	write("Destructing this object.\n");
+        write("Updated: " + str + "\n");
+        write("Destructing this object.\n");
 
         /* Remove the binary file too. */
         SECURITY->remove_binary(MASTER);
 
-	destruct();
-	return 1;
+        destruct();
+        return 1;
     }
 
     /* Remove the binary file too. */
@@ -1781,12 +1781,12 @@ update_ob(string str, int recurse)
 
     if (objectp(ob) && ob == find_object(str))
     {
-	notify_fail("Object could not be updated.\n");
-	return 0;
+        notify_fail("Object could not be updated.\n");
+        return 0;
     }
 
     if (this_player()->query_option(OPT_ECHO))
-	write("Updated: " + str + "\n");
+        write("Updated: " + str + "\n");
     else
         write("Ok.\n");
     return 1;
@@ -1801,7 +1801,7 @@ update(string str)
     /* catch 'update' without args */
     if (!strlen(str))
     {
-	return update_ob(str, 0);
+        return update_ob(str, 0);
     }
 
     /* check if user specifies the -d or -r options */
@@ -1813,7 +1813,7 @@ update(string str)
 
     if (!dirupd)
     {
-	return update_ob(str, recurse);
+        return update_ob(str, recurse);
     }
 
     /* fix path and get files */
@@ -1828,14 +1828,14 @@ update(string str)
     /* move through all files returned by 'dir' */
     foreach(string file: files)
     {
-	/* get full filepath to objects */
-	fpath = FTPATH(path, file);
+        /* get full filepath to objects */
+        fpath = FTPATH(path, file);
 
-	/* just update existing objects */
-	if (find_object(fpath))
+        /* just update existing objects */
+        if (find_object(fpath))
         {
             /* Ignore the update success when doing multiple. */
-	    update_ob(fpath, recurse);
+            update_ob(fpath, recurse);
         }
     }
     return 1;
