@@ -95,6 +95,7 @@
 /* Room.Info */
 #define GMCP_ID        "id"
 #define GMCP_SHORT     "short"
+#define GMCP_LONG      "long"
 #define GMCP_DOORS     "doors"
 #define GMCP_EXITS     "exits"
 #define GMCP_MAP       "map"
