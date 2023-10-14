@@ -246,12 +246,14 @@ gmcp_room_info(object player, mapping data = 0)
         if (!CAN_SEE_IN_ROOM(player))
         {
             data[GMCP_SHORT] = "A dark room.";
+            data[GMCP_LONG]  = "A dark room.";
             data[GMCP_DOORS] = ({ });
             data[GMCP_EXITS] = ({ });
         }
         else
         {
             data[GMCP_SHORT] = short(player);
+            data[GMCP_LONG]  = long(player);
             data[GMCP_EXITS] = (query_noshow_obvious() ? ({ }) : query_obvious_exits());
             data[GMCP_DOORS] = query_door_cmds();
         }
