@@ -1177,7 +1177,7 @@ cooldown_expired_hook(string cooldown)
         this_object()->catch_tell("You feel ready to consume another herb.\n");
         break;
     case PEEK_COOLDOWN:
-        this_object()->catch_tell("You feel ready to rifle through someones belongings again.\n");
+        this_object()->catch_tell("You feel ready to rifle through someone's belongings again.\n");
         break;
     case STEAL_COOLDOWN:
         this_object()->catch_tell("You feel ready to steal something again.\n");
