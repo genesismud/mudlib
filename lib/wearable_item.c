@@ -284,6 +284,8 @@ wear_how(int location)
             how = " on " + pos + " left ear"; break;
         case A_R_EAR:
             how = " on " + pos + " right ear"; break;
+        case A_ANY_EAR:
+            how = " on " + pos + " ear of choice"; break;
         case A_HIPS:
             how = " on " + pos + " hips"; break;
         case A_L_HIP:
