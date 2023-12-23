@@ -51,7 +51,7 @@ add_chat(mixed str)
 
     this_object()->seq_clear(SEQ_CHAT);
     this_object()->seq_addfirst(SEQ_CHAT,
-        ({ random(monster_chat_time + 1), monster_do_chat);
+        ({ random(monster_chat_time + 1), monster_do_chat }));
 
     if (!str)
         return;
