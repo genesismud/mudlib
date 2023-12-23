@@ -11,6 +11,7 @@
 #include <formulas.h>
 #include <gmcp.h>
 #include <language.h>
+#include <living_desc.h>
 #include <ss_types.h>
 #include <login.h>
 
@@ -245,15 +246,24 @@ gmcp_room_info(object player, mapping data = 0)
 
         if (!CAN_SEE_IN_ROOM(player))
         {
-            data[GMCP_SHORT] = "A dark room.";
-            data[GMCP_LONG]  = "A dark room.";
+            string dark = query_prop(ROOM_S_DARK_LONG);
+            if (!dark)
+            {
+     	        dark = LD_DARK_ROOM(this_object());
+            }
+
+            if (dark[-1..] == "\n")
+                dark = dark[0..-2];
+
+            data[GMCP_SHORT] = dark;
+            data[GMCP_LONG]  = dark;
             data[GMCP_DOORS] = ({ });
             data[GMCP_EXITS] = ({ });
         }
         else
         {
             data[GMCP_SHORT] = short(player);
-            data[GMCP_LONG]  = long(player);
+            data[GMCP_LONG]  = long();
             data[GMCP_EXITS] = (query_noshow_obvious() ? ({ }) : query_obvious_exits());
             data[GMCP_DOORS] = query_door_cmds();
         }
@@ -274,13 +284,13 @@ gmcp_room_info(object player, mapping data = 0)
     /* Only add the coordinates if there actually are any. */
     if (map_x && CAN_SEE_IN_ROOM(player))
     {
-	data[GMCP_MAPX] = map_x;
-	data[GMCP_MAPY] = map_y;
-	if (map_zoomx)
-	{
+        data[GMCP_MAPX] = map_x;
+        data[GMCP_MAPY] = map_y;
+        if (map_zoomx)
+        {
             data[GMCP_ZOOMX] = map_zoomx;
             data[GMCP_ZOOMY] = map_zoomy;
-	}
+        }
     }
 
     player->catch_gmcp(GMCP_ROOM_INFO, data);
@@ -617,7 +627,7 @@ track_room()
         paralyze->set_standard_paralyze("tracking");
         paralyze->set_stop_fun("stop_track");
         paralyze->set_stop_verb("stop");
-	paralyze->set_combat_stop(1);
+        paralyze->set_combat_stop(1);
         paralyze->set_stop_message("You stop searching for tracks on the ground.\n");
         paralyze->set_remove_time(time);
         paralyze->set_fail_message("You are busy searching for tracks. You must " +
@@ -632,22 +642,20 @@ track_room()
  * Arguments:
  * Returns:
  */
-varargs int
+public int
 stop_track(mixed arg)
 {
     if (!objectp(arg))
     {
         mixed *calls = get_all_alarms();
-        mixed *args;
-        int i;
 
-        for (i = 0; i < sizeof(calls); i++)
+        foreach (mixed *call: calls)
         {
-            if (calls[i][1] == "track_now")
+            if (call[1] == "track_now")
             {
-                args = calls[i][4];
+                mixed *args = call[4];
                 if (args[0] == this_player())
-                    remove_alarm(calls[i][0]);
+                    remove_alarm(call[0]);
             }
         }
     }
