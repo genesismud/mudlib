@@ -8,7 +8,7 @@
   Typical usage:
 
           seq_new("talk"); seq_new("walk");
-          
+
           seq_addfirst("talk", command_sequence1);
           seq_addfirst("walk", command_sequence2);
 
@@ -34,13 +34,12 @@
 #include <macros.h>
 
 /* Local definitions. */
-#define SEQ_MAX	 10			/* Max limit of sequences / NPC */
-#define SEQ_SLOW 15.0			/* The slow factor */
-/* Seconds a stoppable sequence stays awake after the last meeting 
-   with an interactive player */
-#define SEQ_STAY_AWAKE 60			
-/* Sequence flags */
-#define SEQ_F_NONSTOP 1
+#define SEQ_MAX         10      /* Max limit of sequences / NPC */
+#define SEQ_SLOW        15.0    /* The slow factor */
+#define SEQ_STAY_AWAKE  60      /* Seconds a stoppable sequence stays awake
+                                 * after the last meeting with an interactive player */
+#define SEQ_F_NONSTOP   1       /* Sequence flags */
+
 
 static  mixed   *seq_commands;          /* Array of arrays holding actions
                                            to do each heart_beat */
@@ -91,7 +90,7 @@ seq_heartbeat(int steps)
 
     if (stopseq)
         stopped = 1;
-    
+
     for (il = 0; il < sizeof(seq_names); il++)
     {
         if (seq_cpos[il] < sizeof(seq_commands[il]))
@@ -123,7 +122,7 @@ seq_heartbeat(int steps)
                 seq_cpos[il]--;
                 seq_commands[il][seq_cpos[il]] = cmdres;
             }
-            else 
+            else
             {
                 newstep = 1;
             }
@@ -179,7 +178,7 @@ seq_restart()
  *  Description: New command sequence. Command sequences are independant
  *               named streams of commands. This function creates a stream.
  */
-public varargs int 
+public varargs int
 seq_new(string name, int flags)
 {
     if (!IS_CLONE)
@@ -221,7 +220,7 @@ seq_delete(string name)
  *               functions that returns the actual command. This function
  *               can of course do all sorts of things. If 'cmd' is a number
  *               it is interpreted as a delayvalue (in heartbeats) until
- *               the next command is issued. 
+ *               the next command is issued.
  *
  *               The sequence 'name' must be created with seq_new(name)
  *               prior to the call of this function.
@@ -246,7 +245,7 @@ seq_addfirst(string name, mixed cmd)
         cmd = ({ cmd });
     }
 
-    seq_commands[pos] = cmd + 
+    seq_commands[pos] = cmd +
         seq_commands[pos][seq_cpos[pos]..sizeof(seq_commands[pos])];
     seq_cpos[pos] = 0;
 
@@ -297,7 +296,7 @@ seq_query(string name)
 
     if ((pos = member_array(name, seq_names)) < 0)
         return 0;
-    
+
     return slice_array(seq_commands[pos],
                        seq_cpos[pos], sizeof(seq_commands[pos]));
 }
@@ -313,7 +312,7 @@ seq_query_flags(string name)
 
     if ((pos = member_array(name, seq_names)) < 0)
         return 0;
-    
+
     return seq_flags[pos];
 }
 

@@ -3,17 +3,17 @@
 
    Chatting: Standard action module for mobiles
 
-   add_chat(string)	       Set a random chatstring 
+   add_chat(string)            Set a random chatstring
 
-   add_cchat(string)           Set a random combat chatstring 
+   add_cchat(string)           Set a random combat chatstring
 
-   clear_chat()		       Clear random chatstring
+   clear_chat()                Clear random chatstring
 
-   clear_cchat()	       Clear random combat chatstring
+   clear_cchat()               Clear random combat chatstring
 
-   set_chat_time(int)	       Set the mean value for chat intervall
+   set_chat_time(int)          Set the mean value for chat intervall
 
-   set_cchat_time(int)	       Set the mean value for combat chat intervall
+   set_cchat_time(int)         Set the mean value for combat chat intervall
 */
 
 #pragma save_binary
@@ -21,12 +21,13 @@
 
 #include <macros.h>
 
-static	int	monster_chat_time,     /* Intervall between chat */
-		monster_cchat_time;    /* Intervall between combat chat */
-static  string  *monster_chat,	       /* Chat strings */
-    		*monster_cchat,        /* Combat Chat strings */
-    		*monster_chat_left,    /* Chat string left */
-    		*monster_cchat_left;   /* Combat Chat strings left */
+static  int     monster_chat_time = 1, /* Intervall between chat */
+                monster_cchat_time;    /* Intervall between combat chat */
+static  string  *monster_chat,         /* Chat strings */
+                *monster_cchat;        /* Combat Chat strings */
+static  int     monster_chat_limit,    /* Current ceiling for unused chats */
+                monster_cchat_limit;   /* Current ceiling for unused cchats */
+static  string  monster_chat_verb = "say";  /* Verb to use for chat */
 
 #define SEQ_CHAT  "_mon_chat"
 
@@ -35,29 +36,31 @@ void monster_do_chat();
 /*
  * Function name: add_chat
  * Description:   Adds a chat string that the monster will randomly say.
- * Arguments:	  str: Text
+ * Arguments:     str: Text
  */
 void
 add_chat(mixed str)
 {
     if (!IS_CLONE)
-	return;
+        return;
 
     if (!this_object()->seq_query(SEQ_CHAT))
     {
-	this_object()->seq_new(SEQ_CHAT);
+        this_object()->seq_new(SEQ_CHAT);
     }
+
     this_object()->seq_clear(SEQ_CHAT);
-    this_object()->seq_addfirst(SEQ_CHAT, monster_do_chat);
+    this_object()->seq_addfirst(SEQ_CHAT,
+        ({ random(monster_chat_time + 1), monster_do_chat);
 
     if (!str)
-	return;
+        return;
 
     if (!sizeof(monster_chat))
-	monster_chat = ({});
+        monster_chat = ({});
 
     monster_chat += ({ str });
-    monster_chat_left = monster_chat;
+    monster_chat_limit = sizeof(monster_chat);
 }
 
 string *query_chat() { return monster_chat; }
@@ -65,21 +68,21 @@ string *query_chat() { return monster_chat; }
 /*
  * Function name: add_cchat
  * Description:   Sets a combat chat string that the monster will randomly say
- * Arguments:	  str: Text
+ * Arguments:     str: Text
  */
 void
 add_cchat(string str)
 {
     if (!IS_CLONE)
-	return;
+        return;
 
     add_chat(0); /* Init chat sequence */
 
     if (!sizeof(monster_cchat))
-	monster_cchat = ({});
+        monster_cchat = ({});
 
     monster_cchat += ({ str });
-    monster_cchat_left = monster_cchat;
+    monster_cchat_limit = sizeof(monster_cchat);
 }
 
 string *query_cchat() { return monster_cchat; }
@@ -91,7 +94,7 @@ string *query_cchat() { return monster_cchat; }
 void
 clear_chat()
 {
-    monster_chat = monster_chat_left = 0;
+    monster_chat = monster_chat_limit = 0;
 }
 
 /*
@@ -101,13 +104,13 @@ clear_chat()
 void
 clear_cchat()
 {
-    monster_cchat = monster_cchat_left = 0;
+    monster_cchat = monster_cchat_limit = 0;
 }
 
 /*
  * Function name: set_chat_time
  * Description:   Set the mean value for chat intervall
- * Arguments:	  tim: Intervall
+ * Arguments:     tim: Intervall
  */
 void
 set_chat_time(int tim)
@@ -116,9 +119,20 @@ set_chat_time(int tim)
 }
 
 /*
+ * Function name: set_chat_verb
+ * Description:   Set the verb to use for chat (default: "say")
+ * Arguments:     verb: Verb
+ */
+void
+set_chat_verb(string verb)
+{
+    monster_chat_verb = verb;
+}
+
+/*
  * Function name: set_cchat_time
  * Description:   Set the mean value for cchat intervall
- * Arguments:	  tim: Intervall
+ * Arguments:     tim: Intervall
  */
 void
 set_cchat_time(int tim)
@@ -131,44 +145,54 @@ set_cchat_time(int tim)
  */
 
 /*
- *  Description: The actual function chatting, called by VBFC in seq_heartbeat
+ * Description: The actual function chatting, called by VBFC in seq_heartbeat
+ *
+ * This is responsible for selecting the strings to say, it does this by
+ * by moving the used string to the end of the array and then selecting
+ * a random string from the unused strings.
  */
 void
 monster_do_chat()
 {
-    int il;
-    string chatstr;
+    int limit, delay;
+    mixed *pool;
 
-    if (!this_object()->query_attack()) 
+    if (!this_object()->query_attack())
     {
-	if (!sizeof(monster_chat_left))
-	    monster_chat_left = monster_chat;
+        pool = monster_chat;
+        delay = monster_chat_time;
+        limit = monster_chat_limit--;
 
-	if (!(il=sizeof(monster_chat_left)))
-	    return;
-
-	il = random(il);
-	chatstr = monster_chat_left[il];
-	monster_chat_left = exclude_array(monster_chat_left,il,il);
-	il = monster_chat_time;
+        if (monster_chat_limit < 0)
+            monster_chat_limit = sizeof(monster_chat);
     }
-    else  /* In combat */
+    else
     {
-	if (!sizeof(monster_cchat_left))
-	    monster_cchat_left = monster_cchat;
+        pool = monster_cchat;
+        delay = monster_cchat_time;
+        limit = monster_cchat_limit--;
 
-	if (!(il = sizeof(monster_cchat_left)))
-	    return;
-
-	il = random(il);
-	chatstr = monster_cchat_left[il];
-	monster_cchat_left = exclude_array(monster_cchat_left,il,il);
-	il = monster_cchat_time;
-	
+        if (monster_cchat_limit < 0)
+            monster_cchat_limit = sizeof(monster_cchat);
     }
+
     this_object()->seq_clear(SEQ_CHAT);
-    this_object()->seq_addfirst(SEQ_CHAT,
-	({ "say " + chatstr, il, monster_do_chat }) );
+    this_object()->seq_addlast(SEQ_CHAT, ({ delay, monster_do_chat }) );
+
+    if (!pointerp(pool) || !sizeof(pool))
+        return;
+
+    int selected = random(limit);
+
+    // Move the selected chat to the end of the pool
+    mixed chat = pool[selected];
+    pool[selected] = pool[limit - 1];
+    pool[limit - 1] = chat;
+
+    if (functionp(chat))
+        chat = chat(this_object());
+
+    return monster_chat_verb + " " + chat;
 }
 
 public string
