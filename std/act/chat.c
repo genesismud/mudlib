@@ -189,6 +189,8 @@ monster_do_chat()
     pool[selected] = pool[limit - 1];
     pool[limit - 1] = chat;
 
+    if (stringp(chat))
+        chat = this_object()->check_call(chat);
     if (functionp(chat))
         chat = chat(this_object());
 
