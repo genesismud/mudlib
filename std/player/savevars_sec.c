@@ -486,9 +486,9 @@ query_temp_start_location()
 public nomask int
 query_age()
 {
-    age_heart += ((time() - age_time) / 2);
-    age_time = time();
-
+    int age_delta = (time() - age_time) / 2;
+    age_heart += age_delta;
+    age_time += age_delta * 2;
     return age_heart;
 }
 
