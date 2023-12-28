@@ -247,7 +247,8 @@ ask(string str)
         oblist, msg))
     {
         oblist = NORMAL_ACCESS(oblist, 0, 0);
-        msg = cap_msg[-strlen(msg)..];
+        if (strlen(msg) > 0)
+            msg = cap_msg[-strlen(msg)..];
     }
 
     switch(sizeof(oblist))
