@@ -810,18 +810,18 @@ compare_living_to_unarmed_enhancer(object living1, object enh2)
         /* Damage type */
         int dt = attack[2];
         int *ac = ({});
-        
+
         if (dt & W_IMPALE)
         {
             ac += ({ pens[0] });
         }
         if (dt & W_SLASH)
         {
-            ac += ({ pens[1] });   
+            ac += ({ pens[1] });
         }
         if (dt & W_BLUDGEON)
         {
-            ac += ({ pens[2] });   
+            ac += ({ pens[2] });
         }
         if (sizeof(ac) == 0)
         {
@@ -1232,6 +1232,12 @@ compare(string str)
         return 0;
     }
 
+    if (obj1->query_prop(OBJ_I_BROKEN) || obj2->query_prop(OBJ_I_BROKEN))
+    {
+        notify_fail("You can't compare broken items.\n");
+        return 0;
+    }
+
     /* Compare the stats of two livings or
      * fists or feet against unarmed enhancers.
      */
@@ -1295,7 +1301,7 @@ compare(string str)
                     " does not enhance unarmed combat.\n");
                 return 0;
             }
-            
+
             compare_living_to_unarmed_enhancer(obj1, obj2);
             return 1;
         }
@@ -2132,7 +2138,7 @@ vitals(string str, object target = this_player())
 
     case "stuffed":
     case "soaked":
-        string stuffed_desc = 
+        string stuffed_desc =
             (target->query_stuffed() > target->query_prop(LIVE_I_MAX_EAT) &&
             target->query_prop(LIVE_S_EXTENDED_STUFF)) ? target->query_prop(LIVE_S_EXTENDED_STUFF)
             : GET_NUM_DESC(target->query_stuffed(), target->query_prop(LIVE_I_MAX_EAT), stuff_state);
